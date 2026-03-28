@@ -164,24 +164,24 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] Commit to git
 
 ## Phase 8: REST Client
-- [ ] HTTP client with Basic Auth
-- [ ] CrudResource (List, Create, Get, Update, Delete)
-- [ ] Pagination support
-- [ ] SignalWireRestError
-- [ ] All namespaces (see rest-apis/ OpenAPI specs):
-  - [ ] Fabric (16+ sub-resources)
-  - [ ] Calling (37 commands)
-  - [ ] PhoneNumbers
-  - [ ] Datasphere
-  - [ ] Video
-  - [ ] Compat (Twilio LAML)
-  - [ ] Addresses, Queues, Recordings
-  - [ ] NumberGroups, VerifiedCallers, SipProfile
-  - [ ] Lookup, ShortCodes, ImportedNumbers
-  - [ ] MFA, Registry, Logs
-  - [ ] Project, PubSub, Chat
-- [ ] Tests: client creation, all namespaces initialized (non-nil), CRUD path construction, error formatting, sub-resource verification
-- [ ] Commit to git
+- [x] HTTP client with Basic Auth
+- [x] CrudResource (List, Create, Get, Update, Delete)
+- [x] Pagination support
+- [x] SignalWireRestError
+- [x] All namespaces (see rest-apis/ OpenAPI specs):
+  - [x] Fabric (13 sub-resources)
+  - [x] Calling (37 commands)
+  - [x] PhoneNumbers
+  - [x] Datasphere
+  - [x] Video
+  - [x] Compat (Twilio LAML)
+  - [x] Addresses, Queues, Recordings
+  - [x] NumberGroups, VerifiedCallers, SipProfile
+  - [x] Lookup, ShortCodes, ImportedNumbers
+  - [x] MFA, Registry, Logs
+  - [x] Project, PubSub, Chat
+- [x] Tests: client creation, all namespaces initialized (non-nil), CRUD path construction, error formatting, sub-resource verification
+- [x] Commit to git
 
 ## Phase 9: Serverless (Optional)
 - [ ] AWS Lambda adapter
