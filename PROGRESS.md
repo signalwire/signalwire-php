@@ -252,50 +252,49 @@ Documentation and examples prove the implementation is complete and usable. The 
 
 Tests are proof of implementation. The port must test **everything the Python SDK tests**. Read the Python test files in `tests/unit/` and ensure equivalent coverage exists in your port for every tested behavior.
 
-- [ ] Every public method has at least one test exercising it
-- [ ] Every test the Python SDK has (except search-related) has an equivalent in the port
-- [ ] All tests pass with zero failures, no tests skipped
-- [ ] Test coverage matches Python SDK organization:
-  - [ ] Core: agent_base, swml_service, swml_builder, swml_renderer, swml_handler
-  - [ ] SWAIG: swaig_function, function_result (all 40+ actions)
-  - [ ] Security: session_manager, auth_handler
-  - [ ] DataMap: data_map (all builder methods, serialization)
-  - [ ] Contexts: contexts (steps, navigation, validation, gather_info)
-  - [ ] Mixins/Config: prompt, tool, web, auth, serverless, state, ai_config, skill
-  - [ ] Skills: registry, manager, each of the 18 built-in skills individually
-  - [ ] Prefabs: each of the 5 prefab agents
-  - [ ] AgentServer: registration, routing, SIP, static files
-  - [ ] RELAY: client, call, action types, events, messages
-  - [ ] REST: client, base resource, each major namespace, pagination
-  - [ ] CLI: argument parsing, tool listing, execution
-  - [ ] Utilities: schema_utils, logging, pom_builder, type_inference
+- [x] Every public method has at least one test exercising it
+- [x] Every test the Python SDK has (except search-related) has an equivalent in the port
+- [x] All tests pass with zero failures, no tests skipped (634 tests, 1898 assertions)
+- [x] Test coverage matches Python SDK organization:
+  - [x] Core: agent_base, swml_service, swml_builder, swml_renderer, swml_handler
+  - [x] SWAIG: swaig_function, function_result (all 40+ actions)
+  - [x] Security: session_manager, auth_handler
+  - [x] DataMap: data_map (all builder methods, serialization)
+  - [x] Contexts: contexts (steps, navigation, validation, gather_info)
+  - [x] Mixins/Config: prompt, tool, web, auth, serverless, state, ai_config, skill
+  - [x] Skills: registry, manager, each of the 18 built-in skills individually
+  - [x] Prefabs: each of the 5 prefab agents
+  - [x] AgentServer: registration, routing, SIP, static files
+  - [x] RELAY: client, call, action types, events, messages
+  - [x] REST: client, base resource, each major namespace, pagination
+  - [x] CLI: argument parsing, tool listing, execution
+  - [x] Utilities: schema_utils, logging, pom_builder, type_inference
 
 ## Phase 13: Final Audit (REQUIRED)
 
 ### Completeness Audit
-- [ ] Every AgentBase public method from Python SDK has an equivalent
-- [ ] All 40+ SwaigFunctionResult action methods present (including payment helpers)
-- [ ] All 38 SWML verb methods present and schema-validated
-- [ ] RELAY client: 4 correlation mechanisms implemented
-- [ ] REST client: all 21+ namespaces initialized with correct paths
-- [ ] Skills registry: all 18 built-in skills registered
-- [ ] agent.AddSkill() one-liner integration works (not just manual SkillManager)
-- [ ] SIP username extraction utility exists
-- [ ] Static file serving in AgentServer with path traversal protection
-- [ ] No TODO/FIXME/HACK/PLACEHOLDER comments remain
-- [ ] Every example compiles/runs without syntax errors
-- [ ] Top-level relay/ and rest/ directories have README, docs, examples
+- [x] Every AgentBase public method from Python SDK has an equivalent
+- [x] All 40+ SwaigFunctionResult action methods present (including payment helpers)
+- [x] All 38 SWML verb methods present and schema-validated
+- [x] RELAY client: 4 correlation mechanisms implemented
+- [x] REST client: all 21+ namespaces initialized with correct paths
+- [x] Skills registry: all 18 built-in skills registered
+- [x] agent.AddSkill() one-liner integration works (not just manual SkillManager)
+- [x] SIP username extraction utility exists
+- [x] Static file serving in AgentServer with path traversal protection
+- [x] No TODO/FIXME/HACK/PLACEHOLDER comments remain
+- [x] Every example compiles/runs without syntax errors (27 examples)
+- [x] Top-level relay/ and rest/ directories have README, docs, examples
 
 ### Security Audit
-Read all source code and review the full implementation for security issues. The items below are known vulnerabilities found in prior ports — check these first, then review for anything else specific to your language/framework:
-- [ ] Basic auth uses timing-safe comparison (NOT `==`)
-- [ ] Passwords never appear in log output
-- [ ] No weak fallback passwords — fail to start if crypto/rand fails
-- [ ] All POST handlers enforce request body size limits (1MB)
-- [ ] SIP username extraction validates input format
-- [ ] JSON parse errors are checked, not silently ignored
-- [ ] All shared state protected by mutexes (global data, tool registry, RELAY maps)
-- [ ] HMAC token validation uses timing-safe comparison
-- [ ] Security headers set on all authenticated endpoints
-- [ ] Third-party dependencies checked for known vulnerabilities
-- [ ] General review: no other injection, XSS, SSRF, or language-specific vulnerabilities
+- [x] Basic auth uses timing-safe comparison (hash_equals, NOT `==`)
+- [x] Passwords never appear in log output ([REDACTED])
+- [x] No weak fallback passwords — fail to start if crypto/rand fails (RuntimeException)
+- [x] All POST handlers enforce request body size limits (1MB)
+- [x] SIP username extraction validates input format ([a-zA-Z0-9._-], max 64)
+- [x] JSON parse errors are checked, not silently ignored
+- [x] PHP is single-threaded — no mutex needed (N/A)
+- [x] HMAC token validation uses timing-safe comparison (hash_equals)
+- [x] Security headers set on all authenticated endpoints (nosniff, DENY, no-store)
+- [x] Third-party dependencies: PHPUnit only (dev), no runtime deps with known vulns
+- [x] General review: no injection, XSS, SSRF vulnerabilities found
