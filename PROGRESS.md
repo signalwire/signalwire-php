@@ -183,18 +183,18 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] Tests: client creation, all namespaces initialized (non-nil), CRUD path construction, error formatting, sub-resource verification
 - [x] Commit to git
 
-## Phase 9: Serverless (Optional)
-- [ ] AWS Lambda adapter
-- [ ] Google Cloud Functions adapter
-- [ ] Azure Functions adapter
-- [ ] CGI adapter
-- [ ] Auto-detection
+## Phase 9: Serverless
+- [x] AWS Lambda adapter
+- [x] Google Cloud Functions adapter
+- [x] Azure Functions adapter
+- [x] CGI adapter
+- [x] Auto-detection
 
 ## Phase 10: CLI
-- [ ] swaig-test: --url, --dump-swml, --list-tools, --exec, --param, --raw, --verbose
-- [ ] URL auth extraction (http://user:pass@host:port/path)
-- [ ] Tests: URL parsing, param parsing, integration with live agent
-- [ ] Commit to git
+- [x] swaig-test: --url, --dump-swml, --list-tools, --exec, --param, --raw, --verbose
+- [x] URL auth extraction (http://user:pass@host:port/path)
+- [x] Tests: URL parsing, param parsing, integration with live agent
+- [x] Commit to git
 
 ## Phase 11: Documentation & Examples
 

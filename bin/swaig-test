@@ -1,0 +1,501 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * swaig-test - CLI tool for testing SWAIG agent endpoints
+ *
+ * Usage:
+ *   swaig-test --url http://user:pass@host:port/route --dump-swml
+ *   swaig-test --url http://user:pass@host:port/route --list-tools
+ *   swaig-test --url http://user:pass@host:port/route --exec tool_name --param key=value
+ *
+ * Copyright (c) 2025 SignalWire
+ * Licensed under the MIT License.
+ */
+
+$VERSION = '1.0.0';
+
+// ============================================================
+//  CLI Option Parsing
+// ============================================================
+
+$url       = null;
+$dumpSwml  = false;
+$listTools = false;
+$execName  = null;
+$params    = [];
+$raw       = false;
+$verbose   = false;
+$help      = false;
+
+$args = array_slice($argv, 1);
+$i = 0;
+$count = count($args);
+
+while ($i < $count) {
+    $arg = $args[$i];
+
+    switch ($arg) {
+        case '--url':
+            $i++;
+            if ($i >= $count) {
+                fwrite(STDERR, "Error: --url requires a value\n");
+                exit(1);
+            }
+            $url = $args[$i];
+            break;
+
+        case '--dump-swml':
+            $dumpSwml = true;
+            break;
+
+        case '--list-tools':
+            $listTools = true;
+            break;
+
+        case '--exec':
+            $i++;
+            if ($i >= $count) {
+                fwrite(STDERR, "Error: --exec requires a tool name\n");
+                exit(1);
+            }
+            $execName = $args[$i];
+            break;
+
+        case '--param':
+            $i++;
+            if ($i >= $count) {
+                fwrite(STDERR, "Error: --param requires a key=value argument\n");
+                exit(1);
+            }
+            $params[] = $args[$i];
+            break;
+
+        case '--raw':
+            $raw = true;
+            break;
+
+        case '--verbose':
+            $verbose = true;
+            break;
+
+        case '--help':
+        case '-h':
+            $help = true;
+            break;
+
+        default:
+            fwrite(STDERR, "Error: Unknown option '{$arg}'\n\n");
+            usageExit(1);
+    }
+
+    $i++;
+}
+
+// ============================================================
+//  Validation
+// ============================================================
+
+if ($help) {
+    usageExit(0);
+}
+
+if ($url === null) {
+    fwrite(STDERR, "Error: --url is required\n\n");
+    usageExit(1);
+}
+
+if (!$dumpSwml && !$listTools && $execName === null) {
+    fwrite(STDERR, "Error: one of --dump-swml, --list-tools, or --exec NAME is required\n\n");
+    usageExit(1);
+}
+
+// ============================================================
+//  Parse URL and Extract Auth
+// ============================================================
+
+$parsedUrl = parseUrlWithAuth($url);
+$baseUrl   = $parsedUrl['base_url'];
+$authUser  = $parsedUrl['user'];
+$authPass  = $parsedUrl['pass'];
+
+// ============================================================
+//  Execute the Requested Operation
+// ============================================================
+
+if ($dumpSwml) {
+    doDumpSwml();
+} elseif ($listTools) {
+    doListTools();
+} elseif ($execName !== null) {
+    doExec($execName);
+}
+
+exit(0);
+
+// ============================================================
+//  Operations
+// ============================================================
+
+function doDumpSwml(): void
+{
+    global $baseUrl, $raw, $verbose;
+
+    $response = httpGet($baseUrl);
+
+    if ($raw) {
+        echo $response;
+        if (substr($response, -1) !== "\n") {
+            echo "\n";
+        }
+    } else {
+        $data = json_decode($response, true);
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            fwrite(STDERR, "Error: Failed to parse JSON response: " . json_last_error_msg() . "\n");
+            exit(1);
+        }
+        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        echo "\n";
+    }
+}
+
+function doListTools(): void
+{
+    global $baseUrl, $raw;
+
+    $response = httpGet($baseUrl);
+    $data = json_decode($response, true);
+    if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+        fwrite(STDERR, "Error: Failed to parse JSON response: " . json_last_error_msg() . "\n");
+        exit(1);
+    }
+
+    // Extract SWAIG functions from the SWML document
+    $functions = [];
+
+    if (isset($data['sections']) && is_array($data['sections'])) {
+        foreach ($data['sections'] as $sectionName => $verbs) {
+            if (!is_array($verbs)) {
+                continue;
+            }
+            foreach ($verbs as $verb) {
+                if (is_array($verb) && isset($verb['ai'])) {
+                    $ai = $verb['ai'];
+                    if (isset($ai['SWAIG']['functions']) && is_array($ai['SWAIG']['functions'])) {
+                        $functions = array_merge($functions, $ai['SWAIG']['functions']);
+                    }
+                }
+            }
+        }
+    }
+
+    if (empty($functions)) {
+        echo "No SWAIG functions found.\n";
+        return;
+    }
+
+    if ($raw) {
+        foreach ($functions as $f) {
+            $name = $f['function'] ?? 'unnamed';
+            $desc = $f['description'] ?? $f['purpose'] ?? '';
+            echo "{$name}\t{$desc}\n";
+        }
+    } else {
+        $count = count($functions);
+        echo "Found {$count} SWAIG function(s):\n\n";
+
+        foreach ($functions as $f) {
+            $name = $f['function'] ?? 'unnamed';
+            $desc = $f['description'] ?? $f['purpose'] ?? '(no description)';
+            printf("  %-30s %s\n", $name, $desc);
+
+            // Show parameters if any
+            $paramsSchema = $f['parameters'] ?? $f['argument'] ?? null;
+            if ($paramsSchema !== null && isset($paramsSchema['properties'])) {
+                $props    = $paramsSchema['properties'];
+                $required = $paramsSchema['required'] ?? [];
+                $requiredMap = array_flip($required);
+
+                ksort($props);
+                foreach ($props as $pname => $pdef) {
+                    $ptype = $pdef['type'] ?? 'any';
+                    $pdesc = $pdef['description'] ?? '';
+                    $reqMarker = isset($requiredMap[$pname]) ? '*' : ' ';
+                    printf("    %s %-20s %-10s %s\n", $reqMarker, $pname, "({$ptype})", $pdesc);
+                }
+            }
+
+            echo "\n";
+        }
+    }
+}
+
+function doExec(string $funcName): void
+{
+    global $baseUrl, $params, $raw, $verbose;
+
+    // Parse --param key=value pairs
+    $parsedArgs = [];
+    foreach ($params as $p) {
+        $eqPos = strpos($p, '=');
+        if ($eqPos === false) {
+            fwrite(STDERR, "Error: Invalid --param format '{$p}'. Use key=value\n");
+            exit(1);
+        }
+        $key = substr($p, 0, $eqPos);
+        $val = substr($p, $eqPos + 1);
+        $parsedArgs[$key] = $val;
+    }
+
+    $swaigUrl = rtrim($baseUrl, '/') . '/swaig';
+
+    $payload = [
+        'function' => $funcName,
+        'argument' => [
+            'parsed' => [$parsedArgs],
+        ],
+    ];
+
+    $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    if ($verbose) {
+        fwrite(STDERR, ">>> POST {$swaigUrl}\n");
+        fwrite(STDERR, ">>> Body: {$jsonBody}\n");
+    }
+
+    $response = httpPost($swaigUrl, $jsonBody);
+
+    if ($verbose) {
+        fwrite(STDERR, "<<< Body: {$response}\n");
+    }
+
+    if ($raw) {
+        echo $response;
+        if (substr($response, -1) !== "\n") {
+            echo "\n";
+        }
+    } else {
+        $data = json_decode($response, true);
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            echo $response;
+            if (substr($response, -1) !== "\n") {
+                echo "\n";
+            }
+        } else {
+            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            echo "\n";
+        }
+    }
+}
+
+// ============================================================
+//  URL Parsing
+// ============================================================
+
+/**
+ * Parse a URL with optional embedded auth (http://user:pass@host:port/path).
+ *
+ * @return array{base_url: string, user: string|null, pass: string|null}
+ */
+function parseUrlWithAuth(string $url): array
+{
+    $parsed = parse_url($url);
+
+    if ($parsed === false) {
+        fwrite(STDERR, "Error: Invalid URL '{$url}'\n");
+        exit(1);
+    }
+
+    $user = $parsed['user'] ?? null;
+    $pass = $parsed['pass'] ?? null;
+
+    // Rebuild the URL without credentials
+    $scheme = $parsed['scheme'] ?? 'http';
+    $host   = $parsed['host'] ?? 'localhost';
+    $port   = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+    $path   = $parsed['path'] ?? '/';
+
+    // Strip trailing slash for the base URL (unless root)
+    $baseUrl = "{$scheme}://{$host}{$port}{$path}";
+    $baseUrl = rtrim($baseUrl, '/');
+
+    // Ensure non-empty base URL
+    if ($baseUrl === "{$scheme}://{$host}{$port}") {
+        $baseUrl .= '';
+    }
+
+    return [
+        'base_url' => $baseUrl,
+        'user'     => $user,
+        'pass'     => $pass,
+    ];
+}
+
+// ============================================================
+//  CLI Param Parsing (exposed for testing)
+// ============================================================
+
+/**
+ * Parse a KEY=VALUE string into [key, value].
+ *
+ * @return array{string, string}|null Returns null if the format is invalid.
+ */
+function parseParam(string $param): ?array
+{
+    $eqPos = strpos($param, '=');
+    if ($eqPos === false) {
+        return null;
+    }
+    return [
+        substr($param, 0, $eqPos),
+        substr($param, $eqPos + 1),
+    ];
+}
+
+// ============================================================
+//  HTTP Helpers
+// ============================================================
+
+function buildAuthHeaders(): array
+{
+    global $authUser, $authPass;
+
+    $headers = [];
+    if ($authUser !== null && $authPass !== null) {
+        $encoded = base64_encode("{$authUser}:{$authPass}");
+        $headers[] = "Authorization: Basic {$encoded}";
+    }
+    return $headers;
+}
+
+function httpGet(string $targetUrl): string
+{
+    global $verbose;
+
+    if ($verbose) {
+        fwrite(STDERR, ">>> GET {$targetUrl}\n");
+    }
+
+    $authHeaders = buildAuthHeaders();
+    $headerString = implode("\r\n", $authHeaders);
+
+    $context = stream_context_create([
+        'http' => [
+            'method'  => 'GET',
+            'header'  => $headerString,
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $response = @file_get_contents($targetUrl, false, $context);
+
+    if ($response === false) {
+        fwrite(STDERR, "Error: Failed to connect to {$targetUrl}\n");
+        exit(1);
+    }
+
+    // Check HTTP status from response headers
+    $statusCode = 0;
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $header) {
+            if (preg_match('#^HTTP/\S+\s+(\d+)#', $header, $m)) {
+                $statusCode = (int) $m[1];
+            }
+        }
+    }
+
+    if ($verbose && $statusCode > 0) {
+        fwrite(STDERR, "<<< Status: {$statusCode}\n");
+    }
+
+    if ($statusCode >= 400) {
+        fwrite(STDERR, "Error: HTTP {$statusCode}\n{$response}\n");
+        exit(1);
+    }
+
+    return $response;
+}
+
+function httpPost(string $targetUrl, string $body): string
+{
+    global $verbose;
+
+    $authHeaders = buildAuthHeaders();
+    $authHeaders[] = 'Content-Type: application/json';
+    $headerString = implode("\r\n", $authHeaders);
+
+    $context = stream_context_create([
+        'http' => [
+            'method'  => 'POST',
+            'header'  => $headerString,
+            'content' => $body,
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $response = @file_get_contents($targetUrl, false, $context);
+
+    if ($response === false) {
+        fwrite(STDERR, "Error: Failed to connect to {$targetUrl}\n");
+        exit(1);
+    }
+
+    // Check HTTP status from response headers
+    $statusCode = 0;
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $header) {
+            if (preg_match('#^HTTP/\S+\s+(\d+)#', $header, $m)) {
+                $statusCode = (int) $m[1];
+            }
+        }
+    }
+
+    if ($verbose && $statusCode > 0) {
+        fwrite(STDERR, "<<< Status: {$statusCode}\n");
+    }
+
+    if ($statusCode >= 400) {
+        fwrite(STDERR, "Error: HTTP {$statusCode}\n{$response}\n");
+        exit(1);
+    }
+
+    return $response;
+}
+
+// ============================================================
+//  Usage
+// ============================================================
+
+function usageExit(int $code = 1): never
+{
+    $text = <<<'USAGE'
+swaig-test - CLI tool for testing SWAIG agent endpoints
+
+Usage:
+  swaig-test --url URL [OPTIONS]
+
+Options:
+  --url URL           Agent URL with embedded auth (http://user:pass@host:port/route)
+  --dump-swml         Fetch and display the SWML document
+  --list-tools        List available SWAIG functions
+  --exec NAME         Execute a SWAIG function by name
+  --param key=value   Parameter for --exec (repeatable)
+  --raw               Output compact JSON (no pretty-printing)
+  --verbose           Show request/response details on stderr
+  --help, -h          Show this help message
+
+Examples:
+  swaig-test --url http://user:pass@localhost:3000/ --dump-swml
+  swaig-test --url http://user:pass@localhost:3000/ --list-tools
+  swaig-test --url http://user:pass@localhost:3000/ --exec get_weather --param location=London
+  swaig-test --url http://user:pass@localhost:3000/ --exec get_weather --param location=London --raw
+
+USAGE;
+
+    fwrite(STDERR, $text);
+    exit($code);
+}
