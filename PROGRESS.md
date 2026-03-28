@@ -141,27 +141,27 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] Commit to git
 
 ## Phase 7: RELAY Client
-- [ ] WebSocket connection to wss://{space}
-- [ ] JSON-RPC 2.0 framing
-- [ ] Authentication (project/token and JWT)
-- [ ] Authorization state for fast reconnect
-- [ ] Auto-reconnect with exponential backoff (1s → 30s)
-- [ ] 4 correlation mechanisms (JSON-RPC id, call_id, control_id, tag)
-- [ ] Event ACK (immediate response to signalwire.event)
-- [ ] Ping handling (respond to signalwire.ping)
-- [ ] Server disconnect handling (restart flag)
-- [ ] Context subscription/unsubscription
-- [ ] Call object with 30+ methods (see RELAY_IMPLEMENTATION_GUIDE.md)
-- [ ] 11 action types with Wait/Stop/IsDone/OnCompleted
-- [ ] PlayAction: Pause, Resume, Volume
-- [ ] play_and_collect gotcha handled (filter by event_type)
-- [ ] detect gotcha handled (resolve on first meaningful result)
-- [ ] dial tag correlation (call_id nested in params.call.call_id)
-- [ ] call-gone (404/410) handled gracefully
-- [ ] 22+ typed event types
-- [ ] SMS/MMS messaging (SendMessage, OnMessage, delivery tracking)
-- [ ] Tests: constants, event parsing (all types), action wait/resolve/callback, call creation, message state, client construction, correlation mechanism verification
-- [ ] Commit to git
+- [x] WebSocket connection to wss://{space}
+- [x] JSON-RPC 2.0 framing
+- [x] Authentication (project/token and JWT)
+- [x] Authorization state for fast reconnect
+- [x] Auto-reconnect with exponential backoff (1s → 30s)
+- [x] 4 correlation mechanisms (JSON-RPC id, call_id, control_id, tag)
+- [x] Event ACK (immediate response to signalwire.event)
+- [x] Ping handling (respond to signalwire.ping)
+- [x] Server disconnect handling (restart flag)
+- [x] Context subscription/unsubscription
+- [x] Call object with 30+ methods (see RELAY_IMPLEMENTATION_GUIDE.md)
+- [x] 11 action types with Wait/Stop/IsDone/OnCompleted
+- [x] PlayAction: Pause, Resume, Volume
+- [x] play_and_collect gotcha handled (filter by event_type)
+- [x] detect gotcha handled (resolve on first meaningful result)
+- [x] dial tag correlation (call_id nested in params.call.call_id)
+- [x] call-gone (404/410) handled gracefully
+- [x] 22+ typed event types
+- [x] SMS/MMS messaging (SendMessage, OnMessage, delivery tracking)
+- [x] Tests: constants, event parsing (all types), action wait/resolve/callback, call creation, message state, client construction, correlation mechanism verification
+- [x] Commit to git
 
 ## Phase 8: REST Client
 - [ ] HTTP client with Basic Auth
