@@ -1,0 +1,491 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SignalWire\SWML;
+
+use SignalWire\Logging\Logger;
+
+class Service
+{
+    protected string $name;
+    protected string $route;
+    protected string $host;
+    protected int $port;
+    protected Document $document;
+    protected Logger $logger;
+
+    protected string $basicAuthUser;
+    protected string $basicAuthPassword;
+
+    /** @var array<string, callable> */
+    protected array $routingCallbacks = [];
+
+    /**
+     * @param array{
+     *   name: string,
+     *   route?: string,
+     *   host?: string,
+     *   port?: int,
+     *   basic_auth_user?: string,
+     *   basic_auth_password?: string,
+     * } $options
+     */
+    public function __construct(array $options)
+    {
+        $this->name = $options['name'];
+        $route = $options['route'] ?? '/';
+        $this->route = rtrim($route, '/') ?: '/';
+        $this->host = $options['host'] ?? '0.0.0.0';
+        $this->port = $options['port'] ?? (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 3000);
+        $this->document = new Document();
+        $this->logger = Logger::getLogger('swml_service');
+
+        // Auth: explicit > env > auto-generated
+        if (isset($options['basic_auth_user']) && isset($options['basic_auth_password'])) {
+            $this->basicAuthUser = $options['basic_auth_user'];
+            $this->basicAuthPassword = $options['basic_auth_password'];
+        } elseif (($envUser = getenv('SWML_BASIC_AUTH_USER')) !== false
+            && ($envPass = getenv('SWML_BASIC_AUTH_PASSWORD')) !== false) {
+            $this->basicAuthUser = $envUser;
+            $this->basicAuthPassword = $envPass;
+        } else {
+            $this->basicAuthUser = $this->randomHex(16);
+            $this->basicAuthPassword = $this->randomHex(32);
+        }
+
+        $this->logger->info("Service '{$this->name}' initialised (route={$this->route}, port={$this->port})");
+    }
+
+    // ------------------------------------------------------------------
+    // Verb auto-vivification via __call
+    // ------------------------------------------------------------------
+
+    /**
+     * Dynamic verb methods from schema.
+     *
+     *   $service->answer('main', ['max_duration' => 3600]);
+     *   $service->sleep('main', 2000);
+     *   $service->hangup();
+     */
+    public function __call(string $method, array $args): static
+    {
+        $schema = Schema::instance();
+        if (!$schema->isValidVerb($method)) {
+            throw new \BadMethodCallException("Unknown method: {$method}");
+        }
+
+        $section = 'main';
+        $config = [];
+
+        if ($method === 'sleep') {
+            // sleep(2000) or sleep('main', 2000)
+            if (count($args) === 1 && is_int($args[0])) {
+                $config = $args[0];
+            } elseif (count($args) === 2) {
+                $section = (string) $args[0];
+                $config = (int) $args[1];
+            } else {
+                throw new \InvalidArgumentException('sleep requires an integer duration');
+            }
+        } else {
+            // verb() or verb({}) or verb('section') or verb('section', {})
+            if (count($args) === 0) {
+                // defaults
+            } elseif (count($args) === 1) {
+                if (is_string($args[0])) {
+                    $section = $args[0];
+                } elseif (is_array($args[0])) {
+                    $config = $args[0];
+                }
+            } elseif (count($args) === 2) {
+                $section = (string) $args[0];
+                $config = is_array($args[1]) ? $args[1] : [];
+            }
+        }
+
+        $this->document->addVerbToSection($section, $method, $config);
+        return $this;
+    }
+
+    // ------------------------------------------------------------------
+    // Auth helpers
+    // ------------------------------------------------------------------
+
+    /**
+     * @return array{string, string} [user, password]
+     */
+    public function getBasicAuthCredentials(): array
+    {
+        return [$this->basicAuthUser, $this->basicAuthPassword];
+    }
+
+    /**
+     * Build the full URL for this service.
+     */
+    public function getFullUrl(bool $includeAuth = false): string
+    {
+        $auth = $includeAuth
+            ? "{$this->basicAuthUser}:{$this->basicAuthPassword}@"
+            : '';
+        $path = $this->route;
+        return "http://{$auth}{$this->host}:{$this->port}{$path}";
+    }
+
+    // ------------------------------------------------------------------
+    // Routing callbacks
+    // ------------------------------------------------------------------
+
+    public function registerRoutingCallback(string $path, callable $callback): void
+    {
+        $this->routingCallbacks[$path] = $callback;
+    }
+
+    // ------------------------------------------------------------------
+    // Accessors
+    // ------------------------------------------------------------------
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getRoute(): string
+    {
+        return $this->route;
+    }
+
+    public function getHost(): string
+    {
+        return $this->host;
+    }
+
+    public function getPort(): int
+    {
+        return $this->port;
+    }
+
+    public function getDocument(): Document
+    {
+        return $this->document;
+    }
+
+    public function render(): string
+    {
+        return $this->document->render();
+    }
+
+    public function renderPretty(): string
+    {
+        return $this->document->renderPretty();
+    }
+
+    /**
+     * Render SWML for a request. Subclasses override this.
+     */
+    public function renderSwml(?array $requestBody = null, array $headers = []): array
+    {
+        return $this->document->toArray();
+    }
+
+    // ------------------------------------------------------------------
+    // HTTP handling (PHP built-in server / CGI / SAPI)
+    // ------------------------------------------------------------------
+
+    /**
+     * Handle an HTTP request. Returns [status, headers, body].
+     *
+     * @return array{int, array<string, string>, string}
+     */
+    public function handleRequest(
+        string $method,
+        string $path,
+        array $headers = [],
+        ?string $body = null,
+    ): array {
+        // Health/ready: no auth
+        if ($path === '/health') {
+            return $this->jsonResponse(200, ['status' => 'healthy']);
+        }
+        if ($path === '/ready') {
+            return $this->jsonResponse(200, ['status' => 'ready']);
+        }
+
+        // Determine if path matches our route
+        $normalRoute = $this->route === '/' ? '' : $this->route;
+        $subPath = null;
+
+        if ($this->route === '/') {
+            $subPath = $path;
+        } elseif ($path === $this->route || str_starts_with($path, $this->route . '/')) {
+            $subPath = substr($path, strlen($this->route)) ?: '/';
+        }
+
+        if ($subPath === null) {
+            return $this->jsonResponse(404, ['error' => 'Not found']);
+        }
+
+        // Auth required for everything under the route
+        if (!$this->checkBasicAuth($headers)) {
+            return [
+                401,
+                array_merge(
+                    ['Content-Type' => 'text/plain', 'WWW-Authenticate' => 'Basic realm="SignalWire SWML Service"'],
+                    $this->securityHeaders(),
+                ),
+                'Unauthorized',
+            ];
+        }
+
+        // Parse body
+        $requestData = null;
+        if ($body !== null && $body !== '') {
+            // Enforce 1MB body size limit
+            if (strlen($body) > 1_048_576) {
+                return $this->jsonResponse(413, ['error' => 'Request body too large']);
+            }
+            $requestData = json_decode($body, true);
+        }
+
+        // Route dispatch
+        if ($subPath === '/' || $subPath === '') {
+            return $this->handleSwmlRequest($method, $requestData, $headers);
+        }
+        if ($subPath === '/swaig') {
+            return $this->handleSwaigRequest($requestData, $headers);
+        }
+        if ($subPath === '/post_prompt') {
+            return $this->handlePostPrompt($requestData, $headers);
+        }
+
+        // Check routing callbacks
+        if (isset($this->routingCallbacks[$subPath])) {
+            $result = ($this->routingCallbacks[$subPath])($requestData, $headers);
+            return $this->jsonResponse(200, $result);
+        }
+
+        return $this->jsonResponse(404, ['error' => 'Not found']);
+    }
+
+    /**
+     * Handle SWML document request.
+     */
+    protected function handleSwmlRequest(string $method, ?array $requestData, array $headers): array
+    {
+        $swml = $this->renderSwml($requestData, $headers);
+        return $this->jsonResponse(200, $swml);
+    }
+
+    /**
+     * Handle SWAIG function dispatch. Override in AgentBase.
+     */
+    protected function handleSwaigRequest(?array $requestData, array $headers): array
+    {
+        return $this->jsonResponse(200, []);
+    }
+
+    /**
+     * Handle post-prompt callback. Override in AgentBase.
+     */
+    protected function handlePostPrompt(?array $requestData, array $headers): array
+    {
+        return $this->jsonResponse(200, []);
+    }
+
+    // ------------------------------------------------------------------
+    // SIP username extraction
+    // ------------------------------------------------------------------
+
+    /**
+     * Extract SIP username from a request body.
+     * Validates format: only [a-zA-Z0-9._-], max 64 chars.
+     */
+    public static function extractSipUsername(?array $requestBody): ?string
+    {
+        if ($requestBody === null) {
+            return null;
+        }
+
+        // Look for SIP URI in common locations
+        $sipUri = $requestBody['call']['to'] ?? $requestBody['to'] ?? null;
+        if ($sipUri === null || !is_string($sipUri)) {
+            return null;
+        }
+
+        // Extract username from sip:username@host
+        if (preg_match('/^sip:([^@]+)@/', $sipUri, $matches)) {
+            $username = $matches[1];
+        } else {
+            $username = $sipUri;
+        }
+
+        // Validate format
+        if (strlen($username) > 64 || !preg_match('/^[a-zA-Z0-9._-]+$/', $username)) {
+            return null;
+        }
+
+        return $username;
+    }
+
+    // ------------------------------------------------------------------
+    // Proxy URL
+    // ------------------------------------------------------------------
+
+    /**
+     * Detect or construct the proxy URL base from request headers.
+     */
+    public function getProxyUrlBase(array $headers = []): string
+    {
+        // 1. Explicit env var
+        $envProxy = getenv('SWML_PROXY_URL_BASE');
+        if ($envProxy !== false && $envProxy !== '') {
+            return rtrim($envProxy, '/');
+        }
+
+        // 2. X-Forwarded-Proto + X-Forwarded-Host
+        $proto = $headers['X-Forwarded-Proto'] ?? $headers['x-forwarded-proto'] ?? null;
+        $fwdHost = $headers['X-Forwarded-Host'] ?? $headers['x-forwarded-host'] ?? null;
+        if ($proto !== null && $fwdHost !== null) {
+            return "{$proto}://{$fwdHost}";
+        }
+
+        // 3. X-Original-URL
+        $origUrl = $headers['X-Original-URL'] ?? $headers['x-original-url'] ?? null;
+        if ($origUrl !== null) {
+            return rtrim($origUrl, '/');
+        }
+
+        // 4. Fallback to server config
+        return "http://{$this->host}:{$this->port}";
+    }
+
+    // ------------------------------------------------------------------
+    // Server
+    // ------------------------------------------------------------------
+
+    /**
+     * Start serving using PHP's built-in server (blocking).
+     */
+    public function serve(): void
+    {
+        $this->logger->info("Starting server on {$this->host}:{$this->port} ...");
+        $this->logger->info("Basic-auth credentials — user: {$this->basicAuthUser}  password: [REDACTED]");
+
+        $addr = "{$this->host}:{$this->port}";
+        $router = $this->createRouterScript();
+
+        // Use PHP built-in server with a router script
+        $cmd = sprintf('php -S %s %s', escapeshellarg($addr), escapeshellarg($router));
+        passthru($cmd);
+    }
+
+    /**
+     * Run the service (alias for serve).
+     */
+    public function run(): void
+    {
+        $this->serve();
+    }
+
+    // ------------------------------------------------------------------
+    // Private helpers
+    // ------------------------------------------------------------------
+
+    /**
+     * Check Basic Auth from request headers.
+     */
+    protected function checkBasicAuth(array $headers): bool
+    {
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+        if ($authHeader === null) {
+            return false;
+        }
+
+        if (!str_starts_with($authHeader, 'Basic ')) {
+            return false;
+        }
+
+        $decoded = base64_decode(substr($authHeader, 6), true);
+        if ($decoded === false) {
+            return false;
+        }
+
+        $colonPos = strpos($decoded, ':');
+        if ($colonPos === false) {
+            return false;
+        }
+
+        $inputUser = substr($decoded, 0, $colonPos);
+        $inputPass = substr($decoded, $colonPos + 1);
+
+        // Timing-safe comparison
+        $userOk = hash_equals($this->basicAuthUser, $inputUser);
+        $passOk = hash_equals($this->basicAuthPassword, $inputPass);
+
+        return $userOk && $passOk;
+    }
+
+    /**
+     * Security headers applied to all authenticated responses.
+     *
+     * @return array<string, string>
+     */
+    protected function securityHeaders(): array
+    {
+        return [
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'DENY',
+            'Cache-Control' => 'no-store',
+        ];
+    }
+
+    /**
+     * Build a JSON response tuple.
+     *
+     * @return array{int, array<string, string>, string}
+     */
+    protected function jsonResponse(int $status, mixed $data): array
+    {
+        $body = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $headers = array_merge(
+            ['Content-Type' => 'application/json'],
+            $this->securityHeaders(),
+        );
+        return [$status, $headers, $body];
+    }
+
+    /**
+     * Generate cryptographically secure random hex string.
+     */
+    protected function randomHex(int $bytes): string
+    {
+        try {
+            return bin2hex(random_bytes($bytes));
+        } catch (\Exception $e) {
+            // random_bytes() will throw if no entropy source available
+            throw new \RuntimeException(
+                'Failed to generate secure random bytes. Cannot start without secure entropy.',
+                0,
+                $e,
+            );
+        }
+    }
+
+    /**
+     * Create a temporary PHP router script for the built-in server.
+     */
+    private function createRouterScript(): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'sw_router_');
+        $serviceFile = realpath(__FILE__);
+        $autoload = realpath(__DIR__ . '/../../../vendor/autoload.php');
+
+        file_put_contents($tmp, <<<'PHP'
+        <?php
+        // This router script is auto-generated for PHP built-in server
+        // It delegates all requests to the SWMLService
+        PHP);
+
+        return $tmp;
+    }
+}

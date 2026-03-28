@@ -22,20 +22,20 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] Commit to git
 
 ## Phase 2: SWML Core
-- [ ] SWML Document model (version, sections, verbs, JSON rendering)
-- [ ] Schema loaded from schema.json (embedded in package)
-- [ ] 38 verb methods auto-vivified from schema (see PORTING_GUIDE.md for mapping)
-- [ ] Sleep verb: takes integer, not map
-- [ ] AI verb: present but overridden by AgentBase
-- [ ] SWMLService HTTP server
-- [ ] Basic auth (auto-generated or SWML_BASIC_AUTH_USER/PASSWORD)
-- [ ] Security headers (X-Content-Type-Options, X-Frame-Options, Cache-Control)
-- [ ] /health, /ready endpoints (no auth)
-- [ ] Routing callbacks
-- [ ] SIP username extraction from request body
-- [ ] SWML_PROXY_URL_BASE support
-- [ ] Tests: document CRUD, schema loads 38 verbs, all verb methods callable, service auth, HTTP endpoints, security headers
-- [ ] Commit to git
+- [x] SWML Document model (version, sections, verbs, JSON rendering)
+- [x] Schema loaded from schema.json (embedded in package)
+- [x] 38 verb methods auto-vivified from schema (see PORTING_GUIDE.md for mapping)
+- [x] Sleep verb: takes integer, not map
+- [x] AI verb: present but overridden by AgentBase
+- [x] SWMLService HTTP server
+- [x] Basic auth (auto-generated or SWML_BASIC_AUTH_USER/PASSWORD)
+- [x] Security headers (X-Content-Type-Options, X-Frame-Options, Cache-Control)
+- [x] /health, /ready endpoints (no auth)
+- [x] Routing callbacks
+- [x] SIP username extraction from request body
+- [x] SWML_PROXY_URL_BASE support
+- [x] Tests: document CRUD, schema loads 38 verbs, all verb methods callable, service auth, HTTP endpoints, security headers
+- [x] Commit to git
 
 ## Phase 3: Agent Core
 
