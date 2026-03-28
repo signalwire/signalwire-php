@@ -121,24 +121,24 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] Commit to git
 
 ## Phase 5: Prefab Agents
-- [ ] InfoGathererAgent (questions → start_questions + submit_answer tools)
-- [ ] SurveyAgent (typed questions → validate_response + log_response tools)
-- [ ] ReceptionistAgent (departments → collect_caller_info + transfer_call tools)
-- [ ] FAQBotAgent (FAQs → search_faqs tool with keyword scoring)
-- [ ] ConciergeAgent (venue → check_availability + get_directions tools)
-- [ ] Tests: each constructible, each has expected tools, tool handlers execute
-- [ ] Commit to git
+- [x] InfoGathererAgent (questions → start_questions + submit_answer tools)
+- [x] SurveyAgent (typed questions → validate_response + log_response tools)
+- [x] ReceptionistAgent (departments → collect_caller_info + transfer_call tools)
+- [x] FAQBotAgent (FAQs → search_faqs tool with keyword scoring)
+- [x] ConciergeAgent (venue → check_availability + get_directions tools)
+- [x] Tests: each constructible, each has expected tools, tool handlers execute
+- [x] Commit to git
 
 ## Phase 6: AgentServer
-- [ ] Register/Unregister agents by route
-- [ ] GetAgents/GetAgent
-- [ ] SIP routing (SetupSipRouting, RegisterSipUsername)
-- [ ] Static file serving (with path traversal protection, security headers, MIME types)
-- [ ] Health/ready endpoints
-- [ ] Root index listing agents
-- [ ] Run with HTTP server
-- [ ] Tests: register/unregister, get agents, health endpoint, route dispatch, SIP routing, static file serving
-- [ ] Commit to git
+- [x] Register/Unregister agents by route
+- [x] GetAgents/GetAgent
+- [x] SIP routing (SetupSipRouting, RegisterSipUsername)
+- [x] Static file serving (with path traversal protection, security headers, MIME types)
+- [x] Health/ready endpoints
+- [x] Root index listing agents
+- [x] Run with HTTP server
+- [x] Tests: register/unregister, get agents, health endpoint, route dispatch, SIP routing, static file serving
+- [x] Commit to git
 
 ## Phase 7: RELAY Client
 - [ ] WebSocket connection to wss://{space}
