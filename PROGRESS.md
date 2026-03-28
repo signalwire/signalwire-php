@@ -40,58 +40,58 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 ## Phase 3: Agent Core
 
 ### SwaigFunctionResult
-- [ ] Constructor(response, post_process)
-- [ ] SetResponse, SetPostProcess, AddAction, AddActions, ToMap/ToDict
-- [ ] Serialization rules: response always, action only if non-empty, post_process only if true
-- [ ] All 40+ action methods (see SWAIG_FUNCTION_RESULT_REFERENCE.md for exact JSON)
-- [ ] Payment helpers: CreatePaymentPrompt, CreatePaymentAction, CreatePaymentParameter
-- [ ] Method chaining on all methods
-- [ ] Tests: construction, serialization, each action category (connect, hangup, say, update_global_data, record_call, toggle_functions, execute_rpc, send_sms, payment helpers), method chaining
+- [x] Constructor(response, post_process)
+- [x] SetResponse, SetPostProcess, AddAction, AddActions, ToMap/ToDict
+- [x] Serialization rules: response always, action only if non-empty, post_process only if true
+- [x] All 40+ action methods (see SWAIG_FUNCTION_RESULT_REFERENCE.md for exact JSON)
+- [x] Payment helpers: CreatePaymentPrompt, CreatePaymentAction, CreatePaymentParameter
+- [x] Method chaining on all methods
+- [x] Tests: construction, serialization, each action category (connect, hangup, say, update_global_data, record_call, toggle_functions, execute_rpc, send_sms, payment helpers), method chaining
 
 ### SessionManager
-- [ ] HMAC-SHA256 token creation (functionName:callID:expiry, signed, base64)
-- [ ] Token validation (timing-safe comparison, expiry check)
-- [ ] Random 32-byte secret per manager — fail hard if entropy unavailable
-- [ ] Default expiry: 3600 seconds
-- [ ] Tests: token round-trip, wrong function/callID rejected, expired rejected, tampered rejected
+- [x] HMAC-SHA256 token creation (functionName:callID:expiry, signed, base64)
+- [x] Token validation (timing-safe comparison, expiry check)
+- [x] Random 32-byte secret per manager — fail hard if entropy unavailable
+- [x] Default expiry: 3600 seconds
+- [x] Tests: token round-trip, wrong function/callID rejected, expired rejected, tampered rejected
 
 ### DataMap
-- [ ] Fluent builder: New, Purpose/Description, Parameter (with enum), Expression
-- [ ] Webhook, WebhookExpressions, Body, Params, Foreach
-- [ ] Output, FallbackOutput, ErrorKeys, GlobalErrorKeys
-- [ ] ToSwaigFunction serialization
-- [ ] CreateSimpleApiTool helper
-- [ ] CreateExpressionTool helper
-- [ ] Tests: fluent chain, parameters, webhook config, expressions, serialization, helpers
+- [x] Fluent builder: New, Purpose/Description, Parameter (with enum), Expression
+- [x] Webhook, WebhookExpressions, Body, Params, Foreach
+- [x] Output, FallbackOutput, ErrorKeys, GlobalErrorKeys
+- [x] ToSwaigFunction serialization
+- [x] CreateSimpleApiTool helper
+- [x] CreateExpressionTool helper
+- [x] Tests: fluent chain, parameters, webhook config, expressions, serialization, helpers
 
 ### Contexts & Steps
-- [ ] ContextBuilder: AddContext, GetContext, Validate, ToMap
-- [ ] Context: AddStep, GetStep, RemoveStep, MoveStep, all setters, ToMap
-- [ ] Step: all setters (text, sections, criteria, functions, navigation, gather, reset), ToMap
-- [ ] GatherInfo and GatherQuestion
-- [ ] CreateSimpleContext helper
-- [ ] Validation: single context must be "default"
-- [ ] Tests: step config, context with steps, gather info, serialization, validation rules, fillers, MoveStep
+- [x] ContextBuilder: AddContext, GetContext, Validate, ToMap
+- [x] Context: AddStep, GetStep, RemoveStep, MoveStep, all setters, ToMap
+- [x] Step: all setters (text, sections, criteria, functions, navigation, gather, reset), ToMap
+- [x] GatherInfo and GatherQuestion
+- [x] CreateSimpleContext helper
+- [x] Validation: single context must be "default"
+- [x] Tests: step config, context with steps, gather info, serialization, validation rules, fillers, MoveStep
 
 ### AgentBase
-- [ ] Constructor with functional options / builder pattern
-- [ ] Prompt: SetPromptText, SetPostPrompt, POM (AddSection, AddSubsection, AddToSection, HasSection)
-- [ ] Tools: DefineTool (with handler), RegisterSwaigFunction (DataMap), DefineTools, OnFunctionCall
-- [ ] AI Config: hints, pattern hints, languages, pronunciations, params, global data, native functions, fillers, debug events, function includes, LLM params
-- [ ] Verbs: AddPreAnswerVerb, AddAnswerVerb, AddPostAnswerVerb, AddPostAiVerb, Clear methods
-- [ ] Contexts: DefineContexts returns ContextBuilder
-- [ ] Skills: AddSkill one-liner, RemoveSkill, ListSkills, HasSkill
-- [ ] Web: DynamicConfigCallback, proxy URL, webhook URL, post-prompt URL, query params
-- [ ] SIP: EnableSipRouting, RegisterSipUsername, extractSipUsername utility
-- [ ] Lifecycle: OnSummary, OnDebugEvent
-- [ ] SWML Rendering: 5-phase pipeline (pre-answer, answer, post-answer, AI, post-AI)
-- [ ] HTTP endpoints: / (SWML), /swaig (tool dispatch), /post_prompt (summary), /health, /ready
-- [ ] Dynamic config: clone agent, apply callback, render from clone, original not mutated
-- [ ] Webhook URL construction with auth and query params
-- [ ] Run/Serve/AsRouter (or framework-specific mount)
-- [ ] Request body size limit (1MB) on all POST handlers
-- [ ] Tests: construction, prompt modes, tool registration+dispatch, AI config, verbs, contexts, skills integration, render_swml structure, dynamic config isolation, HTTP endpoints (auth, SWML, swaig dispatch, post_prompt, health), method chaining
-- [ ] Commit to git
+- [x] Constructor with functional options / builder pattern
+- [x] Prompt: SetPromptText, SetPostPrompt, POM (AddSection, AddSubsection, AddToSection, HasSection)
+- [x] Tools: DefineTool (with handler), RegisterSwaigFunction (DataMap), DefineTools, OnFunctionCall
+- [x] AI Config: hints, pattern hints, languages, pronunciations, params, global data, native functions, fillers, debug events, function includes, LLM params
+- [x] Verbs: AddPreAnswerVerb, AddAnswerVerb, AddPostAnswerVerb, AddPostAiVerb, Clear methods
+- [x] Contexts: DefineContexts returns ContextBuilder
+- [x] Skills: AddSkill one-liner, RemoveSkill, ListSkills, HasSkill
+- [x] Web: DynamicConfigCallback, proxy URL, webhook URL, post-prompt URL, query params
+- [x] SIP: EnableSipRouting, RegisterSipUsername, extractSipUsername utility
+- [x] Lifecycle: OnSummary, OnDebugEvent
+- [x] SWML Rendering: 5-phase pipeline (pre-answer, answer, post-answer, AI, post-AI)
+- [x] HTTP endpoints: / (SWML), /swaig (tool dispatch), /post_prompt (summary), /health, /ready
+- [x] Dynamic config: clone agent, apply callback, render from clone, original not mutated
+- [x] Webhook URL construction with auth and query params
+- [x] Run/Serve/AsRouter (or framework-specific mount)
+- [x] Request body size limit (1MB) on all POST handlers
+- [x] Tests: construction, prompt modes, tool registration+dispatch, AI config, verbs, contexts, skills integration, render_swml structure, dynamic config isolation, HTTP endpoints (auth, SWML, swaig dispatch, post_prompt, health), method chaining
+- [x] Commit to git
 
 ## Phase 4: Skills System
 - [ ] SkillBase interface (see SKILLS_MANIFEST.md for full contract)
