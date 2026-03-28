@@ -10,6 +10,7 @@ use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Security\SessionManager;
 use SignalWire\Contexts\ContextBuilder;
+use SignalWire\Skills\SkillManager;
 
 class AgentBase extends Service
 {
@@ -572,38 +573,45 @@ class AgentBase extends Service
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * Add a skill by name (stub -- delegates to skill manager when available).
+     * Get or create the SkillManager (lazy init).
+     */
+    protected function getSkillManager(): SkillManager
+    {
+        if ($this->skillManager === null) {
+            $this->skillManager = new SkillManager($this);
+        }
+        return $this->skillManager;
+    }
+
+    /**
+     * Add a skill by name.
      */
     public function addSkill(string $name, array $params = []): self
     {
-        if ($this->skillManager !== null && is_object($this->skillManager) && method_exists($this->skillManager, 'add')) {
-            $this->skillManager->add($name, $params);
-        }
+        $this->getSkillManager()->loadSkill($name, $params);
         return $this;
     }
 
     public function removeSkill(string $name): self
     {
-        if ($this->skillManager !== null && is_object($this->skillManager) && method_exists($this->skillManager, 'remove')) {
-            $this->skillManager->remove($name);
-        }
+        $this->getSkillManager()->unloadSkill($name);
         return $this;
     }
 
     public function listSkills(): array
     {
-        if ($this->skillManager !== null && is_object($this->skillManager) && method_exists($this->skillManager, 'list')) {
-            return $this->skillManager->list();
+        if ($this->skillManager === null) {
+            return [];
         }
-        return [];
+        return $this->skillManager->listSkills();
     }
 
     public function hasSkill(string $name): bool
     {
-        if ($this->skillManager !== null && is_object($this->skillManager) && method_exists($this->skillManager, 'has')) {
-            return $this->skillManager->has($name);
+        if ($this->skillManager === null) {
+            return false;
         }
-        return false;
+        return $this->skillManager->hasSkill($name);
     }
 
     // ══════════════════════════════════════════════════════════════════════

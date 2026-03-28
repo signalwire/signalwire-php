@@ -94,31 +94,31 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] Commit to git
 
 ## Phase 4: Skills System
-- [ ] SkillBase interface (see SKILLS_MANIFEST.md for full contract)
-- [ ] BaseSkill with default implementations
-- [ ] SkillManager: LoadSkill, UnloadSkill, ListLoadedSkills, HasSkill, GetSkill
-- [ ] SkillRegistry: RegisterSkill, GetSkillFactory, ListSkills
-- [ ] All 18 built-in skills (see SKILLS_MANIFEST.md for exact specifications):
-  - [ ] datetime (get_current_time, get_current_date)
-  - [ ] math (calculate — safe evaluator, no eval)
-  - [ ] joke (tell_joke)
-  - [ ] weather_api (get_weather — HTTP to WeatherAPI.com)
-  - [ ] web_search (web_search — HTTP to Google CSE)
-  - [ ] wikipedia_search (search_wiki — HTTP to Wikipedia API)
-  - [ ] google_maps (lookup_address, compute_route)
-  - [ ] spider (scrape_url — HTTP fetch + HTML strip)
-  - [ ] datasphere (search_datasphere — HTTP to SignalWire DataSphere)
-  - [ ] datasphere_serverless (DataMap-based DataSphere)
-  - [ ] swml_transfer (transfer_call — pattern matching)
-  - [ ] play_background_file (play/stop background audio)
-  - [ ] api_ninjas_trivia (get_trivia)
-  - [ ] native_vector_search (search_knowledge — network mode only)
-  - [ ] info_gatherer (start_questions + submit_answer — stateful)
-  - [ ] claude_skills (SKILL.md file loading)
-  - [ ] mcp_gateway (MCP server bridge)
-  - [ ] custom_skills (user-defined tools from config)
-- [ ] Tests: registry lists 18, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
-- [ ] Commit to git
+- [x] SkillBase interface (see SKILLS_MANIFEST.md for full contract)
+- [x] BaseSkill with default implementations
+- [x] SkillManager: LoadSkill, UnloadSkill, ListLoadedSkills, HasSkill, GetSkill
+- [x] SkillRegistry: RegisterSkill, GetSkillFactory, ListSkills
+- [x] All 18 built-in skills (see SKILLS_MANIFEST.md for exact specifications):
+  - [x] datetime (get_current_time, get_current_date)
+  - [x] math (calculate — safe evaluator, no eval)
+  - [x] joke (tell_joke)
+  - [x] weather_api (get_weather — HTTP to WeatherAPI.com)
+  - [x] web_search (web_search — HTTP to Google CSE)
+  - [x] wikipedia_search (search_wiki — HTTP to Wikipedia API)
+  - [x] google_maps (lookup_address, compute_route)
+  - [x] spider (scrape_url — HTTP fetch + HTML strip)
+  - [x] datasphere (search_datasphere — HTTP to SignalWire DataSphere)
+  - [x] datasphere_serverless (DataMap-based DataSphere)
+  - [x] swml_transfer (transfer_call — pattern matching)
+  - [x] play_background_file (play/stop background audio)
+  - [x] api_ninjas_trivia (get_trivia)
+  - [x] native_vector_search (search_knowledge — network mode only)
+  - [x] info_gatherer (start_questions + submit_answer — stateful)
+  - [x] claude_skills (SKILL.md file loading)
+  - [x] mcp_gateway (MCP server bridge)
+  - [x] custom_skills (user-defined tools from config)
+- [x] Tests: registry lists 18, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
+- [x] Commit to git
 
 ## Phase 5: Prefab Agents
 - [ ] InfoGathererAgent (questions → start_questions + submit_answer tools)
