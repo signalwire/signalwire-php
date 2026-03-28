@@ -201,50 +201,50 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 Documentation and examples prove the implementation is complete and usable. The requirement is **100% of the Python SDK's docs and examples** (except search-related). If Python has it, the port has it.
 
 ### Top-level docs/ (copy ALL from Python SDK except search/bedrock/comparison docs)
-- [ ] architecture.md, agent_guide.md, api_reference.md
-- [ ] swaig_reference.md, datamap_guide.md, contexts_guide.md
-- [ ] skills_system.md, skills_parameter_schema.md, third_party_skills.md
-- [ ] security.md, configuration.md, llm_parameters.md, sdk_features.md
-- [ ] cli_guide.md, swml_service_guide.md, web_service.md
+- [x] architecture.md, agent_guide.md, api_reference.md
+- [x] swaig_reference.md, datamap_guide.md, contexts_guide.md
+- [x] skills_system.md, skills_parameter_schema.md, third_party_skills.md
+- [x] security.md, configuration.md, llm_parameters.md, sdk_features.md
+- [x] cli_guide.md, swml_service_guide.md
 
 ### Top-level relay/ directory (REQUIRED)
-- [ ] relay/README.md (API overview, quick start, code examples in target language)
-- [ ] relay/RELAY_IMPLEMENTATION_GUIDE.md (copy from porting-sdk)
-- [ ] relay/docs/ (getting-started, call-methods, events, messaging, client-reference)
-- [ ] relay/examples/relay_answer_and_welcome.* (proves: answer, play TTS, hangup)
-- [ ] relay/examples/relay_dial_and_play.* (proves: outbound dial, play, hangup)
-- [ ] relay/examples/relay_ivr_connect.* (proves: collect DTMF, connect to department)
+- [x] relay/README.md (API overview, quick start, code examples in target language)
+- [x] relay/RELAY_IMPLEMENTATION_GUIDE.md (copy from porting-sdk)
+- [x] relay/docs/ (getting-started, call-methods, events, messaging, client-reference)
+- [x] relay/examples/relay_answer_and_welcome.php
+- [x] relay/examples/relay_dial_and_play.php
+- [x] relay/examples/relay_ivr_connect.php
 
 ### Top-level rest/ directory (REQUIRED)
-- [ ] rest/README.md (API overview, namespace examples in target language)
-- [ ] rest/docs/ (getting-started, namespaces, calling, fabric, compat, client-reference)
-- [ ] rest/examples/rest_10dlc_registration.* (proves: registry namespace)
-- [ ] rest/examples/rest_calling_ivr_and_ai.* (proves: calling namespace)
-- [ ] rest/examples/rest_calling_play_and_record.* (proves: calling play/record)
-- [ ] rest/examples/rest_compat_laml.* (proves: compat namespace)
-- [ ] rest/examples/rest_datasphere_search.* (proves: datasphere namespace)
-- [ ] rest/examples/rest_fabric_conferences_and_routing.* (proves: fabric sub-resources)
-- [ ] rest/examples/rest_fabric_subscribers_and_sip.* (proves: fabric SIP)
-- [ ] rest/examples/rest_fabric_swml_and_callflows.* (proves: fabric SWML)
-- [ ] rest/examples/rest_manage_resources.* (proves: CRUD operations)
-- [ ] rest/examples/rest_phone_number_management.* (proves: phone numbers)
-- [ ] rest/examples/rest_queues_mfa_and_recordings.* (proves: queues, MFA, recordings)
-- [ ] rest/examples/rest_video_rooms.* (proves: video namespace)
+- [x] rest/README.md (API overview, namespace examples in target language)
+- [x] rest/docs/ (getting-started, namespaces, calling, fabric, compat, client-reference)
+- [x] rest/examples/rest_10dlc_registration.php
+- [x] rest/examples/rest_calling_ivr_and_ai.php
+- [x] rest/examples/rest_calling_play_and_record.php
+- [x] rest/examples/rest_compat_laml.php
+- [x] rest/examples/rest_datasphere_search.php
+- [x] rest/examples/rest_fabric_conferences_and_routing.php
+- [x] rest/examples/rest_fabric_subscribers_and_sip.php
+- [x] rest/examples/rest_fabric_swml_and_callflows.php
+- [x] rest/examples/rest_manage_resources.php
+- [x] rest/examples/rest_phone_number_management.php
+- [x] rest/examples/rest_queues_mfa_and_recordings.php
+- [x] rest/examples/rest_video_rooms.php
 
 ### Agent examples/ directory (12 minimum — each proves a feature)
-- [ ] examples/README.md (index with descriptions)
-- [ ] simple_agent.* (proves: AgentBase, prompt, tools, hints, language, run)
-- [ ] simple_dynamic_agent.* (proves: DynamicConfigCallback, per-request customization)
-- [ ] multi_agent_server.* (proves: AgentServer, multiple agents, route dispatch)
-- [ ] contexts_demo.* (proves: DefineContexts, steps, criteria, navigation, fillers)
-- [ ] datamap_demo.* (proves: DataMap webhook + expression tools)
-- [ ] skills_demo.* (proves: AddSkill one-liner, skill registry)
-- [ ] session_state.* (proves: global data, post-prompt, OnSummary callback)
-- [ ] call_flow.* (proves: pre/post answer verbs, debug events, FunctionResult actions)
-- [ ] relay_demo.* (proves: RelayClient, OnCall, answer/play/hangup)
-- [ ] rest_demo.* (proves: SignalWireClient, namespace usage)
-- [ ] prefab_info_gatherer.* (proves: InfoGathererAgent prefab)
-- [ ] prefab_survey.* (proves: SurveyAgent prefab)
+- [x] examples/README.md (index with descriptions)
+- [x] simple_agent.php
+- [x] simple_dynamic_agent.php
+- [x] multi_agent_server.php
+- [x] contexts_demo.php
+- [x] datamap_demo.php
+- [x] skills_demo.php
+- [x] session_state.php
+- [x] call_flow.php
+- [x] relay_demo.php
+- [x] rest_demo.php
+- [x] prefab_info_gatherer.php
+- [x] prefab_survey.php
 
 ### Commit to git
 
