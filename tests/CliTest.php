@@ -292,7 +292,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        exec("/home/devuser/php/bin/php {$path} --help 2>&1", $output, $exitCode);
+        exec(PHP_BINARY . " {$path} --help 2>&1", $output, $exitCode);
 
         $this->assertSame(0, $exitCode);
         $outputStr = implode("\n", $output);
@@ -312,7 +312,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        exec("/home/devuser/php/bin/php {$path} 2>&1", $output, $exitCode);
+        exec(PHP_BINARY . " {$path} 2>&1", $output, $exitCode);
 
         $this->assertSame(1, $exitCode);
     }
@@ -326,7 +326,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        exec("/home/devuser/php/bin/php {$path} --url http://localhost:3000/ 2>&1", $output, $exitCode);
+        exec(PHP_BINARY . " {$path} --url http://localhost:3000/ 2>&1", $output, $exitCode);
 
         $this->assertSame(1, $exitCode);
         $outputStr = implode("\n", $output);
@@ -342,7 +342,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        exec("/home/devuser/php/bin/php {$path} --bogus 2>&1", $output, $exitCode);
+        exec(PHP_BINARY . " {$path} --bogus 2>&1", $output, $exitCode);
 
         $this->assertSame(1, $exitCode);
         $outputStr = implode("\n", $output);
