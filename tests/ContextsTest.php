@@ -904,7 +904,7 @@ class ContextsTest extends TestCase
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
         $this->assertStringContainsString("unknown_step", $errors[0]);
-        $this->assertStringContainsString("does not exist", $errors[0]);
+        $this->assertStringContainsString("is not a step", $errors[0]);
     }
 
     // ── ContextBuilder toArray ───────────────────────────────────────────

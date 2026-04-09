@@ -284,7 +284,59 @@ class AgentBase extends Service
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * Define a tool with a callable handler.
+     * Register a SWAIG tool (function) that the AI can invoke during a
+     * call.
+     *
+     * ## How this becomes a tool the model sees
+     *
+     * A SWAIG function is **exactly the same concept** as a "tool" in
+     * native OpenAI / Anthropic tool calling. On every LLM turn, the
+     * SDK renders each registered SWAIG function into the OpenAI tool
+     * schema:
+     *
+     *     {
+     *       "type": "function",
+     *       "function": {
+     *         "name":        "your_name_here",
+     *         "description": "your description text",
+     *         "parameters":  { ... your JSON schema ... }
+     *       }
+     *     }
+     *
+     * That schema is sent to the model as part of the same API call
+     * that produces the next assistant message. The model reads:
+     *
+     *   - the function `description` to decide WHEN to call this tool
+     *   - each parameter `description` (inside `parameters`) to decide
+     *     HOW to fill in that argument from the user's utterance
+     *
+     * This means **descriptions are prompt engineering**, not
+     * developer comments. A vague description is the #1 cause of "the
+     * model has the right tool but doesn't call it" failures.
+     *
+     * ## Bad vs good descriptions
+     *
+     *   BAD : 'description' => 'Lookup function'
+     *   GOOD: 'description' => 'Look up a customer\'s account details '
+     *                        . 'by account number. Use this BEFORE '
+     *                        . 'quoting any account-specific info '
+     *                        . '(balance, plan, status). Do not use '
+     *                        . 'for general product questions.'
+     *
+     *   BAD : 'parameters' => ['id' => ['type' => 'string',
+     *                                   'description' => 'the id']]
+     *   GOOD: 'parameters' => ['account_number' => ['type' => 'string',
+     *             'description' => 'The customer\'s 8-digit account '
+     *                            . 'number, no dashes or spaces. Ask '
+     *                            . 'the user if they don\'t provide it.']]
+     *
+     * ## Tool count matters
+     *
+     * LLM tool selection accuracy degrades past ~7-8
+     * simultaneously-active tools per call. Use
+     * \SignalWire\Contexts\Step::setFunctions() to partition tools
+     * across steps so only the relevant subset is active at any
+     * moment.
      */
     public function defineTool(
         string $name,
@@ -362,8 +414,29 @@ class AgentBase extends Service
         if ($result instanceof FunctionResult) {
             return $result;
         }
+        if (is_array($result)) {
+            // Wrap a plain array (dict) into a FunctionResult. If the
+            // caller already set a 'response' key, use it directly.
+            if (isset($result['response']) && is_string($result['response'])) {
+                return new FunctionResult($result['response']);
+            }
+            return new FunctionResult((string) json_encode($result));
+        }
 
-        return null;
+        // Neither a FunctionResult nor an array. Warn and fall back to
+        // wrapping the stringified value, matching Python's web_mixin
+        // / serverless_mixin / tool_mixin behavior.
+        $type = is_object($result) ? get_class($result) : gettype($result);
+        $this->logger->warn(
+            "unexpected_function_result_type: function=\"{$name}\" "
+            . "result_type=\"{$type}\". SWAIG function returned a "
+            . "value that is neither a FunctionResult nor an array; "
+            . "falling back to wrapping the stringified value. The AI "
+            . "will see the stringified value as its tool response. "
+            . "Return a \\SignalWire\\SWAIG\\FunctionResult object or "
+            . "an array with at least a 'response' key."
+        );
+        return new FunctionResult((string) $result);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -455,15 +528,114 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * The complete set of internal SWAIG function names that accept
+     * fillers, matching the SWAIGInternalFiller schema definition.
+     *
+     * Any name outside this set is silently ignored by the runtime —
+     * setInternalFillers() and addInternalFiller() warn if you pass
+     * an unknown name.
+     *
+     * Notable absences: change_step, gather_submit, and arbitrary
+     * user-defined SWAIG function names are NOT supported.
+     */
+    public const SUPPORTED_INTERNAL_FILLER_NAMES = [
+        'hangup',                   // AI is hanging up the call
+        'check_time',               // AI is checking the time
+        'wait_for_user',            // AI is waiting for user input
+        'wait_seconds',             // deliberate pause / wait period
+        'adjust_response_latency',  // AI is adjusting response timing
+        'next_step',                // transitioning between steps in prompt.contexts
+        'change_context',           // switching between contexts in prompt.contexts
+        'get_visual_input',         // processing visual input (enable_vision)
+        'get_ideal_strategy',       // thinking (enable_thinking)
+    ];
+
+    /**
+     * Set internal fillers for native SWAIG functions.
+     *
+     * Internal fillers are short phrases the AI agent speaks (via
+     * TTS) while an internal/native function is running, so the
+     * caller doesn't hear dead air during transitions or background
+     * work.
+     *
+     * Supported function names (match the SWAIGInternalFiller
+     * schema): hangup, check_time, wait_for_user, wait_seconds,
+     * adjust_response_latency, next_step, change_context,
+     * get_visual_input, get_ideal_strategy. See
+     * self::SUPPORTED_INTERNAL_FILLER_NAMES.
+     *
+     * Notably NOT supported: change_step, gather_submit, or arbitrary
+     * user-defined SWAIG function names. The runtime only honors
+     * fillers for the names listed above; everything else is
+     * silently ignored at the SWML level. This method warns at
+     * registration time if you pass an unknown name so you catch the
+     * typo early.
+     *
+     * Expected format: ['function_name' => ['language_code' => ['phrase', ...]]]
+     */
     public function setInternalFillers(array $fillers): self
     {
+        $unknown = array_values(array_diff(
+            array_keys($fillers),
+            self::SUPPORTED_INTERNAL_FILLER_NAMES
+        ));
+        if (!empty($unknown)) {
+            sort($unknown);
+            $unknownStr = "['" . implode("', '", $unknown) . "']";
+            $supported = self::SUPPORTED_INTERNAL_FILLER_NAMES;
+            sort($supported);
+            $supportedStr = "['" . implode("', '", $supported) . "']";
+            $this->logger->warn(
+                "unknown_internal_filler_names: {$unknownStr}. "
+                . "setInternalFillers received names that the SWML schema "
+                . "does not recognize. Those entries will be ignored by "
+                . "the runtime. Supported names: {$supportedStr}."
+            );
+        }
         $this->internalFillers = $fillers;
         return $this;
     }
 
-    public function addInternalFiller(string $filler): self
+    /**
+     * Add a single internal filler entry.
+     *
+     * Two calling conventions are supported for backward
+     * compatibility:
+     *
+     *   $agent->addInternalFiller('plain text')  // legacy
+     *   $agent->addInternalFiller($functionName, $languageCode, $fillers)
+     *
+     * See setInternalFillers() for the complete list of supported
+     * function names and what fillers do. Names outside the supported
+     * set log a warning.
+     */
+    public function addInternalFiller(string $filler_or_function, ?string $languageCode = null, ?array $fillers = null): self
     {
-        $this->internalFillers[] = $filler;
+        if ($languageCode === null || $fillers === null) {
+            // Legacy: single string argument.
+            $this->internalFillers[] = $filler_or_function;
+            return $this;
+        }
+
+        $functionName = $filler_or_function;
+        if (!in_array($functionName, self::SUPPORTED_INTERNAL_FILLER_NAMES, true)) {
+            $supported = self::SUPPORTED_INTERNAL_FILLER_NAMES;
+            sort($supported);
+            $supportedStr = "['" . implode("', '", $supported) . "']";
+            $this->logger->warn(
+                "unknown_internal_filler_name: '{$functionName}'. "
+                . "addInternalFiller received a function name the SWML "
+                . "schema does not recognize. The entry will be stored "
+                . "but the runtime will not play these fillers. "
+                . "Supported names: {$supportedStr}."
+            );
+        }
+        if (!isset($this->internalFillers[$functionName])
+            || !is_array($this->internalFillers[$functionName])) {
+            $this->internalFillers[$functionName] = [];
+        }
+        $this->internalFillers[$functionName][$languageCode] = $fillers;
         return $this;
     }
 
@@ -551,13 +723,32 @@ class AgentBase extends Service
 
     /**
      * Return the ContextBuilder, creating it lazily on first access.
+     *
+     * The builder is attached to this agent so validate() can check
+     * user-defined tool names against reserved native tool names
+     * (next_step, change_context, gather_submit).
      */
     public function defineContexts(): ContextBuilder
     {
         if ($this->contextBuilder === null) {
             $this->contextBuilder = new ContextBuilder();
+            $this->contextBuilder->attachToolNameSupplier(function (): array {
+                return $this->listToolNames();
+            });
         }
         return $this->contextBuilder;
+    }
+
+    /**
+     * Return the names of every registered SWAIG tool in insertion
+     * order. Used by ContextBuilder::validate() to detect collisions
+     * with reserved native tool names.
+     *
+     * @return string[]
+     */
+    public function listToolNames(): array
+    {
+        return $this->toolOrder;
     }
 
     /**
