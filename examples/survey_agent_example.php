@@ -49,16 +49,16 @@ $questions = [
 ];
 
 $agent = new SurveyAgent(
-    surveyName:   'Product Feedback Survey',
+    name:         'product_survey',
     questions:    $questions,
+    route:        '/product_survey',
+    surveyName:   'Product Feedback Survey',
     introduction: 'Thank you for participating in our product survey! '
         . 'Your feedback helps us improve our products and services. '
         . 'This survey should take about 2-3 minutes to complete.',
     conclusion:   'Thank you for completing our survey! Your feedback is extremely valuable.',
     brandName:    'SampleTech',
     maxRetries:   2,
-    name:         'product_survey',
-    route:        '/product_survey',
 );
 
 $agent->setParams([

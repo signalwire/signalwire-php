@@ -34,12 +34,12 @@ class AgentServerTest extends TestCase
 
     private function makeAgent(string $name, string $route = '/'): AgentBase
     {
-        return new AgentBase([
-            'name'                => $name,
-            'route'               => $route,
-            'basic_auth_user'     => 'testuser',
-            'basic_auth_password' => 'testpass',
-        ]);
+        return new AgentBase(
+            name: $name,
+            route: $route,
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
     }
 
     private function authHeader(string $user = 'testuser', string $pass = 'testpass'): array
@@ -61,7 +61,7 @@ class AgentServerTest extends TestCase
 
     public function testServerCustomOptions(): void
     {
-        $server = new AgentServer(['host' => '127.0.0.1', 'port' => 8080]);
+        $server = new AgentServer(host: '127.0.0.1', port: 8080);
         $this->assertSame('127.0.0.1', $server->getHost());
         $this->assertSame(8080, $server->getPort());
     }

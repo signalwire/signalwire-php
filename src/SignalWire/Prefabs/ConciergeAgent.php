@@ -29,10 +29,27 @@ class ConciergeAgent extends AgentBase
      * @param string $name Agent name
      * @param array $venueInfo Venue information: venue_name (required), services, amenities,
      *                         hours_of_operation, special_instructions, welcome_message
-     * @param array $options Additional AgentBase options
+     * @param string $route
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $basicAuthUser
+     * @param string|null $basicAuthPassword
+     * @param bool $autoAnswer
+     * @param bool $recordCall
+     * @param bool $usePom
      */
-    public function __construct(string $name, array $venueInfo, array $options = [])
-    {
+    public function __construct(
+        string $name,
+        array $venueInfo,
+        string $route = '/concierge',
+        ?string $host = null,
+        ?int $port = null,
+        ?string $basicAuthUser = null,
+        ?string $basicAuthPassword = null,
+        bool $autoAnswer = true,
+        bool $recordCall = false,
+        bool $usePom = true,
+    ) {
         $this->venueName           = $venueInfo['venue_name'];
         $this->services            = $venueInfo['services'] ?? [];
         $this->amenities           = $venueInfo['amenities'] ?? [];
@@ -40,10 +57,19 @@ class ConciergeAgent extends AgentBase
         $this->specialInstructions = $venueInfo['special_instructions'] ?? [];
         $this->welcomeMessage      = $venueInfo['welcome_message'] ?? null;
 
-        $options['name']  = $name !== '' ? $name : 'concierge';
-        $options['route'] = $options['route'] ?? '/concierge';
+        $name = $name !== '' ? $name : 'concierge';
 
-        parent::__construct($options);
+        parent::__construct(
+            name: $name,
+            route: $route,
+            host: $host,
+            port: $port,
+            basicAuthUser: $basicAuthUser,
+            basicAuthPassword: $basicAuthPassword,
+            autoAnswer: $autoAnswer,
+            recordCall: $recordCall,
+            usePom: $usePom,
+        );
 
         $this->usePom = true;
 

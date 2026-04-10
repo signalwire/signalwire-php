@@ -18,11 +18,10 @@ $departments = [
 ];
 
 $agent = new ReceptionistAgent(
-    departments: $departments,
     name:        'acme-receptionist',
+    departments: $departments,
     route:       '/reception',
     greeting:    'Hello, thank you for calling ACME Corporation. How may I direct your call today?',
-    voice:       'inworld.Mark',
 );
 
 $agent->promptAddSection(
