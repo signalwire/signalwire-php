@@ -15,14 +15,40 @@ class InfoGathererAgent extends AgentBase
     /**
      * @param string $name Agent name
      * @param list<array{key_name: string, question_text: string, confirm?: bool}> $questions
-     * @param array $options Additional AgentBase options
+     * @param string $route
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $basicAuthUser
+     * @param string|null $basicAuthPassword
+     * @param bool $autoAnswer
+     * @param bool $recordCall
+     * @param bool $usePom
      */
-    public function __construct(string $name, array $questions, array $options = [])
-    {
-        $options['name']  = $name !== '' ? $name : 'info_gatherer';
-        $options['route'] = $options['route'] ?? '/info_gatherer';
+    public function __construct(
+        string $name,
+        array $questions,
+        string $route = '/info_gatherer',
+        ?string $host = null,
+        ?int $port = null,
+        ?string $basicAuthUser = null,
+        ?string $basicAuthPassword = null,
+        bool $autoAnswer = true,
+        bool $recordCall = false,
+        bool $usePom = true,
+    ) {
+        $name = $name !== '' ? $name : 'info_gatherer';
 
-        parent::__construct($options);
+        parent::__construct(
+            name: $name,
+            route: $route,
+            host: $host,
+            port: $port,
+            basicAuthUser: $basicAuthUser,
+            basicAuthPassword: $basicAuthPassword,
+            autoAnswer: $autoAnswer,
+            recordCall: $recordCall,
+            usePom: $usePom,
+        );
 
         $this->questions = $questions;
         $this->usePom    = true;

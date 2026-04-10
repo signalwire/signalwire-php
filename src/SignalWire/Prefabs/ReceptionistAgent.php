@@ -17,16 +17,44 @@ class ReceptionistAgent extends AgentBase
     /**
      * @param string $name Agent name
      * @param list<array{name: string, description: string, number?: string, transfer_type?: string, swml_url?: string}> $departments
-     * @param array $options Additional options (greeting, plus AgentBase options)
+     * @param string $route
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $basicAuthUser
+     * @param string|null $basicAuthPassword
+     * @param bool $autoAnswer
+     * @param bool $recordCall
+     * @param bool $usePom
+     * @param string|null $greeting
      */
-    public function __construct(string $name, array $departments, array $options = [])
-    {
-        $this->greeting = $options['greeting'] ?? 'Thank you for calling. How can I help you today?';
+    public function __construct(
+        string $name,
+        array $departments,
+        string $route = '/receptionist',
+        ?string $host = null,
+        ?int $port = null,
+        ?string $basicAuthUser = null,
+        ?string $basicAuthPassword = null,
+        bool $autoAnswer = true,
+        bool $recordCall = false,
+        bool $usePom = true,
+        ?string $greeting = null,
+    ) {
+        $this->greeting = $greeting ?? 'Thank you for calling. How can I help you today?';
 
-        $options['name']  = $name !== '' ? $name : 'receptionist';
-        $options['route'] = $options['route'] ?? '/receptionist';
+        $name = $name !== '' ? $name : 'receptionist';
 
-        parent::__construct($options);
+        parent::__construct(
+            name: $name,
+            route: $route,
+            host: $host,
+            port: $port,
+            basicAuthUser: $basicAuthUser,
+            basicAuthPassword: $basicAuthPassword,
+            autoAnswer: $autoAnswer,
+            recordCall: $recordCall,
+            usePom: $usePom,
+        );
 
         $this->departments = $departments;
         $this->usePom      = true;

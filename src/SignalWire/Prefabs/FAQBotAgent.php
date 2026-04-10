@@ -18,18 +18,48 @@ class FAQBotAgent extends AgentBase
     /**
      * @param string $name Agent name
      * @param list<array{question: string, answer: string}> $faqs Question/answer pairs
-     * @param array $options Additional options (suggest_related, persona, plus AgentBase options)
+     * @param string $route
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $basicAuthUser
+     * @param string|null $basicAuthPassword
+     * @param bool $autoAnswer
+     * @param bool $recordCall
+     * @param bool $usePom
+     * @param string|null $persona
+     * @param bool $suggestRelated
      */
-    public function __construct(string $name, array $faqs, array $options = [])
-    {
-        $this->suggestRelated = (bool) ($options['suggest_related'] ?? true);
-        $this->persona        = $options['persona']
+    public function __construct(
+        string $name,
+        array $faqs,
+        string $route = '/faq',
+        ?string $host = null,
+        ?int $port = null,
+        ?string $basicAuthUser = null,
+        ?string $basicAuthPassword = null,
+        bool $autoAnswer = true,
+        bool $recordCall = false,
+        bool $usePom = true,
+        ?string $persona = null,
+        bool $suggestRelated = true,
+    ) {
+        $this->suggestRelated = $suggestRelated;
+        $this->persona        = $persona
             ?? 'You are a helpful FAQ bot that provides accurate answers to common questions.';
 
-        $options['name']  = $name !== '' ? $name : 'faq_bot';
-        $options['route'] = $options['route'] ?? '/faq';
+        $name = $name !== '' ? $name : 'faq_bot';
 
-        parent::__construct($options);
+        parent::__construct(
+            name: $name,
+            route: $route,
+            host: $host,
+            port: $port,
+            basicAuthUser: $basicAuthUser,
+            basicAuthPassword: $basicAuthPassword,
+            autoAnswer: $autoAnswer,
+            recordCall: $recordCall,
+            usePom: $usePom,
+        );
 
         $this->faqs  = $faqs;
         $this->usePom = true;
