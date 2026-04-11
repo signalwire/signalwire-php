@@ -506,6 +506,7 @@ class Context
 
     private ?array $validContexts = null;
     private ?array $validSteps = null;
+    private ?string $initialStep = null;
 
     // Context entry parameters
     private ?string $postPrompt = null;
@@ -686,6 +687,25 @@ class Context
 
     // ── Config setters ──────────────────────────────────────────────────
 
+    /**
+     * Set which step the context starts on when entered.
+     *
+     * By default, a context starts on its first step (index 0). Use
+     * this to skip a preamble step on re-entry via change_context.
+     *
+     * @param string $stepName name of the step to start on.
+     */
+    public function setInitialStep(string $stepName): self
+    {
+        $this->initialStep = $stepName;
+        return $this;
+    }
+
+    public function getInitialStep(): ?string
+    {
+        return $this->initialStep;
+    }
+
     public function setValidContexts(array $contexts): self
     {
         $this->validContexts = $contexts;
@@ -854,6 +874,9 @@ class Context
         if ($this->validSteps !== null) {
             $map['valid_steps'] = $this->validSteps;
         }
+        if ($this->initialStep !== null) {
+            $map['initial_step'] = $this->initialStep;
+        }
         if ($this->postPrompt !== null) {
             $map['post_prompt'] = $this->postPrompt;
         }
@@ -960,6 +983,18 @@ class ContextBuilder
     }
 
     /**
+     * Remove all contexts, returning the builder to its initial state.
+     * Use this in a dynamic config callback when you need to rebuild
+     * contexts from scratch for a specific request.
+     */
+    public function reset(): self
+    {
+        $this->contexts = [];
+        $this->contextOrder = [];
+        return $this;
+    }
+
+    /**
      * Add a new context and return it for further configuration.
      */
     public function addContext(string $name): Context
@@ -1019,6 +1054,18 @@ class ContextBuilder
         foreach ($this->contexts as $contextName => $context) {
             if (empty($context->getSteps())) {
                 $errors[] = "Context '{$contextName}' must have at least one step";
+            }
+        }
+
+        // Validate initial_step references a real step in the context
+        foreach ($this->contexts as $contextName => $context) {
+            $initialStep = $context->getInitialStep();
+            if ($initialStep !== null && !isset($context->getSteps()[$initialStep])) {
+                $available = array_keys($context->getSteps());
+                sort($available);
+                $errors[] = "Context '{$contextName}' has initial_step='{$initialStep}'"
+                    . " but that step does not exist. Available steps: ["
+                    . implode(', ', array_map(fn($s) => "'{$s}'", $available)) . "]";
             }
         }
 

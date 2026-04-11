@@ -759,6 +759,20 @@ class AgentBase extends Service
         return $this->defineContexts();
     }
 
+    /**
+     * Remove all contexts, returning the agent to a no-contexts state.
+     * This is a convenience wrapper around defineContexts()->reset().
+     * Use it in a dynamic config callback when you need to rebuild
+     * contexts from scratch for a specific request.
+     */
+    public function resetContexts(): self
+    {
+        if ($this->contextBuilder !== null) {
+            $this->contextBuilder->reset();
+        }
+        return $this;
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  Skill Methods
     // ══════════════════════════════════════════════════════════════════════
