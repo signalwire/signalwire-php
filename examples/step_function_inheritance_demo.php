@@ -43,10 +43,10 @@ require 'vendor/autoload.php';
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
-$agent = new AgentBase([
-    'name'  => 'step_function_inheritance_demo',
-    'route' => '/',
-]);
+$agent = new AgentBase(
+    name:  'step_function_inheritance_demo',
+    route: '/'
+);
 
 // Register three SWAIG tools so we have something to whitelist.
 // In a real agent these would call out to webhooks; here they're

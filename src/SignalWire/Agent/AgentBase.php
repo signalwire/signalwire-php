@@ -98,27 +98,44 @@ class AgentBase extends Service
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * @param array{
-     *   name: string,
-     *   route?: string,
-     *   host?: string,
-     *   port?: int,
-     *   basic_auth_user?: string,
-     *   basic_auth_password?: string,
-     * } $options
+     * @param string $name
+     * @param string $route
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $basicAuthUser
+     * @param string|null $basicAuthPassword
+     * @param bool $autoAnswer
+     * @param bool $recordCall
+     * @param bool $usePom
      */
-    public function __construct(array $options)
-    {
-        parent::__construct($options);
+    public function __construct(
+        string $name,
+        string $route = '/',
+        ?string $host = null,
+        ?int $port = null,
+        ?string $basicAuthUser = null,
+        ?string $basicAuthPassword = null,
+        bool $autoAnswer = true,
+        bool $recordCall = false,
+        bool $usePom = true,
+    ) {
+        parent::__construct(
+            name: $name,
+            route: $route,
+            host: $host,
+            port: $port,
+            basicAuthUser: $basicAuthUser,
+            basicAuthPassword: $basicAuthPassword
+        );
 
         // Call handling
-        $this->autoAnswer   = (bool) ($options['auto_answer'] ?? true);
-        $this->recordCall   = (bool) ($options['record_call'] ?? false);
+        $this->autoAnswer   = $autoAnswer;
+        $this->recordCall   = $recordCall;
         $this->recordFormat = 'wav';
         $this->recordStereo = false;
 
         // Prompt / POM
-        $this->usePom      = (bool) ($options['use_pom'] ?? true);
+        $this->usePom      = $usePom;
         $this->pomSections = [];
         $this->promptText  = '';
         $this->postPrompt  = '';

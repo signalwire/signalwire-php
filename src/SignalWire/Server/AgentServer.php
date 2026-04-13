@@ -49,11 +49,19 @@ class AgentServer
         'eot'   => 'application/vnd.ms-fontobject',
     ];
 
-    public function __construct(array $options = [])
-    {
-        $this->host     = $options['host'] ?? '0.0.0.0';
-        $this->port     = $options['port'] ?? (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 3000);
-        $this->logLevel = $options['log_level'] ?? 'info';
+    /**
+     * @param string|null $host
+     * @param int|null $port
+     * @param string $logLevel
+     */
+    public function __construct(
+        ?string $host = null,
+        ?int $port = null,
+        string $logLevel = 'info'
+    ) {
+        $this->host     = $host ?? '0.0.0.0';
+        $this->port     = $port ?? (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 3000);
+        $this->logLevel = $logLevel;
         $this->logger   = Logger::getLogger('agent_server');
     }
 
