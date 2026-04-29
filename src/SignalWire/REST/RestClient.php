@@ -50,7 +50,11 @@ class RestClient
     /**
      * @param string $projectId Project ID (falls back to SIGNALWIRE_PROJECT_ID env var).
      * @param string $token     API token  (falls back to SIGNALWIRE_API_TOKEN env var).
-     * @param string $space     Space host (falls back to SIGNALWIRE_SPACE env var).
+     * @param string $space     Space host or full base URL.
+     *                          - "mycompany.signalwire.com" → https://mycompany.signalwire.com
+     *                          - "https://example.com:8080" → used verbatim
+     *                          - "http://127.0.0.1:8080"   → used verbatim (test fixtures)
+     *                          Falls back to SIGNALWIRE_SPACE env var.
      */
     public function __construct(string $projectId = '', string $token = '', string $space = '')
     {
@@ -74,7 +78,12 @@ class RestClient
             );
         }
 
-        $this->baseUrl = 'https://' . $this->space;
+        // Accept a bare host ("space.signalwire.com") or a fully-qualified
+        // URL. The latter is used by tests and audit harnesses to point
+        // the client at a loopback fixture without forcing https://.
+        $this->baseUrl = preg_match('#^https?://#i', $this->space)
+            ? rtrim($this->space, '/')
+            : 'https://' . $this->space;
         $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl);
     }
 
