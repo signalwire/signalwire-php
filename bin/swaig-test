@@ -10,6 +10,7 @@ declare(strict_types=1);
  *   swaig-test --url http://user:pass@host:port/route --dump-swml
  *   swaig-test --url http://user:pass@host:port/route --list-tools
  *   swaig-test --url http://user:pass@host:port/route --exec tool_name --param key=value
+ *   swaig-test --file path/to/example.php --list-tools
  *
  * Copyright (c) 2025 SignalWire
  * Licensed under the MIT License.
@@ -22,6 +23,7 @@ $VERSION = '1.0.0';
 // ============================================================
 
 $url       = null;
+$file      = null;
 $dumpSwml  = false;
 $listTools = false;
 $execName  = null;
@@ -45,6 +47,16 @@ while ($i < $count) {
                 exit(1);
             }
             $url = $args[$i];
+            break;
+
+        case '--file':
+        case '--example':
+            $i++;
+            if ($i >= $count) {
+                fwrite(STDERR, "Error: {$arg} requires a path\n");
+                exit(1);
+            }
+            $file = $args[$i];
             break;
 
         case '--dump-swml':
@@ -102,14 +114,33 @@ if ($help) {
     usageExit(0);
 }
 
-if ($url === null) {
-    fwrite(STDERR, "Error: --url is required\n\n");
+if ($url !== null && $file !== null) {
+    fwrite(STDERR, "Error: --url and --file are mutually exclusive\n\n");
+    usageExit(1);
+}
+
+if ($url === null && $file === null) {
+    fwrite(STDERR, "Error: one of --url or --file is required\n\n");
     usageExit(1);
 }
 
 if (!$dumpSwml && !$listTools && $execName === null) {
     fwrite(STDERR, "Error: one of --dump-swml, --list-tools, or --exec NAME is required\n\n");
     usageExit(1);
+}
+
+// ============================================================
+//  File-Mode Dispatch (no HTTP — load example in-process)
+// ============================================================
+
+if ($file !== null) {
+    if ($dumpSwml || $execName !== null) {
+        fwrite(STDERR, "Error: --file currently supports --list-tools only (got "
+            . ($dumpSwml ? '--dump-swml' : '--exec') . ")\n");
+        exit(1);
+    }
+    doListToolsFromFile($file);
+    exit(0);
 }
 
 // ============================================================
@@ -229,6 +260,199 @@ function doListTools(): void
 
             echo "\n";
         }
+    }
+}
+
+/**
+ * Load a PHP example/script in-process and list its registered SWAIG tools by
+ * walking the SWML\Service runtime registry — no HTTP, no server.
+ *
+ * The script must guard its `serve()` / `run()` call with a "is this script
+ * being run directly?" check (see examples/SwmlServiceSwaigStandalone.php),
+ * otherwise requiring it would start a server. This function does NOT start
+ * any listener; it just loads the file, finds the most-recently-declared
+ * SWML\Service subclass instance (or builds one), and reflects on its
+ * private `$tools` array.
+ */
+function doListToolsFromFile(string $path): void
+{
+    global $raw;
+
+    if (!is_file($path)) {
+        fwrite(STDERR, "Error: file not found: {$path}\n");
+        exit(1);
+    }
+    $real = realpath($path);
+    if ($real === false) {
+        fwrite(STDERR, "Error: could not resolve path: {$path}\n");
+        exit(1);
+    }
+
+    // Make sure the autoloader is active. The script may also require it,
+    // but loading ourselves means we don't depend on the script doing it.
+    $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+    if (is_file($autoload)) {
+        require_once $autoload;
+    }
+
+    $beforeClasses = get_declared_classes();
+    $beforeFunctions = get_defined_functions()['user'];
+
+    // Snapshot $GLOBALS so we can find any Service instance the example
+    // assigned at top level (rare; most examples build inside a function).
+    $beforeGlobals = array_keys($GLOBALS);
+
+    // Require the example. Top-level `if (run-directly) { ... }` blocks
+    // suppress server start; defineTool() calls inside builder functions
+    // are skipped until we invoke the builder ourselves below.
+    try {
+        require_once $real;
+    } catch (\Throwable $e) {
+        fwrite(STDERR, "Error: failed to require {$path}: {$e->getMessage()}\n");
+        exit(1);
+    }
+
+    /** @var \SignalWire\SWML\Service|null $service */
+    $service = null;
+
+    // 1. Did `require_once` itself create a Service in globals? Unusual,
+    //    but cheap to check.
+    foreach (array_diff(array_keys($GLOBALS), $beforeGlobals) as $name) {
+        $val = $GLOBALS[$name] ?? null;
+        if ($val instanceof \SignalWire\SWML\Service) {
+            $service = $val;
+            break;
+        }
+    }
+
+    // 2. Otherwise look for a builder function the example declared and
+    //    invoke it. Examples in this repo follow the convention
+    //    `buildXxxService()`. We also accept any zero-arg user function
+    //    that returns a Service.
+    if ($service === null) {
+        $afterFunctions = get_defined_functions()['user'];
+        $newFunctions   = array_values(array_diff($afterFunctions, $beforeFunctions));
+        // Prefer obvious builder names first.
+        usort($newFunctions, function ($a, $b) {
+            $aHit = (int) (stripos($a, 'build') !== false);
+            $bHit = (int) (stripos($b, 'build') !== false);
+            return $bHit <=> $aHit;
+        });
+        foreach ($newFunctions as $fn) {
+            try {
+                $reflect = new \ReflectionFunction($fn);
+            } catch (\Throwable) {
+                continue;
+            }
+            // Skip anything that requires arguments without a default; we
+            // only call zero-arg-safe functions.
+            $needsArg = false;
+            foreach ($reflect->getParameters() as $p) {
+                if (!$p->isOptional()) {
+                    $needsArg = true;
+                    break;
+                }
+            }
+            if ($needsArg) {
+                continue;
+            }
+            try {
+                $candidate = $reflect->invoke();
+            } catch (\Throwable) {
+                continue;
+            }
+            if ($candidate instanceof \SignalWire\SWML\Service) {
+                $service = $candidate;
+                break;
+            }
+        }
+    }
+
+    // 3. Last resort — try to instantiate the most-recently-declared
+    //    SWML\Service subclass (other than Service / AgentBase themselves).
+    if ($service === null) {
+        $afterClasses = get_declared_classes();
+        $newClasses   = array_diff($afterClasses, $beforeClasses);
+        $candidates   = [];
+        foreach ($newClasses as $cls) {
+            if (!is_subclass_of($cls, \SignalWire\SWML\Service::class)) {
+                continue;
+            }
+            if ($cls === \SignalWire\Agent\AgentBase::class) {
+                continue;
+            }
+            $candidates[] = $cls;
+        }
+        // Most-recently-declared wins.
+        $candidates = array_reverse($candidates);
+        foreach ($candidates as $cls) {
+            try {
+                $service = new $cls();
+                break;
+            } catch (\Throwable) {
+                // Constructor needs args — skip this one.
+                continue;
+            }
+        }
+    }
+
+    if (!$service instanceof \SignalWire\SWML\Service) {
+        fwrite(STDERR, "Error: could not locate a SignalWire\\SWML\\Service "
+            . "instance in {$path}. The example must declare a build*Service() "
+            . "function returning a Service, or assign one to a global.\n");
+        exit(1);
+    }
+
+    // Walk the runtime tool registry via reflection. The property is
+    // `protected $tools` on SWML\Service.
+    try {
+        $rp = new \ReflectionProperty(\SignalWire\SWML\Service::class, 'tools');
+        $rp->setAccessible(true);
+        $tools = $rp->getValue($service);
+    } catch (\Throwable $e) {
+        fwrite(STDERR, "Error: could not read tool registry: {$e->getMessage()}\n");
+        exit(1);
+    }
+
+    if (!is_array($tools) || empty($tools)) {
+        echo "No SWAIG functions found.\n";
+        return;
+    }
+
+    if ($raw) {
+        foreach ($tools as $t) {
+            $name = $t['function'] ?? 'unnamed';
+            $desc = $t['purpose'] ?? $t['description'] ?? '';
+            echo "{$name}\t{$desc}\n";
+        }
+        return;
+    }
+
+    $count = count($tools);
+    echo "Found {$count} SWAIG function(s):\n\n";
+
+    foreach ($tools as $t) {
+        $name = $t['function'] ?? 'unnamed';
+        $desc = $t['purpose'] ?? $t['description'] ?? '(no description)';
+        printf("  %-30s %s\n", $name, $desc);
+
+        // Tool definitions on Service use 'argument' for the schema (with
+        // 'properties'). Some raw definitions may use 'parameters' instead.
+        $paramsSchema = $t['argument'] ?? $t['parameters'] ?? null;
+        if (is_array($paramsSchema) && isset($paramsSchema['properties']) && is_array($paramsSchema['properties'])) {
+            $props    = $paramsSchema['properties'];
+            $required = $paramsSchema['required'] ?? [];
+            $requiredMap = is_array($required) ? array_flip($required) : [];
+
+            ksort($props);
+            foreach ($props as $pname => $pdef) {
+                $ptype = is_array($pdef) ? ($pdef['type'] ?? 'any') : 'any';
+                $pdesc = is_array($pdef) ? ($pdef['description'] ?? '') : '';
+                $reqMarker = isset($requiredMap[$pname]) ? '*' : ' ';
+                printf("    %s %-20s %-10s %s\n", $reqMarker, $pname, "({$ptype})", $pdesc);
+            }
+        }
+        echo "\n";
     }
 }
 
@@ -476,13 +700,20 @@ function usageExit(int $code = 1): never
 swaig-test - CLI tool for testing SWAIG agent endpoints
 
 Usage:
-  swaig-test --url URL [OPTIONS]
+  swaig-test --url URL  [OPTIONS]
+  swaig-test --file PATH --list-tools
 
 Options:
   --url URL           Agent URL with embedded auth (http://user:pass@host:port/route)
-  --dump-swml         Fetch and display the SWML document
+  --file PATH         Load a PHP example in-process and read the runtime SWAIG
+                      tool registry. Mutually exclusive with --url. Use this for
+                      SWMLService-only examples that have no <ai> verb. The
+                      script must guard its serve()/run() call with a
+                      "is this script being run directly?" check.
+  --example PATH      Alias for --file.
+  --dump-swml         Fetch and display the SWML document (URL mode only)
   --list-tools        List available SWAIG functions
-  --exec NAME         Execute a SWAIG function by name
+  --exec NAME         Execute a SWAIG function by name (URL mode only)
   --param key=value   Parameter for --exec (repeatable)
   --raw               Output compact JSON (no pretty-printing)
   --verbose           Show request/response details on stderr
@@ -493,6 +724,7 @@ Examples:
   swaig-test --url http://user:pass@localhost:3000/ --list-tools
   swaig-test --url http://user:pass@localhost:3000/ --exec get_weather --param location=London
   swaig-test --url http://user:pass@localhost:3000/ --exec get_weather --param location=London --raw
+  swaig-test --file examples/SwmlServiceSwaigStandalone.php --list-tools
 
 USAGE;
 

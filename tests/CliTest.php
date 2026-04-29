@@ -348,4 +348,80 @@ class CliTest extends TestCase
         $outputStr = implode("\n", $output);
         $this->assertStringContainsString('Unknown option', $outputStr);
     }
+
+    // ==================================================================
+    // 20. swaig-test --file mode lists tools without HTTP
+    // ==================================================================
+
+    public function testFileModeListsToolsFromSwmlServiceExample(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $example = dirname(__DIR__) . '/examples/SwmlServiceSwaigStandalone.php';
+        $this->assertFileExists($example, 'SwmlServiceSwaigStandalone example must exist');
+
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --file ' . escapeshellarg($example)
+            . ' --list-tools 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = implode("\n", $output);
+        $this->assertSame(0, $exitCode, "swaig-test --file should exit 0; got:\n{$outputStr}");
+        $this->assertStringContainsString('lookup_competitor', $outputStr);
+        $this->assertStringContainsString('competitor', $outputStr);
+        // No HTTP should be involved — the registry must come from in-process load.
+        $this->assertStringNotContainsString('Failed to connect', $outputStr);
+    }
+
+    // ==================================================================
+    // 21. swaig-test --file mode also works for the ai_sidecar example
+    // ==================================================================
+
+    public function testFileModeListsToolsFromAiSidecarExample(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $example = dirname(__DIR__) . '/examples/SwmlServiceAiSidecar.php';
+        $this->assertFileExists($example, 'SwmlServiceAiSidecar example must exist');
+
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --file ' . escapeshellarg($example)
+            . ' --list-tools 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = implode("\n", $output);
+        $this->assertSame(0, $exitCode, "swaig-test --file should exit 0; got:\n{$outputStr}");
+        $this->assertStringContainsString('lookup_competitor', $outputStr);
+        $this->assertStringContainsString('competitor', $outputStr);
+    }
+
+    // ==================================================================
+    // 22. swaig-test rejects --url and --file together
+    // ==================================================================
+
+    public function testFileAndUrlAreMutuallyExclusive(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://localhost:3000/'
+            . ' --file foo.php --list-tools 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $this->assertSame(1, $exitCode);
+        $outputStr = implode("\n", $output);
+        $this->assertStringContainsString('mutually exclusive', $outputStr);
+    }
 }
