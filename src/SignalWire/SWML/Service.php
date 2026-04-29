@@ -237,6 +237,32 @@ class Service
     }
 
     /**
+     * Return the registered SWAIG tool definitions.
+     *
+     * Used by introspection (CLI --list-tools, the skills audit
+     * harness, and any test that needs to inspect what's been
+     * registered without going through a HTTP round trip).
+     *
+     * @return array<string, array> name => tool definition
+     */
+    public function getTools(): array
+    {
+        return $this->tools;
+    }
+
+    /**
+     * Return the names of registered tools in the order they were
+     * registered. Stable ordering matters for CLI output and for
+     * tests that rely on deterministic enumeration.
+     *
+     * @return list<string>
+     */
+    public function getToolNames(): array
+    {
+        return $this->toolOrder;
+    }
+
+    /**
      * Dispatch a function call to the registered handler.
      */
     public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
