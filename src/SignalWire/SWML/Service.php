@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\SWML;
 
 use SignalWire\Logging\Logger;
+use SignalWire\SWAIG\FunctionResult;
 
 class Service
 {
@@ -20,6 +21,17 @@ class Service
 
     /** @var array<string, callable> */
     protected array $routingCallbacks = [];
+
+    /**
+     * SWAIG tool registry — lifted from AgentBase so any Service (sidecar,
+     * non-agent verb host, etc.) can register and dispatch SWAIG functions.
+     *
+     * @var array<string, array>
+     */
+    protected array $tools = [];
+
+    /** @var list<string> */
+    protected array $toolOrder = [];
 
     /**
      * @param array{
@@ -165,6 +177,120 @@ class Service
     }
 
     // ------------------------------------------------------------------
+    // SWAIG tool registry (lifted from AgentBase)
+    // ------------------------------------------------------------------
+
+    /**
+     * Define a SWAIG function the AI can call.
+     *
+     * Tool descriptions and parameter descriptions are LLM-facing prompt
+     * engineering, not internal documentation. See PORTING_GUIDE for guidance.
+     */
+    public function defineTool(
+        string $name,
+        string $description,
+        array $parameters,
+        callable $handler,
+        bool $secure = false,
+    ): static {
+        $this->tools[$name] = [
+            'function' => $name,
+            'purpose' => $description,
+            'argument' => [
+                'type' => 'object',
+                'properties' => $parameters,
+            ],
+            '_handler' => $handler,
+            '_secure' => $secure,
+        ];
+        if (!in_array($name, $this->toolOrder, true)) {
+            $this->toolOrder[] = $name;
+        }
+        return $this;
+    }
+
+    /**
+     * Register a raw SWAIG function definition (e.g. DataMap tools).
+     */
+    public function registerSwaigFunction(array $funcDef): static
+    {
+        $name = $funcDef['function'] ?? '';
+        if ($name === '') {
+            return $this;
+        }
+        $this->tools[$name] = $funcDef;
+        if (!in_array($name, $this->toolOrder, true)) {
+            $this->toolOrder[] = $name;
+        }
+        return $this;
+    }
+
+    /**
+     * Register multiple tool definitions at once.
+     */
+    public function defineTools(array $toolDefs): static
+    {
+        foreach ($toolDefs as $def) {
+            $this->registerSwaigFunction($def);
+        }
+        return $this;
+    }
+
+    /**
+     * Dispatch a function call to the registered handler.
+     */
+    public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
+    {
+        if (!isset($this->tools[$name])) {
+            return null;
+        }
+        $tool = $this->tools[$name];
+        $handler = $tool['_handler'] ?? null;
+        if ($handler === null || !is_callable($handler)) {
+            return null;
+        }
+
+        try {
+            $result = $handler($args, $rawData);
+        } catch (\Throwable $e) {
+            return new FunctionResult("Error executing function '{$name}': {$e->getMessage()}");
+        }
+
+        if ($result instanceof FunctionResult) {
+            return $result;
+        }
+        if (is_array($result)) {
+            if (isset($result['response']) && is_string($result['response'])) {
+                return new FunctionResult($result['response']);
+            }
+            return new FunctionResult((string) json_encode($result));
+        }
+        $type = is_object($result) ? get_class($result) : gettype($result);
+        $this->logger->warn(
+            "unexpected_function_result_type: function=\"{$name}\" "
+            . "result_type=\"{$type}\". SWAIG function returned a "
+            . "value that is neither a FunctionResult nor an array; "
+            . "falling back to wrapping the stringified value. Return "
+            . "a \\SignalWire\\SWAIG\\FunctionResult object or an array "
+            . "with at least a 'response' key."
+        );
+        return new FunctionResult((string) $result);
+    }
+
+    /**
+     * Extension point: invoked between argument parsing and function dispatch.
+     * AgentBase may override to add session-token validation or ephemeral
+     * config. Returns [target, shortCircuit]: shortCircuit non-null replies
+     * directly without dispatch.
+     *
+     * @return array{0: object, 1: ?array}
+     */
+    protected function swaigPreDispatch(array $requestData, array $headers, string $functionName): array
+    {
+        return [$this, null];
+    }
+
+    // ------------------------------------------------------------------
     // Accessors
     // ------------------------------------------------------------------
 
@@ -275,7 +401,7 @@ class Service
             return $this->handleSwmlRequest($method, $requestData, $headers);
         }
         if ($subPath === '/swaig') {
-            return $this->handleSwaigRequest($requestData, $headers);
+            return $this->handleSwaigRequest($method, $requestData, $headers);
         }
         if ($subPath === '/post_prompt') {
             return $this->handlePostPrompt($requestData, $headers);
@@ -300,11 +426,50 @@ class Service
     }
 
     /**
-     * Handle SWAIG function dispatch. Override in AgentBase.
+     * Handle SWAIG function dispatch.
+     *
+     * GET: return the rendered SWML document (parallel to root /).
+     * POST: parse {function, argument, call_id}, validate, run pre-dispatch
+     * hook, call onFunctionCall, return the FunctionResult.
+     *
+     * Lifted from AgentBase so non-agent SWMLServices (e.g. ai_sidecar host)
+     * can serve /swaig without subclassing AgentBase.
      */
-    protected function handleSwaigRequest(?array $requestData, array $headers): array
+    protected function handleSwaigRequest(string $method, ?array $requestData, array $headers): array
     {
-        return $this->jsonResponse(200, []);
+        if (strtoupper($method) === 'GET') {
+            $swml = $this->renderSwml($requestData, $headers);
+            return $this->jsonResponse(200, $swml);
+        }
+
+        if ($requestData === null) {
+            return $this->jsonResponse(400, ['error' => 'Missing request body']);
+        }
+
+        $functionName = $requestData['function'] ?? '';
+        if ($functionName === '') {
+            return $this->jsonResponse(400, ['error' => 'Missing function name']);
+        }
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $functionName)) {
+            return $this->jsonResponse(400, ['error' => "Invalid function name format: '{$functionName}'"]);
+        }
+
+        $args = $requestData['argument']['parsed'][0]
+            ?? (is_array($requestData['arguments'] ?? null) ? $requestData['arguments'] : []);
+        if (!is_array($args)) {
+            $args = [];
+        }
+
+        [$target, $shortCircuit] = $this->swaigPreDispatch($requestData, $headers, $functionName);
+        if ($shortCircuit !== null) {
+            return $this->jsonResponse(200, $shortCircuit);
+        }
+
+        $result = $target->onFunctionCall($functionName, $args, $requestData);
+        if ($result === null) {
+            return $this->jsonResponse(404, ['error' => "Unknown function: {$functionName}"]);
+        }
+        return $this->jsonResponse(200, $result->toArray());
     }
 
     /**

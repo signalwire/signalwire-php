@@ -379,9 +379,13 @@ class SWMLServiceTest extends TestCase
 
     public function testSwaigEndpointWithAuth(): void
     {
+        // After the SWAIG lift, the endpoint validates the body. An empty
+        // body with no `function` name now returns 400. The test exists to
+        // prove the route is mounted under auth — 400 is the correct lifted
+        // behavior; the stub-200 the old test asserted was a no-op handler.
         $svc = $this->makeService();
         [$status,,] = $svc->handleRequest('POST', '/swaig', $this->authHeader(), '{}');
-        $this->assertSame(200, $status);
+        $this->assertSame(400, $status);
     }
 
     public function testPostPromptEndpointAuth(): void
@@ -416,9 +420,12 @@ class SWMLServiceTest extends TestCase
 
     public function testCustomRouteSwaig(): void
     {
+        // Lifted handler validates body — empty body returns 400 (missing
+        // function name). The point of the test is that /agent/swaig routes
+        // through the route prefix to handleSwaigRequest, which it does.
         $svc = $this->makeService(['route' => '/agent']);
         [$status,,] = $svc->handleRequest('POST', '/agent/swaig', $this->authHeader(), '{}');
-        $this->assertSame(200, $status);
+        $this->assertSame(400, $status);
     }
 
     public function testCustomRoutePostPrompt(): void

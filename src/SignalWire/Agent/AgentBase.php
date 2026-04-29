@@ -27,10 +27,8 @@ class AgentBase extends Service
     protected string $postPrompt;
 
     // ── Tools / SWAIG ───────────────────────────────────────────────────
-    /** @var array<string, array> */
-    protected array $tools;
-    /** @var list<string> */
-    protected array $toolOrder;
+    // $tools and $toolOrder are now declared on Service (lifted so non-agent
+    // SWMLService instances can host SWAIG functions). AgentBase inherits.
 
     // ── Hints ───────────────────────────────────────────────────────────
     /** @var list<string> */
@@ -123,9 +121,7 @@ class AgentBase extends Service
         $this->promptText  = '';
         $this->postPrompt  = '';
 
-        // Tools
-        $this->tools     = [];
-        $this->toolOrder = [];
+        // Tools — registry now initialised by Service (parent) property defaults
 
         // Hints
         $this->hints        = [];
@@ -279,165 +275,8 @@ class AgentBase extends Service
         return $this->promptText;
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    //  Tool Methods
-    // ══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Register a SWAIG tool (function) that the AI can invoke during a
-     * call.
-     *
-     * ## How this becomes a tool the model sees
-     *
-     * A SWAIG function is **exactly the same concept** as a "tool" in
-     * native OpenAI / Anthropic tool calling. On every LLM turn, the
-     * SDK renders each registered SWAIG function into the OpenAI tool
-     * schema:
-     *
-     *     {
-     *       "type": "function",
-     *       "function": {
-     *         "name":        "your_name_here",
-     *         "description": "your description text",
-     *         "parameters":  { ... your JSON schema ... }
-     *       }
-     *     }
-     *
-     * That schema is sent to the model as part of the same API call
-     * that produces the next assistant message. The model reads:
-     *
-     *   - the function `description` to decide WHEN to call this tool
-     *   - each parameter `description` (inside `parameters`) to decide
-     *     HOW to fill in that argument from the user's utterance
-     *
-     * This means **descriptions are prompt engineering**, not
-     * developer comments. A vague description is the #1 cause of "the
-     * model has the right tool but doesn't call it" failures.
-     *
-     * ## Bad vs good descriptions
-     *
-     *   BAD : 'description' => 'Lookup function'
-     *   GOOD: 'description' => 'Look up a customer\'s account details '
-     *                        . 'by account number. Use this BEFORE '
-     *                        . 'quoting any account-specific info '
-     *                        . '(balance, plan, status). Do not use '
-     *                        . 'for general product questions.'
-     *
-     *   BAD : 'parameters' => ['id' => ['type' => 'string',
-     *                                   'description' => 'the id']]
-     *   GOOD: 'parameters' => ['account_number' => ['type' => 'string',
-     *             'description' => 'The customer\'s 8-digit account '
-     *                            . 'number, no dashes or spaces. Ask '
-     *                            . 'the user if they don\'t provide it.']]
-     *
-     * ## Tool count matters
-     *
-     * LLM tool selection accuracy degrades past ~7-8
-     * simultaneously-active tools per call. Use
-     * \SignalWire\Contexts\Step::setFunctions() to partition tools
-     * across steps so only the relevant subset is active at any
-     * moment.
-     */
-    public function defineTool(
-        string $name,
-        string $description,
-        array $parameters,
-        callable $handler,
-        bool $secure = false,
-    ): self {
-        $this->tools[$name] = [
-            'function'  => $name,
-            'purpose'   => $description,
-            'argument'  => [
-                'type'       => 'object',
-                'properties' => $parameters,
-            ],
-            '_handler' => $handler,
-            '_secure'  => $secure,
-        ];
-
-        if (!in_array($name, $this->toolOrder, true)) {
-            $this->toolOrder[] = $name;
-        }
-
-        return $this;
-    }
-
-    /**
-     * Register a raw SWAIG function definition (e.g. DataMap tools).
-     */
-    public function registerSwaigFunction(array $funcDef): self
-    {
-        $name = $funcDef['function'] ?? '';
-        if ($name === '') {
-            return $this;
-        }
-
-        $this->tools[$name] = $funcDef;
-
-        if (!in_array($name, $this->toolOrder, true)) {
-            $this->toolOrder[] = $name;
-        }
-
-        return $this;
-    }
-
-    /**
-     * Register multiple tool definitions at once.
-     */
-    public function defineTools(array $toolDefs): self
-    {
-        foreach ($toolDefs as $def) {
-            $this->registerSwaigFunction($def);
-        }
-        return $this;
-    }
-
-    /**
-     * Dispatch a function call to the registered handler.
-     */
-    public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
-    {
-        if (!isset($this->tools[$name])) {
-            return null;
-        }
-
-        $tool = $this->tools[$name];
-        $handler = $tool['_handler'] ?? null;
-
-        if ($handler === null || !is_callable($handler)) {
-            return null;
-        }
-
-        $result = $handler($args, $rawData);
-
-        if ($result instanceof FunctionResult) {
-            return $result;
-        }
-        if (is_array($result)) {
-            // Wrap a plain array (dict) into a FunctionResult. If the
-            // caller already set a 'response' key, use it directly.
-            if (isset($result['response']) && is_string($result['response'])) {
-                return new FunctionResult($result['response']);
-            }
-            return new FunctionResult((string) json_encode($result));
-        }
-
-        // Neither a FunctionResult nor an array. Warn and fall back to
-        // wrapping the stringified value, matching Python's web_mixin
-        // / serverless_mixin / tool_mixin behavior.
-        $type = is_object($result) ? get_class($result) : gettype($result);
-        $this->logger->warn(
-            "unexpected_function_result_type: function=\"{$name}\" "
-            . "result_type=\"{$type}\". SWAIG function returned a "
-            . "value that is neither a FunctionResult nor an array; "
-            . "falling back to wrapping the stringified value. The AI "
-            . "will see the stringified value as its tool response. "
-            . "Return a \\SignalWire\\SWAIG\\FunctionResult object or "
-            . "an array with at least a 'response' key."
-        );
-        return new FunctionResult((string) $result);
-    }
+    // Tool methods (defineTool, registerSwaigFunction, defineTools, onFunctionCall)
+    // are now provided by SignalWire\SWML\Service - inherited via parent.
 
     // ══════════════════════════════════════════════════════════════════════
     //  AI Config Methods
@@ -1071,30 +910,8 @@ class AgentBase extends Service
         return $this->jsonResponse(200, $swml);
     }
 
-    /**
-     * Handle a SWAIG function dispatch request.
-     */
-    protected function handleSwaigRequest(?array $requestData, array $headers): array
-    {
-        if ($requestData === null) {
-            return $this->jsonResponse(400, ['error' => 'Missing request body']);
-        }
-
-        $functionName = $requestData['function'] ?? '';
-        if ($functionName === '') {
-            return $this->jsonResponse(400, ['error' => 'Missing function name']);
-        }
-
-        $args = $requestData['argument']['parsed'][0] ?? [];
-
-        $result = $this->onFunctionCall($functionName, $args, $requestData);
-
-        if ($result === null) {
-            return $this->jsonResponse(404, ['error' => "Unknown function: {$functionName}"]);
-        }
-
-        return $this->jsonResponse(200, $result->toArray());
-    }
+    // handleSwaigRequest is now provided by Service (parent). The lifted
+    // version handles GET (renders SWML) and POST (dispatches via onFunctionCall).
 
     /**
      * Handle the post-prompt callback.
