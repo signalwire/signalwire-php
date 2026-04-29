@@ -21,6 +21,8 @@ class Client
     public string  $project;
     public string  $token;
     public string  $host;
+    public string  $scheme = 'wss';
+    public string  $relayPath = '/api/relay/ws';
     public array   $contexts = [];
     public bool    $connected = false;
     public ?string $sessionId = null;
@@ -55,15 +57,25 @@ class Client
     private Logger $logger;
 
     /**
-     * Opaque reference to the underlying socket.  Typed as mixed so that
-     * tests can inject a stub without requiring a real WebSocket ext.
+     * The WebSocket transport. May be null before connect() or after a
+     * disconnect; tests may inject a fake to bypass real I/O without
+     * removing the real transport from production code (subclassing is
+     * the supported path).
      */
-    private mixed $socket = null;
+    protected ?WebSocket $socket = null;
+
+    /**
+     * Read timeout (seconds) for a single WS frame in readOnce(). Kept
+     * short so the run loop can interleave reconnect bookkeeping; not
+     * the time-to-fail-the-RPC, which is bounded by the run-loop logic.
+     */
+    private float $readTimeout = 5.0;
 
     private int $reconnectDelay = 1;
     private const MAX_RECONNECT_DELAY = 30;
 
     private bool $running = false;
+    private bool $closing = false;
 
     // ══════════════════════════════════════════════════════════════════
     //  Construction
@@ -75,9 +87,26 @@ class Client
         $this->token    = $options['token']    ?? '';
         $this->contexts = $options['contexts'] ?? [];
 
-        // Host may come from options or the SIGNALWIRE_SPACE env var.
+        // Host may come from options or env. Tests use SIGNALWIRE_RELAY_HOST
+        // to point at a local fixture; production uses SIGNALWIRE_SPACE.
+        $relayHost = getenv('SIGNALWIRE_RELAY_HOST');
+        $space = getenv('SIGNALWIRE_SPACE');
         $this->host = $options['host']
-            ?? (getenv('SIGNALWIRE_SPACE') !== false ? getenv('SIGNALWIRE_SPACE') : '');
+            ?? ($relayHost !== false && $relayHost !== '' ? $relayHost : '')
+            ?: (is_string($space) ? $space : '');
+
+        $scheme = $options['scheme'] ?? null;
+        if ($scheme === null) {
+            $envScheme = getenv('SIGNALWIRE_RELAY_SCHEME');
+            $scheme = (is_string($envScheme) && $envScheme !== '')
+                ? $envScheme
+                : 'wss';
+        }
+        $this->scheme = strtolower($scheme);
+
+        if (isset($options['path']) && is_string($options['path'])) {
+            $this->relayPath = $options['path'];
+        }
 
         $this->logger = Logger::getLogger('relay.client');
     }
@@ -87,40 +116,92 @@ class Client
     // ══════════════════════════════════════════════════════════════════
 
     /**
-     * Establish the WebSocket connection and authenticate.
+     * Open the WebSocket connection and run the JSON-RPC `signalwire.connect`
+     * handshake. Throws on transport or auth failure.
      *
-     * This is a stub: a production implementation would open a WSS
-     * socket to wss://{host}/api/relay/ws and perform the TLS
-     * handshake.  For unit-testing purposes the transport is left
-     * abstract.
+     * The transport URI is `<scheme>://<host><relayPath>` (defaults to
+     * `wss://<host>/api/relay/ws`). Tests point SIGNALWIRE_RELAY_SCHEME
+     * at `ws` and SIGNALWIRE_RELAY_HOST at the fixture's host:port.
      */
     public function connect(): void
     {
-        $this->logger->info("Connecting to {$this->host}");
-        // In production: $this->socket = wss_connect(...)
+        if ($this->host === '') {
+            throw new \RuntimeException(
+                'RelayClient: host is empty. Pass options.host, set '
+                . 'SIGNALWIRE_RELAY_HOST (test) or SIGNALWIRE_SPACE.'
+            );
+        }
+        $uri = "{$this->scheme}://{$this->host}{$this->relayPath}";
+        $this->logger->info("Connecting to {$uri}");
+
+        $socket = $this->createSocket();
+        $socket->connect($uri);
+        $this->socket = $socket;
         $this->connected = true;
         $this->reconnectDelay = 1;
+        $this->closing = false;
+
         $this->authenticate();
     }
 
     /**
+     * Hook for tests to inject a fake transport. Production builds a real
+     * WebSocket; subclassing this method is the supported way to drive
+     * the JSON-RPC layer in isolation.
+     */
+    protected function createSocket(): WebSocket
+    {
+        return new WebSocket();
+    }
+
+    /**
      * Send the signalwire.connect RPC to authenticate and bind a session.
+     *
+     * Sends project/token both at the top level AND nested under
+     * `authentication`. Python sends the nested form; the audit fixture
+     * accepts either; sending both is forward-compatible (per
+     * SUBAGENT_PLAYBOOK lessons-learned).
      */
     public function authenticate(): void
     {
         $this->logger->info('Authenticating');
 
-        $result = $this->execute('signalwire.connect', [
+        $params = [
             'version' => Constants::PROTOCOL_VERSION,
+            'agent' => $this->agent,
+            'event_acks' => true,
+            // Top-level project/token for fixtures / older RELAY versions.
+            'project' => $this->project,
+            'token'   => $this->token,
             'authentication' => [
                 'project' => $this->project,
                 'token'   => $this->token,
             ],
-            'agent' => $this->agent,
-        ]);
+        ];
+        if (!empty($this->contexts)) {
+            $params['contexts'] = $this->contexts;
+        }
+        // Re-send protocol on reconnect to resume the session.
+        if ($this->protocol !== null && $this->protocol !== '') {
+            $params['protocol'] = $this->protocol;
+        }
+        // Re-send authorization_state for fast reconnect.
+        if ($this->authorizationState !== null && $this->authorizationState !== '') {
+            $params['authorization_state'] = $this->authorizationState;
+        }
 
-        $this->sessionId = $result['session_id'] ?? null;
-        $this->protocol  = $result['protocol']   ?? null;
+        $result = $this->execute('signalwire.connect', $params);
+
+        $this->sessionId = $result['session_id'] ?? $this->sessionId;
+        $this->protocol  = $result['protocol']   ?? $this->protocol;
+        // Capture authorization blob if RELAY/audit fixture sent one.
+        $authBlob = $result['authorization'] ?? null;
+        if (is_array($authBlob)) {
+            $newState = $authBlob['authorization_state'] ?? null;
+            if (is_string($newState) && $newState !== '') {
+                $this->authorizationState = $newState;
+            }
+        }
 
         $this->logger->info("Authenticated, session={$this->sessionId}");
     }
@@ -131,9 +212,18 @@ class Client
     public function disconnect(): void
     {
         $this->logger->info('Disconnecting');
-        $this->running   = false;
+        $this->closing = true;
+        $this->running = false;
+        if ($this->socket !== null) {
+            $this->socket->close();
+            $this->socket = null;
+        }
         $this->connected = false;
-        $this->socket    = null;
+        // Reject all pending requests so callers don't hang.
+        foreach ($this->pending as $entry) {
+            ($entry['reject'])(['code' => -1, 'message' => 'Connection closed']);
+        }
+        $this->pending = [];
     }
 
     /**
@@ -160,6 +250,10 @@ class Client
 
     /**
      * Main event loop – reads messages until disconnect.
+     *
+     * Auto-reconnects with exponential backoff on transport errors,
+     * preserving authorization_state across reconnects so the server
+     * can fast-path the session resumption.
      */
     public function run(): void
     {
@@ -169,12 +263,17 @@ class Client
 
         $this->running = true;
 
-        while ($this->running && $this->connected) {
+        while ($this->running && !$this->closing) {
             try {
                 $this->readOnce();
             } catch (\RuntimeException $e) {
                 $this->logger->error('Read error: ' . $e->getMessage());
-                if ($this->running) {
+                $this->connected = false;
+                if ($this->socket !== null) {
+                    $this->socket->close();
+                    $this->socket = null;
+                }
+                if ($this->running && !$this->closing) {
                     $this->reconnect();
                 }
             }
@@ -189,7 +288,7 @@ class Client
      * Send a JSON-RPC request and synchronously wait for the matching
      * response.  Returns the "result" portion of the response.
      *
-     * @throws \RuntimeException on error responses
+     * @throws \RuntimeException on error responses or transport timeout.
      */
     public function execute(string $method, array $params = []): array
     {
@@ -213,13 +312,19 @@ class Client
 
         $this->send($msg);
 
-        // In a real async runtime we would yield here.  For the
-        // synchronous stub we spin readOnce() until the slot is filled.
-        $maxAttempts = 1000;
-        $attempt = 0;
-        while ($result === null && $error === null && $attempt < $maxAttempts) {
-            $this->readOnce();
-            $attempt++;
+        // PHP's relay stack is synchronous — we drive the read loop
+        // ourselves until the response arrives, the connection drops, or
+        // the deadline expires. Keep this tight (10s default, matching
+        // Python's _EXECUTE_TIMEOUT) so half-open connections don't hang
+        // the caller forever.
+        $deadline = microtime(true) + 10.0;
+        while ($result === null && $error === null && microtime(true) < $deadline) {
+            try {
+                $this->readOnce();
+            } catch (\RuntimeException $e) {
+                unset($this->pending[$id]);
+                throw $e;
+            }
         }
 
         unset($this->pending[$id]);
@@ -230,39 +335,72 @@ class Client
             throw new \RuntimeException($message, $code);
         }
 
-        return $result ?? [];
+        if ($result === null) {
+            throw new \RuntimeException(
+                "RelayClient: timeout waiting for response to {$method} (id={$id})"
+            );
+        }
+
+        return $result;
     }
 
     /**
-     * Encode and send a JSON message over the socket.
+     * Encode and send a JSON message over the WebSocket. Throws if the
+     * socket is closed; the run loop catches and triggers reconnect.
      */
     public function send(array $msg): void
     {
         $json = json_encode($msg, JSON_THROW_ON_ERROR);
         $this->logger->debug(">> {$json}");
 
-        // Stub: in production we would write to $this->socket.
+        if ($this->socket === null || !$this->socket->isConnected()) {
+            throw new \RuntimeException('RelayClient: send on disconnected socket');
+        }
+        $this->socket->sendText($json);
     }
 
     /**
-     * Read a single message from the socket and dispatch it.
+     * Read a single inbound frame from the WebSocket and dispatch it.
+     *
+     * Returns silently on a read timeout (no frame within $this->readTimeout
+     * seconds — the run loop will call again). Throws on socket errors so
+     * the run loop can trigger reconnect.
      */
     public function readOnce(): void
     {
-        // Stub: in production we would read from $this->socket.
-        // For unit testing, call handleMessage() directly.
+        if ($this->socket === null || !$this->socket->isConnected()) {
+            throw new \RuntimeException('RelayClient: read on disconnected socket');
+        }
+        $payload = $this->socket->receive($this->readTimeout);
+        if ($payload === null) {
+            return;
+        }
+        if ($payload === WebSocket::CLOSE_FRAME) {
+            $this->logger->info('RelayClient: peer closed connection');
+            $this->connected = false;
+            throw new \RuntimeException('RelayClient: peer closed');
+        }
+        $this->handleMessage($payload);
     }
 
     /**
      * Send an acknowledgement (empty result) for a server-initiated request.
+     *
+     * Best-effort: an ACK that fails because the socket dropped during
+     * the request handling is not propagated as an exception (the run
+     * loop will already trigger reconnect on the next read).
      */
     public function sendAck(string $id): void
     {
-        $this->send([
-            'jsonrpc' => '2.0',
-            'id'      => $id,
-            'result'  => new \stdClass(),
-        ]);
+        try {
+            $this->send([
+                'jsonrpc' => '2.0',
+                'id'      => $id,
+                'result'  => new \stdClass(),
+            ]);
+        } catch (\RuntimeException $e) {
+            $this->logger->debug('sendAck failed: ' . $e->getMessage());
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
