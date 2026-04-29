@@ -553,17 +553,41 @@ class Service
 
     /**
      * Start serving using PHP's built-in server (blocking).
+     *
+     * In CLI mode: spawns `php -S host:port <entry-script>` where entry-script
+     * is the example file the user ran. The entry script is responsible for
+     * (re)building the service and calling run() — under the cli-server SAPI,
+     * run() dispatches from $_SERVER instead of re-spawning.
+     *
+     * Under cli-server SAPI: directly dispatches the inbound request to
+     * handleRequest() and writes the result to the response.
      */
     public function serve(): void
     {
+        if (PHP_SAPI === 'cli-server') {
+            // Already running inside a php -S worker — dispatch the
+            // inbound request and emit the response directly.
+            $this->dispatchFromGlobals();
+            return;
+        }
+
         $this->logger->info("Starting server on {$this->host}:{$this->port} ...");
         $this->logger->info("Basic-auth credentials — user: {$this->basicAuthUser}  password: [REDACTED]");
 
         $addr = "{$this->host}:{$this->port}";
-        $router = $this->createRouterScript();
 
-        // Use PHP built-in server with a router script
-        $cmd = sprintf('php -S %s %s', escapeshellarg($addr), escapeshellarg($router));
+        // The router script is the ORIGINAL CLI script (the example file the
+        // user ran). When `php -S` re-invokes it for each request, the
+        // builder runs, the service is constructed, run() is called again —
+        // but this time under cli-server SAPI, where the early-return branch
+        // above takes over and dispatches.
+        $entry = $this->resolveEntryScript();
+        $cmd = sprintf(
+            '%s -S %s %s',
+            escapeshellcmd(PHP_BINARY),
+            escapeshellarg($addr),
+            escapeshellarg($entry),
+        );
         passthru($cmd);
     }
 
@@ -573,6 +597,118 @@ class Service
     public function run(): void
     {
         $this->serve();
+    }
+
+    /**
+     * Dispatch the current PHP request (cli-server / php-fpm / mod_php) to
+     * handleRequest() and write the response. Must be called inside a SAPI
+     * that has populated $_SERVER for the inbound request.
+     */
+    public function dispatchFromGlobals(): void
+    {
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+        // Reconstruct headers from $_SERVER (cli-server doesn't populate
+        // getallheaders() reliably; this works in every SAPI).
+        $headers = [];
+        foreach ($_SERVER as $k => $v) {
+            if (str_starts_with($k, 'HTTP_')) {
+                $name = str_replace('_', '-', substr($k, 5));
+                // Title-case for Authorization, Content-Type compatibility
+                $name = ucwords(strtolower($name), '-');
+                $headers[$name] = $v;
+            }
+        }
+        if (isset($_SERVER['CONTENT_TYPE'])) {
+            $headers['Content-Type'] = $_SERVER['CONTENT_TYPE'];
+        }
+        if (isset($_SERVER['CONTENT_LENGTH'])) {
+            $headers['Content-Length'] = $_SERVER['CONTENT_LENGTH'];
+        }
+        // PHP's cli-server eats the Authorization header for CGI safety;
+        // recover it from REDIRECT_HTTP_AUTHORIZATION / PHP_AUTH_USER if set.
+        if (!isset($headers['Authorization'])) {
+            $authVal = $_SERVER['HTTP_AUTHORIZATION']
+                ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+                ?? null;
+            if (is_string($authVal) && $authVal !== '') {
+                $headers['Authorization'] = $authVal;
+            } elseif (isset($_SERVER['PHP_AUTH_USER'])) {
+                // Reconstruct Basic auth from PHP_AUTH_USER/PW which are
+                // always present when the front-end has parsed the header.
+                $user = (string) $_SERVER['PHP_AUTH_USER'];
+                $pw = (string) ($_SERVER['PHP_AUTH_PW'] ?? '');
+                $headers['Authorization'] = 'Basic ' . base64_encode($user . ':' . $pw);
+            }
+        }
+
+        $body = file_get_contents('php://input');
+        if ($body === false || $body === '') {
+            $body = null;
+        }
+
+        [$status, $respHeaders, $respBody] = $this->handleRequest($method, $path, $headers, $body);
+
+        // Emit response
+        if (!headers_sent()) {
+            http_response_code($status);
+            foreach ($respHeaders as $k => $v) {
+                header("{$k}: {$v}", true);
+            }
+        }
+        echo $respBody;
+    }
+
+    /**
+     * Resolve the path of the original example script that constructed
+     * this Service, so `php -S` can re-invoke it as the router.
+     *
+     * Order of preference:
+     *   1. SWML_SERVICE_ENTRY env var (explicit override; harnesses set this)
+     *   2. $_SERVER['SCRIPT_FILENAME'] (most-reliable absolute path under CLI)
+     *   3. $_SERVER['argv'][0] (resolves to absolute via realpath)
+     *   4. The first frame of the call stack outside the SDK (last resort)
+     */
+    private function resolveEntryScript(): string
+    {
+        $env = getenv('SWML_SERVICE_ENTRY');
+        if (is_string($env) && $env !== '' && file_exists($env)) {
+            return realpath($env) ?: $env;
+        }
+        $script = $_SERVER['SCRIPT_FILENAME'] ?? null;
+        if (is_string($script) && $script !== '' && file_exists($script)) {
+            return realpath($script) ?: $script;
+        }
+        $argv0 = $_SERVER['argv'][0] ?? null;
+        if (is_string($argv0) && $argv0 !== '') {
+            $abs = realpath($argv0);
+            if ($abs !== false && file_exists($abs)) {
+                return $abs;
+            }
+        }
+        // Walk back through the stack until we find a file outside of
+        // the SignalWire SDK source tree.
+        $sdkDir = realpath(__DIR__ . '/../..');
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
+            $file = $frame['file'] ?? null;
+            if (!is_string($file) || $file === '') {
+                continue;
+            }
+            $abs = realpath($file);
+            if ($abs === false) {
+                continue;
+            }
+            if ($sdkDir !== false && str_starts_with($abs, $sdkDir)) {
+                continue;
+            }
+            return $abs;
+        }
+        throw new \RuntimeException(
+            'Could not locate the entry script for SWML\\Service::serve(). '
+            . 'Set the SWML_SERVICE_ENTRY env var to the example path or '
+            . 'invoke the script via `php examples/<your-example>.php`.'
+        );
     }
 
     // ------------------------------------------------------------------
@@ -659,21 +795,4 @@ class Service
         }
     }
 
-    /**
-     * Create a temporary PHP router script for the built-in server.
-     */
-    private function createRouterScript(): string
-    {
-        $tmp = tempnam(sys_get_temp_dir(), 'sw_router_');
-        $serviceFile = realpath(__FILE__);
-        $autoload = realpath(__DIR__ . '/../../../vendor/autoload.php');
-
-        file_put_contents($tmp, <<<'PHP'
-        <?php
-        // This router script is auto-generated for PHP built-in server
-        // It delegates all requests to the SWMLService
-        PHP);
-
-        return $tmp;
-    }
 }

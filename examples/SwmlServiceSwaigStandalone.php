@@ -84,17 +84,25 @@ function buildStandaloneSwaigService(): Service
     return $svc;
 }
 
-// Top-level entry point: only run the server when invoked directly,
-// so the file can also be require()'d by tests or other harnesses.
-if (PHP_SAPI === 'cli'
+// Top-level entry point. Two SAPI cases must run the service:
+//   1. CLI ("php examples/SwmlServiceSwaigStandalone.php") — start the
+//      built-in server, which re-invokes this file under cli-server.
+//   2. cli-server ("php -S host:port examples/SwmlServiceSwaigStandalone.php")
+//      — the built-in server loaded this file as a router; build the service
+//      and dispatch the inbound request via Service::run().
+// Other SAPIs (web tests including this file via require) skip auto-run.
+$isCliEntrypoint = PHP_SAPI === 'cli'
     && isset($_SERVER['argv'][0])
-    && realpath($_SERVER['argv'][0]) === __FILE__
-) {
+    && \realpath($_SERVER['argv'][0]) === __FILE__;
+$isCliServer = PHP_SAPI === 'cli-server';
+if ($isCliEntrypoint || $isCliServer) {
     $service = buildStandaloneSwaigService();
-    [$user, $pass] = $service->getBasicAuthCredentials();
-    $url = $service->getFullUrl();
-    fwrite(STDOUT, "Standalone SWAIG service listening at {$url}\n");
-    fwrite(STDOUT, "Basic-auth user: {$user}\n");
-    fwrite(STDOUT, "Basic-auth pass: {$pass}\n");
+    if ($isCliEntrypoint) {
+        [$user, $pass] = $service->getBasicAuthCredentials();
+        $url = $service->getFullUrl();
+        \fwrite(STDOUT, "Standalone SWAIG service listening at {$url}\n");
+        \fwrite(STDOUT, "Basic-auth user: {$user}\n");
+        \fwrite(STDOUT, "Basic-auth pass: {$pass}\n");
+    }
     $service->run();
 }

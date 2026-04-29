@@ -209,18 +209,149 @@ class LoggerTest extends TestCase
         $logger = Logger::getLogger('testformat');
         $logger->setLevel('debug');
 
-        // Capture stderr
-        $stream = fopen('php://memory', 'r+');
-        $oldStderr = defined('STDERR') ? STDERR : fopen('php://stderr', 'w');
+        // Capture stderr by spawning a child PHP process so we can
+        // really inspect what fwrite(STDERR, ...) wrote — STDERR can't
+        // be redirected from inside PHPUnit's own process.
+        $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+        $script = <<<PHP
+<?php
+require '{$autoload}';
+\$logger = \\SignalWire\\Logging\\Logger::getLogger('child');
+\$logger->setLevel('debug');
+\$logger->debug('msg-debug');
+\$logger->info('msg-info');
+\$logger->warn('msg-warn');
+\$logger->error('msg-error');
+PHP;
+        $tmp = \tempnam(\sys_get_temp_dir(), 'sw_log_test_') . '.php';
+        \file_put_contents($tmp, $script);
+        try {
+            // CLI mode: STDERR is defined, fwrite goes to the process stream.
+            $cmd = \escapeshellcmd(PHP_BINARY) . ' ' . \escapeshellarg($tmp);
+            $descriptors = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ];
+            $env = ['PHPUNIT_TEST_LOGGER' => '1'];
+            $proc = \proc_open($cmd, $descriptors, $pipes, dirname(__DIR__), $env);
+            $this->assertIsResource($proc, 'Failed to spawn child PHP process');
+            \fclose($pipes[0]);
+            $stdout = \stream_get_contents($pipes[1]);
+            $stderr = \stream_get_contents($pipes[2]);
+            \fclose($pipes[1]);
+            \fclose($pipes[2]);
+            \proc_close($proc);
+            // Each level's content must appear, tagged with [LEVEL] and [child].
+            $this->assertStringContainsString(
+                '[DEBUG] [child] msg-debug',
+                $stderr,
+                'stderr was: ' . $stderr . ' / stdout was: ' . $stdout
+            );
+            $this->assertStringContainsString('[INFO] [child] msg-info', $stderr);
+            $this->assertStringContainsString('[WARN] [child] msg-warn', $stderr);
+            $this->assertStringContainsString('[ERROR] [child] msg-error', $stderr);
+            // Body should be empty — Logger writes only to stderr.
+            $this->assertSame('', $stdout, 'Logger leaked into stdout');
+        } finally {
+            @\unlink($tmp);
+        }
+    }
 
-        // We can't easily redirect STDERR in PHPUnit, so just verify the methods don't throw
-        $logger->debug('test debug message');
-        $logger->info('test info message');
-        $logger->warn('test warn message');
-        $logger->error('test error message');
+    /**
+     * Regression test for the bare-STDERR bug: under php -S (the built-in
+     * webserver SAPI), the global STDERR constant is NOT defined inside
+     * request worker processes. A logger that writes via the bare name
+     * `STDERR` from within `namespace SignalWire\Logging` triggers
+     * "Undefined constant SignalWire\Logging\STDERR" and fatal-errors out
+     * of every request — silently breaking the SWMLService HTTP server.
+     *
+     * The fix uses `\STDERR` and falls back to opening `php://stderr` so
+     * the logger works in CLI, php -S, php-fpm, mod_php, etc. This test
+     * stands up a one-shot `php -S` server, drives a logger from inside
+     * a request, and asserts the response is intact instead of being
+     * truncated by a fatal Logger crash.
+     */
+    public function testLoggerWorksUnderPhpBuiltinWebserver(): void
+    {
+        $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+        $script = <<<PHP
+<?php
+require '{$autoload}';
+\$logger = \\SignalWire\\Logging\\Logger::getLogger('webtest');
+\$logger->setLevel('debug');
+\$logger->info('hit-from-php-S');
+header('Content-Type: text/plain');
+echo "OK\\n";
+PHP;
+        $tmp = \tempnam(\sys_get_temp_dir(), 'sw_log_phps_') . '.php';
+        \file_put_contents($tmp, $script);
 
-        // If we got here without exceptions, the log methods work
-        $this->assertTrue(true);
+        // Bind ephemeral port.
+        $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        \socket_bind($sock, '127.0.0.1', 0);
+        \socket_getsockname($sock, $addr, $port);
+        \socket_close($sock);
+
+        $cmd = \escapeshellcmd(PHP_BINARY)
+            . ' -S 127.0.0.1:' . (int) $port
+            . ' ' . \escapeshellarg($tmp);
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $proc = \proc_open($cmd, $descriptors, $pipes);
+        $this->assertIsResource($proc, 'Failed to start php -S');
+        \fclose($pipes[0]);
+        \stream_set_blocking($pipes[1], false);
+        \stream_set_blocking($pipes[2], false);
+
+        try {
+            // Wait for bind.
+            $ok = false;
+            $deadline = \microtime(true) + 5.0;
+            while (\microtime(true) < $deadline) {
+                $err = 0;
+                $errStr = '';
+                $conn = @\fsockopen('127.0.0.1', $port, $err, $errStr, 0.2);
+                if ($conn !== false) {
+                    \fclose($conn);
+                    $ok = true;
+                    break;
+                }
+                \usleep(100_000);
+            }
+            $this->assertTrue($ok, "php -S did not bind to 127.0.0.1:{$port}");
+
+            $ctx = \stream_context_create(['http' => ['timeout' => 5.0]]);
+            $body = @\file_get_contents("http://127.0.0.1:{$port}/", false, $ctx);
+
+            // Drain server stderr to surface useful diagnostics on failure.
+            $serverStderr = (string) \stream_get_contents($pipes[2]);
+
+            $this->assertNotFalse($body, 'Request to php -S failed');
+            $this->assertStringContainsString(
+                'OK',
+                (string) $body,
+                'Response truncated — Logger likely fatal-errored under php -S. '
+                . 'Server stderr: ' . $serverStderr
+            );
+            $this->assertStringNotContainsString(
+                'Undefined constant',
+                (string) $body,
+                'Logger leaked an Undefined-constant error into the response.'
+            );
+            $this->assertStringNotContainsString(
+                'Undefined constant',
+                $serverStderr,
+                'Logger fatal-errored on the server side under php -S.'
+            );
+        } finally {
+            \proc_terminate($proc, SIGTERM);
+            \proc_close($proc);
+            @\unlink($tmp);
+        }
     }
 
     public function testResetClearsInstances(): void

@@ -115,6 +115,45 @@ class Logger
         $upperLevel = strtoupper($level);
         $message = implode(' ', $messages);
         $line = "[{$timestamp}] [{$upperLevel}] [{$this->name}] {$message}" . PHP_EOL;
-        fwrite(STDERR, $line);
+
+        // Resolve a stderr handle that works in every SAPI:
+        //   - CLI: the global \STDERR constant is defined.
+        //   - php -S (built-in webserver) and most non-CLI SAPIs: \STDERR
+        //     is NOT defined, so referencing the bare `STDERR` name from
+        //     inside namespace SignalWire\Logging triggers
+        //     "Undefined constant SignalWire\Logging\STDERR" and
+        //     fatal-errors out of the request handler. Open the
+        //     `php://stderr` stream as a fallback once and cache it.
+        $handle = self::resolveStderr();
+        if ($handle !== null) {
+            fwrite($handle, $line);
+        }
+    }
+
+    /**
+     * @var resource|null Cached stderr stream, lazily opened.
+     */
+    private static $stderrHandle = null;
+
+    /**
+     * Return a writable stderr stream resource that works under any SAPI.
+     *
+     * Checks the global `\STDERR` constant first (defined in CLI, undefined
+     * under `php -S`); falls back to opening `php://stderr` and caches the
+     * result so each log call doesn't re-open the stream.
+     *
+     * @return resource|null
+     */
+    private static function resolveStderr()
+    {
+        if (\defined('\\STDERR')) {
+            // Use the CLI-provided stream resource directly.
+            return \STDERR;
+        }
+        if (self::$stderrHandle === null) {
+            $h = @\fopen('php://stderr', 'w');
+            self::$stderrHandle = ($h !== false) ? $h : null;
+        }
+        return self::$stderrHandle;
     }
 }
