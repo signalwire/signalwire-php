@@ -9692,39 +9692,22 @@
       }
     },
     "signalwire.utils.url_validator": {
-      "classes": {
-        "UrlValidator": {
-          "methods": {
-            "__init__": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "void"
+      "functions": {
+        "validate_url": {
+          "params": [
+            {
+              "name": "url",
+              "type": "string",
+              "required": true
             },
-            "resolver": {
-              "params": [],
-              "returns": "any"
-            },
-            "validate_url": {
-              "params": [
-                {
-                  "name": "url",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "allow_private",
-                  "type": "bool",
-                  "required": false,
-                  "default": false
-                }
-              ],
-              "returns": "bool"
+            {
+              "name": "allow_private",
+              "type": "bool",
+              "required": false,
+              "default": false
             }
-          }
+          ],
+          "returns": "bool"
         }
       }
     }

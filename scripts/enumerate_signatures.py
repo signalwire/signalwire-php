@@ -137,6 +137,27 @@ def _translate_php_class_ref(t: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+# Free-function projections: lift a static method on an SDK class up to
+# a Python module-level free function. Keyed by ("FullyQualified\\Class",
+# "phpMethodName"); value is (py_module, py_function_name).
+# Example: Python's signalwire.utils.url_validator.validate_url is a free
+# function with no enclosing class; PHP exposes it as
+# SignalWire\Utils\UrlValidator::validateUrl. Without this projection the
+# audit would look for "signalwire.utils.url_validator.validate_url" but
+# the port emits "signalwire.utils.url_validator.UrlValidator.validate_url".
+FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
+    ("SignalWire\\Utils\\UrlValidator", "validateUrl"):
+        ("signalwire.utils.url_validator", "validate_url"),
+    # ExecutionMode helpers — Python ships them as free functions in
+    # two distinct modules; PHP groups both static methods on the
+    # LoggingConfig class for cohesion.
+    ("SignalWire\\Logging\\LoggingConfig", "getExecutionMode"):
+        ("signalwire.core.logging_config", "get_execution_mode"),
+    ("SignalWire\\Logging\\LoggingConfig", "isServerlessMode"):
+        ("signalwire.utils", "is_serverless_mode"),
+}
+
+
 def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
     out_modules: dict = {}
     failures: list = []
@@ -164,7 +185,17 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         else:
             mod = _module_path_for_class(canonical_name, file_relative)
 
+        # PHP fully-qualified class name used to key FREE_FUNCTION_PROJECTIONS.
+        full_php = f"{ns}\\{php_name}" if ns else php_name
+        # Some classes exist solely to host static methods that get lifted
+        # to module-level Python free functions (e.g. UrlValidator). Skip
+        # the class shell entirely when *every* projection key targets it.
+        is_freefn_only_class = any(
+            cls == full_php for (cls, _) in FREE_FUNCTION_PROJECTIONS.keys()
+        )
+
         methods_out: dict = {}
+        free_functions_out: list[tuple[str, str, dict]] = []  # (target_mod, target_fn, sig)
         for m in type_entry.get("methods", []):
             native = m.get("name", "")
             if native == "__construct":
@@ -178,6 +209,23 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
             else:
                 snake = camel_to_snake(native)
                 method_canonical = METHOD_ALIASES.get(snake, snake)
+
+            ff_key = (full_php, native)
+            if ff_key in FREE_FUNCTION_PROJECTIONS:
+                target_mod, target_fn = FREE_FUNCTION_PROJECTIONS[ff_key]
+                ctx = f"{target_mod}.{target_fn}"
+                try:
+                    sig = build_signature(m, aliases, ctx)
+                except TypeTranslationError as e:
+                    failures.append(str(e))
+                    continue
+                # Strip implicit ``self`` — free functions have no receiver.
+                params = sig.get("params", [])
+                if params and params[0].get("kind") == "self":
+                    sig["params"] = params[1:]
+                free_functions_out.append((target_mod, target_fn, sig))
+                continue
+
             ctx = f"{mod}.{canonical_name}.{method_canonical}"
             try:
                 sig = build_signature(m, aliases, ctx)
@@ -188,23 +236,37 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
                 continue
             methods_out[method_canonical] = sig
 
-        # Properties → zero-arg "method" entries
-        for p in type_entry.get("properties", []):
-            pname = p.get("name", "")
-            snake = camel_to_snake(pname)
-            method_canonical = METHOD_ALIASES.get(snake, snake)
-            if method_canonical in methods_out:
-                continue
-            ctx = f"{mod}.{canonical_name}.{method_canonical}"
-            try:
-                ret = translate_php_type(p.get("type", "mixed"), aliases, ctx + "[->]")
-            except TypeTranslationError as e:
-                failures.append(str(e))
-                continue
-            params_out = []
-            if not p.get("is_static", False):
-                params_out.append({"name": "self", "kind": "self"})
-            methods_out[method_canonical] = {"params": params_out, "returns": ret}
+        # Properties → zero-arg "method" entries (skipped for free-function-
+        # only classes; their state is not part of the Python surface).
+        if not is_freefn_only_class:
+            for p in type_entry.get("properties", []):
+                pname = p.get("name", "")
+                snake = camel_to_snake(pname)
+                method_canonical = METHOD_ALIASES.get(snake, snake)
+                if method_canonical in methods_out:
+                    continue
+                ctx = f"{mod}.{canonical_name}.{method_canonical}"
+                try:
+                    ret = translate_php_type(p.get("type", "mixed"), aliases, ctx + "[->]")
+                except TypeTranslationError as e:
+                    failures.append(str(e))
+                    continue
+                params_out = []
+                if not p.get("is_static", False):
+                    params_out.append({"name": "self", "kind": "self"})
+                methods_out[method_canonical] = {"params": params_out, "returns": ret}
+
+        # Emit any lifted free functions before the class itself.
+        for target_mod, target_fn, sig in free_functions_out:
+            out_modules.setdefault(target_mod, {"classes": {}})
+            out_modules[target_mod].setdefault("functions", {})
+            out_modules[target_mod]["functions"][target_fn] = sig
+
+        # Free-function-only classes: do NOT emit a class shell, even with
+        # synthesized __init__. The Python reference has no class — only a
+        # module-level function — so emitting one would create drift.
+        if is_freefn_only_class:
+            continue
 
         if not methods_out:
             continue
@@ -255,12 +317,18 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
     sorted_modules = {}
     for k in sorted(out_modules):
         entry = out_modules[k]
-        sorted_modules[k] = {
-            "classes": {
+        out_entry: dict = {}
+        if entry.get("classes"):
+            out_entry["classes"] = {
                 cls: {"methods": dict(sorted(entry["classes"][cls]["methods"].items()))}
                 for cls in sorted(entry["classes"])
             }
-        }
+        if entry.get("functions"):
+            out_entry["functions"] = {
+                fn: entry["functions"][fn] for fn in sorted(entry["functions"])
+            }
+        if out_entry:
+            sorted_modules[k] = out_entry
     return {
         "version": "2",
         "generated_from": "signalwire-php via PHP Reflection",
