@@ -275,6 +275,67 @@ class AgentBase extends Service
         return $this->promptText;
     }
 
+    /**
+     * Returns the post-prompt text that was set via setPostPrompt, or the
+     * empty string when none has been set.
+     *
+     * Mirrors Python's PromptManager::get_post_prompt /
+     * PromptMixin::get_post_prompt — used by SWML rendering when a
+     * post-prompt is configured.
+     */
+    public function getPostPrompt(): string
+    {
+        return $this->postPrompt;
+    }
+
+    /**
+     * Returns the raw prompt text whatever setPromptText stored, or the
+     * empty string when no raw prompt has been set. Distinct from
+     * getPrompt() which returns the POM array when usePom is true.
+     *
+     * Mirrors Python's PromptManager::get_raw_prompt.
+     */
+    public function getRawPrompt(): string
+    {
+        return $this->promptText;
+    }
+
+    /**
+     * Sets the prompt as a list of POM section arrays. Each section array
+     * supports keys "title", "body", "bullets", "numbered",
+     * "numbered_bullets", and "subsections". Switches the agent to POM
+     * mode.
+     *
+     * Mirrors Python's PromptManager::set_prompt_pom — accepts a list of
+     * section dicts and stores them in pomSections.
+     */
+    public function setPromptPom(array $pom): self
+    {
+        $this->usePom      = true;
+        $this->pomSections = [];
+        foreach ($pom as $section) {
+            if (is_array($section)) {
+                $this->pomSections[] = $section;
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Returns the contexts dictionary as a serialised array, or null when
+     * no contexts have been defined yet.
+     *
+     * Mirrors Python's PromptManager::get_contexts which returns the
+     * contexts dict or None.
+     */
+    public function getContexts(): ?array
+    {
+        if ($this->contextBuilder === null) {
+            return null;
+        }
+        return $this->contextBuilder->toArray();
+    }
+
     // Tool methods (defineTool, registerSwaigFunction, defineTools, onFunctionCall)
     // are now provided by SignalWire\SWML\Service - inherited via parent.
 
