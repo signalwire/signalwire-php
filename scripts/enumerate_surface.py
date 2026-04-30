@@ -323,6 +323,9 @@ METHOD_ALIASES: dict[str, str] = {
     # PHP AgentServer serve_static == Python serve_static_files
     # (only on AgentServer; we apply globally — no collision elsewhere)
     "serve_static": "serve_static_files",
+    # Python ``AgentBase.pom`` is a @property; PHP exposes it as the
+    # getter ``getPom()``. Project the PHP getter onto the Python name.
+    "get_pom": "pom",
 }
 
 

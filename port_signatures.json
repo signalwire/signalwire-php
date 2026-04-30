@@ -816,15 +816,6 @@
               ],
               "returns": "any"
             },
-            "get_pom": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "optional<any>"
-            },
             "list_tool_names": {
               "params": [
                 {
@@ -875,6 +866,15 @@
                 }
               ],
               "returns": "any"
+            },
+            "pom": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<any>"
             },
             "register_sip_username": {
               "params": [
