@@ -3418,6 +3418,15 @@
               ],
               "returns": "any"
             },
+            "get_basic_auth_credentials_with_source": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "get_document": {
               "params": [
                 {
@@ -3697,6 +3706,25 @@
                 }
               ],
               "returns": "void"
+            },
+            "validate_basic_auth": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "password",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             }
           }
         }

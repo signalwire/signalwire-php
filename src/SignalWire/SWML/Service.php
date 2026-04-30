@@ -155,6 +155,35 @@ class Service
         return [$this->basicAuthUser, $this->basicAuthPassword];
     }
 
+    /** Validate provided basic-auth credentials against the configured ones
+     * using a constant-time comparison. Python parity:
+     * AuthMixin.validate_basic_auth(username, password). */
+    public function validateBasicAuth(string $username, string $password): bool
+    {
+        return hash_equals($this->basicAuthUser, $username)
+            && hash_equals($this->basicAuthPassword, $password);
+    }
+
+    /** Get (user, password, source) where source is "provided",
+     * "environment", or "generated". Python parity:
+     * AuthMixin.get_basic_auth_credentials(include_source=True). */
+    public function getBasicAuthCredentialsWithSource(): array
+    {
+        $envUser = getenv('SWML_BASIC_AUTH_USER');
+        $envPass = getenv('SWML_BASIC_AUTH_PASSWORD');
+        if ($envUser !== false && $envUser !== ''
+            && $envPass !== false && $envPass !== ''
+            && $this->basicAuthUser === $envUser
+            && $this->basicAuthPassword === $envPass) {
+            $source = 'environment';
+        } elseif (str_starts_with($this->basicAuthUser, 'user_') && strlen($this->basicAuthPassword) > 20) {
+            $source = 'generated';
+        } else {
+            $source = 'provided';
+        }
+        return [$this->basicAuthUser, $this->basicAuthPassword, $source];
+    }
+
     /**
      * Build the full URL for this service.
      */
