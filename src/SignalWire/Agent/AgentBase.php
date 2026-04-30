@@ -322,6 +322,25 @@ class AgentBase extends Service
     }
 
     /**
+     * Read-only snapshot of the agent's POM section list.
+     *
+     * Python parity: ``agent.pom`` instance attribute (agent_base.py
+     * line 209). Returns ``null`` when ``usePom`` is false (mirroring
+     * Python's ``self.pom = None``); otherwise returns the section list.
+     * PHP arrays are copy-on-write/copy-on-assignment, so callers cannot
+     * mutate the agent's internal state through this accessor.
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    public function getPom(): ?array
+    {
+        if (!$this->usePom) {
+            return null;
+        }
+        return $this->pomSections;
+    }
+
+    /**
      * Returns the contexts dictionary as a serialised array, or null when
      * no contexts have been defined yet.
      *

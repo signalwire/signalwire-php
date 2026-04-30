@@ -1048,6 +1048,62 @@ class AgentBaseTest extends TestCase
     }
 
     // ------------------------------------------------------------------
+    // getPom() — Python parity: agent.pom
+    //
+    // Mirrors signalwire-python tests/unit/core/test_agent_base.py::
+    //   TestAgentBasePromptMethods::test_set_prompt_pom_succeeds_when_use_pom_true
+    // ------------------------------------------------------------------
+
+    public function testGetPomReturnsAssignedSections(): void
+    {
+        $agent = $this->makeAgent();
+        $sections = [['title' => 'Greeting', 'body' => 'Hello']];
+        $agent->setPromptPom($sections);
+
+        $pom = $agent->getPom();
+        $this->assertNotNull($pom);
+        $this->assertCount(1, $pom);
+        $this->assertSame('Greeting', $pom[0]['title']);
+        $this->assertSame('Hello', $pom[0]['body']);
+    }
+
+    public function testGetPomReturnsSectionsAfterPromptAddSection(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->promptAddSection('Topic', 'Body text');
+
+        $pom = $agent->getPom();
+        $this->assertNotNull($pom);
+        $this->assertCount(1, $pom);
+        $this->assertSame('Topic', $pom[0]['title']);
+        $this->assertSame('Body text', $pom[0]['body']);
+    }
+
+    public function testGetPomNullWhenUsePomFalse(): void
+    {
+        // Constructor option ``use_pom: false`` disables POM mode;
+        // getPom() must return null (Python parity: self.pom is None).
+        $agent = $this->makeAgent(['use_pom' => false]);
+        $this->assertNull($agent->getPom());
+    }
+
+    public function testGetPomReturnsCopyNotReference(): void
+    {
+        // PHP arrays are value types — assigning to a separate variable
+        // and mutating that variable must not affect the agent's state.
+        $agent = $this->makeAgent();
+        $agent->setPromptPom([['title' => 'Original', 'body' => 'B']]);
+
+        $pom = $agent->getPom();
+        $pom[] = ['title' => 'Injected'];
+        $pom[0]['title'] = 'Hijacked';
+
+        $fresh = $agent->getPom();
+        $this->assertCount(1, $fresh, 'caller mutation leaked into agent state');
+        $this->assertSame('Original', $fresh[0]['title'], 'caller mutation leaked into agent state');
+    }
+
+    // ------------------------------------------------------------------
     // Internal test helpers
     // ------------------------------------------------------------------
 

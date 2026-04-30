@@ -816,6 +816,15 @@
               ],
               "returns": "any"
             },
+            "get_pom": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<any>"
+            },
             "list_tool_names": {
               "params": [
                 {
