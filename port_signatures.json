@@ -6,6 +6,15 @@
       "classes": {
         "SignalWire": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "get_logger": {
               "params": [
                 {
@@ -237,6 +246,15 @@
       "classes": {
         "Adapter": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "detect": {
               "params": [],
               "returns": "string"
@@ -601,6 +619,15 @@
       "classes": {
         "ContextBuilder": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "add_context": {
               "params": [
                 {
@@ -1984,6 +2011,15 @@
       "classes": {
         "Logger": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "debug": {
               "params": [
                 {
@@ -5494,6 +5530,15 @@
       "classes": {
         "WebSocket": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "close": {
               "params": [
                 {
@@ -7718,6 +7763,15 @@
       "classes": {
         "HttpHelper": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "apply_base_url_override": {
               "params": [
                 {
@@ -8339,6 +8393,15 @@
       "classes": {
         "SkillRegistry": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "get_factory": {
               "params": [
                 {
@@ -8807,6 +8870,15 @@
       "classes": {
         "Schema": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "get_verb": {
               "params": [
                 {

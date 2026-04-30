@@ -209,6 +209,16 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         if not methods_out:
             continue
 
+        # Synthesize __init__ when PHP class has no explicit __construct.
+        # Every PHP class IS constructible (PHP supplies a default
+        # constructor); without this, those classes show as missing-port
+        # __init__ in the cross-language audit.
+        if "__init__" not in methods_out:
+            methods_out["__init__"] = {
+                "params": [{"name": "self", "kind": "self"}],
+                "returns": "void",
+            }
+
         out_modules.setdefault(mod, {"classes": {}})
         out_modules[mod]["classes"][canonical_name] = {
             "methods": dict(sorted(methods_out.items())),
