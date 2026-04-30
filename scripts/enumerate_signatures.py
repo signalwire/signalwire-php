@@ -154,7 +154,15 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         canonical_name = _translate_class(php_name)
         # Compute file_relative for module resolution
         file_relative = Path(ns.replace("SignalWire\\", "").replace("\\", "/")) / php_name
-        mod = _module_path_for_class(canonical_name, file_relative)
+        # Try BOTH the original and canonical names against CLASS_MODULE_MAP.
+        # CLASS_MODULE_MAP is mostly keyed by PHP-native names (Service, Client),
+        # not Python-canonical names (SWMLService, RelayClient).
+        if php_name in CLASS_MODULE_MAP:
+            mod = CLASS_MODULE_MAP[php_name]
+        elif canonical_name in CLASS_MODULE_MAP:
+            mod = CLASS_MODULE_MAP[canonical_name]
+        else:
+            mod = _module_path_for_class(canonical_name, file_relative)
 
         methods_out: dict = {}
         for m in type_entry.get("methods", []):
