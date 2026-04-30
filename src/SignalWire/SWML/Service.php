@@ -250,6 +250,36 @@ class Service
         return $this->tools;
     }
 
+    /** Whether a SWAIG function with the given name is registered.
+     * Python parity: ``ToolRegistry.has_function``. */
+    public function hasFunction(string $name): bool
+    {
+        return isset($this->tools[$name]);
+    }
+
+    /** Get a registered SWAIG function by name, or null when absent.
+     * Python parity: ``ToolRegistry.get_function``. */
+    public function getFunction(string $name): ?array
+    {
+        return $this->tools[$name] ?? null;
+    }
+
+    /** Snapshot of all registered SWAIG functions keyed by name.
+     * Python parity: ``ToolRegistry.get_all_functions``. */
+    public function getAllFunctions(): array
+    {
+        return $this->tools;  // copy on read in PHP arrays
+    }
+
+    /** Remove a registered SWAIG function. True on success, false if absent.
+     * Python parity: ``ToolRegistry.remove_function``. */
+    public function removeFunction(string $name): bool
+    {
+        if (!isset($this->tools[$name])) return false;
+        unset($this->tools[$name]);
+        return true;
+    }
+
     /**
      * Return the names of registered tools in the order they were
      * registered. Stable ordering matters for CLI output and for

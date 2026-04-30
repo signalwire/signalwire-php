@@ -3400,6 +3400,15 @@
               ],
               "returns": "optional<string>"
             },
+            "get_all_functions": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "get_basic_auth_credentials": {
               "params": [
                 {
@@ -3432,6 +3441,20 @@
                 }
               ],
               "returns": "string"
+            },
+            "get_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
             },
             "get_host": {
               "params": [
@@ -3533,6 +3556,20 @@
               ],
               "returns": "any"
             },
+            "has_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
             "on_function_call": {
               "params": [
                 {
@@ -3589,6 +3626,20 @@
                 }
               ],
               "returns": "any"
+            },
+            "remove_function": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             },
             "render": {
               "params": [
