@@ -144,6 +144,63 @@ class SkillsTest extends TestCase
         $this->assertNull($fresh->getFactory('temp_skill'));
     }
 
+    // ── add_skill_directory parity with Python ───────────────────────────
+    // Mirrors test_registry.py::TestDirectoryScanning::test_add_skill_directory_*
+
+    public function testAddSkillDirectoryValidPath(): void
+    {
+        $registry = SkillRegistry::instance();
+        $tmpDir = sys_get_temp_dir() . '/swphp_skill_dir_' . uniqid();
+        mkdir($tmpDir);
+        try {
+            $registry->addSkillDirectory($tmpDir);
+            $paths = $registry->getExternalPaths();
+            $this->assertContains($tmpDir, $paths);
+        } finally {
+            rmdir($tmpDir);
+        }
+    }
+
+    public function testAddSkillDirectoryNotExistsRaises(): void
+    {
+        $registry = SkillRegistry::instance();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/does not exist/');
+        $registry->addSkillDirectory('/no/such/path/swphp_abc123_xyz');
+    }
+
+    public function testAddSkillDirectoryNotADirRaises(): void
+    {
+        $registry = SkillRegistry::instance();
+        $tmp = tempnam(sys_get_temp_dir(), 'swphp_skill_file_');
+        try {
+            $this->expectException(\InvalidArgumentException::class);
+            $this->expectExceptionMessageMatches('/not a directory/');
+            $registry->addSkillDirectory($tmp);
+        } finally {
+            unlink($tmp);
+        }
+    }
+
+    public function testAddSkillDirectoryDeduplicates(): void
+    {
+        $registry = SkillRegistry::instance();
+        $tmpDir = sys_get_temp_dir() . '/swphp_skill_dir_dedup_' . uniqid();
+        mkdir($tmpDir);
+        try {
+            $registry->addSkillDirectory($tmpDir);
+            $registry->addSkillDirectory($tmpDir);
+            $paths = $registry->getExternalPaths();
+            $count = 0;
+            foreach ($paths as $p) {
+                if ($p === $tmpDir) $count++;
+            }
+            $this->assertSame(1, $count);
+        } finally {
+            rmdir($tmpDir);
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  SkillBase tests (6)
     // ══════════════════════════════════════════════════════════════════════

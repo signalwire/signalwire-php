@@ -11,6 +11,9 @@ class SkillRegistry
     /** @var array<string, string> */
     private array $registeredSkills = [];
 
+    /** @var list<string> External skill directories registered via addSkillDirectory(). */
+    private array $externalPaths = [];
+
     private const BUILTIN_SKILL_NAMES = [
         'api_ninjas_trivia',
         'claude_skills',
@@ -86,6 +89,43 @@ class SkillRegistry
     public static function reset(): void
     {
         self::$instance = null;
+    }
+
+    /**
+     * Add a directory to search for skills.
+     *
+     * Mirrors Python's
+     * `signalwire.skills.registry.SkillRegistry.add_skill_directory`:
+     * validate that the path exists and is a directory, then append it
+     * (de-duplicated) to the external paths list. Throws
+     * `InvalidArgumentException` (the PHP analog of Python's `ValueError`)
+     * for invalid input.
+     *
+     * @throws \InvalidArgumentException when the path doesn't exist or
+     *         isn't a directory.
+     */
+    public function addSkillDirectory(string $path): void
+    {
+        if (!file_exists($path)) {
+            throw new \InvalidArgumentException("Skill directory does not exist: {$path}");
+        }
+        if (!is_dir($path)) {
+            throw new \InvalidArgumentException("Path is not a directory: {$path}");
+        }
+        if (!in_array($path, $this->externalPaths, true)) {
+            $this->externalPaths[] = $path;
+        }
+    }
+
+    /**
+     * Returns the registered external skill directories.
+     * Parity surface for Python's `_external_paths`.
+     *
+     * @return list<string>
+     */
+    public function getExternalPaths(): array
+    {
+        return $this->externalPaths;
     }
 
     private static function snakeToCamel(string $name): string
