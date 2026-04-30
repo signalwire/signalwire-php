@@ -278,6 +278,42 @@ class AgentBase extends Service
     // Tool methods (defineTool, registerSwaigFunction, defineTools, onFunctionCall)
     // are now provided by SignalWire\SWML\Service - inherited via parent.
 
+    /**
+     * Mint a per-call SWAIG-function token via the agent's SessionManager.
+     *
+     * Python parity: state_mixin.StateMixin._create_tool_token —
+     * delegates to SessionManager::createToolToken and returns "" on
+     * any thrown error (Python catches all exceptions and returns "").
+     */
+    public function createToolToken(string $toolName, string $callId): string
+    {
+        try {
+            return $this->sessionManager->createToolToken($toolName, $callId);
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Validate a per-call SWAIG-function token. Returns false when the
+     * function is not registered, when the SessionManager rejects the
+     * token, or on any underlying exception.
+     *
+     * Python parity: state_mixin.StateMixin.validate_tool_token —
+     * rejects unknown function names up-front and swallows exceptions.
+     */
+    public function validateToolToken(string $functionName, string $token, string $callId): bool
+    {
+        if (!$this->hasFunction($functionName)) {
+            return false;
+        }
+        try {
+            return $this->sessionManager->validateToolToken($functionName, $token, $callId);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  AI Config Methods
     // ══════════════════════════════════════════════════════════════════════
