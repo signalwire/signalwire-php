@@ -6,6 +6,7 @@ namespace SignalWire\SWML;
 
 use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\Utils\SchemaUtils;
 
 class Service
 {
@@ -14,6 +15,11 @@ class Service
     protected string $host;
     protected int $port;
     protected Document $document;
+    /**
+     * SchemaUtils helper exposed via getSchemaUtils(). Built lazily so
+     * existing subclasses constructed without the schema env still work.
+     */
+    protected ?SchemaUtils $schemaUtils = null;
     protected Logger $logger;
 
     protected string $basicAuthUser;
@@ -436,6 +442,19 @@ class Service
     public function getDocument(): Document
     {
         return $this->document;
+    }
+
+    /**
+     * SchemaUtils helper bound to this Service. Mirrors Python's
+     * self.schema_utils public instance attribute on SWMLService.
+     * Built lazily on first access.
+     */
+    public function getSchemaUtils(): SchemaUtils
+    {
+        if ($this->schemaUtils === null) {
+            $this->schemaUtils = new SchemaUtils();
+        }
+        return $this->schemaUtils;
     }
 
     public function render(): string

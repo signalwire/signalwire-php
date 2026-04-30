@@ -71,8 +71,13 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # core/swml
     "Service": "signalwire.core.swml_service",  # PHP `Service` -> Python `SWMLService`
     "Document": "signalwire.core.swml_builder",
-    # PHP's Schema is the schema-utils helper class
+    # PHP's Schema is a singleton sidecar; canonical SchemaUtils ships
+    # under signalwire\Utils\SchemaUtils and projects to the Python
+    # canonical name.  The legacy Schema mapping is kept as a port-only
+    # alias so existing code references continue to resolve.
     "Schema": "signalwire.utils.schema_utils",
+    "SchemaUtils": "signalwire.utils.schema_utils",
+    "SchemaValidationError": "signalwire.utils.schema_utils",
 
     # core/swaig
     "FunctionResult": "signalwire.core.function_result",
@@ -326,6 +331,9 @@ METHOD_ALIASES: dict[str, str] = {
     # Python ``AgentBase.pom`` is a @property; PHP exposes it as the
     # getter ``getPom()``. Project the PHP getter onto the Python name.
     "get_pom": "pom",
+    # Python ``SWMLService.schema_utils`` is a public attribute exposed
+    # via PHP's ``getSchemaUtils()`` getter. Strip the get_ prefix.
+    "get_schema_utils": "schema_utils",
 }
 
 

@@ -338,10 +338,13 @@ signalwire.skills.web_search.skill.WebSearchSkill.get_version: PHP idiomatic acc
 signalwire.skills.web_search.skill.WebSearchSkill.supports_multiple_instances: PHP idiomatic accessor / public hook on WebSearchSkill; Python implements the same behavior via private helpers.
 signalwire.skills.wikipedia_search.skill.WikipediaSearchSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.wikipedia_search.skill.WikipediaSearchSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.utils.schema_utils.Schema: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.utils.schema_utils.Schema.get_verb: PHP exposes the embedded SWML schema as a Schema class; Python uses module-level helpers in schema_utils for the same data.
-signalwire.utils.schema_utils.Schema.get_verb_names: PHP exposes the embedded SWML schema as a Schema class; Python uses module-level helpers in schema_utils for the same data.
-signalwire.utils.schema_utils.Schema.instance: PHP exposes the embedded SWML schema as a Schema class; Python uses module-level helpers in schema_utils for the same data.
-signalwire.utils.schema_utils.Schema.is_valid_verb: PHP exposes the embedded SWML schema as a Schema class; Python uses module-level helpers in schema_utils for the same data.
-signalwire.utils.schema_utils.Schema.reset: PHP exposes the embedded SWML schema as a Schema class; Python uses module-level helpers in schema_utils for the same data.
-signalwire.utils.schema_utils.Schema.verb_count: PHP exposes the embedded SWML schema as a Schema class; Python uses module-level helpers in schema_utils for the same data.
+signalwire.utils.schema_utils.Schema: idiomatic PHP singleton sidecar; canonical SchemaUtils ships separately as SignalWire\Utils\SchemaUtils.
+signalwire.utils.schema_utils.Schema.get_verb: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
+signalwire.utils.schema_utils.Schema.get_verb_names: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
+signalwire.utils.schema_utils.Schema.instance: PHP singleton accessor; canonical SchemaUtils ships separately.
+signalwire.utils.schema_utils.Schema.is_valid_verb: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
+signalwire.utils.schema_utils.Schema.reset: PHP singleton reset hook (test-only); canonical SchemaUtils ships separately.
+signalwire.utils.schema_utils.Schema.verb_count: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
+signalwire.utils.schema_utils.SchemaUtils.generate_method_signature: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
+signalwire.utils.schema_utils.SchemaUtils.generate_method_body: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
+signalwire.utils.schema_utils.SchemaUtils.is_full_validation_available: @property in Python (filtered as bool-returning attribute); ports expose it as an explicit method per spec.
