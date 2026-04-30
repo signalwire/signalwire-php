@@ -376,6 +376,40 @@ class Service
     }
 
     // ------------------------------------------------------------------
+    // SWML customization hooks (Python WebMixin parity)
+    // ------------------------------------------------------------------
+
+    /**
+     * Customization hook called when SWML is requested. Default
+     * delegates to {@see onSwmlRequest()}; subclasses typically
+     * override `onSwmlRequest` rather than this method.
+     *
+     * Return null to use the default SWML rendering, or an array of
+     * modifications to merge into the rendered document.
+     *
+     * Python parity: WebMixin.on_request(request_data, callback_path).
+     * The Python third `request` arg is FastAPI-specific and is not
+     * mirrored.
+     */
+    public function onRequest(?array $requestData = null, ?string $callbackPath = null): ?array
+    {
+        return $this->onSwmlRequest($requestData, $callbackPath);
+    }
+
+    /**
+     * Customization point for subclasses to modify SWML based on
+     * request data. The default implementation returns null (no
+     * modification). Subclasses override to inspect the body or
+     * callback path and return an associative array of overrides.
+     *
+     * Python parity: WebMixin.on_swml_request(request_data, callback_path).
+     */
+    public function onSwmlRequest(?array $requestData = null, ?string $callbackPath = null): ?array
+    {
+        return null;
+    }
+
+    // ------------------------------------------------------------------
     // Accessors
     // ------------------------------------------------------------------
 

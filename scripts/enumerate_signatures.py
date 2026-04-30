@@ -224,22 +224,30 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
             "methods": dict(sorted(methods_out.items())),
         }
 
-    # Mixin projection
+    # Mixin projection — pick matching methods off AgentBase or SWMLService
+    # depending on the (source_cls) the projection points at.
     ab_entry = out_modules.get("signalwire.core.agent_base", {}).get("classes", {}).get("AgentBase")
-    if ab_entry:
-        ab_methods = ab_entry["methods"]
-        projected = set()
+    sm_entry = out_modules.get("signalwire.core.swml_service", {}).get("classes", {}).get("SWMLService")
+    ab_methods = (ab_entry or {}).get("methods", {})
+    sm_methods = (sm_entry or {}).get("methods", {})
+
+    if ab_methods or sm_methods:
+        projected_ab: set[str] = set()
         for (target_mod, target_cls), (source_cls, expected) in MIXIN_PROJECTIONS.items():
-            present = {m: ab_methods[m] for m in expected if m in ab_methods}
+            source_methods = sm_methods if source_cls == "SWMLService" else ab_methods
+            present = {m: source_methods[m] for m in expected if m in source_methods}
             if not present:
                 continue
             out_modules.setdefault(target_mod, {"classes": {}})
             out_modules[target_mod]["classes"].setdefault(target_cls, {"methods": {}})
             out_modules[target_mod]["classes"][target_cls]["methods"].update(present)
-            projected.update(present)
-        for n in projected:
+            # Only de-duplicate against AgentBase — SWMLService methods that
+            # are also projected to a mixin still belong on SWMLService.
+            if source_cls != "SWMLService":
+                projected_ab.update(present)
+        for n in projected_ab:
             ab_methods.pop(n, None)
-        if not ab_methods:
+        if ab_entry is not None and not ab_methods:
             out_modules["signalwire.core.agent_base"]["classes"].pop("AgentBase", None)
             if not out_modules["signalwire.core.agent_base"]["classes"]:
                 out_modules.pop("signalwire.core.agent_base")
