@@ -155,6 +155,36 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.logging_config", "get_execution_mode"),
     ("SignalWire\\Logging\\LoggingConfig", "isServerlessMode"):
         ("signalwire.utils", "is_serverless_mode"),
+    # Top-level SignalWire\SignalWire class hosts package-level helpers
+    # (RestClient, register_skill, add_skill_directory,
+    # list_skills_with_params). Project each onto the canonical
+    # signalwire.<name> Python free function. RestClient stays
+    # PascalCase to match Python; the rest are already snake_case in PHP.
+    ("SignalWire\\SignalWire", "RestClient"):
+        ("signalwire", "RestClient"),
+    ("SignalWire\\SignalWire", "register_skill"):
+        ("signalwire", "register_skill"),
+    ("SignalWire\\SignalWire", "add_skill_directory"):
+        ("signalwire", "add_skill_directory"),
+    ("SignalWire\\SignalWire", "list_skills_with_params"):
+        ("signalwire", "list_skills_with_params"),
+}
+
+
+# Free-function projections sometimes need their parameter shape rewritten
+# to match Python's variadic ``*args, **kwargs`` conventions. PHP doesn't
+# have a syntactic ``**kwargs`` — it uses two parallel ``array``
+# parameters — so the source-side gets ``positional`` kinds with type
+# ``any`` while Python emits ``var_positional`` / ``var_keyword``. This
+# table rewrites the projected signature to canonical kind+type so the
+# cross-language audit treats them as compatible.
+FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
+    ("signalwire", "RestClient"): [
+        {"name": "args", "kind": "var_positional", "type": "list<any>",
+         "required": False, "default": "()"},
+        {"name": "kwargs", "kind": "var_keyword", "type": "dict<string,any>",
+         "required": False, "default": {}},
+    ],
 }
 
 
@@ -189,9 +219,23 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         full_php = f"{ns}\\{php_name}" if ns else php_name
         # Some classes exist solely to host static methods that get lifted
         # to module-level Python free functions (e.g. UrlValidator). Skip
-        # the class shell entirely when *every* projection key targets it.
-        is_freefn_only_class = any(
-            cls == full_php for (cls, _) in FREE_FUNCTION_PROJECTIONS.keys()
+        # the class shell entirely when *every* declared method on the
+        # class is free-function-projected. If the class has at least one
+        # non-projected method (e.g. SignalWire\SignalWire::getLogger), we
+        # keep the class shell so port-only methods stay surfaced.
+        projected_method_names = {
+            method
+            for (cls, method) in FREE_FUNCTION_PROJECTIONS.keys()
+            if cls == full_php
+        }
+        declared_methods = [
+            m.get("name", "")
+            for m in type_entry.get("methods", [])
+            if not m.get("name", "").startswith("__")
+        ]
+        is_freefn_only_class = (
+            bool(projected_method_names)
+            and all(m in projected_method_names for m in declared_methods)
         )
 
         methods_out: dict = {}
@@ -223,6 +267,13 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
                 params = sig.get("params", [])
                 if params and params[0].get("kind") == "self":
                     sig["params"] = params[1:]
+                # Apply variadic-shape override for projections whose PHP
+                # signature uses ``array $args = [], array $kwargs = []``
+                # but the canonical Python signature is
+                # ``(*args, **kwargs)``.
+                override = FREE_FUNCTION_PARAM_OVERRIDES.get((target_mod, target_fn))
+                if override is not None:
+                    sig["params"] = [dict(p) for p in override]
                 free_functions_out.append((target_mod, target_fn, sig))
                 continue
 

@@ -128,6 +128,48 @@ class SkillRegistry
         return $this->externalPaths;
     }
 
+    /**
+     * Get complete schema for all registered skills.
+     *
+     * Mirrors Python's instance-method
+     * ``SkillRegistry.get_all_skills_schema()`` — returns an associative
+     * array keyed by skill name where each entry contains metadata +
+     * parameter schema. PHP skills don't carry rich Python-style
+     * parameter introspection in v1, so the value defaults to a minimal
+     * shape with the skill name; built-ins that expose
+     * ``getDescription`` / ``getVersion`` get those merged in.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function getAllSkillsSchema(): array
+    {
+        $out = [];
+        foreach ($this->listSkills() as $name) {
+            $entry = ['name' => $name, 'parameters' => []];
+            $className = $this->getFactory($name);
+            if ($className && \class_exists($className)) {
+                if (\method_exists($className, 'getDescription')) {
+                    try {
+                        $skill = new $className();
+                        $entry['description'] = $skill->getDescription();
+                    } catch (\Throwable $e) {
+                        // Skip on construction failure
+                    }
+                }
+                if (\method_exists($className, 'getVersion')) {
+                    try {
+                        $skill = $skill ?? new $className();
+                        $entry['version'] = $skill->getVersion();
+                    } catch (\Throwable $e) {
+                        // Skip on construction failure
+                    }
+                }
+            }
+            $out[$name] = $entry;
+        }
+        return $out;
+    }
+
     private static function snakeToCamel(string $name): string
     {
         return str_replace(' ', '', ucwords(str_replace('_', ' ', $name)));

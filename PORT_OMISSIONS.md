@@ -9,8 +9,6 @@ Entries marked `not_yet_implemented:` are honest — a future PR will close the 
 # Regenerate with `python3 scripts/generate_exemptions.py` after
 # a surface change.
 
-signalwire.RestClient: Python's `from signalwire import RestClient` is a re-export; PHP users import `\SignalWire\REST\RestClient` directly.
-signalwire.add_skill_directory: Python top-level skill-discovery helper; PHP registers skills via `SkillRegistry::registerSkill` directly.
 signalwire.agent_server.AgentServer.register_global_routing_callback: Python global-routing callback hook; PHP apps install equivalent behavior via `AgentServer::register()` with a routed AgentBase.
 signalwire.agents.bedrock.BedrockAgent: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
 signalwire.agents.bedrock.BedrockAgent.__init__: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
@@ -305,7 +303,6 @@ signalwire.core.swml_service.SWMLService.render_document: Python alias for `rend
 signalwire.core.swml_service.SWMLService.reset_document: Python helper that resets the underlying Document; PHP users call `$service->getDocument()->reset()` directly.
 signalwire.core.swml_service.SWMLService.stop: Python helper for graceful HTTP-server shutdown; PHP's `php -S` and FPM lifecycles are managed externally.
 signalwire.list_skills: Python top-level helper; PHP exposes `SkillRegistry::listSkills`.
-signalwire.list_skills_with_params: Python top-level helper; PHP exposes `SkillRegistry::listSkills` and users inspect each registered skill for params.
 signalwire.livewire.Agent: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.Agent.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.Agent.llm_node: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
@@ -437,7 +434,6 @@ signalwire.prefabs.receptionist.ReceptionistAgent.on_summary: Python prefab expo
 signalwire.prefabs.survey.SurveyAgent.log_response: Python prefab exposes additional internal helpers not needed in PHP's equivalent prefab class (e.g. PromptManager wrappers, auto-tools registration). PHP prefabs implement the same five agent classes with the documented public constructor.
 signalwire.prefabs.survey.SurveyAgent.on_summary: Python prefab exposes additional internal helpers not needed in PHP's equivalent prefab class (e.g. PromptManager wrappers, auto-tools registration). PHP prefabs implement the same five agent classes with the documented public constructor.
 signalwire.prefabs.survey.SurveyAgent.validate_response: Python prefab exposes additional internal helpers not needed in PHP's equivalent prefab class (e.g. PromptManager wrappers, auto-tools registration). PHP prefabs implement the same five agent classes with the documented public constructor.
-signalwire.register_skill: Python top-level helper; PHP exposes `SkillRegistry::registerSkill`.
 signalwire.relay.call.AIAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.AIAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.Call.__repr__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.

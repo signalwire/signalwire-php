@@ -28,6 +28,51 @@
             }
           }
         }
+      },
+      "functions": {
+        "RestClient": {
+          "params": [
+            {
+              "name": "args",
+              "kind": "var_positional",
+              "type": "list<any>",
+              "required": false,
+              "default": "()"
+            },
+            {
+              "name": "kwargs",
+              "kind": "var_keyword",
+              "type": "dict<string,any>",
+              "required": false,
+              "default": {}
+            }
+          ],
+          "returns": "class:signalwire.rest.client.RestClient"
+        },
+        "add_skill_directory": {
+          "params": [
+            {
+              "name": "path",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "void"
+        },
+        "list_skills_with_params": {
+          "params": [],
+          "returns": "any"
+        },
+        "register_skill": {
+          "params": [
+            {
+              "name": "skill_class",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "void"
+        }
       }
     },
     "signalwire.agent_server": {
@@ -9136,6 +9181,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "get_all_skills_schema": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
             },
             "get_external_paths": {
               "params": [
