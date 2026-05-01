@@ -33,14 +33,28 @@ class GatherQuestion
     private ?string $prompt;
     private ?array $functions;
 
-    public function __construct(array $opts)
-    {
-        $this->key = $opts['key'];
-        $this->question = $opts['question'];
-        $this->type = $opts['type'] ?? 'string';
-        $this->confirm = $opts['confirm'] ?? false;
-        $this->prompt = $opts['prompt'] ?? null;
-        $this->functions = $opts['functions'] ?? null;
+    /**
+     * @param string $key       Key name for storing the answer in global_data.
+     * @param string $question  The question text to ask.
+     * @param string $type      JSON schema type for the answer (default 'string').
+     * @param bool   $confirm   If true, the model must confirm the answer.
+     * @param ?string $prompt   Extra instruction text appended after the question.
+     * @param ?array<string> $functions Functions to unlock for this question.
+     */
+    public function __construct(
+        string $key,
+        string $question,
+        string $type = 'string',
+        bool $confirm = false,
+        ?string $prompt = null,
+        ?array $functions = null
+    ) {
+        $this->key = $key;
+        $this->question = $question;
+        $this->type = $type;
+        $this->confirm = $confirm;
+        $this->prompt = $prompt;
+        $this->functions = $functions;
     }
 
     public function getKey(): string
@@ -92,9 +106,24 @@ class GatherInfo
         $this->prompt = $prompt;
     }
 
-    public function addQuestion(array $opts): self
+    /**
+     * Add a question to gather.
+     *
+     * @param string $key       Key name for storing the answer in global_data.
+     * @param string $question  The question text to ask.
+     * @param array{type?:string,confirm?:bool,prompt?:?string,functions?:?array<string>} $kwargs
+     *                          Optional named arguments forwarded to GatherQuestion.
+     */
+    public function addQuestion(string $key, string $question, array $kwargs = []): self
     {
-        $this->questions[] = new GatherQuestion($opts);
+        $this->questions[] = new GatherQuestion(
+            $key,
+            $question,
+            $kwargs['type'] ?? 'string',
+            $kwargs['confirm'] ?? false,
+            $kwargs['prompt'] ?? null,
+            $kwargs['functions'] ?? null
+        );
         return $this;
     }
 
@@ -316,15 +345,24 @@ class Step
     }
 
     /**
-     * Initialize the gather_info configuration for this step.
+     * Initialize the gather_info configuration for this step. Questions are
+     * presented one at a time via dynamic step instruction re-injection,
+     * producing zero tool_call/tool_result entries in LLM-visible history.
+     *
+     * After calling this, use addGatherQuestion() to define questions.
+     *
+     * @param ?string $output_key  Key in global_data to store answers under.
+     * @param ?string $completion_action  Where to go when all questions are
+     *                              answered ('next_step', a step name, or null).
+     * @param ?string $prompt      Preamble text injected once when entering
+     *                              the gather step.
      */
-    public function setGatherInfo(array $opts): self
-    {
-        $this->gatherInfo = new GatherInfo(
-            $opts['output_key'] ?? null,
-            $opts['completion_action'] ?? null,
-            $opts['prompt'] ?? null
-        );
+    public function setGatherInfo(
+        ?string $output_key = null,
+        ?string $completion_action = null,
+        ?string $prompt = null
+    ): self {
+        $this->gatherInfo = new GatherInfo($output_key, $completion_action, $prompt);
         return $this;
     }
 
@@ -351,12 +389,25 @@ class Step
      *   'functions' option. Functions listed here are active ONLY for
      *   this question.
      */
-    public function addGatherQuestion(array $opts): self
-    {
+    public function addGatherQuestion(
+        string $key,
+        string $question,
+        string $type = 'string',
+        bool $confirm = false,
+        ?string $prompt = null,
+        ?array $functions = null
+    ): self {
         if ($this->gatherInfo === null) {
-            $this->gatherInfo = new GatherInfo();
+            throw new \LogicException(
+                "Must call setGatherInfo() before addGatherQuestion()"
+            );
         }
-        $this->gatherInfo->addQuestion($opts);
+        $this->gatherInfo->addQuestion($key, $question, [
+            'type' => $type,
+            'confirm' => $confirm,
+            'prompt' => $prompt,
+            'functions' => $functions,
+        ]);
         return $this;
     }
 
@@ -546,10 +597,33 @@ class Context
     // ── Steps ───────────────────────────────────────────────────────────
 
     /**
-     * Add a new step to this context and return it for further configuration.
+     * Add a new step to this context.
+     *
+     * When called with only $name the returned Step can be configured with
+     * the usual method-chaining API. When the optional keyword arguments are
+     * supplied the step is fully configured in one call:
+     *
+     * @param string $name       Step name (must be unique within the context).
+     * @param ?string $task      Text for the "Task" section (≡ addSection("Task", $task)).
+     * @param ?array<string> $bullets List of bullet strings for the "Process"
+     *                           section (≡ addBullets("Process", $bullets)).
+     *                           Requires $task to also be set.
+     * @param ?string $criteria  Step-completion criteria (≡ setStepCriteria()).
+     * @param string|array<string>|null $functions Tool names the step may call,
+     *                           or 'none' (≡ setFunctions()).
+     * @param ?array<string> $valid_steps Names of steps the agent may
+     *                           transition to (≡ setValidSteps()).
+     *
+     * @return Step The configured Step object for optional further chaining.
      */
-    public function addStep(string $name, array $opts = []): Step
-    {
+    public function addStep(
+        string $name,
+        ?string $task = null,
+        ?array $bullets = null,
+        ?string $criteria = null,
+        $functions = null,
+        ?array $valid_steps = null
+    ): Step {
         if (isset($this->steps[$name])) {
             throw new \LogicException("Step '{$name}' already exists in context '{$this->name}'");
         }
@@ -563,21 +637,20 @@ class Context
         $this->steps[$name] = $step;
         $this->stepOrder[] = $name;
 
-        // Apply shorthand options if provided
-        if (isset($opts['text'])) {
-            $step->setText($opts['text']);
+        if ($task !== null) {
+            $step->addSection('Task', $task);
         }
-        if (isset($opts['step_criteria'])) {
-            $step->setStepCriteria($opts['step_criteria']);
+        if ($bullets !== null) {
+            $step->addBullets('Process', $bullets);
         }
-        if (isset($opts['functions'])) {
-            $step->setFunctions($opts['functions']);
+        if ($criteria !== null) {
+            $step->setStepCriteria($criteria);
         }
-        if (isset($opts['valid_steps'])) {
-            $step->setValidSteps($opts['valid_steps']);
+        if ($functions !== null) {
+            $step->setFunctions($functions);
         }
-        if (isset($opts['valid_contexts'])) {
-            $step->setValidContexts($opts['valid_contexts']);
+        if ($valid_steps !== null) {
+            $step->setValidSteps($valid_steps);
         }
 
         return $step;
@@ -770,39 +843,71 @@ class Context
 
     // ── Fillers ─────────────────────────────────────────────────────────
 
-    public function setEnterFillers(array $fillers): self
+    /**
+     * Set fillers played by the AI when entering this context.
+     *
+     * @param array<string,array<string>> $enter_fillers Map of language code
+     *        ("en-US" / "default") to a list of phrases.
+     */
+    public function setEnterFillers(array $enter_fillers): self
     {
-        $this->enterFillers = $fillers;
+        $this->enterFillers = $enter_fillers;
         return $this;
     }
 
-    public function setExitFillers(array $fillers): self
+    /**
+     * Set fillers played by the AI when leaving this context.
+     *
+     * @param array<string,array<string>> $exit_fillers Map of language code
+     *        ("en-US" / "default") to a list of phrases.
+     */
+    public function setExitFillers(array $exit_fillers): self
     {
-        $this->exitFillers = $fillers;
+        $this->exitFillers = $exit_fillers;
         return $this;
     }
 
-    public function addEnterFiller(string $lang, string $text): self
+    /**
+     * Add enter fillers for a specific language.
+     *
+     * Mirrors Python's Context.add_enter_filler(language_code: str, fillers:
+     * List[str]) — pass a list of phrases to associate with this language code.
+     *
+     * @param string $language_code Language code (e.g. "en-US", "es") or
+     *                              "default" for catch-all.
+     * @param array<string> $fillers List of filler phrases.
+     */
+    public function addEnterFiller(string $language_code, array $fillers): self
     {
+        if (empty($fillers)) {
+            return $this;
+        }
         if ($this->enterFillers === null) {
             $this->enterFillers = [];
         }
-        if (!isset($this->enterFillers[$lang])) {
-            $this->enterFillers[$lang] = [];
-        }
-        $this->enterFillers[$lang][] = $text;
+        $this->enterFillers[$language_code] = $fillers;
         return $this;
     }
 
-    public function addExitFiller(string $lang, string $text): self
+    /**
+     * Add exit fillers for a specific language.
+     *
+     * Mirrors Python's Context.add_exit_filler(language_code: str, fillers:
+     * List[str]) — pass a list of phrases to associate with this language code.
+     *
+     * @param string $language_code Language code (e.g. "en-US", "es") or
+     *                              "default" for catch-all.
+     * @param array<string> $fillers List of filler phrases.
+     */
+    public function addExitFiller(string $language_code, array $fillers): self
     {
+        if (empty($fillers)) {
+            return $this;
+        }
         if ($this->exitFillers === null) {
             $this->exitFillers = [];
         }
-        if (!isset($this->exitFillers[$lang])) {
-            $this->exitFillers[$lang] = [];
-        }
-        $this->exitFillers[$lang][] = $text;
+        $this->exitFillers[$language_code] = $fillers;
         return $this;
     }
 
@@ -968,6 +1073,29 @@ class ContextBuilder
      * @var callable|null
      */
     private $toolNameSupplier = null;
+
+    /** @var object|null Bound agent for collision validation. */
+    private $agent = null;
+
+    /**
+     * Construct a builder. The optional $agent reference mirrors Python's
+     * ContextBuilder(agent) so callers (typically AgentBase) can hand the
+     * builder a reference to the owning agent for tool-name collision
+     * checks during validate().
+     *
+     * If $agent has a method named getRegisteredToolNames() returning an
+     * array of strings, validate() will use it automatically — no
+     * separate attachToolNameSupplier() call required.
+     */
+    public function __construct(?object $agent = null)
+    {
+        $this->agent = $agent;
+        if ($agent !== null && method_exists($agent, 'getRegisteredToolNames')) {
+            $this->toolNameSupplier = function () use ($agent) {
+                return $agent->getRegisteredToolNames();
+            };
+        }
+    }
 
     /**
      * Attach a callable that returns registered SWAIG tool names so
@@ -1218,4 +1346,20 @@ class ContextBuilder
         $builder->addContext($name);
         return $builder;
     }
+}
+
+// ── Module-level helper ─────────────────────────────────────────────────────
+
+/**
+ * Helper function to create a simple single Context.
+ *
+ * Mirrors Python's signalwire.core.contexts.create_simple_context — returns a
+ * standalone Context (NOT a builder). Use ContextBuilder::createSimpleContext
+ * if you want a fully-populated builder.
+ *
+ * @param string $name Context name (defaults to "default").
+ */
+function create_simple_context(string $name = 'default'): Context
+{
+    return new Context($name);
 }

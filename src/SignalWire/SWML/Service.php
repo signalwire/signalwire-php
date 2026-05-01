@@ -662,6 +662,15 @@ class Service
      */
     public function getProxyUrlBase(array $headers = []): string
     {
+        // 0. Manually-set proxy URL takes priority (manualSetProxyUrl on
+        //    AgentBase). Subclasses that override the proxy URL set
+        //    $this->manualProxyUrl; check via property_exists for safety.
+        if (property_exists($this, 'manualProxyUrl')
+            && !empty($this->manualProxyUrl)
+        ) {
+            return $this->manualProxyUrl;
+        }
+
         // 1. Explicit env var
         $envProxy = getenv('SWML_PROXY_URL_BASE');
         if ($envProxy !== false && $envProxy !== '') {

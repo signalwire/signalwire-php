@@ -112,7 +112,9 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # rest core
     "RestClient": "signalwire.rest.client",
     "HttpClient": "signalwire.rest._base",
+    "BaseResource": "signalwire.rest._base",
     "CrudResource": "signalwire.rest._base",
+    "CrudWithAddresses": "signalwire.rest._base",
     "SignalWireRestError": "signalwire.rest._base",
 
     # rest namespaces (PHP only ships dedicated classes for Calling and Fabric;
@@ -670,11 +672,19 @@ def build_surface() -> dict:
     swml_service_methods = _lookup_class_methods("SWMLService")
 
     for (target_mod, target_cls), (source_cls, expected) in MIXIN_PROJECTIONS.items():
-        source_methods = (
+        primary = (
             agent_base_methods if source_cls == "AgentBase"
             else swml_service_methods
         )
-        present = sorted(m for m in expected if m in source_methods)
+        secondary = (
+            swml_service_methods if source_cls == "AgentBase"
+            else agent_base_methods
+        )
+        # Try the configured primary source first, fall back to the
+        # alternate base class. WebMixin's manual_set_proxy_url is a
+        # typical case — Python projects it under the mixin while PHP
+        # declares it on AgentBase.
+        present = sorted(m for m in expected if m in primary or m in secondary)
         modules[target_mod]["classes"][target_cls] = present
 
     # Add the top-level signalwire module re-exports (mirrors Python's

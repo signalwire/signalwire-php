@@ -359,6 +359,47 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
             "methods": dict(sorted(methods_out.items())),
         }
 
+    # Free functions declared in SignalWire\* namespaces (e.g.
+    # SignalWire\Contexts\create_simple_context). Map them onto
+    # canonical Python module paths just like classes.
+    for fn in raw.get("functions", []):
+        ns = fn.get("namespace", "")
+        php_name = fn.get("name", "")
+        if not php_name:
+            continue
+        # Convert namespace `SignalWire\Contexts` -> `signalwire.contexts`
+        parts = [p for p in ns.split("\\") if p]
+        if not parts or parts[0].lower() != "signalwire":
+            continue
+        rest = parts[1:]
+        if rest:
+            mod = "signalwire." + ".".join(camel_to_snake(p) for p in rest)
+        else:
+            mod = "signalwire"
+        # Special case: signalwire.contexts -> signalwire.core.contexts to
+        # match the canonical Python module path.
+        if mod == "signalwire.contexts":
+            mod = "signalwire.core.contexts"
+        py_name = camel_to_snake(php_name)
+        py_name = METHOD_ALIASES.get(py_name, py_name)
+        ctx = f"{mod}.{py_name}"
+        try:
+            sig = build_signature({"name": php_name, "is_static": True,
+                                   "parameters": fn.get("parameters", []),
+                                   "return_type": fn.get("return_type", "mixed"),
+                                   "return_allows_null": fn.get("return_allows_null", False)},
+                                   aliases, ctx)
+            # Free functions have no `self`.
+            params = sig.get("params", [])
+            if params and params[0].get("kind") == "self":
+                sig["params"] = params[1:]
+        except TypeTranslationError as e:
+            failures.append(str(e))
+            continue
+        out_modules.setdefault(mod, {"classes": {}})
+        out_modules[mod].setdefault("functions", {})
+        out_modules[mod]["functions"][py_name] = sig
+
     # Mixin projection — pick matching methods off AgentBase or SWMLService
     # depending on the (source_cls) the projection points at.
     ab_entry = out_modules.get("signalwire.core.agent_base", {}).get("classes", {}).get("AgentBase")
@@ -369,8 +410,21 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
     if ab_methods or sm_methods:
         projected_ab: set[str] = set()
         for (target_mod, target_cls), (source_cls, expected) in MIXIN_PROJECTIONS.items():
-            source_methods = sm_methods if source_cls == "SWMLService" else ab_methods
-            present = {m: source_methods[m] for m in expected if m in source_methods}
+            primary = sm_methods if source_cls == "SWMLService" else ab_methods
+            secondary = ab_methods if source_cls == "SWMLService" else sm_methods
+            present: dict = {}
+            ab_picked: list[str] = []
+            for m in expected:
+                if m in primary:
+                    present[m] = primary[m]
+                elif m in secondary:
+                    # Cross-source pickup: PHP only declares the method on
+                    # the alternate base class. WebMixin's manual_set_proxy_url
+                    # is a typical case — Python projects it under the mixin
+                    # while PHP declares it on AgentBase.
+                    present[m] = secondary[m]
+                    if source_cls == "SWMLService":
+                        ab_picked.append(m)
             if not present:
                 continue
             out_modules.setdefault(target_mod, {"classes": {}})
@@ -380,6 +434,11 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
             # are also projected to a mixin still belong on SWMLService.
             if source_cls != "SWMLService":
                 projected_ab.update(present)
+            # When the SWMLService-source projection cross-picks an
+            # AgentBase method, also mark it for AgentBase de-dup so it
+            # doesn't show up in two places.
+            for m in ab_picked:
+                projected_ab.add(m)
         for n in projected_ab:
             ab_methods.pop(n, None)
         if ab_entry is not None and not ab_methods:

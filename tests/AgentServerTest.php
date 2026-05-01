@@ -380,6 +380,69 @@ class AgentServerTest extends TestCase
         $ret = $server->setupSipRouting();
         $this->assertSame($server, $ret);
         $this->assertTrue($server->isSipRoutingEnabled());
+        // Default route per Python is "/sip"; auto_map defaults to true.
+        $this->assertSame('/sip', $server->getSipRoute());
+        $this->assertTrue($server->getSipAutoMap());
+    }
+
+    public function testSipRoutingSetupCustomRoute(): void
+    {
+        $server = new AgentServer();
+        // Python signature: setup_sip_routing(route="/sip", auto_map=True)
+        // Pass through both — verify they round-trip and the route gets
+        // normalised (trailing slash stripped, leading slash added).
+        $server->setupSipRouting(route: '/voip/inbound', auto_map: false);
+
+        $this->assertTrue($server->isSipRoutingEnabled());
+        $this->assertSame('/voip/inbound', $server->getSipRoute());
+        $this->assertFalse($server->getSipAutoMap());
+    }
+
+    public function testSipRoutingSetupNormalisesRoute(): void
+    {
+        $server = new AgentServer();
+        // Missing leading slash + trailing slash: Python adds the leading
+        // slash and rstrips trailing slash before storing.
+        $server->setupSipRouting('voip/');
+
+        $this->assertSame('/voip', $server->getSipRoute());
+    }
+
+    public function testSipRoutingSetupAutoMapPopulatesUsernames(): void
+    {
+        $server = new AgentServer();
+        $server->register($this->makeAgent('alice', '/alice'));
+        $server->register($this->makeAgent('bob', '/sales'));
+
+        $server->setupSipRouting(auto_map: true);
+
+        $mapping = $server->getSipUsernameMapping();
+        // Auto-map derives lowercased username from each agent's route
+        // (mirrors Python's _auto_map_agent_sip_usernames).
+        $this->assertArrayHasKey('alice', $mapping);
+        $this->assertSame('/alice', $mapping['alice']);
+        $this->assertArrayHasKey('sales', $mapping);
+        $this->assertSame('/sales', $mapping['sales']);
+    }
+
+    public function testSipRoutingSetupAutoMapFalseDoesNotPopulate(): void
+    {
+        $server = new AgentServer();
+        $server->register($this->makeAgent('alice', '/alice'));
+
+        $server->setupSipRouting(auto_map: false);
+
+        $this->assertSame([], $server->getSipUsernameMapping());
+    }
+
+    public function testSipRoutingSetupRepeatedCallIsNoop(): void
+    {
+        $server = new AgentServer();
+        $server->setupSipRouting(route: '/sip');
+        // Python: if already enabled, log warning + return without
+        // overwriting. Verify same behavior here.
+        $server->setupSipRouting(route: '/different');
+        $this->assertSame('/sip', $server->getSipRoute());
     }
 
     public function testRegisterSipUsername(): void

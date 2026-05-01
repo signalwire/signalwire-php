@@ -2,7 +2,7 @@
 
 Every symbol listed here is a public class, method or function present in the Python reference (`porting-sdk/python_surface.json`) that this PHP port deliberately does not expose. Each entry records a one-line rationale; the Phase 13 surface audit in CI will reject any Python symbol missing from the PHP SDK that is also missing from this file.
 
-Entries marked `not_yet_implemented:` are honest — a future PR will close the gap. Everything else is intentional divergence with a design reason.
+As of phase 4 cleanup, every `not_yet_implemented:` entry has been closed. New entries should carry an intentional-divergence rationale (e.g. "Python's helper is internal", "PHP composes the same behavior via X", etc.).
 
 
 # Format: `<fully.qualified.symbol>: <rationale>`
@@ -217,13 +217,13 @@ signalwire.core.mixins.tool_mixin.ToolMixin.tool: Python composes AgentBase + SW
 signalwire.core.mixins.web_mixin.WebMixin.as_router: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.enable_debug_routes: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.get_app: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.manual_set_proxy_url: not_yet_implemented: WebMixin proxy/config-callback hooks not yet ported to PHP; follow-up PR will add them
+signalwire.core.mixins.web_mixin.WebMixin.manual_set_proxy_url: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.on_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.on_swml_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.register_routing_callback: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.run: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.serve: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.set_dynamic_config_callback: not_yet_implemented: WebMixin proxy/config-callback hooks not yet ported to PHP; follow-up PR will add them
+signalwire.core.mixins.web_mixin.WebMixin.set_dynamic_config_callback: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.setup_graceful_shutdown: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.pom_builder.PomBuilder: Python's PomBuilder helper is merged into AgentBase's prompt API in PHP; the SDK's `pomSections` array stores the structured prompt directly with no separate builder class.
 signalwire.core.pom_builder.PomBuilder.__init__: Python's PomBuilder helper is merged into AgentBase's prompt API in PHP; the SDK's `pomSections` array stores the structured prompt directly with no separate builder class.
@@ -525,10 +525,6 @@ signalwire.relay.event.TranscribeEvent.from_payload: PHP's Event family has a si
 signalwire.relay.event.parse_event: PHP's Event family has a single Event class that exposes the type + payload; Python splits into per-event-type subclasses. The PHP surface is informationally equivalent.
 signalwire.relay.message.Message.__repr__: Python Message exposes additional internal helpers; PHP's Message sticks to the public send/reply API.
 signalwire.relay.message.Message.result: Python Message exposes additional internal helpers; PHP's Message sticks to the public send/reply API.
-signalwire.rest._base.BaseResource: Python's BaseResource is the abstract parent of CrudResource; PHP exposes only `CrudResource` (the concrete class) at the same namespace path.
-signalwire.rest._base.BaseResource.__init__: not_yet_implemented: Python surface has no matching PHP symbol — a follow-up PR will close the gap
-signalwire.rest._base.CrudWithAddresses: Python's mixin for resources that nest addresses (e.g. Subscribers); PHP composes the same behavior via the standard CrudResource passing the right base path.
-signalwire.rest._base.CrudWithAddresses.list_addresses: not_yet_implemented: Python surface has no matching PHP symbol — a follow-up PR will close the gap
 signalwire.rest._pagination.PaginatedIterator: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().
 signalwire.rest._pagination.PaginatedIterator.__init__: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().
 signalwire.rest._pagination.PaginatedIterator.__iter__: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().

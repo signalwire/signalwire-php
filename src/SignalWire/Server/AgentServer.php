@@ -18,6 +18,8 @@ class AgentServer
 
     // SIP routing
     protected bool $sipRoutingEnabled = false;
+    protected string $sipRoute = '/sip';
+    protected bool $sipAutoMap = true;
 
     /** @var array<string, string> SIP username => route */
     protected array $sipUsernameMapping = [];
@@ -117,12 +119,57 @@ class AgentServer
     // ======================================================================
 
     /**
-     * Enable SIP-based routing.
+     * Set up central SIP-based routing for the server.
+     *
+     * Mirrors Python's AgentServer.setup_sip_routing(route, auto_map). When
+     * called with no args, defaults match Python: route="/sip", auto_map=true.
+     *
+     * @param string $route   Path for SIP routing (default "/sip"). Leading
+     *                        slash is added if missing; trailing slash is
+     *                        stripped.
+     * @param bool   $auto_map If true, existing agents have their SIP
+     *                        usernames auto-derived from their route.
      */
-    public function setupSipRouting(): self
+    public function setupSipRouting(string $route = '/sip', bool $auto_map = true): self
     {
+        if ($this->sipRoutingEnabled) {
+            $this->logger->warn('sip_routing_already_enabled');
+            return $this;
+        }
+
+        if (!str_starts_with($route, '/')) {
+            $route = '/' . $route;
+        }
+        $route = rtrim($route, '/');
+        if ($route === '') {
+            $route = '/sip';
+        }
+
         $this->sipRoutingEnabled = true;
+        $this->sipRoute = $route;
+        $this->sipAutoMap = $auto_map;
+
+        if ($auto_map) {
+            foreach ($this->agents as $agentRoute => $_agent) {
+                // Strip leading slash, lowercase — mirrors Python's auto-map
+                $username = ltrim($agentRoute, '/');
+                if ($username !== '') {
+                    $this->sipUsernameMapping[strtolower($username)] = $agentRoute;
+                }
+            }
+        }
+
         return $this;
+    }
+
+    public function getSipRoute(): string
+    {
+        return $this->sipRoute;
+    }
+
+    public function getSipAutoMap(): bool
+    {
+        return $this->sipAutoMap;
     }
 
     /**

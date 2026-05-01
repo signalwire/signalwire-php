@@ -784,6 +784,16 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * Returns the dynamic-config callback (or null if none has been set).
+     * Used by request handlers to invoke the callback before SWML
+     * rendering so the agent can be reshaped per-request.
+     */
+    public function getDynamicConfigCallback(): ?callable
+    {
+        return $this->dynamicConfigCallback;
+    }
+
     public function setWebHookUrl(string $url): self
     {
         $this->webhookUrl = $url;

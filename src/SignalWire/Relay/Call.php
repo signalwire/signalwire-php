@@ -260,9 +260,24 @@ class Call
         return $this->execute('calling.bind_digit', $params);
     }
 
-    public function clearDigitBindings(): array
+    /**
+     * Clear all digit bindings, optionally filtered by realm.
+     *
+     * Mirrors Python's Call.clear_digit_bindings(*, realm=None, **kwargs).
+     *
+     * @param ?string $realm  Optional realm filter — restricts clearing to
+     *                         bindings registered under that realm.
+     * @param array<string,mixed> $kwargs Additional params forwarded to the
+     *                                     wire call.
+     */
+    public function clearDigitBindings(?string $realm = null, array $kwargs = []): array
     {
-        return $this->execute('calling.clear_digit_bindings');
+        $params = [];
+        if ($realm !== null) {
+            $params['realm'] = $realm;
+        }
+        $params = array_merge($params, $kwargs);
+        return $this->execute('calling.clear_digit_bindings', $params);
     }
 
     public function liveTranscribe(array $params): array
@@ -315,9 +330,56 @@ class Call
         return $this->execute('calling.queue.enter', $params);
     }
 
-    public function queueLeave(): array
-    {
-        return $this->execute('calling.queue.leave');
+    /**
+     * Remove the call from a named queue.
+     *
+     * Mirrors Python's Call.queue_leave(queue_name, *, control_id=None,
+     * queue_id=None, status_url=None, **kwargs). When called with no args
+     * the legacy "leave the current queue" behavior is preserved.
+     *
+     * @param ?string $queue_name  Name of the queue to leave. Required when
+     *                             also supplying control_id / queue_id; when
+     *                             null the legacy no-arg "leave-current"
+     *                             behavior is preserved.
+     * @param ?string $control_id  Optional control_id; auto-generated when
+     *                             null and other named-args are supplied.
+     * @param ?string $queue_id    Optional explicit queue_id passed to the
+     *                             server.
+     * @param ?string $status_url  Optional status callback URL.
+     * @param array<string,mixed> $kwargs  Extra params merged onto the
+     *                                     wire call.
+     */
+    public function queueLeave(
+        ?string $queue_name = null,
+        ?string $control_id = null,
+        ?string $queue_id = null,
+        ?string $status_url = null,
+        array $kwargs = []
+    ): array {
+        if ($queue_name === null
+            && $control_id === null
+            && $queue_id === null
+            && $status_url === null
+            && empty($kwargs)
+        ) {
+            // Legacy no-arg shape: leave whatever queue the call is in.
+            return $this->execute('calling.queue.leave');
+        }
+
+        $params = [
+            'control_id' => $control_id ?? bin2hex(random_bytes(16)),
+        ];
+        if ($queue_name !== null) {
+            $params['queue_name'] = $queue_name;
+        }
+        if ($queue_id !== null) {
+            $params['queue_id'] = $queue_id;
+        }
+        if ($status_url !== null) {
+            $params['status_url'] = $status_url;
+        }
+        $params = array_merge($params, $kwargs);
+        return $this->execute('calling.queue.leave', $params);
     }
 
     public function refer(array $params): array

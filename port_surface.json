@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ b0fe5dde835ffbf0a4702bd862c7f87a86b2b748",
+  "generated_from": "signalwire-php @ 23c8abd698db07d1df0c6be326519c4790c57256",
   "modules": {
     "signalwire": {
       "classes": {
@@ -22,6 +22,8 @@
           "get_agents",
           "get_host",
           "get_port",
+          "get_sip_auto_map",
+          "get_sip_route",
           "get_sip_username_mapping",
           "handle_request",
           "is_sip_routing_enabled",
@@ -184,6 +186,7 @@
           "to_dict"
         ],
         "ContextBuilder": [
+          "__init__",
           "add_context",
           "attach_tool_name_supplier",
           "create_simple_context",
@@ -433,11 +436,13 @@
     "signalwire.core.mixins.web_mixin": {
       "classes": {
         "WebMixin": [
+          "manual_set_proxy_url",
           "on_request",
           "on_swml_request",
           "register_routing_callback",
           "run",
-          "serve"
+          "serve",
+          "set_dynamic_config_callback"
         ]
       },
       "functions": []
@@ -819,6 +824,11 @@
     },
     "signalwire.rest._base": {
       "classes": {
+        "BaseResource": [
+          "__init__",
+          "get_base_path",
+          "get_http"
+        ],
         "CrudResource": [
           "__init__",
           "create",
@@ -828,6 +838,9 @@
           "get_client",
           "list",
           "update"
+        ],
+        "CrudWithAddresses": [
+          "list_addresses"
         ],
         "HttpClient": [
           "__init__",

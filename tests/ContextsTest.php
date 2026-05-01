@@ -19,10 +19,7 @@ class ContextsTest extends TestCase
 
     public function testGatherQuestionConstructionAndToArray(): void
     {
-        $q = new GatherQuestion([
-            'key' => 'name',
-            'question' => 'What is your name?',
-        ]);
+        $q = new GatherQuestion('name', 'What is your name?');
 
         $this->assertSame('name', $q->getKey());
 
@@ -38,14 +35,14 @@ class ContextsTest extends TestCase
 
     public function testGatherQuestionWithAllOptions(): void
     {
-        $q = new GatherQuestion([
-            'key' => 'age',
-            'question' => 'How old are you?',
-            'type' => 'integer',
-            'confirm' => true,
-            'prompt' => 'Confirm age',
-            'functions' => ['validate_age'],
-        ]);
+        $q = new GatherQuestion(
+            key: 'age',
+            question: 'How old are you?',
+            type: 'integer',
+            confirm: true,
+            prompt: 'Confirm age',
+            functions: ['validate_age']
+        );
 
         $arr = $q->toArray();
         $this->assertSame('age', $arr['key']);
@@ -58,22 +55,14 @@ class ContextsTest extends TestCase
 
     public function testGatherQuestionDefaultTypeOmitted(): void
     {
-        $q = new GatherQuestion([
-            'key' => 'x',
-            'question' => 'Q?',
-            'type' => 'string',
-        ]);
+        $q = new GatherQuestion('x', 'Q?', 'string');
 
         $this->assertArrayNotHasKey('type', $q->toArray());
     }
 
     public function testGatherQuestionNonDefaultTypeIncluded(): void
     {
-        $q = new GatherQuestion([
-            'key' => 'x',
-            'question' => 'Q?',
-            'type' => 'boolean',
-        ]);
+        $q = new GatherQuestion('x', 'Q?', 'boolean');
 
         $this->assertSame('boolean', $q->toArray()['type']);
     }
@@ -85,8 +74,8 @@ class ContextsTest extends TestCase
     public function testGatherInfoAddQuestionAndToArray(): void
     {
         $gi = new GatherInfo('result_key', 'next_step', 'Please answer');
-        $gi->addQuestion(['key' => 'color', 'question' => 'Favorite color?']);
-        $gi->addQuestion(['key' => 'food', 'question' => 'Favorite food?']);
+        $gi->addQuestion('color', 'Favorite color?');
+        $gi->addQuestion('food', 'Favorite food?');
 
         $this->assertCount(2, $gi->getQuestions());
         $this->assertSame('next_step', $gi->getCompletionAction());
@@ -103,7 +92,7 @@ class ContextsTest extends TestCase
     public function testGatherInfoDefaultsOmitOptionalFields(): void
     {
         $gi = new GatherInfo();
-        $gi->addQuestion(['key' => 'k', 'question' => 'Q?']);
+        $gi->addQuestion('k', 'Q?');
 
         $arr = $gi->toArray();
         $this->assertArrayNotHasKey('prompt', $arr);
@@ -114,7 +103,7 @@ class ContextsTest extends TestCase
     public function testGatherInfoChainsAddQuestion(): void
     {
         $gi = new GatherInfo();
-        $result = $gi->addQuestion(['key' => 'a', 'question' => 'A?']);
+        $result = $gi->addQuestion('a', 'A?');
         $this->assertSame($gi, $result);
     }
 
@@ -319,12 +308,12 @@ class ContextsTest extends TestCase
     {
         $step = new Step('s');
         $step->setText('text');
-        $step->setGatherInfo([
-            'output_key' => 'info',
-            'completion_action' => 'next_step',
-            'prompt' => 'Answer these questions',
-        ]);
-        $step->addGatherQuestion(['key' => 'name', 'question' => 'Your name?']);
+        $step->setGatherInfo(
+            output_key: 'info',
+            completion_action: 'next_step',
+            prompt: 'Answer these questions'
+        );
+        $step->addGatherQuestion('name', 'Your name?');
 
         $arr = $step->toArray();
         $this->assertArrayHasKey('gather_info', $arr);
@@ -334,16 +323,14 @@ class ContextsTest extends TestCase
         $this->assertCount(1, $arr['gather_info']['questions']);
     }
 
-    public function testStepAddGatherQuestionAutoInitializes(): void
+    public function testStepAddGatherQuestionWithoutSetGatherInfoThrows(): void
     {
         $step = new Step('s');
         $step->setText('text');
-        // No setGatherInfo call, should auto-create
-        $step->addGatherQuestion(['key' => 'email', 'question' => 'Your email?']);
 
-        $gi = $step->getGatherInfo();
-        $this->assertNotNull($gi);
-        $this->assertCount(1, $gi->getQuestions());
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Must call setGatherInfo()');
+        $step->addGatherQuestion('email', 'Your email?');
     }
 
     public function testStepToArraySerialization(): void
@@ -411,47 +398,53 @@ class ContextsTest extends TestCase
     public function testContextAddStepAndGetStep(): void
     {
         $ctx = new Context('default');
-        $step = $ctx->addStep('greeting', ['text' => 'Hello']);
+        $step = $ctx->addStep('greeting')->setText('Hello');
 
         $this->assertInstanceOf(Step::class, $step);
         $this->assertSame($step, $ctx->getStep('greeting'));
         $this->assertNull($ctx->getStep('nonexistent'));
     }
 
-    public function testContextAddStepWithShorthandOpts(): void
+    public function testContextAddStepWithShorthandKwargs(): void
     {
         $ctx = new Context('default');
-        $step = $ctx->addStep('s1', [
-            'text' => 'Hello',
-            'step_criteria' => 'always',
-            'functions' => ['fn1'],
-            'valid_steps' => ['s2'],
-            'valid_contexts' => ['other'],
-        ]);
+        // Mirror Python's Context.add_step(name, *, task, bullets, criteria,
+        // functions, valid_steps): named-arg shorthand fills the step's
+        // POM "Task"/"Process" sections, criteria, functions, and valid_steps.
+        $step = $ctx->addStep(
+            's1',
+            task: 'Greet the caller',
+            bullets: ['Be polite', 'Ask their name'],
+            criteria: 'always',
+            functions: ['fn1'],
+            valid_steps: ['s2']
+        );
 
         $arr = $step->toArray();
-        $this->assertSame('Hello', $arr['text']);
+        $this->assertStringContainsString('## Task', $arr['text']);
+        $this->assertStringContainsString('Greet the caller', $arr['text']);
+        $this->assertStringContainsString('## Process', $arr['text']);
+        $this->assertStringContainsString('- Be polite', $arr['text']);
         $this->assertSame('always', $arr['step_criteria']);
         $this->assertSame(['fn1'], $arr['functions']);
         $this->assertSame(['s2'], $arr['valid_steps']);
-        $this->assertSame(['other'], $arr['valid_contexts']);
     }
 
     public function testContextDuplicateStepThrows(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('greeting', ['text' => 'Hi']);
+        $ctx->addStep('greeting')->setText('Hi');
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage("Step 'greeting' already exists");
-        $ctx->addStep('greeting', ['text' => 'Hi again']);
+        $ctx->addStep('greeting')->setText('Hi again');
     }
 
     public function testContextRemoveStep(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('a', ['text' => 'A']);
-        $ctx->addStep('b', ['text' => 'B']);
+        $ctx->addStep('a')->setText('A');
+        $ctx->addStep('b')->setText('B');
         $ctx->removeStep('a');
 
         $this->assertNull($ctx->getStep('a'));
@@ -462,7 +455,7 @@ class ContextsTest extends TestCase
     public function testContextRemoveNonexistentStepIsNoop(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('a', ['text' => 'A']);
+        $ctx->addStep('a')->setText('A');
         $ctx->removeStep('nonexistent');
 
         $this->assertCount(1, $ctx->getSteps());
@@ -471,9 +464,9 @@ class ContextsTest extends TestCase
     public function testContextMoveStep(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('a', ['text' => 'A']);
-        $ctx->addStep('b', ['text' => 'B']);
-        $ctx->addStep('c', ['text' => 'C']);
+        $ctx->addStep('a')->setText('A');
+        $ctx->addStep('b')->setText('B');
+        $ctx->addStep('c')->setText('C');
 
         $ctx->moveStep('c', 0);
         $this->assertSame(['c', 'a', 'b'], $ctx->getStepOrder());
@@ -482,9 +475,9 @@ class ContextsTest extends TestCase
     public function testContextMoveStepToMiddle(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('a', ['text' => 'A']);
-        $ctx->addStep('b', ['text' => 'B']);
-        $ctx->addStep('c', ['text' => 'C']);
+        $ctx->addStep('a')->setText('A');
+        $ctx->addStep('b')->setText('B');
+        $ctx->addStep('c')->setText('C');
 
         $ctx->moveStep('a', 1);
         $this->assertSame(['b', 'a', 'c'], $ctx->getStepOrder());
@@ -493,7 +486,7 @@ class ContextsTest extends TestCase
     public function testContextMoveNonexistentStepThrows(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('a', ['text' => 'A']);
+        $ctx->addStep('a')->setText('A');
 
         $this->expectException(\LogicException::class);
         $ctx->moveStep('z', 0);
@@ -504,7 +497,7 @@ class ContextsTest extends TestCase
     public function testContextPromptTextMode(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step text']);
+        $ctx->addStep('s')->setText('Step text');
         $ctx->setPrompt('You are a helpful assistant.');
 
         $arr = $ctx->toArray();
@@ -514,7 +507,7 @@ class ContextsTest extends TestCase
     public function testContextPromptPomMode(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step text']);
+        $ctx->addStep('s')->setText('Step text');
         $ctx->addSection('Role', 'You are a concierge.');
         $ctx->addBullets('Rules', ['Be kind', 'Be brief']);
 
@@ -557,7 +550,7 @@ class ContextsTest extends TestCase
     public function testContextSystemPromptText(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
+        $ctx->addStep('s')->setText('Step');
         $ctx->setSystemPrompt('System instructions here.');
 
         $arr = $ctx->toArray();
@@ -567,7 +560,7 @@ class ContextsTest extends TestCase
     public function testContextSystemPromptPom(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
+        $ctx->addStep('s')->setText('Step');
         $ctx->addSystemSection('Behavior', 'Be professional.');
         $ctx->addSystemBullets('Constraints', ['No profanity']);
 
@@ -609,7 +602,7 @@ class ContextsTest extends TestCase
     public function testContextEnterFillers(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
+        $ctx->addStep('s')->setText('Step');
         $ctx->setEnterFillers(['en' => ['Please wait', 'One moment']]);
 
         $arr = $ctx->toArray();
@@ -619,7 +612,7 @@ class ContextsTest extends TestCase
     public function testContextExitFillers(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
+        $ctx->addStep('s')->setText('Step');
         $ctx->setExitFillers(['en' => ['Goodbye']]);
 
         $arr = $ctx->toArray();
@@ -629,10 +622,9 @@ class ContextsTest extends TestCase
     public function testContextAddEnterFiller(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
-        $ctx->addEnterFiller('en', 'Hold on');
-        $ctx->addEnterFiller('en', 'Just a sec');
-        $ctx->addEnterFiller('es', 'Un momento');
+        $ctx->addStep('s')->setText('Step');
+        $ctx->addEnterFiller('en', ['Hold on', 'Just a sec']);
+        $ctx->addEnterFiller('es', ['Un momento']);
 
         $arr = $ctx->toArray();
         $this->assertSame(['Hold on', 'Just a sec'], $arr['enter_fillers']['en']);
@@ -642,9 +634,8 @@ class ContextsTest extends TestCase
     public function testContextAddExitFiller(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
-        $ctx->addExitFiller('en', 'Bye');
-        $ctx->addExitFiller('en', 'See you');
+        $ctx->addStep('s')->setText('Step');
+        $ctx->addExitFiller('en', ['Bye', 'See you']);
 
         $arr = $ctx->toArray();
         $this->assertSame(['Bye', 'See you'], $arr['exit_fillers']['en']);
@@ -653,7 +644,7 @@ class ContextsTest extends TestCase
     public function testContextFillersOmittedWhenNotSet(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step']);
+        $ctx->addStep('s')->setText('Step');
 
         $arr = $ctx->toArray();
         $this->assertArrayNotHasKey('enter_fillers', $arr);
@@ -665,9 +656,9 @@ class ContextsTest extends TestCase
     public function testContextToArrayStepOrdering(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('first', ['text' => 'First']);
-        $ctx->addStep('second', ['text' => 'Second']);
-        $ctx->addStep('third', ['text' => 'Third']);
+        $ctx->addStep('first')->setText('First');
+        $ctx->addStep('second')->setText('Second');
+        $ctx->addStep('third')->setText('Third');
 
         $arr = $ctx->toArray();
         $this->assertSame('first', $arr['steps'][0]['name']);
@@ -678,7 +669,7 @@ class ContextsTest extends TestCase
     public function testContextToArrayFullSerialization(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Step text']);
+        $ctx->addStep('s')->setText('Step text');
         $ctx->setPrompt('Context prompt');
         $ctx->setSystemPrompt('System prompt');
         $ctx->setPostPrompt('Post prompt');
@@ -709,7 +700,7 @@ class ContextsTest extends TestCase
     public function testContextToArrayOmitsUnsetOptionalFields(): void
     {
         $ctx = new Context('default');
-        $ctx->addStep('s', ['text' => 'Hi']);
+        $ctx->addStep('s')->setText('Hi');
 
         $arr = $ctx->toArray();
         $this->assertArrayHasKey('steps', $arr);
@@ -763,7 +754,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('custom');
-        $ctx->addStep('s', ['text' => 'Hello']);
+        $ctx->addStep('s')->setText('Hello');
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -774,7 +765,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $ctx->addStep('s', ['text' => 'Hello']);
+        $ctx->addStep('s')->setText('Hello');
 
         $errors = $builder->validate();
         $this->assertEmpty($errors);
@@ -803,8 +794,8 @@ class ContextsTest extends TestCase
     public function testValidateMultipleContextsNonDefaultAllowed(): void
     {
         $builder = new ContextBuilder();
-        $builder->addContext('billing')->addStep('s', ['text' => 'Billing']);
-        $builder->addContext('support')->addStep('s', ['text' => 'Support']);
+        $builder->addContext('billing')->addStep('s')->setText('Billing');
+        $builder->addContext('support')->addStep('s')->setText('Support');
 
         $errors = $builder->validate();
         $this->assertEmpty($errors);
@@ -814,7 +805,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $ctx->addStep('s1', ['text' => 'Step 1'])->setValidSteps(['nonexistent']);
+        $ctx->addStep('s1')->setText('Step 1')->setValidSteps(['nonexistent']);
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -825,7 +816,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $ctx->addStep('s1', ['text' => 'Step 1'])->setValidSteps(['next']);
+        $ctx->addStep('s1')->setText('Step 1')->setValidSteps(['next']);
 
         $errors = $builder->validate();
         $this->assertEmpty($errors);
@@ -835,7 +826,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $ctx->addStep('s', ['text' => 'Step']);
+        $ctx->addStep('s')->setText('Step');
         $ctx->setValidContexts(['ghost']);
 
         $errors = $builder->validate();
@@ -847,7 +838,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $ctx->addStep('s', ['text' => 'Step'])->setValidContexts(['ghost']);
+        $ctx->addStep('s')->setText('Step')->setValidContexts(['ghost']);
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -858,8 +849,8 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $step = $ctx->addStep('s', ['text' => 'Step']);
-        $step->setGatherInfo(['output_key' => 'info']);
+        $step = $ctx->addStep('s')->setText('Step');
+        $step->setGatherInfo(output_key: 'info');
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -870,9 +861,10 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $step = $ctx->addStep('s', ['text' => 'Step']);
-        $step->addGatherQuestion(['key' => 'name', 'question' => 'Name?']);
-        $step->addGatherQuestion(['key' => 'name', 'question' => 'Name again?']);
+        $step = $ctx->addStep('s')->setText('Step');
+        $step->setGatherInfo();
+        $step->addGatherQuestion('name', 'Name?');
+        $step->addGatherQuestion('name', 'Name again?');
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -883,9 +875,9 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $step = $ctx->addStep('last', ['text' => 'Step']);
-        $step->setGatherInfo(['completion_action' => 'next_step']);
-        $step->addGatherQuestion(['key' => 'q', 'question' => 'Q?']);
+        $step = $ctx->addStep('last')->setText('Step');
+        $step->setGatherInfo(completion_action: 'next_step');
+        $step->addGatherQuestion('q', 'Q?');
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -897,9 +889,9 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $step = $ctx->addStep('s', ['text' => 'Step']);
-        $step->setGatherInfo(['completion_action' => 'unknown_step']);
-        $step->addGatherQuestion(['key' => 'q', 'question' => 'Q?']);
+        $step = $ctx->addStep('s')->setText('Step');
+        $step->setGatherInfo(completion_action: 'unknown_step');
+        $step->addGatherQuestion('q', 'Q?');
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
@@ -913,7 +905,7 @@ class ContextsTest extends TestCase
     {
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
-        $ctx->addStep('greeting', ['text' => 'Hello!']);
+        $ctx->addStep('greeting')->setText('Hello!');
         $ctx->setPrompt('Be helpful');
 
         $arr = $builder->toArray();
@@ -926,9 +918,9 @@ class ContextsTest extends TestCase
     public function testContextBuilderToArrayPreservesOrder(): void
     {
         $builder = new ContextBuilder();
-        $builder->addContext('billing')->addStep('s', ['text' => 'Bill']);
-        $builder->addContext('support')->addStep('s', ['text' => 'Sup']);
-        $builder->addContext('default')->addStep('s', ['text' => 'Main']);
+        $builder->addContext('billing')->addStep('s')->setText('Bill');
+        $builder->addContext('support')->addStep('s')->setText('Sup');
+        $builder->addContext('default')->addStep('s')->setText('Main');
 
         $arr = $builder->toArray();
         $keys = array_keys($arr);
@@ -960,7 +952,7 @@ class ContextsTest extends TestCase
     public function testCreateSimpleContextCanBeUsedEndToEnd(): void
     {
         $builder = ContextBuilder::createSimpleContext('default');
-        $builder->getContext('default')->addStep('greet', ['text' => 'Hi there']);
+        $builder->getContext('default')->addStep('greet')->setText('Hi there');
 
         $arr = $builder->toArray();
         $this->assertArrayHasKey('default', $arr);
@@ -1006,12 +998,191 @@ class ContextsTest extends TestCase
         $this->assertSame($step, $step->setEnd(true));
         $this->assertSame($step, $step->setSkipUserTurn(true));
         $this->assertSame($step, $step->setSkipToNextStep(true));
-        $this->assertSame($step, $step->setGatherInfo([]));
-        $this->assertSame($step, $step->addGatherQuestion(['key' => 'k', 'question' => 'Q?']));
+        $this->assertSame($step, $step->setGatherInfo());
+        $this->assertSame($step, $step->addGatherQuestion('k', 'Q?'));
         $this->assertSame($step, $step->clearSections());
         $this->assertSame($step, $step->setResetSystemPrompt('sp'));
         $this->assertSame($step, $step->setResetUserPrompt('up'));
         $this->assertSame($step, $step->setResetConsolidate(true));
         $this->assertSame($step, $step->setResetFullReset(true));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Python parity — newly-closed signature gaps
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public function testContextBuilderConstructorAcceptsAgent(): void
+    {
+        // Mirror Python's ContextBuilder(agent) — pass an agent reference.
+        $agent = new class {
+            public array $tools = [];
+            public function getRegisteredToolNames(): array
+            {
+                return array_keys($this->tools);
+            }
+        };
+        $agent->tools = ['lookup_account' => true];
+
+        $builder = new ContextBuilder($agent);
+
+        // The agent supplies registered tool names — collision validation
+        // should pull them in automatically.
+        $ctx = $builder->addContext('default');
+        $ctx->addStep('s')->setText('hi');
+        $errors = $builder->validate();
+        $this->assertSame([], $errors, 'no collision so validate is clean');
+
+        // Now add a colliding tool name (one of the reserved names).
+        $agent->tools['next_step'] = true;
+        $errors = $builder->validate();
+        $this->assertNotEmpty($errors);
+        $this->assertStringContainsString('next_step', $errors[0]);
+        $this->assertStringContainsString('reserved', $errors[0]);
+    }
+
+    public function testContextBuilderConstructorIsOptional(): void
+    {
+        // Default no-arg shape still works (matches Python's optional param).
+        $builder = new ContextBuilder();
+        $ctx = $builder->addContext('default');
+        $ctx->addStep('s')->setText('hi');
+        $this->assertSame([], $builder->validate());
+    }
+
+    public function testCreateSimpleContextFreeFunctionReturnsContext(): void
+    {
+        // Python's signalwire.core.contexts.create_simple_context(name) is
+        // a module-level helper that returns a Context (not a builder).
+        // PHP exposes the same as a namespaced function.
+        $ctx = \SignalWire\Contexts\create_simple_context('greeting');
+        $this->assertInstanceOf(Context::class, $ctx);
+        $this->assertSame('greeting', $ctx->getName());
+    }
+
+    public function testCreateSimpleContextFreeFunctionDefaultName(): void
+    {
+        // Default name is "default" (matches Python).
+        $ctx = \SignalWire\Contexts\create_simple_context();
+        $this->assertSame('default', $ctx->getName());
+    }
+
+    public function testGatherInfoAddQuestionPositional(): void
+    {
+        // Mirror Python's GatherInfo.add_question(key, question, **kwargs).
+        $gi = new GatherInfo();
+        $gi->addQuestion('food', 'What food?', [
+            'type' => 'string',
+            'confirm' => true,
+            'prompt' => 'Confirm food',
+            'functions' => ['validate_food'],
+        ]);
+
+        $arr = $gi->toArray();
+        $this->assertSame('food', $arr['questions'][0]['key']);
+        $this->assertSame('What food?', $arr['questions'][0]['question']);
+        $this->assertTrue($arr['questions'][0]['confirm']);
+        $this->assertSame('Confirm food', $arr['questions'][0]['prompt']);
+        $this->assertSame(['validate_food'], $arr['questions'][0]['functions']);
+    }
+
+    public function testStepSetGatherInfoNamedArgs(): void
+    {
+        // Mirror Python's Step.set_gather_info(*, output_key, completion_action, prompt).
+        $step = new Step('s');
+        $step->setText('Body');
+        $step->setGatherInfo(
+            output_key: 'collected',
+            completion_action: 'next_step',
+            prompt: 'Be friendly'
+        );
+        $step->addGatherQuestion('color', 'Color?', confirm: true);
+
+        $arr = $step->toArray();
+        $this->assertSame('collected', $arr['gather_info']['output_key']);
+        $this->assertSame('next_step', $arr['gather_info']['completion_action']);
+        $this->assertSame('Be friendly', $arr['gather_info']['prompt']);
+        $this->assertTrue($arr['gather_info']['questions'][0]['confirm']);
+    }
+
+    public function testStepAddGatherQuestionAllNamedArgs(): void
+    {
+        // Mirror Python's Step.add_gather_question(key, question, type,
+        // confirm, prompt, functions). Verify all six survive the round-trip.
+        $step = new Step('s');
+        $step->setText('Body');
+        $step->setGatherInfo();
+        $step->addGatherQuestion(
+            key: 'age',
+            question: 'How old?',
+            type: 'integer',
+            confirm: true,
+            prompt: 'Be precise',
+            functions: ['validate_age']
+        );
+
+        $q = $step->getGatherInfo()->toArray()['questions'][0];
+        $this->assertSame('age', $q['key']);
+        $this->assertSame('How old?', $q['question']);
+        $this->assertSame('integer', $q['type']);
+        $this->assertTrue($q['confirm']);
+        $this->assertSame('Be precise', $q['prompt']);
+        $this->assertSame(['validate_age'], $q['functions']);
+    }
+
+    public function testContextAddEnterFillerAcceptsList(): void
+    {
+        // Mirror Python's Context.add_enter_filler(language_code, fillers:
+        // List[str]). Multiple phrases per language survive.
+        $ctx = new Context('default');
+        $ctx->addStep('s')->setText('Step');
+        $ctx->addEnterFiller('en-US', ['Welcome', 'Hi', 'Hello']);
+        $ctx->addEnterFiller('es', ['Hola', 'Bienvenido']);
+
+        $arr = $ctx->toArray();
+        $this->assertSame(['Welcome', 'Hi', 'Hello'], $arr['enter_fillers']['en-US']);
+        $this->assertSame(['Hola', 'Bienvenido'], $arr['enter_fillers']['es']);
+    }
+
+    public function testContextSetEnterFillersAcceptsNestedMap(): void
+    {
+        // Mirror Python's Context.set_enter_fillers(enter_fillers: Dict[str,
+        // List[str]]) — full map replacement.
+        $ctx = new Context('default');
+        $ctx->addStep('s')->setText('Step');
+        $ctx->setEnterFillers([
+            'en-US' => ['Welcome', 'Hi'],
+            'default' => ['Entering...'],
+        ]);
+
+        $arr = $ctx->toArray();
+        $this->assertSame(['Welcome', 'Hi'], $arr['enter_fillers']['en-US']);
+        $this->assertSame(['Entering...'], $arr['enter_fillers']['default']);
+    }
+
+    public function testContextAddStepAllNamedKwargs(): void
+    {
+        // Mirror Python's Context.add_step(name, *, task, bullets, criteria,
+        // functions, valid_steps).
+        $ctx = new Context('default');
+        $step = $ctx->addStep(
+            'survey',
+            task: 'Survey the customer',
+            bullets: ['Confirm name', 'Ask satisfaction', 'Collect feedback'],
+            criteria: 'All three answers gathered',
+            functions: ['log_response'],
+            valid_steps: ['next']
+        );
+
+        $this->assertSame('survey', $step->getName());
+        $arr = $step->toArray();
+        $this->assertStringContainsString('## Task', $arr['text']);
+        $this->assertStringContainsString('Survey the customer', $arr['text']);
+        $this->assertStringContainsString('## Process', $arr['text']);
+        $this->assertStringContainsString('- Confirm name', $arr['text']);
+        $this->assertStringContainsString('- Ask satisfaction', $arr['text']);
+        $this->assertStringContainsString('- Collect feedback', $arr['text']);
+        $this->assertSame('All three answers gathered', $arr['step_criteria']);
+        $this->assertSame(['log_response'], $arr['functions']);
+        $this->assertSame(['next'], $arr['valid_steps']);
     }
 }

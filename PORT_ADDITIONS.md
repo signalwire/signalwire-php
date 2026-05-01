@@ -20,6 +20,8 @@ signalwire.SignalWire.register_skill: PHP-class-method: PHP's SignalWire static 
 signalwire.SignalWire.rest_client: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
 signalwire.agent_server.AgentServer.get_host: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agent_server.AgentServer.get_port: PHP idiomatic accessor / lifecycle hook on AgentServer.
+signalwire.agent_server.AgentServer.get_sip_auto_map: PHP idiomatic accessor / lifecycle hook on AgentServer (returns the auto_map flag passed to setupSipRouting).
+signalwire.agent_server.AgentServer.get_sip_route: PHP idiomatic accessor / lifecycle hook on AgentServer (returns the SIP route configured via setupSipRouting).
 signalwire.agent_server.AgentServer.get_sip_username_mapping: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agent_server.AgentServer.handle_request: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agent_server.AgentServer.is_sip_routing_enabled: PHP idiomatic accessor / lifecycle hook on AgentServer.
@@ -246,6 +248,9 @@ signalwire.relay.web_socket.WebSocket.connect: Port-internal WebSocket transport
 signalwire.relay.web_socket.WebSocket.is_connected: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.receive: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.send_text: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
+signalwire.rest._base.BaseResource.get_base_path: PHP idiomatic accessor on BaseResource — Python exposes the base path as the protected `_base_path` attribute; PHP wraps it in `getBasePath()`.
+signalwire.rest._base.BaseResource.get_http: PHP idiomatic accessor on BaseResource — Python exposes the http transport as the protected `_http` attribute; PHP wraps it in `getHttp()`.
+signalwire.rest._base.CrudWithAddresses.__init__: PHP exposes an explicit `__construct(client, basePath)` because PHP's reflection emits a constructor entry on every concrete class — Python's CrudWithAddresses inherits from CrudResource without redeclaring `__init__`.
 signalwire.rest._base.CrudResource.__init__: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
 signalwire.rest._base.CrudResource.get_base_path: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
 signalwire.rest._base.CrudResource.get_client: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
