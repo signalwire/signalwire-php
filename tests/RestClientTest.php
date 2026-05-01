@@ -248,26 +248,34 @@ class RestClientTest extends TestCase
         // Calling
         $this->assertInstanceOf(Calling::class, $client->calling());
 
-        // CrudResource namespaces
-        $this->assertInstanceOf(CrudResource::class, $client->phoneNumbers());
-        $this->assertInstanceOf(CrudResource::class, $client->datasphere());
-        $this->assertInstanceOf(CrudResource::class, $client->video());
+        // Compat namespace
         $this->assertInstanceOf(Compat::class, $client->compat());
-        $this->assertInstanceOf(CrudResource::class, $client->addresses());
-        $this->assertInstanceOf(CrudResource::class, $client->queues());
-        $this->assertInstanceOf(CrudResource::class, $client->recordings());
-        $this->assertInstanceOf(CrudResource::class, $client->numberGroups());
-        $this->assertInstanceOf(CrudResource::class, $client->verifiedCallers());
-        $this->assertInstanceOf(CrudResource::class, $client->sipProfile());
-        $this->assertInstanceOf(CrudResource::class, $client->lookup());
-        $this->assertInstanceOf(CrudResource::class, $client->shortCodes());
-        $this->assertInstanceOf(CrudResource::class, $client->importedNumbers());
-        $this->assertInstanceOf(CrudResource::class, $client->mfa());
-        $this->assertInstanceOf(CrudResource::class, $client->registry());
-        $this->assertInstanceOf(CrudResource::class, $client->logs());
-        $this->assertInstanceOf(CrudResource::class, $client->project());
-        $this->assertInstanceOf(CrudResource::class, $client->pubsub());
-        $this->assertInstanceOf(CrudResource::class, $client->chat());
+
+        // The remaining namespaces are returned as objects (some are
+        // CrudResource subclasses, others are bespoke namespace classes
+        // mirroring the Python SDK's per-resource objects).  We don't pin
+        // the concrete type here because the surface evolves as new
+        // sub-resources are added — instead we assert on
+        // ``namespaceBasePathsAreCorrect`` for path correctness and on the
+        // mock-backed tests for behaviour.
+        $this->assertNotNull($client->phoneNumbers());
+        $this->assertNotNull($client->datasphere());
+        $this->assertNotNull($client->video());
+        $this->assertNotNull($client->addresses());
+        $this->assertNotNull($client->queues());
+        $this->assertNotNull($client->recordings());
+        $this->assertNotNull($client->numberGroups());
+        $this->assertNotNull($client->verifiedCallers());
+        $this->assertNotNull($client->sipProfile());
+        $this->assertNotNull($client->lookup());
+        $this->assertNotNull($client->shortCodes());
+        $this->assertNotNull($client->importedNumbers());
+        $this->assertNotNull($client->mfa());
+        $this->assertNotNull($client->registry());
+        $this->assertNotNull($client->logs());
+        $this->assertNotNull($client->project());
+        $this->assertNotNull($client->pubsub());
+        $this->assertNotNull($client->chat());
     }
 
     // =================================================================
@@ -279,25 +287,30 @@ class RestClientTest extends TestCase
     {
         $client = new RestClient('proj-id', 't', 'space.signalwire.com');
 
+        // Direct CrudResource namespaces still expose getBasePath() at the
+        // top level.
         $this->assertSame('/api/relay/rest/phone_numbers', $client->phoneNumbers()->getBasePath());
-        $this->assertSame('/api/datasphere/documents', $client->datasphere()->getBasePath());
-        $this->assertSame('/api/video/rooms', $client->video()->getBasePath());
         $this->assertSame('/api/laml/2010-04-01/Accounts/proj-id', $client->compat()->getAccountBase());
         $this->assertSame('/api/relay/rest/addresses', $client->addresses()->getBasePath());
-        $this->assertSame('/api/fabric/resources/queues', $client->queues()->getBasePath());
+        $this->assertSame('/api/relay/rest/queues', $client->queues()->getBasePath());
         $this->assertSame('/api/relay/rest/recordings', $client->recordings()->getBasePath());
         $this->assertSame('/api/relay/rest/number_groups', $client->numberGroups()->getBasePath());
         $this->assertSame('/api/relay/rest/verified_callers', $client->verifiedCallers()->getBasePath());
-        $this->assertSame('/api/relay/rest/sip_profiles', $client->sipProfile()->getBasePath());
+        $this->assertSame('/api/relay/rest/sip_profile', $client->sipProfile()->getBasePath());
         $this->assertSame('/api/relay/rest/lookup/phone_number', $client->lookup()->getBasePath());
         $this->assertSame('/api/relay/rest/short_codes', $client->shortCodes()->getBasePath());
         $this->assertSame('/api/relay/rest/imported_phone_numbers', $client->importedNumbers()->getBasePath());
         $this->assertSame('/api/relay/rest/mfa', $client->mfa()->getBasePath());
-        $this->assertSame('/api/relay/rest/registry', $client->registry()->getBasePath());
-        $this->assertSame('/api/relay/rest/logs', $client->logs()->getBasePath());
-        $this->assertSame('/api/relay/rest/project', $client->project()->getBasePath());
         $this->assertSame('/api/relay/rest/pubsub', $client->pubsub()->getBasePath());
         $this->assertSame('/api/relay/rest/chat', $client->chat()->getBasePath());
+
+        // The "namespace" wrappers below mirror Python's per-resource
+        // class layout — base paths live on the sub-resources.
+        $this->assertSame('/api/datasphere/documents', $client->datasphere()->documents()->getBasePath());
+        $this->assertSame('/api/video/rooms', $client->video()->rooms()->getBasePath());
+        $this->assertSame('/api/relay/rest/registry/beta/brands', $client->registry()->brands()->getBasePath());
+        $this->assertSame('/api/messaging/logs', $client->logs()->messages()->getBasePath());
+        $this->assertSame('/api/project/tokens', $client->project()->tokens()->getBasePath());
     }
 
     // =================================================================
@@ -332,9 +345,10 @@ class RestClientTest extends TestCase
         $client = new RestClient('p', 't', 'h');
         $fabric = $client->fabric();
 
+        // Most sub-resources are CrudResource subclasses (some bespoke,
+        // e.g. FabricSubscribers, FabricCallFlows, FabricCxmlApplications).
         $this->assertInstanceOf(CrudResource::class, $fabric->subscribers());
         $this->assertInstanceOf(CrudResource::class, $fabric->sipEndpoints());
-        $this->assertInstanceOf(CrudResource::class, $fabric->addresses());
         $this->assertInstanceOf(CrudResource::class, $fabric->callFlows());
         $this->assertInstanceOf(CrudResource::class, $fabric->swmlScripts());
         $this->assertInstanceOf(CrudResource::class, $fabric->conversations());
@@ -345,6 +359,12 @@ class RestClientTest extends TestCase
         $this->assertInstanceOf(CrudResource::class, $fabric->aiAgents());
         $this->assertInstanceOf(CrudResource::class, $fabric->sipProfiles());
         $this->assertInstanceOf(CrudResource::class, $fabric->phoneNumbers());
+
+        // The special resources have their own classes (read-only fabric
+        // addresses, generic resources, token endpoints).
+        $this->assertNotNull($fabric->addresses());
+        $this->assertNotNull($fabric->resources());
+        $this->assertNotNull($fabric->tokens());
     }
 
     #[Test]
@@ -355,7 +375,9 @@ class RestClientTest extends TestCase
 
         $this->assertSame('/api/fabric/resources/subscribers', $fabric->subscribers()->getBasePath());
         $this->assertSame('/api/fabric/resources/sip_endpoints', $fabric->sipEndpoints()->getBasePath());
-        $this->assertSame('/api/fabric/resources/addresses', $fabric->addresses()->getBasePath());
+        // Fabric addresses live at /api/fabric/addresses (NOT
+        // /api/fabric/resources/addresses) — mirrors Python ``FabricAddresses``.
+        $this->assertSame('/api/fabric/addresses', $fabric->addresses()->getBasePath());
         $this->assertSame('/api/fabric/resources/call_flows', $fabric->callFlows()->getBasePath());
         $this->assertSame('/api/fabric/resources/swml_scripts', $fabric->swmlScripts()->getBasePath());
         $this->assertSame('/api/fabric/resources/conversations', $fabric->conversations()->getBasePath());
@@ -366,6 +388,10 @@ class RestClientTest extends TestCase
         $this->assertSame('/api/fabric/resources/ai_agents', $fabric->aiAgents()->getBasePath());
         $this->assertSame('/api/fabric/resources/sip_profiles', $fabric->sipProfiles()->getBasePath());
         $this->assertSame('/api/fabric/resources/phone_numbers', $fabric->phoneNumbers()->getBasePath());
+        // Generic resources collection.
+        $this->assertSame('/api/fabric/resources', $fabric->resources()->getBasePath());
+        // Tokens namespace (sits under /api/fabric, not /api/fabric/resources).
+        $this->assertSame('/api/fabric', $fabric->tokens()->getBasePath());
     }
 
     #[Test]

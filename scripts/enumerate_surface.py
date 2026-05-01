@@ -138,6 +138,78 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "CompatTranscriptions": "signalwire.rest.namespaces.compat",
     "CompatTokens": "signalwire.rest.namespaces.compat",
 
+    # Video namespace and its sub-resources (Python: signalwire.rest.namespaces.video)
+    "Video": "signalwire.rest.namespaces.video",
+    "VideoNamespace": "signalwire.rest.namespaces.video",
+    "VideoRooms": "signalwire.rest.namespaces.video",
+    "VideoRoomTokens": "signalwire.rest.namespaces.video",
+    "VideoRoomSessions": "signalwire.rest.namespaces.video",
+    "VideoRoomRecordings": "signalwire.rest.namespaces.video",
+    "VideoConferences": "signalwire.rest.namespaces.video",
+    "VideoConferenceTokens": "signalwire.rest.namespaces.video",
+    "VideoStreams": "signalwire.rest.namespaces.video",
+
+    # Logs namespace + sub-resources
+    "Logs": "signalwire.rest.namespaces.logs",
+    "LogsNamespace": "signalwire.rest.namespaces.logs",
+    "MessageLogs": "signalwire.rest.namespaces.logs",
+    "VoiceLogs": "signalwire.rest.namespaces.logs",
+    "FaxLogs": "signalwire.rest.namespaces.logs",
+    "ConferenceLogs": "signalwire.rest.namespaces.logs",
+
+    # 10DLC Registry namespace + sub-resources
+    "Registry": "signalwire.rest.namespaces.registry",
+    "RegistryNamespace": "signalwire.rest.namespaces.registry",
+    "RegistryBrands": "signalwire.rest.namespaces.registry",
+    "RegistryCampaigns": "signalwire.rest.namespaces.registry",
+    "RegistryOrders": "signalwire.rest.namespaces.registry",
+    "RegistryNumbers": "signalwire.rest.namespaces.registry",
+
+    # Project tokens
+    "Project": "signalwire.rest.namespaces.project",
+    "ProjectNamespace": "signalwire.rest.namespaces.project",
+    "ProjectTokens": "signalwire.rest.namespaces.project",
+
+    # Datasphere
+    "Datasphere": "signalwire.rest.namespaces.datasphere",  # NOTE: shadowed by skill below; see CLASS_RENAME_MAP
+    "DatasphereNamespace": "signalwire.rest.namespaces.datasphere",
+    "DatasphereDocuments": "signalwire.rest.namespaces.datasphere",
+
+    # Other small namespaces
+    "Queues": "signalwire.rest.namespaces.queues",
+    "QueuesResource": "signalwire.rest.namespaces.queues",
+    "NumberGroups": "signalwire.rest.namespaces.number_groups",
+    "NumberGroupsResource": "signalwire.rest.namespaces.number_groups",
+    "ShortCodes": "signalwire.rest.namespaces.short_codes",
+    "ShortCodesResource": "signalwire.rest.namespaces.short_codes",
+    "ImportedNumbers": "signalwire.rest.namespaces.imported_numbers",
+    "ImportedNumbersResource": "signalwire.rest.namespaces.imported_numbers",
+    "Mfa": "signalwire.rest.namespaces.mfa",
+    "MfaResource": "signalwire.rest.namespaces.mfa",
+    "SipProfile": "signalwire.rest.namespaces.sip_profile",
+    "SipProfileResource": "signalwire.rest.namespaces.sip_profile",
+    "Addresses": "signalwire.rest.namespaces.addresses",
+    "AddressesResource": "signalwire.rest.namespaces.addresses",
+    "Recordings": "signalwire.rest.namespaces.recordings",
+    "RecordingsResource": "signalwire.rest.namespaces.recordings",
+
+    # Fabric helper classes — all collapse onto signalwire.rest.namespaces.fabric
+    "FabricSubscribers": "signalwire.rest.namespaces.fabric",
+    "SubscribersResource": "signalwire.rest.namespaces.fabric",
+    "FabricCallFlows": "signalwire.rest.namespaces.fabric",
+    "CallFlowsResource": "signalwire.rest.namespaces.fabric",
+    "FabricConferenceRooms": "signalwire.rest.namespaces.fabric",
+    "ConferenceRoomsResource": "signalwire.rest.namespaces.fabric",
+    "FabricCxmlApplications": "signalwire.rest.namespaces.fabric",
+    "CxmlApplicationsResource": "signalwire.rest.namespaces.fabric",
+    "FabricGenericResources": "signalwire.rest.namespaces.fabric",
+    "GenericResources": "signalwire.rest.namespaces.fabric",
+    "FabricAddresses": "signalwire.rest.namespaces.fabric",
+    "FabricTokens": "signalwire.rest.namespaces.fabric",
+
+    # Pagination helper
+    "PaginatedIterator": "signalwire.rest._pagination",
+
     # relay
     "Client": "signalwire.relay.client",   # PHP `Relay\Client` -> Python `RelayClient`
     "Call": "signalwire.relay.call",
@@ -287,6 +359,32 @@ CLASS_RENAME_MAP: dict[str, str] = {
     "Calling": "CallingNamespace",
     "Fabric": "FabricNamespace",  # not in Python; emitted into fabric.py module
     "Compat": "CompatNamespace",
+    "Video": "VideoNamespace",
+    "Logs": "LogsNamespace",
+    "Registry": "RegistryNamespace",
+    "Project": "ProjectNamespace",
+    # Datasphere is special — same short name used by both a REST namespace
+    # and a skill. The REST name is disambiguated via FQN_CLASS_MODULE_MAP
+    # in enumerate_signatures.py, leaving the legacy skill rename below
+    # untouched. (Don't add `Datasphere -> DatasphereNamespace` here.)
+    "Queues": "QueuesResource",
+    "NumberGroups": "NumberGroupsResource",
+    "ShortCodes": "ShortCodesResource",
+    "ImportedNumbers": "ImportedNumbersResource",
+    "Mfa": "MfaResource",
+    "SipProfile": "SipProfileResource",
+    "Addresses": "AddressesResource",
+    "Recordings": "RecordingsResource",
+    # Fabric helpers — PHP names use the FabricXxx prefix to keep the global
+    # PHP class-name-space flat; Python names drop the prefix because each
+    # class lives inside fabric.py.
+    "FabricSubscribers": "SubscribersResource",
+    "FabricCallFlows": "CallFlowsResource",
+    "FabricConferenceRooms": "ConferenceRoomsResource",
+    "FabricCxmlApplications": "CxmlApplicationsResource",
+    "FabricGenericResources": "GenericResources",
+    # FabricAddresses / FabricTokens keep their PHP names verbatim — Python
+    # uses the same class names.
     # Skill renames -- append Skill suffix to match Python's <Name>Skill convention
     "ApiNinjasTrivia": "ApiNinjasTriviaSkill",
     "ClaudeSkills": "ClaudeSkillsSkill",

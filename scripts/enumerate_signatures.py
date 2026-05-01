@@ -145,6 +145,21 @@ def _translate_php_class_ref(t: str) -> str:
 # SignalWire\Utils\UrlValidator::validateUrl. Without this projection the
 # audit would look for "signalwire.utils.url_validator.validate_url" but
 # the port emits "signalwire.utils.url_validator.UrlValidator.validate_url".
+# Namespace-qualified disambiguation. When a PHP unqualified class name
+# appears in multiple namespaces (e.g. `Datasphere` lives both as a
+# REST namespace and as a skill class), keying CLASS_MODULE_MAP by short
+# name alone collides. This table is consulted *first* using the full
+# `Namespace\\Class` key before falling back to CLASS_MODULE_MAP. Values
+# are (target_python_module, optional_renamed_class_name); the second
+# element overrides the CLASS_RENAME_MAP for the duration of the lookup
+# (set to None to keep the PHP-native class name).
+FQN_CLASS_MODULE_MAP: dict[str, tuple[str, str | None]] = {
+    # REST namespace classes that share a short name with a skill.
+    "SignalWire\\REST\\Namespaces\\Datasphere":
+        ("signalwire.rest.namespaces.datasphere", "Datasphere"),
+}
+
+
 FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
     ("SignalWire\\Utils\\UrlValidator", "validateUrl"):
         ("signalwire.utils.url_validator", "validate_url"),
@@ -205,10 +220,17 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         canonical_name = _translate_class(php_name)
         # Compute file_relative for module resolution
         file_relative = Path(ns.replace("SignalWire\\", "").replace("\\", "/")) / php_name
+        # FQN_CLASS_MODULE_MAP wins when set — disambiguates short-name
+        # collisions between e.g. REST namespace classes and skills.
+        full_php_for_lookup = f"{ns}\\{php_name}" if ns else php_name
+        if full_php_for_lookup in FQN_CLASS_MODULE_MAP:
+            mod, override_name = FQN_CLASS_MODULE_MAP[full_php_for_lookup]
+            if override_name is not None:
+                canonical_name = override_name
         # Try BOTH the original and canonical names against CLASS_MODULE_MAP.
         # CLASS_MODULE_MAP is mostly keyed by PHP-native names (Service, Client),
         # not Python-canonical names (SWMLService, RelayClient).
-        if php_name in CLASS_MODULE_MAP:
+        elif php_name in CLASS_MODULE_MAP:
             mod = CLASS_MODULE_MAP[php_name]
         elif canonical_name in CLASS_MODULE_MAP:
             mod = CLASS_MODULE_MAP[canonical_name]

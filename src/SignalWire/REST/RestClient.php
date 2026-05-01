@@ -7,6 +7,19 @@ namespace SignalWire\REST;
 use SignalWire\REST\Namespaces\Fabric;
 use SignalWire\REST\Namespaces\Calling;
 use SignalWire\REST\Namespaces\Compat;
+use SignalWire\REST\Namespaces\Video;
+use SignalWire\REST\Namespaces\Logs;
+use SignalWire\REST\Namespaces\Registry;
+use SignalWire\REST\Namespaces\Project;
+use SignalWire\REST\Namespaces\Datasphere;
+use SignalWire\REST\Namespaces\Queues;
+use SignalWire\REST\Namespaces\NumberGroups;
+use SignalWire\REST\Namespaces\ShortCodes;
+use SignalWire\REST\Namespaces\ImportedNumbers;
+use SignalWire\REST\Namespaces\Mfa;
+use SignalWire\REST\Namespaces\SipProfile;
+use SignalWire\REST\Namespaces\Addresses;
+use SignalWire\REST\Namespaces\Recordings;
 
 /**
  * Top-level SignalWire REST client.
@@ -29,22 +42,22 @@ class RestClient
     private ?Fabric $fabric = null;
     private ?Calling $calling = null;
     private ?CrudResource $phoneNumbers = null;
-    private ?CrudResource $datasphere = null;
-    private ?CrudResource $video = null;
+    private ?Datasphere $datasphere = null;
+    private ?Video $video = null;
     private ?Compat $compat = null;
-    private ?CrudResource $addresses = null;
-    private ?CrudResource $queues = null;
-    private ?CrudResource $recordings = null;
-    private ?CrudResource $numberGroups = null;
+    private ?Addresses $addresses = null;
+    private ?Queues $queues = null;
+    private ?Recordings $recordings = null;
+    private ?NumberGroups $numberGroups = null;
     private ?CrudResource $verifiedCallers = null;
-    private ?CrudResource $sipProfile = null;
+    private ?SipProfile $sipProfile = null;
     private ?CrudResource $lookup = null;
-    private ?CrudResource $shortCodes = null;
-    private ?CrudResource $importedNumbers = null;
-    private ?CrudResource $mfa = null;
-    private ?CrudResource $registry = null;
-    private ?CrudResource $logs = null;
-    private ?CrudResource $project = null;
+    private ?ShortCodes $shortCodes = null;
+    private ?ImportedNumbers $importedNumbers = null;
+    private ?Mfa $mfa = null;
+    private ?Registry $registry = null;
+    private ?Logs $logs = null;
+    private ?Project $project = null;
     private ?CrudResource $pubsub = null;
     private ?CrudResource $chat = null;
 
@@ -148,20 +161,23 @@ class RestClient
         return $this->phoneNumbers;
     }
 
-    /** Datasphere documents. */
-    public function datasphere(): CrudResource
+    /** Datasphere documents (CRUD + chunks + search). */
+    public function datasphere(): Datasphere
     {
         if ($this->datasphere === null) {
-            $this->datasphere = new CrudResource($this->http, '/api/datasphere/documents');
+            $this->datasphere = new Datasphere($this->http);
         }
         return $this->datasphere;
     }
 
-    /** Video rooms. */
-    public function video(): CrudResource
+    /**
+     * Video API namespace (rooms, room_sessions, room_recordings,
+     * conferences, conference_tokens, streams).
+     */
+    public function video(): Video
     {
         if ($this->video === null) {
-            $this->video = new CrudResource($this->http, '/api/video/rooms');
+            $this->video = new Video($this->http);
         }
         return $this->video;
     }
@@ -180,38 +196,38 @@ class RestClient
         return $this->compat;
     }
 
-    /** Addresses. */
-    public function addresses(): CrudResource
+    /** Addresses (list / create / get / delete — no update). */
+    public function addresses(): Addresses
     {
         if ($this->addresses === null) {
-            $this->addresses = new CrudResource($this->http, '/api/relay/rest/addresses');
+            $this->addresses = new Addresses($this->http);
         }
         return $this->addresses;
     }
 
-    /** Queues. */
-    public function queues(): CrudResource
+    /** Queues (CRUD + member operations). */
+    public function queues(): Queues
     {
         if ($this->queues === null) {
-            $this->queues = new CrudResource($this->http, '/api/fabric/resources/queues');
+            $this->queues = new Queues($this->http);
         }
         return $this->queues;
     }
 
-    /** Recordings. */
-    public function recordings(): CrudResource
+    /** Recordings (list / get / delete only). */
+    public function recordings(): Recordings
     {
         if ($this->recordings === null) {
-            $this->recordings = new CrudResource($this->http, '/api/relay/rest/recordings');
+            $this->recordings = new Recordings($this->http);
         }
         return $this->recordings;
     }
 
-    /** Number groups. */
-    public function numberGroups(): CrudResource
+    /** Number groups (CRUD + membership operations). */
+    public function numberGroups(): NumberGroups
     {
         if ($this->numberGroups === null) {
-            $this->numberGroups = new CrudResource($this->http, '/api/relay/rest/number_groups');
+            $this->numberGroups = new NumberGroups($this->http);
         }
         return $this->numberGroups;
     }
@@ -225,11 +241,11 @@ class RestClient
         return $this->verifiedCallers;
     }
 
-    /** SIP profile. */
-    public function sipProfile(): CrudResource
+    /** SIP profile (singleton, get + update). */
+    public function sipProfile(): SipProfile
     {
         if ($this->sipProfile === null) {
-            $this->sipProfile = new CrudResource($this->http, '/api/relay/rest/sip_profiles');
+            $this->sipProfile = new SipProfile($this->http);
         }
         return $this->sipProfile;
     }
@@ -243,56 +259,56 @@ class RestClient
         return $this->lookup;
     }
 
-    /** Short codes. */
-    public function shortCodes(): CrudResource
+    /** Short codes (list / get / update only). */
+    public function shortCodes(): ShortCodes
     {
         if ($this->shortCodes === null) {
-            $this->shortCodes = new CrudResource($this->http, '/api/relay/rest/short_codes');
+            $this->shortCodes = new ShortCodes($this->http);
         }
         return $this->shortCodes;
     }
 
-    /** Imported phone numbers. */
-    public function importedNumbers(): CrudResource
+    /** Imported phone numbers (create only). */
+    public function importedNumbers(): ImportedNumbers
     {
         if ($this->importedNumbers === null) {
-            $this->importedNumbers = new CrudResource($this->http, '/api/relay/rest/imported_phone_numbers');
+            $this->importedNumbers = new ImportedNumbers($this->http);
         }
         return $this->importedNumbers;
     }
 
-    /** Multi-factor authentication. */
-    public function mfa(): CrudResource
+    /** Multi-factor authentication (sms / call / verify). */
+    public function mfa(): Mfa
     {
         if ($this->mfa === null) {
-            $this->mfa = new CrudResource($this->http, '/api/relay/rest/mfa');
+            $this->mfa = new Mfa($this->http);
         }
         return $this->mfa;
     }
 
-    /** Registry (10DLC brands, campaigns, orders). */
-    public function registry(): CrudResource
+    /** Registry (10DLC brands, campaigns, orders, numbers). */
+    public function registry(): Registry
     {
         if ($this->registry === null) {
-            $this->registry = new CrudResource($this->http, '/api/relay/rest/registry');
+            $this->registry = new Registry($this->http);
         }
         return $this->registry;
     }
 
     /** Logs (messages, voice, fax, conferences). */
-    public function logs(): CrudResource
+    public function logs(): Logs
     {
         if ($this->logs === null) {
-            $this->logs = new CrudResource($this->http, '/api/relay/rest/logs');
+            $this->logs = new Logs($this->http);
         }
         return $this->logs;
     }
 
-    /** Project management. */
-    public function project(): CrudResource
+    /** Project management (project tokens). */
+    public function project(): Project
     {
         if ($this->project === null) {
-            $this->project = new CrudResource($this->http, '/api/relay/rest/project');
+            $this->project = new Project($this->http);
         }
         return $this->project;
     }
