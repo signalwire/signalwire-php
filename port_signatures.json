@@ -4866,12 +4866,12 @@
                 },
                 {
                   "name": "timeout",
-                  "type": "int",
+                  "type": "union<int,float>",
                   "required": false,
                   "default": 30
                 }
               ],
-              "returns": "any"
+              "returns": "optional<class:signalwire.relay.event.Event>"
             }
           }
         },
@@ -4912,9 +4912,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "prompt",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.AIAction"
@@ -5022,9 +5028,10 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "opts",
                   "type": "any",
-                  "required": true
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.CollectAction"
@@ -5077,9 +5084,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "detect",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.DetectAction"
@@ -5101,6 +5114,15 @@
                 }
               ],
               "returns": "bool"
+            },
+            "direction": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             },
             "disconnect": {
               "params": [
@@ -5148,6 +5170,12 @@
                 {
                   "name": "self",
                   "kind": "self"
+                },
+                {
+                  "name": "reason",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -5283,9 +5311,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
-                  "type": "any",
+                  "name": "payment_connector_url",
+                  "type": "string",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.PayAction"
@@ -5306,9 +5340,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "media",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.PlayAction"
@@ -5320,9 +5360,20 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "media",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "collect",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.CollectAction"
@@ -5357,9 +5408,10 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "opts",
                   "type": "any",
-                  "required": true
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.FaxAction"
@@ -5371,9 +5423,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "audio",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.RecordAction"
@@ -5422,9 +5480,21 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
-                  "type": "any",
+                  "name": "document",
+                  "type": "string",
                   "required": true
+                },
+                {
+                  "name": "identity",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.FaxAction"
@@ -5445,9 +5515,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
-                  "type": "any",
+                  "name": "url",
+                  "type": "string",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.StreamAction"
@@ -5468,9 +5544,20 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "tap",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "device",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.TapAction"
@@ -5482,9 +5569,10 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "opts",
                   "type": "any",
-                  "required": true
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.TranscribeAction"
@@ -5618,9 +5706,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "devices",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "class:signalwire.relay.call.Call"
@@ -5715,6 +5809,15 @@
               "returns": "void"
             },
             "host": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "jwt_token": {
               "params": [
                 {
                   "name": "self",
@@ -6221,6 +6324,20 @@
               ],
               "returns": "optional<string>"
             },
+            "handle_event": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "event",
+                  "type": "class:signalwire.relay.event.Event",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
             "is_done": {
               "params": [
                 {
@@ -6287,6 +6404,41 @@
                 }
               ],
               "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.relay.relay_error": {
+      "classes": {
+        "RelayError": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "message",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "code",
+                  "type": "int",
+                  "required": false,
+                  "default": 0
+                },
+                {
+                  "name": "previous",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
             }
           }
         }

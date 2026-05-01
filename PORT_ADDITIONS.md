@@ -13,7 +13,11 @@ Every entry must carry a rationale. Reviewers use this file to catch accidental 
 # a surface change.
 
 signalwire.SignalWire: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.SignalWire.add_skill_directory: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
 signalwire.SignalWire.get_logger: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.SignalWire.list_skills_with_params: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
+signalwire.SignalWire.register_skill: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
+signalwire.SignalWire.rest_client: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
 signalwire.agent_server.AgentServer.get_host: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agent_server.AgentServer.get_port: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agent_server.AgentServer.get_sip_username_mapping: PHP idiomatic accessor / lifecycle hook on AgentServer.
@@ -38,13 +42,18 @@ signalwire.core.agent_base.AgentBase.add_skill: PHP idiomatic getter / explicit 
 signalwire.core.agent_base.AgentBase.build_ai_verb: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.clone_for_request: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.contexts: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.create_tool_token: PHP-additional-API: PHP's AgentBase exposes tool-token helpers as public methods (paired with SessionManager); Python keeps token operations internal
 signalwire.core.agent_base.AgentBase.define_contexts: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.enable_debug_events: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.get_contexts: PHP-prompt-getter: explicit prompt accessor 'get_contexts' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
+signalwire.core.agent_base.AgentBase.get_post_prompt: PHP-prompt-getter: explicit prompt accessor 'get_post_prompt' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
 signalwire.core.agent_base.AgentBase.get_prompt: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.get_raw_prompt: PHP-prompt-getter: explicit prompt accessor 'get_raw_prompt' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
 signalwire.core.agent_base.AgentBase.has_skill: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.list_skills: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.list_tool_names: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.manual_set_proxy_url: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.pom: PHP-prompt-getter: explicit pom() accessor returning the Prompt Object Model builder; Python's @property pom is mapped via METHOD_ALIASES (get_pom -> pom) but PHP's bare 'pom()' method still surfaces
 signalwire.core.agent_base.AgentBase.prompt_add_section: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.prompt_add_subsection: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.prompt_add_to_section: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
@@ -63,9 +72,11 @@ signalwire.core.agent_base.AgentBase.set_params: PHP idiomatic getter / explicit
 signalwire.core.agent_base.AgentBase.set_post_prompt: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_post_prompt_llm_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_prompt_llm_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.set_prompt_pom: PHP-prompt-getter: explicit prompt accessor 'set_prompt_pom' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
 signalwire.core.agent_base.AgentBase.set_prompt_text: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_pronunciations: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.update_global_data: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.validate_tool_token: PHP-additional-API: PHP's AgentBase exposes tool-token helpers as public methods (paired with SessionManager); Python keeps token operations internal
 signalwire.core.contexts.Context.get_initial_step: PHP idiomatic getter on Context.
 signalwire.core.contexts.Context.get_name: PHP idiomatic getter on Context.
 signalwire.core.contexts.Context.get_step_order: PHP idiomatic getter on Context.
@@ -120,7 +131,10 @@ signalwire.core.swml_service.SWMLService.__call: PHP magic-method dispatcher tha
 signalwire.core.swml_service.SWMLService.define_tool: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_service.SWMLService.define_tools: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_service.SWMLService.dispatch_from_globals: PHP CGI-mode helper that reads from `$_SERVER` / `$_REQUEST` globals; Python's equivalent is the WSGI/ASGI adapter shipped with FastAPI.
+signalwire.core.swml_service.SWMLService.get_all_functions: PHP-tool-registry: SWMLService exposes the internal tool-registry methods ('get_all_functions') as public API for testing and reflection; Python keeps the registry internal
+signalwire.core.swml_service.SWMLService.get_basic_auth_credentials_with_source: PHP-auth-helper: SWMLService.get_basic_auth_credentials_with_source is the (creds, source) tuple variant; Python merges this into the include_source=True branch of get_basic_auth_credentials
 signalwire.core.swml_service.SWMLService.get_full_url: PHP getter for the host:port:route URL; Python computes this internally but doesn't expose a separate accessor on SWMLService.
+signalwire.core.swml_service.SWMLService.get_function: PHP-tool-registry: SWMLService exposes the internal tool-registry methods ('get_function') as public API for testing and reflection; Python keeps the registry internal
 signalwire.core.swml_service.SWMLService.get_host: PHP getter exposing the bind host; Python uses the underlying uvicorn config directly.
 signalwire.core.swml_service.SWMLService.get_name: PHP getter for the service name; Python users access via `service.name` attribute directly.
 signalwire.core.swml_service.SWMLService.get_port: PHP getter for the bind port; Python uses the underlying uvicorn config directly.
@@ -129,12 +143,20 @@ signalwire.core.swml_service.SWMLService.get_route: PHP getter for the bind rout
 signalwire.core.swml_service.SWMLService.get_tool_names: PHP getter for the registered tool names list; Python users iterate the underlying `_tool_registry` dict.
 signalwire.core.swml_service.SWMLService.get_tools: PHP getter for the full tool registry; Python exposes the same data via the registry's iter API.
 signalwire.core.swml_service.SWMLService.handle_request: PHP entry-point for HTTP request dispatch; Python's equivalent is the FastAPI route function the framework wires up.
+signalwire.core.swml_service.SWMLService.has_function: PHP-tool-registry: SWMLService exposes the internal tool-registry methods ('has_function') as public API for testing and reflection; Python keeps the registry internal
 signalwire.core.swml_service.SWMLService.on_function_call: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.core.swml_service.SWMLService.on_swml_request: PHP-hook: SWMLService.on_swml_request is the standard hook for SWML callback handling; Python exposes equivalent via WebMixin.on_swml_request which projects to SWMLService
 signalwire.core.swml_service.SWMLService.register_swaig_function: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.core.swml_service.SWMLService.remove_function: PHP-tool-registry: SWMLService exposes the internal tool-registry methods ('remove_function') as public API for testing and reflection; Python keeps the registry internal
 signalwire.core.swml_service.SWMLService.render: PHP method exposing the canonical `render()` entry point — Python uses `render_document()` for the same purpose.
 signalwire.core.swml_service.SWMLService.render_pretty: PHP convenience for human-readable JSON output; Python equivalent is `render_document(pretty=True)`.
 signalwire.core.swml_service.SWMLService.render_swml: PHP alias for the SWML render path; equivalent of Python's `render_document`.
 signalwire.core.swml_service.SWMLService.run: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.core.swml_service.SWMLService.schema_utils: PHP-schema-getter: SWMLService.schema_utils accessor returning the SchemaUtils singleton; Python exposes it as @property schema_utils which already aliases to PHP's getSchemaUtils via METHOD_ALIASES
+signalwire.core.swml_service.SWMLService.validate_basic_auth: PHP-auth-helper: SWMLService.validate_basic_auth is exposed as a public method on the service for downstream auth checks; Python wraps it inside AuthMixin
+signalwire.logging.logging_config.LoggingConfig: PHP-logging-config: PHP groups logging-config helpers (getExecutionMode/isServerlessMode) on a LoggingConfig static class; Python ships them as module-level functions in signalwire.core.logging_config (already projected via FREE_FUNCTION_PROJECTIONS)
+signalwire.logging.logging_config.LoggingConfig.get_execution_mode: PHP-logging-config: PHP groups logging-config helpers (getExecutionMode/isServerlessMode) on a LoggingConfig static class; Python ships them as module-level functions in signalwire.core.logging_config (already projected via FREE_FUNCTION_PROJECTIONS)
+signalwire.logging.logging_config.LoggingConfig.is_serverless_mode: PHP-logging-config: PHP groups logging-config helpers (getExecutionMode/isServerlessMode) on a LoggingConfig static class; Python ships them as module-level functions in signalwire.core.logging_config (already projected via FREE_FUNCTION_PROJECTIONS)
 signalwire.prefabs.concierge.ConciergeAgent.get_amenities: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.concierge.ConciergeAgent.get_services: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.concierge.ConciergeAgent.get_venue_name: PHP idiomatic accessor on the prefab class.
@@ -165,9 +187,9 @@ signalwire.relay.call.Call.resolve_all_actions: PHP idiomatic getter on Call; Py
 signalwire.relay.call.CollectAction.get_collect_result: PHP idiomatic accessor on the CollectAction subclass.
 signalwire.relay.call.CollectAction.get_stop_method: PHP idiomatic accessor on the CollectAction subclass.
 signalwire.relay.call.CollectAction.handle_event: PHP idiomatic accessor on the CollectAction subclass.
+signalwire.relay.call.CollectAction.set_stop_method: PHP CollectAction is the handle for both calling.collect and calling.play_and_collect (Python uses two separate types); the setter lets startAction wire the right verb-specific stop sub-command.
 signalwire.relay.call.DetectAction.get_detect_result: PHP idiomatic accessor on the DetectAction subclass.
 signalwire.relay.call.DetectAction.get_stop_method: PHP idiomatic accessor on the DetectAction subclass.
-signalwire.relay.call.CollectAction.set_stop_method: PHP CollectAction is the handle for both calling.collect and calling.play_and_collect (Python uses two separate types); the setter lets startAction wire the right verb-specific stop sub-command.
 signalwire.relay.call.FaxAction.get_fax_type: PHP idiomatic accessor on the FaxAction subclass.
 signalwire.relay.call.FaxAction.get_stop_method: PHP idiomatic accessor on the FaxAction subclass.
 signalwire.relay.call.PayAction.get_stop_method: PHP idiomatic accessor on the PayAction subclass.
@@ -212,9 +234,9 @@ signalwire.relay.message.Message.get_message_id: PHP idiomatic getter on the Mes
 signalwire.relay.message.Message.get_reason: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_result: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_state: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.handle_event: alias for dispatchEvent so the Client's event router (which symmetrically calls handleEvent on actions and messages) doesn't need a per-type branch.
 signalwire.relay.message.Message.get_tags: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_to_number: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
+signalwire.relay.message.Message.handle_event: alias for dispatchEvent so the Client's event router (which symmetrically calls handleEvent on actions and messages) doesn't need a per-type branch.
 signalwire.relay.message.Message.on_completed: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.resolve: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.relay_error.RelayError: PHP exception class corresponding to Python's `signalwire.relay.client.RelayError`; lives in its own module because PHP's autoloader is one-class-per-file.
@@ -235,6 +257,18 @@ signalwire.rest._base.HttpClient.list_all: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.SignalWireRestError.__str__: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._base.SignalWireRestError.get_response_body: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._base.SignalWireRestError.get_status_code: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.rest._pagination.PaginatedIterator.current: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.get_data_key: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.get_http: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.get_index: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.get_items: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.get_params: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.get_path: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.is_done: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.key: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.next: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.rewind: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
+signalwire.rest._pagination.PaginatedIterator.valid: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
 signalwire.rest.client.RestClient.addresses: PHP idiomatic getter / namespace accessor on RestClient; Python users access the same data via `client.<name>` direct attribute access (e.g. `client.fabric.subscribers`).
 signalwire.rest.client.RestClient.calling: PHP idiomatic getter / namespace accessor on RestClient; Python users access the same data via `client.<name>` direct attribute access (e.g. `client.fabric.subscribers`).
 signalwire.rest.client.RestClient.chat: PHP idiomatic getter / namespace accessor on RestClient; Python users access the same data via `client.<name>` direct attribute access (e.g. `client.fabric.subscribers`).
@@ -261,24 +295,118 @@ signalwire.rest.client.RestClient.short_codes: PHP idiomatic getter / namespace 
 signalwire.rest.client.RestClient.sip_profile: PHP idiomatic getter / namespace accessor on RestClient; Python users access the same data via `client.<name>` direct attribute access (e.g. `client.fabric.subscribers`).
 signalwire.rest.client.RestClient.verified_callers: PHP idiomatic getter / namespace accessor on RestClient; Python users access the same data via `client.<name>` direct attribute access (e.g. `client.fabric.subscribers`).
 signalwire.rest.client.RestClient.video: PHP idiomatic getter / namespace accessor on RestClient; Python users access the same data via `client.<name>` direct attribute access (e.g. `client.fabric.subscribers`).
+signalwire.rest.namespaces.addresses.AddressesResource.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
 signalwire.rest.namespaces.calling.CallingNamespace.get_base_path: PHP idiomatic accessor on the CallingNamespace; Python exposes the same surface via the calling-namespace class methods.
 signalwire.rest.namespaces.calling.CallingNamespace.get_client: PHP idiomatic accessor on the CallingNamespace; Python exposes the same surface via the calling-namespace class methods.
 signalwire.rest.namespaces.calling.CallingNamespace.get_project_id: PHP idiomatic accessor on the CallingNamespace; Python exposes the same surface via the calling-namespace class methods.
 signalwire.rest.namespaces.calling.CallingNamespace.update_call: PHP idiomatic accessor on the CallingNamespace; Python exposes the same surface via the calling-namespace class methods.
+signalwire.rest.namespaces.compat.CompatAccounts.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.compat.CompatConferences.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.compat.CompatConferences.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.compat.CompatNamespace.accounts: PHP-namespace-accessor: explicit 'accounts()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.applications: PHP-namespace-accessor: explicit 'applications()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.calls: PHP-namespace-accessor: explicit 'calls()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.conferences: PHP-namespace-accessor: explicit 'conferences()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.faxes: PHP-namespace-accessor: explicit 'faxes()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.get_account_base: PHP-idiom-getter: explicit get_account_base() method on Compat namespace for the account-prefixed base URL; Python embeds this in CrudResource constructor
+signalwire.rest.namespaces.compat.CompatNamespace.get_account_sid: PHP-idiom-getter: explicit get_account_sid() method on Compat namespace; Python keeps the SID as a private attribute
+signalwire.rest.namespaces.compat.CompatNamespace.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
+signalwire.rest.namespaces.compat.CompatNamespace.laml_bins: PHP-namespace-accessor: explicit 'laml_bins()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.messages: PHP-namespace-accessor: explicit 'messages()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.phone_numbers: PHP-namespace-accessor: explicit 'phone_numbers()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.queues: PHP-namespace-accessor: explicit 'queues()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.recordings: PHP-namespace-accessor: explicit 'recordings()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.tokens: PHP-namespace-accessor: explicit 'tokens()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatNamespace.transcriptions: PHP-namespace-accessor: explicit 'transcriptions()' method on CompatNamespace returning the corresponding sub-resource; Python uses snake_case attribute access ('compat.accounts')
+signalwire.rest.namespaces.compat.CompatPhoneNumbers.get_available_base: PHP-idiom-getter: explicit get_available_base() method for /AvailablePhoneNumbers endpoint base URL
+signalwire.rest.namespaces.compat.CompatPhoneNumbers.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.compat.CompatPhoneNumbers.get_imported_base: PHP-idiom-getter: explicit get_imported_base() method for /IncomingPhoneNumbers endpoint base URL
+signalwire.rest.namespaces.compat.CompatRecordings.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.compat.CompatRecordings.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.compat.CompatTokens.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.compat.CompatTokens.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.compat.CompatTranscriptions.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.compat.CompatTranscriptions.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.fabric.FabricAddresses.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.fabric.FabricAddresses.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
 signalwire.rest.namespaces.fabric.FabricNamespace.addresses: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.ai_agents: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.call_flows: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.call_queues: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.conference_rooms: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.conversations: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
+signalwire.rest.namespaces.fabric.FabricNamespace.cxml_applications: PHP-namespace-accessor: explicit 'cxml_applications()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
+signalwire.rest.namespaces.fabric.FabricNamespace.cxml_scripts: PHP-namespace-accessor: explicit 'cxml_scripts()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
+signalwire.rest.namespaces.fabric.FabricNamespace.cxml_webhooks: PHP-namespace-accessor: explicit 'cxml_webhooks()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.dial_plans: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.freeclimb_apps: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
+signalwire.rest.namespaces.fabric.FabricNamespace.freeswitch_connectors: PHP-namespace-accessor: explicit 'freeswitch_connectors()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.get_client: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.phone_numbers: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
+signalwire.rest.namespaces.fabric.FabricNamespace.relay_applications: PHP-namespace-accessor: explicit 'relay_applications()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
+signalwire.rest.namespaces.fabric.FabricNamespace.resources: PHP-namespace-accessor: explicit 'resources()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.sip_endpoints: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
+signalwire.rest.namespaces.fabric.FabricNamespace.sip_gateways: PHP-namespace-accessor: explicit 'sip_gateways()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.sip_profiles: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.subscribers: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.swml_scripts: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
+signalwire.rest.namespaces.fabric.FabricNamespace.swml_webhooks: PHP-namespace-accessor: explicit 'swml_webhooks()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
+signalwire.rest.namespaces.fabric.FabricNamespace.tokens: PHP-namespace-accessor: explicit 'tokens()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
+signalwire.rest.namespaces.fabric.FabricTokens.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.fabric.GenericResources.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.fabric.GenericResources.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.imported_numbers.ImportedNumbersResource.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.logs.ConferenceLogs.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.logs.ConferenceLogs.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.logs.FaxLogs.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.logs.FaxLogs.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.logs.LogsNamespace.conferences: PHP-namespace-accessor: explicit 'conferences()' method on LogsNamespace returning the corresponding log-stream resource; Python uses attribute access
+signalwire.rest.namespaces.logs.LogsNamespace.fax: PHP-namespace-accessor: explicit 'fax()' method on LogsNamespace returning the corresponding log-stream resource; Python uses attribute access
+signalwire.rest.namespaces.logs.LogsNamespace.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
+signalwire.rest.namespaces.logs.LogsNamespace.messages: PHP-namespace-accessor: explicit 'messages()' method on LogsNamespace returning the corresponding log-stream resource; Python uses attribute access
+signalwire.rest.namespaces.logs.LogsNamespace.voice: PHP-namespace-accessor: explicit 'voice()' method on LogsNamespace returning the corresponding log-stream resource; Python uses attribute access
+signalwire.rest.namespaces.logs.MessageLogs.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.logs.MessageLogs.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.logs.VoiceLogs.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.logs.VoiceLogs.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.mfa.MfaResource.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.project.ProjectNamespace.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
+signalwire.rest.namespaces.project.ProjectNamespace.tokens: PHP-namespace-accessor: explicit 'tokens()' method on ProjectNamespace; Python uses attribute access
+signalwire.rest.namespaces.project.ProjectTokens.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.recordings.RecordingsResource.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.registry.RegistryBrands.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.registry.RegistryBrands.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.registry.RegistryCampaigns.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.registry.RegistryCampaigns.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.registry.RegistryNamespace.brands: PHP-namespace-accessor: explicit 'brands()' method on RegistryNamespace returning the registry sub-resource; Python uses attribute access
+signalwire.rest.namespaces.registry.RegistryNamespace.campaigns: PHP-namespace-accessor: explicit 'campaigns()' method on RegistryNamespace returning the registry sub-resource; Python uses attribute access
+signalwire.rest.namespaces.registry.RegistryNamespace.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
+signalwire.rest.namespaces.registry.RegistryNamespace.numbers: PHP-namespace-accessor: explicit 'numbers()' method on RegistryNamespace returning the registry sub-resource; Python uses attribute access
+signalwire.rest.namespaces.registry.RegistryNamespace.orders: PHP-namespace-accessor: explicit 'orders()' method on RegistryNamespace returning the registry sub-resource; Python uses attribute access
+signalwire.rest.namespaces.registry.RegistryNumbers.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.registry.RegistryNumbers.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.registry.RegistryOrders.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.registry.RegistryOrders.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.short_codes.ShortCodesResource.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.sip_profile.SipProfileResource.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.video.VideoConferenceTokens.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.video.VideoConferenceTokens.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.video.VideoNamespace.conference_tokens: PHP-namespace-accessor: explicit 'conference_tokens()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoNamespace.conferences: PHP-namespace-accessor: explicit 'conferences()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoNamespace.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
+signalwire.rest.namespaces.video.VideoNamespace.room_recordings: PHP-namespace-accessor: explicit 'room_recordings()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoNamespace.room_sessions: PHP-namespace-accessor: explicit 'room_sessions()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoNamespace.room_tokens: PHP-namespace-accessor: explicit 'room_tokens()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoNamespace.rooms: PHP-namespace-accessor: explicit 'rooms()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoNamespace.streams: PHP-namespace-accessor: explicit 'streams()' method on VideoNamespace; Python uses attribute access
+signalwire.rest.namespaces.video.VideoRoomRecordings.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.video.VideoRoomRecordings.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.video.VideoRoomSessions.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.video.VideoRoomSessions.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.video.VideoRoomTokens.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.video.VideoRoomTokens.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
+signalwire.rest.namespaces.video.VideoStreams.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.rest.namespaces.video.VideoStreams.get_base_path: PHP-idiom-getter: explicit get_base_path() method on REST resource classes; Python uses a class-level _path constant accessed directly. Same data, different access shape
 signalwire.skills.api_ninjas_trivia.skill.ApiNinjasTriviaSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.api_ninjas_trivia.skill.ApiNinjasTriviaSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.api_ninjas_trivia.skill.ApiNinjasTriviaSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -293,7 +421,10 @@ signalwire.skills.custom_skills.skill.CustomSkillsSkill.get_name: PHP idiomatic 
 signalwire.skills.custom_skills.skill.CustomSkillsSkill.register_tools: PHP idiomatic accessor on CustomSkillsSkill.
 signalwire.skills.custom_skills.skill.CustomSkillsSkill.setup: PHP idiomatic accessor on CustomSkillsSkill.
 signalwire.skills.custom_skills.skill.CustomSkillsSkill.supports_multiple_instances: PHP idiomatic accessor on CustomSkillsSkill.
+signalwire.skills.datasphere.skill.DataSphereSkill.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
+signalwire.skills.datasphere.skill.DataSphereSkill.documents: PHP-skill-accessor: DataSphereSkill exposes 'documents' as a public method (additional surface beyond Python's parent SkillBase)
 signalwire.skills.datasphere.skill.DataSphereSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.skills.datasphere.skill.DataSphereSkill.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
 signalwire.skills.datasphere.skill.DataSphereSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.datasphere.skill.DataSphereSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.datasphere_serverless.skill.DataSphereServerlessSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -324,6 +455,7 @@ signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.supports_mu
 signalwire.skills.play_background_file.skill.PlayBackgroundFileSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.play_background_file.skill.PlayBackgroundFileSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.play_background_file.skill.PlayBackgroundFileSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.skills.registry.SkillRegistry.get_external_paths: PHP-registry-getter: SkillRegistry.get_external_paths returns the configured external skill directories; Python keeps this as an internal _external_paths attribute
 signalwire.skills.registry.SkillRegistry.get_factory: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.registry.SkillRegistry.instance: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.registry.SkillRegistry.reset: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -348,6 +480,10 @@ signalwire.utils.schema_utils.Schema.instance: PHP singleton accessor; canonical
 signalwire.utils.schema_utils.Schema.is_valid_verb: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
 signalwire.utils.schema_utils.Schema.reset: PHP singleton reset hook (test-only); canonical SchemaUtils ships separately.
 signalwire.utils.schema_utils.Schema.verb_count: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
-signalwire.utils.schema_utils.SchemaUtils.generate_method_signature: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
 signalwire.utils.schema_utils.SchemaUtils.generate_method_body: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
+signalwire.utils.schema_utils.SchemaUtils.generate_method_signature: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
 signalwire.utils.schema_utils.SchemaUtils.is_full_validation_available: @property in Python (filtered as bool-returning attribute); ports expose it as an explicit method per spec.
+signalwire.utils.schema_utils.SchemaValidationError.get_errors: PHP-exception-getter: SchemaValidationError exposes 'get_errors' as an explicit getter; Python attaches the same data as instance attributes accessed directly
+signalwire.utils.schema_utils.SchemaValidationError.get_verb_name: PHP-exception-getter: SchemaValidationError exposes 'get_verb_name' as an explicit getter; Python attaches the same data as instance attributes accessed directly
+signalwire.utils.url_validator.UrlValidator: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
+signalwire.utils.url_validator.UrlValidator.validate_url: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
