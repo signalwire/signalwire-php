@@ -142,6 +142,8 @@ class MockTest extends TestCase
         $err = new \RuntimeException(
             'MockTest: `python -m mock_signalwire` did not become ready within '
             . self::STARTUP_TIMEOUT_SEC . 's on port ' . $port
+            . ' (clone porting-sdk next to signalwire-php so tests can find '
+            . 'porting-sdk/test_harness/mock_signalwire/, or pip install the mock_signalwire package)'
         );
         self::$startupFailure = $err;
         throw $err;
@@ -162,7 +164,9 @@ class MockTest extends TestCase
     /**
      * Spawn `python -m mock_signalwire --host 127.0.0.1 --port <port> --log-level error`.
      * Returns the proc_open resource. Stdout/stderr are routed to /dev/null
-     * to keep the child detached.
+     * to keep the child detached. Injects PYTHONPATH so `python -m
+     * mock_signalwire` resolves without a prior pip-install: the only
+     * contract is that porting-sdk lives next to signalwire-php in ~/src/.
      */
     private static function spawnMockServer(int $port)
     {
@@ -174,16 +178,64 @@ class MockTest extends TestCase
             '--port', (string) $port,
             '--log-level', 'error',
         ];
+        // Try to inject porting-sdk/test_harness/mock_signalwire/ into
+        // PYTHONPATH so `python -m mock_signalwire` resolves without a
+        // prior `pip install -e ...`. Adjacency contract: porting-sdk next
+        // to signalwire-php in ~/src/. When the walk fails (e.g. porting-sdk
+        // is not adjacent), we still spawn — the child falls back to
+        // whatever is on the system Python's sys.path, and the readiness
+        // probe surfaces a clear timeout error if neither mode is available.
+        $pkgDir = self::discoverPortingSdkPackage('mock_signalwire');
+        $env = $_SERVER;
+        // Filter to scalar values so proc_open's env doesn't choke on arrays.
+        $cleanEnv = [];
+        foreach ($env as $k => $v) {
+            if (is_string($k) && (is_string($v) || is_numeric($v))) {
+                $cleanEnv[$k] = (string) $v;
+            }
+        }
+        if ($pkgDir !== null) {
+            $sep = PATH_SEPARATOR;
+            $existing = $cleanEnv['PYTHONPATH'] ?? '';
+            $cleanEnv['PYTHONPATH'] = $existing !== '' ? ($pkgDir . $sep . $existing) : $pkgDir;
+        }
         $descriptors = [
             0 => ['file', '/dev/null', 'r'],
             1 => ['file', '/dev/null', 'w'],
             2 => ['file', '/dev/null', 'w'],
         ];
-        $proc = proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => false]);
+        $proc = proc_open($cmd, $descriptors, $pipes, null, $cleanEnv, ['bypass_shell' => false]);
         if (!is_resource($proc)) {
             throw new \RuntimeException('proc_open failed for ' . implode(' ', $cmd));
         }
         return $proc;
+    }
+
+    /**
+     * Walk this file's directory upward looking for an adjacent
+     * porting-sdk/test_harness/<name>/<name>/__init__.py.
+     *
+     * Returns the absolute path to the directory containing the Python
+     * package (the value to put on PYTHONPATH so that `python -m <name>`
+     * resolves), or null when no adjacent porting-sdk is reachable.
+     */
+    public static function discoverPortingSdkPackage(string $name): ?string
+    {
+        $dir = __DIR__;
+        while (true) {
+            $parent = dirname($dir);
+            if ($parent === $dir) {
+                return null;
+            }
+            $candidate = $parent . DIRECTORY_SEPARATOR . 'porting-sdk'
+                . DIRECTORY_SEPARATOR . 'test_harness'
+                . DIRECTORY_SEPARATOR . $name;
+            $init = $candidate . DIRECTORY_SEPARATOR . $name . DIRECTORY_SEPARATOR . '__init__.py';
+            if (is_file($init)) {
+                return $candidate;
+            }
+            $dir = $parent;
+        }
     }
 
     /**
