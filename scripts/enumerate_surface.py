@@ -119,6 +119,24 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # the rest are accessed as CrudResource via RestClient::namespace()).
     "Calling": "signalwire.rest.namespaces.calling",
     "Fabric": "signalwire.rest.namespaces.fabric",
+    # Compat sub-resources collapse to `signalwire.rest.namespaces.compat` to
+    # match Python's CompatNamespace/sub-class layout. Both the PHP-native
+    # name (Compat) and the Python-canonical name (CompatNamespace) are
+    # listed so the signature emitter resolves return types consistently.
+    "Compat": "signalwire.rest.namespaces.compat",
+    "CompatNamespace": "signalwire.rest.namespaces.compat",
+    "CompatAccounts": "signalwire.rest.namespaces.compat",
+    "CompatCalls": "signalwire.rest.namespaces.compat",
+    "CompatMessages": "signalwire.rest.namespaces.compat",
+    "CompatFaxes": "signalwire.rest.namespaces.compat",
+    "CompatConferences": "signalwire.rest.namespaces.compat",
+    "CompatPhoneNumbers": "signalwire.rest.namespaces.compat",
+    "CompatApplications": "signalwire.rest.namespaces.compat",
+    "CompatLamlBins": "signalwire.rest.namespaces.compat",
+    "CompatQueues": "signalwire.rest.namespaces.compat",
+    "CompatRecordings": "signalwire.rest.namespaces.compat",
+    "CompatTranscriptions": "signalwire.rest.namespaces.compat",
+    "CompatTokens": "signalwire.rest.namespaces.compat",
 
     # relay
     "Client": "signalwire.relay.client",   # PHP `Relay\Client` -> Python `RelayClient`
@@ -268,6 +286,7 @@ CLASS_RENAME_MAP: dict[str, str] = {
     # REST namespace classes (Python uses descriptive *Resource / *Namespace names)
     "Calling": "CallingNamespace",
     "Fabric": "FabricNamespace",  # not in Python; emitted into fabric.py module
+    "Compat": "CompatNamespace",
     # Skill renames -- append Skill suffix to match Python's <Name>Skill convention
     "ApiNinjasTrivia": "ApiNinjasTriviaSkill",
     "ClaudeSkills": "ClaudeSkillsSkill",
@@ -334,6 +353,14 @@ METHOD_ALIASES: dict[str, str] = {
     # Python ``SWMLService.schema_utils`` is a public attribute exposed
     # via PHP's ``getSchemaUtils()`` getter. Strip the get_ prefix.
     "get_schema_utils": "schema_utils",
+    # Compat sub-resource accessors. Python exposes ``compat.calls`` etc. as
+    # plain attributes; PHP wraps them in getter methods (``calls()`` is the
+    # PHP idiom). Project the PHP method names onto the same surface so the
+    # cross-language audit treats them as the same symbol. ``get_account_base``
+    # / ``get_account_sid`` / ``get_http`` are PHP-only debugging accessors;
+    # the surface diff already tolerates extras, so leave them in place
+    # rather than aliasing them onto Python attributes that don't exist.
+    # The Compat class is mapped by name above (Compat -> CompatNamespace).
 }
 
 

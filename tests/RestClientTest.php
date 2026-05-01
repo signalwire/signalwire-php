@@ -12,6 +12,7 @@ use SignalWire\REST\RestClient;
 use SignalWire\REST\SignalWireRestError;
 use SignalWire\REST\Namespaces\Fabric;
 use SignalWire\REST\Namespaces\Calling;
+use SignalWire\REST\Namespaces\Compat;
 
 /**
  * Unit tests for the SignalWire PHP REST client.
@@ -251,7 +252,7 @@ class RestClientTest extends TestCase
         $this->assertInstanceOf(CrudResource::class, $client->phoneNumbers());
         $this->assertInstanceOf(CrudResource::class, $client->datasphere());
         $this->assertInstanceOf(CrudResource::class, $client->video());
-        $this->assertInstanceOf(CrudResource::class, $client->compat());
+        $this->assertInstanceOf(Compat::class, $client->compat());
         $this->assertInstanceOf(CrudResource::class, $client->addresses());
         $this->assertInstanceOf(CrudResource::class, $client->queues());
         $this->assertInstanceOf(CrudResource::class, $client->recordings());
@@ -281,7 +282,7 @@ class RestClientTest extends TestCase
         $this->assertSame('/api/relay/rest/phone_numbers', $client->phoneNumbers()->getBasePath());
         $this->assertSame('/api/datasphere/documents', $client->datasphere()->getBasePath());
         $this->assertSame('/api/video/rooms', $client->video()->getBasePath());
-        $this->assertSame('/api/laml/2010-04-01/Accounts/proj-id', $client->compat()->getBasePath());
+        $this->assertSame('/api/laml/2010-04-01/Accounts/proj-id', $client->compat()->getAccountBase());
         $this->assertSame('/api/relay/rest/addresses', $client->addresses()->getBasePath());
         $this->assertSame('/api/fabric/resources/queues', $client->queues()->getBasePath());
         $this->assertSame('/api/relay/rest/recordings', $client->recordings()->getBasePath());
@@ -410,7 +411,7 @@ class RestClientTest extends TestCase
 
         $expectedMethods = [
             // Call lifecycle (5)
-            'dial', 'updateCall', 'end', 'transfer', 'disconnect',
+            'dial', 'update', 'end', 'transfer', 'disconnect',
             // Play (5)
             'play', 'playPause', 'playResume', 'playStop', 'playVolume',
             // Record (4)
@@ -469,11 +470,11 @@ class RestClientTest extends TestCase
 
         $this->assertStringContainsString(
             'my-proj',
-            $client->compat()->getBasePath()
+            $client->compat()->getAccountBase()
         );
         $this->assertSame(
             '/api/laml/2010-04-01/Accounts/my-proj',
-            $client->compat()->getBasePath()
+            $client->compat()->getAccountBase()
         );
     }
 }

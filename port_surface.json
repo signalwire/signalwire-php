@@ -1,11 +1,15 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 00173d6b46a84886c51feb1f6ef03d1fb7bf981b",
+  "generated_from": "signalwire-php @ 58560dc4a12554b3e29a04a6e59bba178f448dd9",
   "modules": {
     "signalwire": {
       "classes": {
         "SignalWire": [
-          "get_logger"
+          "add_skill_directory",
+          "get_logger",
+          "list_skills_with_params",
+          "register_skill",
+          "rest_client"
         ]
       },
       "functions": []
@@ -45,6 +49,38 @@
       },
       "functions": []
     },
+    "signalwire.core.agent.prompt.manager": {
+      "classes": {
+        "PromptManager": [
+          "define_contexts",
+          "get_contexts",
+          "get_post_prompt",
+          "get_prompt",
+          "get_raw_prompt",
+          "prompt_add_section",
+          "prompt_add_subsection",
+          "prompt_add_to_section",
+          "prompt_has_section",
+          "set_post_prompt",
+          "set_prompt_pom",
+          "set_prompt_text"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.agent.tools.registry": {
+      "classes": {
+        "ToolRegistry": [
+          "define_tool",
+          "get_all_functions",
+          "get_function",
+          "has_function",
+          "register_swaig_function",
+          "remove_function"
+        ]
+      },
+      "functions": []
+    },
     "signalwire.core.agent_base": {
       "classes": {
         "AgentBase": [
@@ -69,16 +105,21 @@
           "clear_swaig_query_params",
           "clone_for_request",
           "contexts",
+          "create_tool_token",
           "define_contexts",
           "enable_debug_events",
           "enable_sip_routing",
+          "get_contexts",
+          "get_post_prompt",
           "get_prompt",
+          "get_raw_prompt",
           "has_skill",
           "list_skills",
           "list_tool_names",
           "manual_set_proxy_url",
           "on_debug_event",
           "on_summary",
+          "pom",
           "prompt_add_section",
           "prompt_add_subsection",
           "prompt_add_to_section",
@@ -99,10 +140,12 @@
           "set_post_prompt_llm_params",
           "set_post_prompt_url",
           "set_prompt_llm_params",
+          "set_prompt_pom",
           "set_prompt_text",
           "set_pronunciations",
           "set_web_hook_url",
-          "update_global_data"
+          "update_global_data",
+          "validate_tool_token"
         ]
       },
       "functions": []
@@ -320,7 +363,8 @@
     "signalwire.core.mixins.auth_mixin": {
       "classes": {
         "AuthMixin": [
-          "get_basic_auth_credentials"
+          "get_basic_auth_credentials",
+          "validate_basic_auth"
         ]
       },
       "functions": []
@@ -336,6 +380,7 @@
         "PromptMixin": [
           "contexts",
           "define_contexts",
+          "get_post_prompt",
           "get_prompt",
           "prompt_add_section",
           "prompt_add_subsection",
@@ -343,6 +388,7 @@
           "prompt_has_section",
           "reset_contexts",
           "set_post_prompt",
+          "set_prompt_pom",
           "set_prompt_text"
         ]
       },
@@ -367,7 +413,9 @@
     },
     "signalwire.core.mixins.state_mixin": {
       "classes": {
-        "StateMixin": []
+        "StateMixin": [
+          "validate_tool_token"
+        ]
       },
       "functions": []
     },
@@ -385,8 +433,11 @@
     "signalwire.core.mixins.web_mixin": {
       "classes": {
         "WebMixin": [
-          "manual_set_proxy_url",
-          "set_dynamic_config_callback"
+          "on_request",
+          "on_swml_request",
+          "register_routing_callback",
+          "run",
+          "serve"
         ]
       },
       "functions": []
@@ -465,9 +516,12 @@
           "define_tools",
           "dispatch_from_globals",
           "extract_sip_username",
+          "get_all_functions",
           "get_basic_auth_credentials",
+          "get_basic_auth_credentials_with_source",
           "get_document",
           "get_full_url",
+          "get_function",
           "get_host",
           "get_name",
           "get_port",
@@ -476,14 +530,29 @@
           "get_tool_names",
           "get_tools",
           "handle_request",
+          "has_function",
           "on_function_call",
+          "on_request",
+          "on_swml_request",
           "register_routing_callback",
           "register_swaig_function",
+          "remove_function",
           "render",
           "render_pretty",
           "render_swml",
           "run",
-          "serve"
+          "schema_utils",
+          "serve",
+          "validate_basic_auth"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.logging.logging_config": {
+      "classes": {
+        "LoggingConfig": [
+          "get_execution_mode",
+          "is_serverless_mode"
         ]
       },
       "functions": []
@@ -850,8 +919,123 @@
           "transcribe",
           "transcribe_stop",
           "transfer",
-          "update_call",
+          "update",
           "user_event"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.rest.namespaces.compat": {
+      "classes": {
+        "CompatAccounts": [
+          "__init__",
+          "create",
+          "get",
+          "get_base_path",
+          "list",
+          "update"
+        ],
+        "CompatApplications": [
+          "update"
+        ],
+        "CompatCalls": [
+          "start_recording",
+          "start_stream",
+          "stop_stream",
+          "update",
+          "update_recording"
+        ],
+        "CompatConferences": [
+          "__init__",
+          "delete_recording",
+          "get",
+          "get_base_path",
+          "get_participant",
+          "get_recording",
+          "list",
+          "list_participants",
+          "list_recordings",
+          "remove_participant",
+          "start_stream",
+          "stop_stream",
+          "update",
+          "update_participant",
+          "update_recording"
+        ],
+        "CompatFaxes": [
+          "delete_media",
+          "get_media",
+          "list_media",
+          "update"
+        ],
+        "CompatLamlBins": [
+          "update"
+        ],
+        "CompatMessages": [
+          "delete_media",
+          "get_media",
+          "list_media",
+          "update"
+        ],
+        "CompatNamespace": [
+          "__init__",
+          "accounts",
+          "applications",
+          "calls",
+          "conferences",
+          "faxes",
+          "get_account_base",
+          "get_account_sid",
+          "get_http",
+          "laml_bins",
+          "messages",
+          "phone_numbers",
+          "queues",
+          "recordings",
+          "tokens",
+          "transcriptions"
+        ],
+        "CompatPhoneNumbers": [
+          "__init__",
+          "delete",
+          "get",
+          "get_available_base",
+          "get_base_path",
+          "get_imported_base",
+          "import_number",
+          "list",
+          "list_available_countries",
+          "purchase",
+          "search_local",
+          "search_toll_free",
+          "update"
+        ],
+        "CompatQueues": [
+          "dequeue_member",
+          "get_member",
+          "list_members",
+          "update"
+        ],
+        "CompatRecordings": [
+          "__init__",
+          "delete",
+          "get",
+          "get_base_path",
+          "list"
+        ],
+        "CompatTokens": [
+          "__init__",
+          "create",
+          "delete",
+          "get_base_path",
+          "update"
+        ],
+        "CompatTranscriptions": [
+          "__init__",
+          "delete",
+          "get",
+          "get_base_path",
+          "list"
         ]
       },
       "functions": []
@@ -1066,6 +1250,9 @@
     "signalwire.skills.registry": {
       "classes": {
         "SkillRegistry": [
+          "add_skill_directory",
+          "get_all_skills_schema",
+          "get_external_paths",
           "get_factory",
           "instance",
           "list_skills",
@@ -1146,6 +1333,32 @@
           "is_valid_verb",
           "reset",
           "verb_count"
+        ],
+        "SchemaUtils": [
+          "__init__",
+          "generate_method_body",
+          "generate_method_signature",
+          "get_all_verb_names",
+          "get_verb_parameters",
+          "get_verb_properties",
+          "get_verb_required_properties",
+          "is_full_validation_available",
+          "load_schema",
+          "validate_document",
+          "validate_verb"
+        ],
+        "SchemaValidationError": [
+          "__init__",
+          "get_errors",
+          "get_verb_name"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.utils.url_validator": {
+      "classes": {
+        "UrlValidator": [
+          "validate_url"
         ]
       },
       "functions": []

@@ -6,6 +6,7 @@ namespace SignalWire\REST;
 
 use SignalWire\REST\Namespaces\Fabric;
 use SignalWire\REST\Namespaces\Calling;
+use SignalWire\REST\Namespaces\Compat;
 
 /**
  * Top-level SignalWire REST client.
@@ -30,7 +31,7 @@ class RestClient
     private ?CrudResource $phoneNumbers = null;
     private ?CrudResource $datasphere = null;
     private ?CrudResource $video = null;
-    private ?CrudResource $compat = null;
+    private ?Compat $compat = null;
     private ?CrudResource $addresses = null;
     private ?CrudResource $queues = null;
     private ?CrudResource $recordings = null;
@@ -165,14 +166,16 @@ class RestClient
         return $this->video;
     }
 
-    /** Compatibility (Twilio-compatible LaML) API. */
-    public function compat(): CrudResource
+    /**
+     * Compatibility (Twilio-compatible LaML) API.
+     *
+     * Returns a ``Compat`` namespace object exposing the LAML sub-resources
+     * (calls, messages, faxes, conferences, phoneNumbers, recordings, ...).
+     */
+    public function compat(): Compat
     {
         if ($this->compat === null) {
-            $this->compat = new CrudResource(
-                $this->http,
-                '/api/laml/2010-04-01/Accounts/' . $this->projectId
-            );
+            $this->compat = new Compat($this->http, $this->projectId);
         }
         return $this->compat;
     }

@@ -77,8 +77,14 @@ class Calling
         return $this->execute('dial', null, $params);
     }
 
-    /** @param array<string,mixed> $params */
-    public function updateCall(array $params = []): array
+    /**
+     * Send the bare ``update`` command (no call_id at body root; ``id`` is
+     * passed inside ``params``). Mirrors Python's
+     * ``CallingNamespace.update(**params)``.
+     *
+     * @param array<string,mixed> $params
+     */
+    public function update(array $params = []): array
     {
         return $this->execute('update', null, $params);
     }
