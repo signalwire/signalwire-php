@@ -48,9 +48,14 @@ class Action
      * Each iteration calls $client->readOnce() so the event-loop
      * keeps processing inbound frames.
      *
-     * @return mixed The resolved result, or null on timeout.
+     * Returns the resolving Event when the action completes (mirrors
+     * Python's ``return self._wait_event.wait()``). Returns null on
+     * timeout. The numeric ``$timeout`` is interpreted as seconds and
+     * accepts integers or floats.
+     *
+     * @return Event|null
      */
-    public function wait(int $timeout = 30)
+    public function wait(int|float $timeout = 30): ?Event
     {
         $deadline = microtime(true) + $timeout;
 
@@ -60,7 +65,7 @@ class Action
             }
         }
 
-        return $this->result;
+        return $this->result instanceof Event ? $this->result : null;
     }
 
     // ------------------------------------------------------------------
@@ -281,9 +286,13 @@ class RecordAction extends Action
         return 'calling.record.stop';
     }
 
-    public function pause(): void
+    /**
+     * @param array<string,mixed> $extra Additional params to merge onto
+     *   the wire (e.g. ``['behavior' => 'continuous']``).
+     */
+    public function pause(array $extra = []): void
     {
-        $this->executeSubcommand('calling.record.pause');
+        $this->executeSubcommand('calling.record.pause', $extra);
     }
 
     public function resume(): void
@@ -318,9 +327,22 @@ class RecordAction extends Action
  */
 class CollectAction extends Action
 {
+    /**
+     * Track the originating verb so ``stop()`` knows which sub-command
+     * to send. ``calling.collect`` and ``calling.play_and_collect`` both
+     * resolve to a CollectAction handle but their ``.stop`` sub-commands
+     * differ on the wire.
+     */
+    private string $stopMethod = 'calling.collect.stop';
+
+    public function setStopMethod(string $method): void
+    {
+        $this->stopMethod = $method;
+    }
+
     public function getStopMethod(): string
     {
-        return 'calling.collect.stop';
+        return $this->stopMethod;
     }
 
     /**

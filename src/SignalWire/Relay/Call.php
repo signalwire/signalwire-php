@@ -27,6 +27,7 @@ class Call
     public ?string $endReason = null;
     public ?string $context = null;
     public bool   $dialWinner = false;
+    public ?string $direction = null;
 
     // ── back-references ───────────────────────────────────────────────
     /** @var object  RELAY Client instance */
@@ -46,14 +47,15 @@ class Call
 
     public function __construct(array $params, object $client)
     {
-        $this->client  = $client;
-        $this->callId  = $params['call_id']  ?? null;
-        $this->nodeId  = $params['node_id']  ?? null;
-        $this->tag     = $params['tag']      ?? null;
-        $this->device  = $params['device']   ?? [];
-        $this->peer    = $params['peer']     ?? [];
-        $this->context = $params['context']  ?? null;
-        $this->state   = $params['state']    ?? 'created';
+        $this->client    = $client;
+        $this->callId    = $params['call_id']   ?? null;
+        $this->nodeId    = $params['node_id']   ?? null;
+        $this->tag       = $params['tag']       ?? null;
+        $this->device    = $params['device']    ?? [];
+        $this->peer      = $params['peer']      ?? [];
+        $this->context   = $params['context']   ?? null;
+        $this->state     = $params['state']     ?? $params['call_state'] ?? 'created';
+        $this->direction = $params['direction'] ?? null;
 
         $this->logger = Logger::getLogger('relay.call');
     }
@@ -75,14 +77,19 @@ class Call
 
         // ── call-level state events ──────────────────────────────────
         if ($eventType === 'calling.call.state') {
-            if (isset($params['state'])) {
-                $this->state = $params['state'];
+            // Production wire uses ``call_state``; older fixtures use ``state``.
+            $newState = $params['state'] ?? $params['call_state'] ?? null;
+            if ($newState !== null) {
+                $this->state = $newState;
             }
             if (isset($params['end_reason'])) {
                 $this->endReason = $params['end_reason'];
             }
             if (isset($params['peer'])) {
                 $this->peer = $params['peer'];
+            }
+            if (isset($params['direction'])) {
+                $this->direction = $params['direction'];
             }
 
             // Terminal state – resolve every in-flight action
@@ -102,14 +109,44 @@ class Call
         $controlId = $event->getControlId();
         if ($controlId !== null && isset($this->actions[$controlId])) {
             $action = $this->actions[$controlId];
+
+            // CollectAction silently ignores intermediate ``calling.call.play``
+            // events that the play_and_collect verb interleaves with the
+            // collect-side stream — see CollectAction::handleEvent. We
+            // forward the event regardless and let the action decide.
             $action->handleEvent($event);
 
-            // Check whether the action has reached a terminal state
-            $terminalMap = Constants::ACTION_TERMINAL_STATES[$eventType] ?? [];
-            $actionState = $params['state'] ?? null;
-            if ($actionState !== null && isset($terminalMap[$actionState])) {
-                $action->resolve();
+            // Detect resolves on the FIRST payload that carries a ``detect``
+            // result, not on a state(finished) — see the Python
+            // ``test_detect_resolves_on_first_detect_payload``.
+            if (
+                $action instanceof DetectAction
+                && $eventType === 'calling.call.detect'
+                && isset($params['detect'])
+            ) {
+                $action->resolve($event);
                 unset($this->actions[$controlId]);
+            } elseif (
+                $action instanceof CollectAction
+                && $eventType === 'calling.call.play'
+            ) {
+                // Ignore — handleEvent already swallowed it.
+            } elseif (
+                $action instanceof CollectAction
+                && $eventType === 'calling.call.collect'
+                && isset($params['result'])
+            ) {
+                // Production wire: collect emits a single payload carrying
+                // ``result`` (digit / speech / both). Resolve on first one.
+                $action->resolve($event);
+                unset($this->actions[$controlId]);
+            } else {
+                $terminalMap = Constants::ACTION_TERMINAL_STATES[$eventType] ?? [];
+                $actionState = $params['state'] ?? null;
+                if ($actionState !== null && isset($terminalMap[$actionState])) {
+                    $action->resolve($event);
+                    unset($this->actions[$controlId]);
+                }
             }
         }
 
@@ -149,9 +186,18 @@ class Call
         return $this->execute('calling.answer');
     }
 
-    public function hangup(): array
+    /**
+     * Hang up the call. ``$reason`` is forwarded as ``reason`` on the
+     * wire (RELAY accepts ``hangup``, ``busy``, ``decline``, etc.).
+     *
+     * The on-wire method is ``calling.end`` (production), which historically
+     * was named ``calling.hangup`` — we send ``calling.end`` to match the
+     * RELAY schema set extracted from switchblade.
+     */
+    public function hangup(?string $reason = null): array
     {
-        return $this->execute('calling.hangup');
+        $extra = $reason !== null ? ['reason' => $reason] : [];
+        return $this->execute('calling.end', $extra);
     }
 
     public function pass(): array
@@ -288,64 +334,150 @@ class Call
     //  Action methods (return Action objects tracked by control_id)
     // ──────────────────────────────────────────────────────────────────
 
-    public function play(array $params): PlayAction
+    /**
+     * Start a calling.play action.
+     *
+     * @param array<int,array<string,mixed>> $media   Play list
+     *   (each entry is ``{type:..., params:...}``).
+     * @param array<string,mixed> $opts ``control_id`` (auto-generated when
+     *   omitted), ``on_completed`` callback fired on terminal events.
+     */
+    public function play(array $media, array $opts = []): PlayAction
     {
-        return $this->startAction('calling.play', PlayAction::class, $params);
+        return $this->startAction(
+            'calling.play',
+            PlayAction::class,
+            ['play' => $media] + $opts,
+            $opts,
+        );
     }
 
-    public function record(array $params): RecordAction
+    /**
+     * @param array<string,mixed> $audio  Recording config (``format``, etc.)
+     */
+    public function record(array $audio, array $opts = []): RecordAction
     {
-        return $this->startAction('calling.record', RecordAction::class, $params);
+        return $this->startAction(
+            'calling.record',
+            RecordAction::class,
+            ['record' => ['audio' => $audio]] + $opts,
+            $opts,
+        );
     }
 
-    public function collect(array $params): CollectAction
+    /**
+     * Standalone collect (digits / speech / both).
+     *
+     * @param array<string,mixed> $opts
+     *   - ``digits`` / ``speech`` / ``initial_timeout`` etc forwarded as-is
+     *   - ``control_id``
+     *   - ``start_input_timers`` (bool)
+     *   - ``on_completed`` callback
+     */
+    public function collect(array $opts = []): CollectAction
     {
-        return $this->startAction('calling.collect', CollectAction::class, $params);
+        // The collect verb takes top-level ``digits``/``speech``/``initial_timeout``
+        // params directly — no wrapping object.
+        return $this->startAction('calling.collect', CollectAction::class, $opts, $opts);
     }
 
-    public function playAndCollect(array $params): CollectAction
+    /**
+     * Play media then collect a response (digits, speech).
+     *
+     * @param array<int,array<string,mixed>> $media
+     * @param array<string,mixed> $collect
+     */
+    public function playAndCollect(array $media, array $collect, array $opts = []): CollectAction
     {
-        return $this->startAction('calling.play_and_collect', CollectAction::class, $params);
+        return $this->startAction(
+            'calling.play_and_collect',
+            CollectAction::class,
+            ['play' => $media, 'collect' => $collect] + $opts,
+            $opts,
+        );
     }
 
-    public function detect(array $params): DetectAction
+    /**
+     * @param array<string,mixed> $detect Detection request
+     *   (``{type: 'machine'|'fax'|'digit', params: {...}}``).
+     */
+    public function detect(array $detect, array $opts = []): DetectAction
     {
-        return $this->startAction('calling.detect', DetectAction::class, $params);
+        return $this->startAction(
+            'calling.detect',
+            DetectAction::class,
+            ['detect' => $detect] + $opts,
+            $opts,
+        );
     }
 
-    public function sendFax(array $params): FaxAction
+    public function sendFax(string $document, ?string $identity = null, array $opts = []): FaxAction
     {
-        return $this->startAction('calling.send_fax', FaxAction::class, $params);
+        $extra = ['document' => $document];
+        if ($identity !== null) {
+            $extra['identity'] = $identity;
+        }
+        $extra += $opts;
+        return $this->startAction(
+            'calling.send_fax',
+            FaxAction::class,
+            $extra,
+            $opts + ['fax_type' => 'send'],
+        );
     }
 
-    public function receiveFax(array $params): FaxAction
+    public function receiveFax(array $opts = []): FaxAction
     {
-        return $this->startAction('calling.receive_fax', FaxAction::class, $params);
+        return $this->startAction(
+            'calling.receive_fax',
+            FaxAction::class,
+            $opts,
+            $opts + ['fax_type' => 'receive'],
+        );
     }
 
-    public function tap(array $params): TapAction
+    /**
+     * @param array<string,mixed> $tap     Tap config.
+     * @param array<string,mixed> $device  Tap delivery device.
+     */
+    public function tap(array $tap, array $device, array $opts = []): TapAction
     {
-        return $this->startAction('calling.tap', TapAction::class, $params);
+        return $this->startAction(
+            'calling.tap',
+            TapAction::class,
+            ['tap' => $tap, 'device' => $device] + $opts,
+            $opts,
+        );
     }
 
-    public function stream(array $params): StreamAction
+    public function stream(string $url, array $opts = []): StreamAction
     {
-        return $this->startAction('calling.stream', StreamAction::class, $params);
+        $extra = ['url' => $url] + $opts;
+        return $this->startAction('calling.stream', StreamAction::class, $extra, $opts);
     }
 
-    public function pay(array $params): PayAction
+    public function pay(string $paymentConnectorUrl, array $opts = []): PayAction
     {
-        return $this->startAction('calling.pay', PayAction::class, $params);
+        $extra = ['payment_connector_url' => $paymentConnectorUrl] + $opts;
+        return $this->startAction('calling.pay', PayAction::class, $extra, $opts);
     }
 
-    public function transcribe(array $params): TranscribeAction
+    public function transcribe(array $opts = []): TranscribeAction
     {
-        return $this->startAction('calling.transcribe', TranscribeAction::class, $params);
+        return $this->startAction('calling.transcribe', TranscribeAction::class, $opts, $opts);
     }
 
-    public function ai(array $params): AIAction
+    /**
+     * @param array<string,mixed> $prompt AI prompt config.
+     */
+    public function ai(array $prompt, array $opts = []): AIAction
     {
-        return $this->startAction('calling.ai', AIAction::class, $params);
+        return $this->startAction(
+            'calling.ai',
+            AIAction::class,
+            ['prompt' => $prompt] + $opts,
+            $opts,
+        );
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -365,30 +497,78 @@ class Call
      * Spin up a long-running action tracked by a unique control_id.
      *
      * @template T of Action
-     * @param string $method      RPC method name
-     * @param class-string<T> $actionClass  Concrete Action class
-     * @param array  $extra       Additional params for the RPC call
+     * @param string                $method      RPC method name
+     * @param class-string<T>       $actionClass Concrete Action class
+     * @param array<string,mixed>   $wireParams  Params merged into the RPC frame
+     * @param array<string,mixed>   $opts        Caller-side options:
+     *   - ``control_id`` (string) — explicit control_id, generated when absent
+     *   - ``on_completed`` (callable) — fires on terminal event
+     *   - ``fax_type`` (string) — for FaxAction discrimination
      * @return T
      */
-    private function startAction(string $method, string $actionClass, array $extra = []): object
-    {
-        $controlId = $this->generateUuid();
+    private function startAction(
+        string $method,
+        string $actionClass,
+        array $wireParams = [],
+        array $opts = [],
+    ): object {
+        // Force Action.php to load (it carries every Action subclass under
+        // a single PSR-4 entry; without this, autoload misses on "first
+        // touch" of PlayAction etc. when Call.php is the only ancestor of
+        // the call chain that's been autoloaded).
+        class_exists(Action::class);
 
-        $action = new $actionClass($controlId, $this);
+        // Caller may pre-supply control_id; otherwise we generate one.
+        $controlId = $opts['control_id'] ?? $wireParams['control_id'] ?? $this->generateUuid();
+
+        $callId = $this->callId ?? '';
+        $nodeId = $this->nodeId ?? '';
+
+        // Construct the action with the right signature.
+        if ($actionClass === FaxAction::class) {
+            $faxType = $opts['fax_type'] ?? 'send';
+            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $faxType);
+        } else {
+            /** @psalm-suppress UnsafeInstantiation */
+            $action = new $actionClass($controlId, $callId, $nodeId, $this->client);
+        }
+
+        // CollectAction is shared between calling.collect and
+        // calling.play_and_collect — wire the right stop method on it.
+        if ($action instanceof CollectAction && $method === 'calling.play_and_collect') {
+            $action->setStopMethod('calling.play_and_collect.stop');
+        }
+
+        if (isset($opts['on_completed']) && is_callable($opts['on_completed'])) {
+            $action->onCompleted($opts['on_completed']);
+        }
+
         $this->actions[$controlId] = $action;
 
-        $params = array_merge($this->baseParams(), ['control_id' => $controlId], $extra);
+        // Strip caller-side options that must NOT leak onto the wire.
+        $wireParams = $wireParams;
+        unset(
+            $wireParams['control_id'],
+            $wireParams['on_completed'],
+            $wireParams['fax_type'],
+        );
+
+        $params = array_merge(
+            $this->baseParams(),
+            ['control_id' => $controlId],
+            $wireParams,
+        );
 
         try {
             $this->client->execute($method, $params);
         } catch (\RuntimeException $e) {
-            // 404 (call not found) or 410 (call gone) – resolve immediately
             $code = $e->getCode();
             if ($code === 404 || $code === 410) {
                 $this->logger->warn("Action {$method} got HTTP {$code}, resolving immediately");
                 $action->resolve();
                 unset($this->actions[$controlId]);
             } else {
+                unset($this->actions[$controlId]);
                 throw $e;
             }
         }

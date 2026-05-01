@@ -66,14 +66,19 @@ class Message
      *
      * Updates state/reason, fires any registered event listeners, and
      * auto-resolves the message when it reaches a terminal state.
+     *
+     * Accepts both ``state`` and ``message_state`` keys on the event
+     * payload — production RELAY emits ``message_state`` while older
+     * fixtures use ``state``.
      */
     public function dispatchEvent(Event $event): void
     {
         $params = $event->getParams();
 
         // Update mutable fields from the event payload.
-        if (isset($params['state'])) {
-            $this->state = $params['state'];
+        $newState = $params['state'] ?? $params['message_state'] ?? null;
+        if ($newState !== null) {
+            $this->state = $newState;
         }
         if (isset($params['reason'])) {
             $this->reason = $params['reason'];
@@ -97,6 +102,16 @@ class Message
         if ($this->state !== null && isset(Constants::MESSAGE_TERMINAL_STATES[$this->state])) {
             $this->resolve($this->state);
         }
+    }
+
+    /**
+     * Alias for ``dispatchEvent`` so the Client's event router (which
+     * calls ``handleEvent`` for symmetry with Action) doesn't need a
+     * special case. Both names route the same way.
+     */
+    public function handleEvent(Event $event): void
+    {
+        $this->dispatchEvent($event);
     }
 
     // ------------------------------------------------------------------

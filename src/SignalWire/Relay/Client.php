@@ -20,6 +20,7 @@ class Client
     // ── identity / auth ───────────────────────────────────────────────
     public string  $project;
     public string  $token;
+    public ?string $jwtToken = null;
     public string  $host;
     public string  $scheme = 'wss';
     public string  $relayPath = '/api/relay/ws';
@@ -87,6 +88,12 @@ class Client
         $this->token    = $options['token']    ?? '';
         $this->contexts = $options['contexts'] ?? [];
 
+        // JWT-only mode: clients can authenticate with a fresh JWT instead
+        // of project/token. Both code paths flow through ``connect()``.
+        if (isset($options['jwt_token']) && is_string($options['jwt_token'])) {
+            $this->jwtToken = $options['jwt_token'];
+        }
+
         // Host may come from options or env. Tests use SIGNALWIRE_RELAY_HOST
         // to point at a local fixture; production uses SIGNALWIRE_SPACE.
         $relayHost = getenv('SIGNALWIRE_RELAY_HOST');
@@ -109,6 +116,18 @@ class Client
         }
 
         $this->logger = Logger::getLogger('relay.client');
+
+        // Validate credentials at construction. Either project+token or
+        // a non-empty jwt_token is required. (Mirrors the Python SDK's
+        // ``ValueError: project and token are required`` from
+        // ``RelayClient.__init__``.)
+        $hasJwt = $this->jwtToken !== null && $this->jwtToken !== '';
+        $hasProjTok = $this->project !== '' && $this->token !== '';
+        if (!$hasJwt && !$hasProjTok) {
+            throw new \InvalidArgumentException(
+                'RelayClient: project and token are required (or pass jwt_token)'
+            );
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -167,17 +186,25 @@ class Client
         $this->logger->info('Authenticating');
 
         $params = [
-            'version' => Constants::PROTOCOL_VERSION,
-            'agent' => $this->agent,
+            'version'    => Constants::PROTOCOL_VERSION,
+            'agent'      => $this->agent,
             'event_acks' => true,
-            // Top-level project/token for fixtures / older RELAY versions.
-            'project' => $this->project,
-            'token'   => $this->token,
-            'authentication' => [
+        ];
+
+        // JWT-only path: just an authentication.jwt_token field.
+        if ($this->jwtToken !== null && $this->jwtToken !== '') {
+            $params['authentication'] = ['jwt_token' => $this->jwtToken];
+        } else {
+            // Top-level project/token for fixtures / older RELAY versions
+            // plus the canonical nested form. Sending both is forward-
+            // compatible (per SUBAGENT_PLAYBOOK lessons-learned).
+            $params['project'] = $this->project;
+            $params['token']   = $this->token;
+            $params['authentication'] = [
                 'project' => $this->project,
                 'token'   => $this->token,
-            ],
-        ];
+            ];
+        }
         if (!empty($this->contexts)) {
             $params['contexts'] = $this->contexts;
         }
@@ -332,11 +359,11 @@ class Client
         if ($error !== null) {
             $code    = $error['code']    ?? 0;
             $message = $error['message'] ?? 'Unknown RPC error';
-            throw new \RuntimeException($message, $code);
+            throw new RelayError($message, $code);
         }
 
         if ($result === null) {
-            throw new \RuntimeException(
+            throw new RelayError(
                 "RelayClient: timeout waiting for response to {$method} (id={$id})"
             );
         }
@@ -479,8 +506,19 @@ class Client
 
         // ── inbound message ──────────────────────────────────────────
         if ($eventType === 'messaging.receive') {
+            // Materialize a Message from the event params (mirrors the
+            // Python ``messaging.receive`` flow that hands a Message into
+            // the handler, not a bare params dict).
+            $msg = new Message(array_merge($params, [
+                'direction' => $params['direction'] ?? 'inbound',
+                'state'     => $params['message_state'] ?? $params['state'] ?? Constants::MESSAGE_STATE_RECEIVED,
+            ]));
+            $msgId = $msg->getMessageId();
+            if ($msgId !== null) {
+                $this->messages[$msgId] = $msg;
+            }
             if ($this->onMessageHandler !== null) {
-                ($this->onMessageHandler)($event, $params);
+                ($this->onMessageHandler)($msg, $event);
             }
             return;
         }
@@ -490,7 +528,7 @@ class Client
             $msgId = $params['message_id'] ?? null;
             if ($msgId !== null && isset($this->messages[$msgId])) {
                 $this->messages[$msgId]->handleEvent($event);
-                $msgState = $params['state'] ?? '';
+                $msgState = $params['state'] ?? $params['message_state'] ?? '';
                 if (isset(Constants::MESSAGE_TERMINAL_STATES[$msgState])) {
                     unset($this->messages[$msgId]);
                 }
@@ -542,58 +580,119 @@ class Client
     // ══════════════════════════════════════════════════════════════════
 
     /**
-     * Originate an outbound call, blocking until the dial resolves.
+     * Originate an outbound call, blocking until ``calling.call.dial``
+     * resolves with a winner or fails.
      *
-     * @return Call  The established call object.
-     * @throws \RuntimeException on dial failure
+     * @param array<int,array<int,array<string,mixed>>> $devices
+     *   Two-dimensional array of devices: each outer entry is one parallel
+     *   "leg" of the dial, each inner entry is a serial step within that
+     *   leg. Mirrors the Python ``[[device, device], [device]]`` shape.
+     * @param array<string,mixed> $opts
+     *   - ``tag``: explicit dial tag (UUID4 generated when omitted)
+     *   - ``dial_timeout``: seconds to wait for the dial event (default 30.0)
+     *   - ``max_duration``: max call lifetime in seconds, passed through
+     *     to ``calling.dial``.
+     *   - any other key is forwarded as a top-level param on the wire.
+     *
+     * @throws RelayError on dial failure or timeout.
      */
-    public function dial(array $params): Call
+    public function dial(array $devices, array $opts = []): Call
     {
-        $tag = $this->generateUuid();
+        $tag = $opts['tag'] ?? $this->generateUuid();
+        $dialTimeout = (float) ($opts['dial_timeout'] ?? 30.0);
 
-        $call = null;
+        // Strip control keys from opts before passing the rest as wire
+        // params alongside ``devices`` and ``tag``.
+        $extra = $opts;
+        unset($extra['tag'], $extra['dial_timeout']);
+
+        $resolved = false;
+        $resolvedCall = null;
+        $resolvedFailure = null;
 
         $this->pendingDials[$tag] = [
-            'resolve' => function (Call $c) use (&$call) { $call = $c; },
-            'tag'     => $tag,
+            'resolve' => function (?Call $c, ?string $failure) use (&$resolved, &$resolvedCall, &$resolvedFailure) {
+                if ($resolved) {
+                    return;
+                }
+                $resolved = true;
+                $resolvedCall = $c;
+                $resolvedFailure = $failure;
+            },
+            'tag' => $tag,
         ];
 
-        $rpcParams = array_merge($params, ['tag' => $tag]);
-        $this->execute('calling.dial', $rpcParams);
+        $rpcParams = array_merge($extra, ['tag' => $tag, 'devices' => $devices]);
 
-        // In sync mode the execute() loop will have already dispatched
-        // the dial event, so $call should be populated.
-        unset($this->pendingDials[$tag]);
+        try {
+            $this->execute('calling.dial', $rpcParams);
+        } catch (\Throwable $e) {
+            unset($this->pendingDials[$tag]);
+            throw $e;
+        }
 
-        if ($call === null) {
-            // Fallback: look up by tag in our calls map.
-            foreach ($this->calls as $c) {
-                if ($c->tag === $tag) {
-                    $call = $c;
-                    break;
-                }
+        // After the response lands, we still have to wait for the
+        // ``calling.call.dial`` event (which carries the winner's call_id).
+        $deadline = microtime(true) + $dialTimeout;
+        while (!$resolved && microtime(true) < $deadline) {
+            try {
+                $this->readOnce();
+            } catch (\RuntimeException $e) {
+                unset($this->pendingDials[$tag]);
+                throw new RelayError('Dial transport error: ' . $e->getMessage(), 0);
             }
         }
+        unset($this->pendingDials[$tag]);
 
-        if ($call === null) {
-            throw new \RuntimeException('Dial failed: no call object received');
+        if (!$resolved) {
+            throw new RelayError("Dial timed out waiting for calling.call.dial event (tag={$tag})", 408);
         }
 
-        return $call;
+        if ($resolvedFailure !== null) {
+            throw new RelayError("Dial failed: {$resolvedFailure}", 0);
+        }
+
+        if ($resolvedCall === null) {
+            throw new RelayError('Dial failed: no winner call_id received', 0);
+        }
+
+        return $resolvedCall;
     }
 
     /**
      * Send an outbound message.
      *
-     * @return Message  Tracking object for the message lifecycle.
+     * @param array<string,mixed> $params Outbound messaging.send params
+     *   (``to_number``, ``from_number``, ``body``, ``media``, ``tags``,
+     *   ``context``).
+     * @return Message  Tracking object for the message lifecycle. The
+     *   Message starts in ``queued`` state; subsequent ``messaging.state``
+     *   events from the server progress it through ``sent`` /
+     *   ``delivered`` / ``undelivered`` / ``failed``.
      */
     public function sendMessage(array $params): Message
     {
+        // Production RELAY requires a ``context`` on the wire. The Python
+        // SDK defaults it to the negotiated protocol string when the
+        // caller doesn't pass one (see signalwire.relay.client.send_message).
+        if (!isset($params['context']) || $params['context'] === '') {
+            $params['context'] = $this->protocol ?? 'default';
+        }
+
         $result = $this->execute('messaging.send', $params);
 
         $messageId = $result['message_id'] ?? $this->generateUuid();
 
-        $message = new Message($messageId, $params, $result);
+        // Materialize the Message with the request params *and* the
+        // server-issued message_id, in the ``queued`` initial state. The
+        // server dispatches subsequent ``messaging.state`` events keyed
+        // by message_id; the Client's event router routes them here.
+        $messageParams = array_merge($params, [
+            'message_id' => $messageId,
+            'direction'  => 'outbound',
+            'state'      => Constants::MESSAGE_STATE_QUEUED,
+        ]);
+        $message = new Message($messageParams);
         $this->messages[$messageId] = $message;
 
         return $message;
@@ -710,42 +809,81 @@ class Client
             return;
         }
 
-        $call = new Call($params, $this);
+        // Production wire uses ``call_state`` on the receive frame; the
+        // Call constructor already accepts both.
+        $callParams = $params + ['direction' => 'inbound'];
+        $call = new Call($callParams, $this);
         $this->calls[$callId] = $call;
 
         $this->logger->info("Inbound call {$callId}");
 
         if ($this->onCallHandler !== null) {
-            ($this->onCallHandler)($call, $event);
+            try {
+                ($this->onCallHandler)($call, $event);
+            } catch (\Throwable $e) {
+                // A raising handler must NOT take down the recv loop —
+                // log and continue. (Mirrors Python's
+                // ``test_handler_exception_does_not_crash_client``.)
+                $this->logger->error('on_call handler raised: ' . $e->getMessage());
+            }
         }
     }
 
     /**
      * Handle the calling.call.dial event that signals a dial outcome.
+     *
+     * Production wire shape: the dial event carries no top-level call_id;
+     * the winner's call info lives inside ``params.call``. ``dial_state``
+     * determines outcome (``answered``, ``failed``, ``no_answer``...).
      */
     private function handleDialEvent(Event $event, array $params): void
     {
-        $tag    = $params['tag']     ?? null;
-        $callId = $params['call_id'] ?? null;
-        $state  = $params['state']   ?? null;
+        $tag       = $params['tag']        ?? null;
+        $dialState = $params['dial_state'] ?? $params['state'] ?? null;
+        $callBlob  = $params['call']       ?? null;
+        $callId    = $params['call_id']    ?? (is_array($callBlob) ? ($callBlob['call_id'] ?? null) : null);
 
         if ($tag === null) {
             return;
         }
 
-        // Ensure we have a Call object.
+        // Failure path — surface to the pending dial caller.
+        if ($dialState === 'failed' || $dialState === 'no_answer' || $dialState === 'busy') {
+            if (isset($this->pendingDials[$tag])) {
+                ($this->pendingDials[$tag]['resolve'])(null, $dialState);
+            }
+            return;
+        }
+
+        // Build (or look up) the Call object for the winner.
         $call = null;
         if ($callId !== null && isset($this->calls[$callId])) {
             $call = $this->calls[$callId];
+        } elseif (is_array($callBlob)) {
+            // Production shape: nested params.call has call_id/node_id/tag/device.
+            $call = new Call($callBlob, $this);
+            if ($call->callId !== null) {
+                $this->calls[$call->callId] = $call;
+            }
         } elseif ($callId !== null) {
+            // Legacy / test fixture: top-level call_id alongside dial params.
             $call = new Call($params, $this);
             $this->calls[$callId] = $call;
         }
 
-        // Resolve the pending dial promise.
-        if (isset($this->pendingDials[$tag]) && $call !== null) {
+        if ($call !== null) {
             $call->dialWinner = true;
-            ($this->pendingDials[$tag]['resolve'])($call);
+            // Persist tag/state/direction so callers can read them.
+            if ($call->tag === null || $call->tag === '') {
+                $call->tag = $tag;
+            }
+            $call->state = 'answered';
+            // Outbound calls are constructed without a direction — set it.
+            $call->direction = 'outbound';
+        }
+
+        if (isset($this->pendingDials[$tag])) {
+            ($this->pendingDials[$tag]['resolve'])($call, null);
         }
     }
 
