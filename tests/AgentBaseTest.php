@@ -1062,9 +1062,10 @@ class AgentBaseTest extends TestCase
 
         $pom = $agent->getPom();
         $this->assertNotNull($pom);
-        $this->assertCount(1, $pom);
-        $this->assertSame('Greeting', $pom[0]['title']);
-        $this->assertSame('Hello', $pom[0]['body']);
+        $this->assertInstanceOf(\SignalWire\POM\PromptObjectModel::class, $pom);
+        $this->assertCount(1, $pom->sections);
+        $this->assertSame('Greeting', $pom->sections[0]->title);
+        $this->assertSame('Hello', $pom->sections[0]->body);
     }
 
     public function testGetPomReturnsSectionsAfterPromptAddSection(): void
@@ -1074,9 +1075,10 @@ class AgentBaseTest extends TestCase
 
         $pom = $agent->getPom();
         $this->assertNotNull($pom);
-        $this->assertCount(1, $pom);
-        $this->assertSame('Topic', $pom[0]['title']);
-        $this->assertSame('Body text', $pom[0]['body']);
+        $this->assertInstanceOf(\SignalWire\POM\PromptObjectModel::class, $pom);
+        $this->assertCount(1, $pom->sections);
+        $this->assertSame('Topic', $pom->sections[0]->title);
+        $this->assertSame('Body text', $pom->sections[0]->body);
     }
 
     public function testGetPomNullWhenUsePomFalse(): void
@@ -1089,18 +1091,36 @@ class AgentBaseTest extends TestCase
 
     public function testGetPomReturnsCopyNotReference(): void
     {
-        // PHP arrays are value types — assigning to a separate variable
-        // and mutating that variable must not affect the agent's state.
+        // getPom() builds a fresh PromptObjectModel from the stored section
+        // dicts each call — caller mutations must not leak into agent state.
         $agent = $this->makeAgent();
         $agent->setPromptPom([['title' => 'Original', 'body' => 'B']]);
 
         $pom = $agent->getPom();
-        $pom[] = ['title' => 'Injected'];
-        $pom[0]['title'] = 'Hijacked';
+        $this->assertNotNull($pom);
+        // Mutate the returned tree.
+        $pom->sections[0]->title = 'Hijacked';
+        $pom->addSection('Injected', ['body' => 'B']);
 
         $fresh = $agent->getPom();
-        $this->assertCount(1, $fresh, 'caller mutation leaked into agent state');
-        $this->assertSame('Original', $fresh[0]['title'], 'caller mutation leaked into agent state');
+        $this->assertNotNull($fresh);
+        $this->assertCount(1, $fresh->sections, 'caller mutation leaked into agent state');
+        $this->assertSame('Original', $fresh->sections[0]->title, 'caller mutation leaked into agent state');
+    }
+
+    public function testGetPomFindsSectionsRecursively(): void
+    {
+        // The returned PromptObjectModel must support the full POM API,
+        // including recursive findSection() through subsections.
+        $agent = $this->makeAgent();
+        $agent->promptAddSection('Outer', 'ob');
+        $agent->promptAddSubsection('Outer', 'Inner', 'ib');
+
+        $pom = $agent->getPom();
+        $this->assertNotNull($pom);
+        $found = $pom->findSection('Inner');
+        $this->assertNotNull($found, 'getPom() must return a usable PromptObjectModel');
+        $this->assertSame('ib', $found->body);
     }
 
     // ------------------------------------------------------------------

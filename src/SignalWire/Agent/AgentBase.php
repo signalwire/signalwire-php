@@ -10,6 +10,7 @@ use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Security\SessionManager;
 use SignalWire\Contexts\ContextBuilder;
+use SignalWire\POM\PromptObjectModel;
 use SignalWire\Skills\SkillManager;
 
 class AgentBase extends Service
@@ -322,22 +323,29 @@ class AgentBase extends Service
     }
 
     /**
-     * Read-only snapshot of the agent's POM section list.
+     * Return the agent's POM as a typed PromptObjectModel instance.
      *
      * Python parity: ``agent.pom`` instance attribute (agent_base.py
-     * line 209). Returns ``null`` when ``usePom`` is false (mirroring
-     * Python's ``self.pom = None``); otherwise returns the section list.
-     * PHP arrays are copy-on-write/copy-on-assignment, so callers cannot
-     * mutate the agent's internal state through this accessor.
+     * line 209). Returns ``null`` when ``use_pom`` is false (mirroring
+     * Python's ``self.pom = None``).  Otherwise returns a PromptObjectModel
+     * built from the agent's stored POM section dicts — sections added via
+     * ``promptAddSection`` / ``setPromptPom`` show up as native ``Section``
+     * objects so callers can use ``renderMarkdown`` / ``renderXml`` /
+     * ``findSection`` etc directly.
      *
-     * @return array<int, array<string, mixed>>|null
+     * The returned instance is freshly constructed each call; mutating it
+     * does not affect the agent's stored state (Python parity is achieved
+     * via construction-from-dicts rather than shared references).
      */
-    public function getPom(): ?array
+    public function getPom(): ?PromptObjectModel
     {
         if (!$this->usePom) {
             return null;
         }
-        return $this->pomSections;
+        if (empty($this->pomSections)) {
+            return new PromptObjectModel();
+        }
+        return PromptObjectModel::fromJson($this->pomSections);
     }
 
     /**

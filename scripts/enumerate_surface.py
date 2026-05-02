@@ -209,6 +209,10 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "FabricAddresses": "signalwire.rest.namespaces.fabric",
     "FabricTokens": "signalwire.rest.namespaces.fabric",
 
+    # POM (Prompt Object Model) — typed standalone classes
+    "PromptObjectModel": "signalwire.pom.pom",
+    "Section": "signalwire.pom.pom",
+
     # Pagination helper
     "PaginatedIterator": "signalwire.rest._pagination",
 

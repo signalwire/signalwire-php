@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 23c8abd698db07d1df0c6be326519c4790c57256",
+  "generated_from": "signalwire-php @ 72997e604028e6b38630db36e77b84bb1b74ac91",
   "modules": {
     "signalwire": {
       "classes": {
@@ -112,6 +112,7 @@
           "enable_debug_events",
           "enable_sip_routing",
           "get_contexts",
+          "get_dynamic_config_callback",
           "get_post_prompt",
           "get_prompt",
           "get_raw_prompt",
@@ -558,6 +559,33 @@
         "LoggingConfig": [
           "get_execution_mode",
           "is_serverless_mode"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.pom.pom": {
+      "classes": {
+        "PromptObjectModel": [
+          "__init__",
+          "add_pom_as_subsection",
+          "add_section",
+          "find_section",
+          "from_json",
+          "from_yaml",
+          "render_markdown",
+          "render_xml",
+          "to_dict",
+          "to_json",
+          "to_yaml"
+        ],
+        "Section": [
+          "__init__",
+          "add_body",
+          "add_bullets",
+          "add_subsection",
+          "render_markdown",
+          "render_xml",
+          "to_dict"
         ]
       },
       "functions": []
