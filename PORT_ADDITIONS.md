@@ -492,3 +492,5 @@ signalwire.utils.schema_utils.SchemaValidationError.get_errors: PHP-exception-ge
 signalwire.utils.schema_utils.SchemaValidationError.get_verb_name: PHP-exception-getter: SchemaValidationError exposes 'get_verb_name' as an explicit getter; Python attaches the same data as instance attributes accessed directly
 signalwire.utils.url_validator.UrlValidator: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
 signalwire.utils.url_validator.UrlValidator.validate_url: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
+
+signalwire.core.agent_base.AgentBase.get_dynamic_config_callback: PHP-bean-accessor — PHP exposes the dynamic-config callback via getDynamicConfigCallback(); Python keeps it as a private _dynamic_config_callback attribute set/cleared by setDynamicConfigCallback (no public getter on the Python side)
