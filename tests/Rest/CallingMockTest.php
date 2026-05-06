@@ -59,6 +59,42 @@ class CallingMockTest extends TestCase
     // ----- Lifecycle ---------------------------------------------------
 
     #[Test]
+    public function testDialForwardsCodecsArray(): void
+    {
+        $body = $this->client->calling()->dial([
+            'url' => 'https://example.com/swml',
+            'to' => '+15551234567',
+            'codecs' => ['OPUS', 'G729', 'VP8', 'PCMA'],
+        ]);
+        $this->assertIsArray($body);
+        $this->assertArrayHasKey('id', $body);
+        $p = $this->commandAssert($this->mock->journal()->last(), 'dial', null);
+        $this->assertSame(
+            ['OPUS', 'G729', 'VP8', 'PCMA'],
+            $p['codecs'] ?? null,
+            'codecs array should reach the wire unchanged'
+        );
+        $this->assertSame('+15551234567', $p['to'] ?? null);
+    }
+
+    #[Test]
+    public function testDialForwardsCodecsString(): void
+    {
+        $body = $this->client->calling()->dial([
+            'url' => 'https://example.com/swml',
+            'to' => '+15551234567',
+            'codecs' => 'OPUS,G729,VP8,PCMA',
+        ]);
+        $this->assertIsArray($body);
+        $p = $this->commandAssert($this->mock->journal()->last(), 'dial', null);
+        $this->assertSame(
+            'OPUS,G729,VP8,PCMA',
+            $p['codecs'] ?? null,
+            'codecs comma-separated string should reach the wire unchanged'
+        );
+    }
+
+    #[Test]
     public function update(): void
     {
         $body = $this->client->calling()->update(['id' => 'call-1', 'state' => 'hold']);
