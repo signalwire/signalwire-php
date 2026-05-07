@@ -497,3 +497,7 @@ signalwire.utils.url_validator.UrlValidator: PHP-class-host: PHP groups url_vali
 signalwire.utils.url_validator.UrlValidator.validate_url: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
 
 signalwire.core.agent_base.AgentBase.get_dynamic_config_callback: PHP-bean-accessor — PHP exposes the dynamic-config callback via getDynamicConfigCallback(); Python keeps it as a private _dynamic_config_callback attribute set/cleared by setDynamicConfigCallback (no public getter on the Python side)
+signalwire.core.agent_base.AgentBase.get_signing_key: php_accessor: AgentBase exposes signing_key getter (Python keeps it private)
+signalwire.core.security.webhook_validator.WebhookValidator: php_idiom_class_wrapper: static class containing validator functions (Python keeps them at module level)
+signalwire.core.security.webhook_validator.WebhookValidator.validate_request: php_idiom_class_wrapper: see WebhookValidator class entry
+signalwire.core.security.webhook_validator.WebhookValidator.validate_webhook_signature: php_idiom_class_wrapper: see WebhookValidator class entry

@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 72997e604028e6b38630db36e77b84bb1b74ac91",
+  "generated_from": "signalwire-php @ 7de04dbdb9a0e0308eb2d163188baf00af121359",
   "modules": {
     "signalwire": {
       "classes": {
@@ -116,6 +116,7 @@
           "get_post_prompt",
           "get_prompt",
           "get_raw_prompt",
+          "get_signing_key",
           "has_skill",
           "list_skills",
           "list_tool_names",
@@ -458,6 +459,24 @@
           "get_token_expiry_secs",
           "validate_token",
           "validate_tool_token"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.security.webhook_middleware": {
+      "classes": {
+        "WebhookMiddleware": [
+          "__init__",
+          "process"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.security.webhook_validator": {
+      "classes": {
+        "WebhookValidator": [
+          "validate_request",
+          "validate_webhook_signature"
         ]
       },
       "functions": []
