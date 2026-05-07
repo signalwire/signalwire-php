@@ -900,6 +900,15 @@
               ],
               "returns": "optional<callable<list<any>,any>>"
             },
+            "get_signing_key": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
+            },
             "list_tool_names": {
               "params": [
                 {
@@ -4512,6 +4521,116 @@
               "returns": "bool"
             }
           }
+        }
+      }
+    },
+    "signalwire.core.security.webhook_middleware": {
+      "classes": {
+        "WebhookMiddleware": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "signing_key",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "process": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "method",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "headers",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "raw_body",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "next",
+                  "type": "callable<list<any>,any>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.security.webhook_validator": {
+      "functions": {
+        "validate_request": {
+          "params": [
+            {
+              "name": "signing_key",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "signature",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "params_or_raw_body",
+              "type": "optional<any>",
+              "required": true
+            }
+          ],
+          "returns": "bool"
+        },
+        "validate_webhook_signature": {
+          "params": [
+            {
+              "name": "signing_key",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "signature",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "raw_body",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "bool"
         }
       }
     },

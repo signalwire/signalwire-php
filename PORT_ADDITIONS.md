@@ -111,6 +111,9 @@ signalwire.core.logging_config.Logger.set_suppressed: PHP wraps the Logger class
 signalwire.core.logging_config.Logger.should_log: PHP wraps the Logger class with explicit getters/setters and level-named helpers (info, warn, error, debug); Python re-exports stdlib logging directly.
 signalwire.core.logging_config.Logger.warn: PHP wraps the Logger class with explicit getters/setters and level-named helpers (info, warn, error, debug); Python re-exports stdlib logging directly.
 signalwire.core.security.session_manager.SessionManager.get_token_expiry_secs: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.core.security.webhook_middleware.WebhookMiddleware: PHP-idiom: PHP has no FastAPI/PSR-15 dominant framework, so webhook validation ships as a callable middleware class (`process(method, url, headers, rawBody, next): [status, headers, body]`) wired into Service::handleRequest. Functional parity with Python's `make_webhook_validation_dependency` FastAPI factory.
+signalwire.core.security.webhook_middleware.WebhookMiddleware.__init__: PHP-idiom: WebhookMiddleware constructor takes the signing key — see WebhookMiddleware entry above.
+signalwire.core.security.webhook_middleware.WebhookMiddleware.process: PHP-idiom: invocation method on the callable middleware class — see WebhookMiddleware entry above.
 signalwire.core.skill_base.SkillBase.get_required_env_vars: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.get_version: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.supports_multiple_instances: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.

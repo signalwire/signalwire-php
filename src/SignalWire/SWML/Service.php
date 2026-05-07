@@ -534,6 +534,23 @@ class Service
             $requestData = json_decode($body, true);
         }
 
+        // Webhook signature validation (when signing_key is configured) —
+        // applies to POSTs of the signed routes only: /, /swaig, /post_prompt.
+        // Subclasses (AgentBase) carry $signingKey; Service queries via
+        // property_exists for loose coupling, mirroring manualProxyUrl.
+        if (
+            strtoupper($method) === 'POST'
+            && in_array($subPath, ['/', '', '/swaig', '/post_prompt'], true)
+            && property_exists($this, 'signingKey')
+            && is_string($this->signingKey ?? null)
+            && $this->signingKey !== ''
+        ) {
+            $sigCheck = $this->checkWebhookSignature($headers, $body ?? '', $path, $subPath);
+            if ($sigCheck !== null) {
+                return $sigCheck;
+            }
+        }
+
         // Route dispatch
         if ($subPath === '/' || $subPath === '') {
             return $this->handleSwmlRequest($method, $requestData, $headers);
@@ -861,6 +878,114 @@ class Service
     // ------------------------------------------------------------------
     // Private helpers
     // ------------------------------------------------------------------
+
+    /**
+     * Validate the X-SignalWire-Signature header on a signed webhook POST.
+     *
+     * Reconstructs the platform-public URL from request headers (proxy-aware)
+     * and runs both Scheme A (RELAY/JSON hex) and Scheme B (Compat/cXML
+     * base64) via WebhookValidator. Returns null on success (caller proceeds
+     * with normal dispatch) or a 403 response tuple on failure / missing
+     * header.
+     *
+     * Only invoked when a $signingKey is set on the subclass — see the
+     * call site in handleRequest().
+     *
+     * @param array<string,string> $headers
+     * @param string               $rawBody Raw request body bytes.
+     * @param string               $path    Path the SDK sees on the inbound request.
+     * @param string               $subPath Path under the service route ('/' / '/swaig' / '/post_prompt').
+     *
+     * @return array{int, array<string,string>, string}|null
+     */
+    protected function checkWebhookSignature(
+        array $headers,
+        string $rawBody,
+        string $path,
+        string $subPath,
+    ): ?array {
+        $signature = null;
+        foreach ($headers as $k => $v) {
+            if (strcasecmp($k, 'X-SignalWire-Signature') === 0) {
+                $signature = is_string($v) ? $v : null;
+                break;
+            }
+        }
+        if ($signature === null) {
+            foreach ($headers as $k => $v) {
+                if (strcasecmp($k, 'X-Twilio-Signature') === 0) {
+                    $signature = is_string($v) ? $v : null;
+                    break;
+                }
+            }
+        }
+        if ($signature === null || $signature === '') {
+            return [
+                403,
+                array_merge(['Content-Type' => 'text/plain'], $this->securityHeaders()),
+                'Forbidden',
+            ];
+        }
+
+        $url = $this->reconstructPublicUrl($headers, $path);
+
+        $signingKey = $this->signingKey ?? null;
+        if (!is_string($signingKey) || $signingKey === '') {
+            // Defensive — caller should have guarded this.
+            return null;
+        }
+
+        $valid = \SignalWire\Security\WebhookValidator::validateWebhookSignature(
+            $signingKey,
+            $signature,
+            $url,
+            $rawBody,
+        );
+        if (!$valid) {
+            return [
+                403,
+                array_merge(['Content-Type' => 'text/plain'], $this->securityHeaders()),
+                'Forbidden',
+            ];
+        }
+        return null;
+    }
+
+    /**
+     * Reconstruct the URL SignalWire POSTed to, honouring proxy headers /
+     * env overrides via getProxyUrlBase(), then appending $path and the
+     * raw query string from REQUEST_URI / X-Original-URL when available.
+     *
+     * Handles edge cases:
+     *  - Headers may pass either a full URL via X-Original-URL or just
+     *    proto + host. getProxyUrlBase already normalises this.
+     *  - The query string MUST be preserved (Scheme A signs URL+body and
+     *    cXML bodySHA256 lives in the query).
+     */
+    protected function reconstructPublicUrl(array $headers, string $path): string
+    {
+        $base = $this->getProxyUrlBase($headers);
+
+        // Find query string (raw, not parsed) from common sources.
+        $query = '';
+        $reqUri = $_SERVER['REQUEST_URI'] ?? null;
+        if (is_string($reqUri) && $reqUri !== '' && str_contains($reqUri, '?')) {
+            $query = '?' . substr($reqUri, strpos($reqUri, '?') + 1);
+        } else {
+            // Allow callers (tests, custom dispatchers) to pass the query
+            // explicitly via X-Original-Query-String. This is a SignalWire-
+            // private header purely for the validator, never consumed by
+            // anything else.
+            foreach ($headers as $k => $v) {
+                if (strcasecmp($k, 'X-Original-Query-String') === 0 && is_string($v) && $v !== '') {
+                    $query = $v[0] === '?' ? $v : '?' . $v;
+                    break;
+                }
+            }
+        }
+
+        return rtrim($base, '/') . $path . $query;
+    }
 
     /**
      * Check Basic Auth from request headers.

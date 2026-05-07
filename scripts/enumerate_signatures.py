@@ -183,6 +183,14 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire", "add_skill_directory"),
     ("SignalWire\\SignalWire", "list_skills_with_params"):
         ("signalwire", "list_skills_with_params"),
+    # Webhook signature validation — Python ships them as module-level free
+    # functions (signalwire.core.security.webhook_validator); PHP groups
+    # both static methods on a WebhookValidator final class for PSR-4 + IDE
+    # discoverability. Project to the Python canonical names.
+    ("SignalWire\\Security\\WebhookValidator", "validateWebhookSignature"):
+        ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
+    ("SignalWire\\Security\\WebhookValidator", "validateRequest"):
+        ("signalwire.core.security.webhook_validator", "validate_request"),
 }
 
 

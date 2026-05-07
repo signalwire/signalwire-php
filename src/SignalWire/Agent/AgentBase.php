@@ -92,6 +92,16 @@ class AgentBase extends Service
     // ── Proxy override ──────────────────────────────────────────────────
     protected ?string $manualProxyUrl = null;
 
+    // ── Webhook signature validation ────────────────────────────────────
+    /**
+     * SignalWire Signing Key for webhook signature validation. When set
+     * (explicitly or via SIGNALWIRE_SIGNING_KEY env), POSTs to /, /swaig,
+     * and /post_prompt require a valid X-SignalWire-Signature header or
+     * are rejected with 403. Read by Service::handleRequest() via
+     * property_exists.
+     */
+    protected ?string $signingKey = null;
+
     // ══════════════════════════════════════════════════════════════════════
     //  Constructor
     // ══════════════════════════════════════════════════════════════════════
@@ -104,6 +114,7 @@ class AgentBase extends Service
      *   port?: int,
      *   basic_auth_user?: string,
      *   basic_auth_password?: string,
+     *   signing_key?: string,
      * } $options
      */
     public function __construct(array $options)
@@ -168,6 +179,33 @@ class AgentBase extends Service
         $this->sessionManager = new SessionManager();
         $this->contextBuilder = null;
         $this->skillManager   = null;
+
+        // Webhook signing key: explicit > env. Empty string treated as unset.
+        $explicitKey = $options['signing_key'] ?? null;
+        if (is_string($explicitKey) && $explicitKey !== '') {
+            $this->signingKey = $explicitKey;
+        } else {
+            $envKey = getenv('SIGNALWIRE_SIGNING_KEY');
+            if (is_string($envKey) && $envKey !== '') {
+                $this->signingKey = $envKey;
+            }
+        }
+
+        if ($this->signingKey === null) {
+            $this->logger->warn(
+                '[signalwire] webhook signature validation is disabled — '
+                . 'set signing_key or SIGNALWIRE_SIGNING_KEY to enable'
+            );
+        }
+    }
+
+    /**
+     * Get the configured signing key, or null when validation is disabled.
+     * Exposed for tooling / tests; do NOT log or echo this value.
+     */
+    public function getSigningKey(): ?string
+    {
+        return $this->signingKey;
     }
 
     // ══════════════════════════════════════════════════════════════════════

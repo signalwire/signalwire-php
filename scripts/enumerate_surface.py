@@ -94,6 +94,8 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # core/security
     "SessionManager": "signalwire.core.security.session_manager",
+    "WebhookValidator": "signalwire.core.security.webhook_validator",
+    "WebhookMiddleware": "signalwire.core.security.webhook_middleware",
 
     # core/skills
     "SkillBase": "signalwire.core.skill_base",
