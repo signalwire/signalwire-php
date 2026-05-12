@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests;
 
+use JetBrains\PhpStorm\ArrayShape;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Prefabs\InfoGathererAgent;
 use SignalWire\Prefabs\SurveyAgent;
@@ -37,11 +38,12 @@ class PrefabsTest extends TestCase
         putenv('PORT');
     }
 
+    #[ArrayShape(['basicAuthUser' => "string", 'basicAuthPassword' => "string"])]
     private function baseOptions(): array
     {
         return [
-            'basic_auth_user'     => 'testuser',
-            'basic_auth_password' => 'testpass',
+            'basicAuthUser'     => 'testuser',
+            'basicAuthPassword' => 'testpass',
         ];
     }
 
@@ -51,10 +53,15 @@ class PrefabsTest extends TestCase
 
     public function testInfoGathererConstruction(): void
     {
-        $agent = new InfoGathererAgent('info_gatherer', [
-            ['key_name' => 'full_name', 'question_text' => 'What is your full name?'],
-            ['key_name' => 'email',     'question_text' => 'What is your email?', 'confirm' => true],
-        ], $this->baseOptions());
+        $agent = new InfoGathererAgent(
+            name: 'info_gatherer',
+            questions: [
+                ['key_name' => 'full_name', 'question_text' => 'What is your full name?'],
+                ['key_name' => 'email',     'question_text' => 'What is your email?', 'confirm' => true],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertSame('info_gatherer', $agent->getName());
         $this->assertSame('/info_gatherer', $agent->getRoute());
@@ -64,9 +71,14 @@ class PrefabsTest extends TestCase
 
     public function testInfoGathererHasExpectedTools(): void
     {
-        $agent = new InfoGathererAgent('info_gatherer', [
-            ['key_name' => 'name', 'question_text' => 'What is your name?'],
-        ], $this->baseOptions());
+        $agent = new InfoGathererAgent(
+            name: 'info_gatherer',
+            questions: [
+                ['key_name' => 'name', 'question_text' => 'What is your name?'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('start_questions', [], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
@@ -77,9 +89,14 @@ class PrefabsTest extends TestCase
 
     public function testInfoGathererStartQuestionsReturnsFirstQuestion(): void
     {
-        $agent = new InfoGathererAgent('info_gatherer', [
-            ['key_name' => 'name', 'question_text' => 'What is your name?'],
-        ], $this->baseOptions());
+        $agent = new InfoGathererAgent(
+            name: 'info_gatherer',
+            questions: [
+                ['key_name' => 'name', 'question_text' => 'What is your name?'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('start_questions', [], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
@@ -89,9 +106,14 @@ class PrefabsTest extends TestCase
 
     public function testInfoGathererSubmitAnswerRecords(): void
     {
-        $agent = new InfoGathererAgent('info_gatherer', [
-            ['key_name' => 'name', 'question_text' => 'What is your name?'],
-        ], $this->baseOptions());
+        $agent = new InfoGathererAgent(
+            name: 'info_gatherer',
+            questions: [
+                ['key_name' => 'name', 'question_text' => 'What is your name?'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('submit_answer', ['answer' => 'Alice'], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
@@ -101,9 +123,14 @@ class PrefabsTest extends TestCase
 
     public function testInfoGathererSwmlRendering(): void
     {
-        $agent = new InfoGathererAgent('info_gatherer', [
-            ['key_name' => 'name', 'question_text' => 'Your name?'],
-        ], $this->baseOptions());
+        $agent = new InfoGathererAgent(
+            name: 'info_gatherer',
+            questions: [
+                ['key_name' => 'name', 'question_text' => 'Your name?'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $swml = $agent->renderSwml();
         $this->assertSame('1.0.0', $swml['version']);
@@ -118,9 +145,14 @@ class PrefabsTest extends TestCase
 
     public function testInfoGathererInheritsAgentBase(): void
     {
-        $agent = new InfoGathererAgent('info_gatherer', [
-            ['key_name' => 'n', 'question_text' => 'Name?'],
-        ], $this->baseOptions());
+        $agent = new InfoGathererAgent(
+            name: 'info_gatherer',
+            questions: [
+                ['key_name' => 'n', 'question_text' => 'Name?'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertInstanceOf(AgentBase::class, $agent);
     }
@@ -131,13 +163,17 @@ class PrefabsTest extends TestCase
 
     public function testSurveyConstruction(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Rate our service', 'type' => 'rating', 'scale' => 5, 'required' => true],
-            ['id' => 'q2', 'text' => 'Any comments?',    'type' => 'open_ended', 'required' => false],
-        ], array_merge($this->baseOptions(), [
-            'survey_name'  => 'Satisfaction Survey',
-            'introduction' => 'Welcome to our survey.',
-        ]));
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Rate our service', 'type' => 'rating', 'scale' => 5, 'required' => true],
+                ['id' => 'q2', 'text' => 'Any comments?',    'type' => 'open_ended', 'required' => false],
+            ],
+            surveyName: 'Satisfaction Survey',
+            introduction: 'Welcome to our survey.',
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertSame('survey', $agent->getName());
         $this->assertSame('/survey', $agent->getRoute());
@@ -148,9 +184,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveyHasExpectedTools(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5, 'required' => true],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5, 'required' => true],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
@@ -167,9 +208,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveyValidatesRating(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5, 'required' => true],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5, 'required' => true],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         // Valid rating
         $result = $agent->onFunctionCall('validate_response', [
@@ -190,9 +236,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveyValidatesMultipleChoice(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Pick one', 'type' => 'multiple_choice', 'choices' => ['Red', 'Blue', 'Green']],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Pick one', 'type' => 'multiple_choice', 'choices' => ['Red', 'Blue', 'Green']],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
@@ -211,9 +262,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveyValidatesYesNo(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Do you agree?', 'type' => 'yes_no'],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Do you agree?', 'type' => 'yes_no'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
@@ -232,9 +288,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveyValidatesOpenEnded(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Comments?', 'type' => 'open_ended'],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Comments?', 'type' => 'open_ended'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
@@ -253,9 +314,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveyLogResponse(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('log_response', [
             'question_id' => 'q1',
@@ -268,9 +334,14 @@ class PrefabsTest extends TestCase
 
     public function testSurveySwmlRendering(): void
     {
-        $agent = new SurveyAgent('survey', [
-            ['id' => 'q1', 'text' => 'Question?', 'type' => 'rating', 'scale' => 5, 'required' => true],
-        ], $this->baseOptions());
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Q?', 'type' => 'rating', 'scale' => 5, 'required' => true],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $swml = $agent->renderSwml();
         $this->assertSame('1.0.0', $swml['version']);
@@ -282,12 +353,16 @@ class PrefabsTest extends TestCase
 
     public function testReceptionistConstruction(): void
     {
-        $agent = new ReceptionistAgent('receptionist', [
-            ['name' => 'sales',   'description' => 'For purchasing',    'number' => '+15551235555'],
-            ['name' => 'support', 'description' => 'For tech help',     'number' => '+15551236666'],
-        ], array_merge($this->baseOptions(), [
-            'greeting' => 'Welcome to Acme Corp!',
-        ]));
+        $agent = new ReceptionistAgent(
+            name: 'receptionist',
+            departments: [
+                ['name' => 'sales',   'description' => 'For purchasing',    'number' => '+15551235555'],
+                ['name' => 'support', 'description' => 'For tech help',     'number' => '+15551236666'],
+            ],
+            greeting: 'Welcome to Acme Corp!',
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertSame('receptionist', $agent->getName());
         $this->assertSame('/receptionist', $agent->getRoute());
@@ -297,9 +372,14 @@ class PrefabsTest extends TestCase
 
     public function testReceptionistHasExpectedTools(): void
     {
-        $agent = new ReceptionistAgent('receptionist', [
-            ['name' => 'sales', 'description' => 'Sales dept', 'number' => '+15551235555'],
-        ], $this->baseOptions());
+        $agent = new ReceptionistAgent(
+            name: 'receptionist',
+            departments: [
+                ['name' => 'sales', 'description' => 'Sales dept', 'number' => '+15551235555'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('collect_caller_info', [
             'caller_name' => 'Alice',
@@ -315,9 +395,14 @@ class PrefabsTest extends TestCase
 
     public function testReceptionistTransferFound(): void
     {
-        $agent = new ReceptionistAgent('receptionist', [
-            ['name' => 'sales', 'description' => 'Sales dept', 'number' => '+15551235555'],
-        ], $this->baseOptions());
+        $agent = new ReceptionistAgent(
+            name: 'receptionist',
+            departments: [
+                ['name' => 'sales', 'description' => 'Sales dept', 'number' => '+15551235555'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'sales'], []);
         $arr = $result->toArray();
@@ -326,9 +411,14 @@ class PrefabsTest extends TestCase
 
     public function testReceptionistTransferNotFound(): void
     {
-        $agent = new ReceptionistAgent('receptionist', [
-            ['name' => 'sales', 'description' => 'Sales dept', 'number' => '+15551235555'],
-        ], $this->baseOptions());
+        $agent = new ReceptionistAgent(
+            name: 'receptionist',
+            departments: [
+                ['name' => 'sales', 'description' => 'Sales dept', 'number' => '+15551235555'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'billing'], []);
         $arr = $result->toArray();
@@ -337,9 +427,14 @@ class PrefabsTest extends TestCase
 
     public function testReceptionistSwmlTransferType(): void
     {
-        $agent = new ReceptionistAgent('receptionist', [
-            ['name' => 'support', 'description' => 'Support', 'transfer_type' => 'swml', 'swml_url' => 'https://example.com/swml'],
-        ], $this->baseOptions());
+        $agent = new ReceptionistAgent(
+            name: 'receptionist',
+            departments: [
+                ['name' => 'support', 'description' => 'Support', 'transfer_type' => 'swml', 'swml_url' => 'https://example.com/swml'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'support'], []);
         $arr = $result->toArray();
@@ -350,9 +445,14 @@ class PrefabsTest extends TestCase
 
     public function testReceptionistPhoneTransferType(): void
     {
-        $agent = new ReceptionistAgent('receptionist', [
-            ['name' => 'sales', 'description' => 'Sales', 'transfer_type' => 'phone', 'number' => '+15551234567'],
-        ], $this->baseOptions());
+        $agent = new ReceptionistAgent(
+            name: 'receptionist',
+            departments: [
+                ['name' => 'sales', 'description' => 'Sales', 'transfer_type' => 'phone', 'number' => '+15551234567'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'sales'], []);
         $arr = $result->toArray();
@@ -367,12 +467,16 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotConstruction(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'What is SignalWire?', 'answer' => 'A cloud comms platform.'],
-            ['question' => 'How much?',           'answer' => 'Pay-as-you-go pricing.'],
-        ], array_merge($this->baseOptions(), [
-            'suggest_related' => true,
-        ]));
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'What is SignalWire?', 'answer' => 'A cloud comms platform.'],
+                ['question' => 'How much?',           'answer' => 'Pay-as-you-go pricing.'],
+            ],
+            suggestRelated: true,
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertSame('faq_bot', $agent->getName());
         $this->assertSame('/faq', $agent->getRoute());
@@ -384,20 +488,29 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotNoRelatedSection(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'Q?', 'answer' => 'A.'],
-        ], array_merge($this->baseOptions(), [
-            'suggest_related' => false,
-        ]));
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'Q?', 'answer' => 'A.'],
+            ],
+            suggestRelated: false,
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertFalse($agent->promptHasSection('Related Questions'));
     }
 
     public function testFAQBotHasExpectedTools(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'What is SignalWire?', 'answer' => 'Cloud comms platform.'],
-        ], $this->baseOptions());
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'What is SignalWire?', 'answer' => 'Cloud comms platform.'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire'], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
@@ -405,9 +518,14 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotSearchFindsMatch(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'What is SignalWire?', 'answer' => 'Cloud comms platform.'],
-        ], $this->baseOptions());
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'What is SignalWire?', 'answer' => 'Cloud comms platform.'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire'], []);
         $arr = $result->toArray();
@@ -416,9 +534,14 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotSearchNoMatch(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'What is SignalWire?', 'answer' => 'Cloud comms platform.'],
-        ], $this->baseOptions());
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'What is SignalWire?', 'answer' => 'Cloud comms platform.'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'banana'], []);
         $arr = $result->toArray();
@@ -427,11 +550,17 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotSearchKeywordScoring(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'What is the pricing model?',   'answer' => 'Pay-as-you-go.'],
-            ['question' => 'What is SignalWire pricing?',   'answer' => 'Usage-based pricing.'],
-            ['question' => 'How do I sign up?',             'answer' => 'Visit the website.'],
-        ], array_merge($this->baseOptions(), ['suggest_related' => true]));
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'What is the pricing model?',   'answer' => 'Pay-as-you-go.'],
+                ['question' => 'What is SignalWire pricing?',   'answer' => 'Usage-based pricing.'],
+                ['question' => 'How do I sign up?',             'answer' => 'Visit the website.'],
+            ],
+            suggestRelated: true,
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         // "signalwire pricing" should match the second FAQ best
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire pricing'], []);
@@ -441,11 +570,17 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotSearchRelatedSuggestions(): void
     {
-        $agent = new FAQBotAgent('faq_bot', [
-            ['question' => 'What is SignalWire?',           'answer' => 'A platform.'],
-            ['question' => 'What SignalWire products exist?', 'answer' => 'Many products.'],
-            ['question' => 'How much is SignalWire?',       'answer' => 'Affordable.'],
-        ], array_merge($this->baseOptions(), ['suggest_related' => true]));
+        $agent = new FAQBotAgent(
+            name: 'faq_bot',
+            faqs: [
+                ['question' => 'What is SignalWire?',           'answer' => 'A platform.'],
+                ['question' => 'What SignalWire products exist?', 'answer' => 'Many products.'],
+                ['question' => 'How much is SignalWire?',       'answer' => 'Affordable.'],
+            ],
+            suggestRelated: true,
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire'], []);
         $arr = $result->toArray();
@@ -454,9 +589,15 @@ class PrefabsTest extends TestCase
 
     public function testFAQBotCustomNameAndRoute(): void
     {
-        $agent = new FAQBotAgent('my_faq', [
-            ['question' => 'Q?', 'answer' => 'A.'],
-        ], array_merge($this->baseOptions(), ['route' => '/my_faq']));
+        $agent = new FAQBotAgent(
+            name: 'my_faq',
+            faqs: [
+                ['question' => 'Q?', 'answer' => 'A.'],
+            ],
+            route: '/my_faq',
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertSame('my_faq', $agent->getName());
         $this->assertSame('/my_faq', $agent->getRoute());
@@ -468,19 +609,24 @@ class PrefabsTest extends TestCase
 
     public function testConciergeConstruction(): void
     {
-        $agent = new ConciergeAgent('concierge', [
-            'venue_name'           => 'Grand Hotel',
-            'services'             => ['room service', 'spa bookings', 'restaurant reservations'],
-            'amenities'            => [
-                'pool' => ['hours' => '7 AM - 10 PM', 'location' => '2nd Floor'],
-                'gym'  => ['hours' => '24 hours',     'location' => '3rd Floor'],
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name'           => 'Grand Hotel',
+                'services'             => ['room service', 'spa bookings', 'restaurant reservations'],
+                'amenities'            => [
+                    'pool' => ['hours' => '7 AM - 10 PM', 'location' => '2nd Floor'],
+                    'gym'  => ['hours' => '24 hours',     'location' => '3rd Floor'],
+                ],
+                'hours_of_operation'   => [
+                    'Monday'  => '9 AM - 5 PM',
+                    'Tuesday' => '9 AM - 5 PM',
+                ],
+                'special_instructions' => ['VIP guests get priority'],
             ],
-            'hours_of_operation'   => [
-                'Monday'  => '9 AM - 5 PM',
-                'Tuesday' => '9 AM - 5 PM',
-            ],
-            'special_instructions' => ['VIP guests get priority'],
-        ], $this->baseOptions());
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $this->assertSame('concierge', $agent->getName());
         $this->assertSame('/concierge', $agent->getRoute());
@@ -493,11 +639,16 @@ class PrefabsTest extends TestCase
 
     public function testConciergeHasExpectedTools(): void
     {
-        $agent = new ConciergeAgent('concierge', [
-            'venue_name' => 'Test Hotel',
-            'services'   => ['room service'],
-            'amenities'  => ['pool' => ['hours' => '9-5']],
-        ], $this->baseOptions());
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name' => 'Test Hotel',
+                'services'   => ['room service'],
+                'amenities'  => ['pool' => ['hours' => '9-5']],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('check_availability', ['service' => 'pool'], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
@@ -508,9 +659,14 @@ class PrefabsTest extends TestCase
 
     public function testConciergeCheckAvailability(): void
     {
-        $agent = new ConciergeAgent('concierge', [
-            'venue_name' => 'Grand Hotel',
-        ], $this->baseOptions());
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name' => 'Grand Hotel',
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('check_availability', [
             'service' => 'spa',
@@ -523,12 +679,17 @@ class PrefabsTest extends TestCase
 
     public function testConciergeGetDirectionsKnown(): void
     {
-        $agent = new ConciergeAgent('concierge', [
-            'venue_name' => 'Grand Hotel',
-            'amenities'  => [
-                'pool' => ['hours' => '9-5', 'location' => '2nd Floor'],
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name' => 'Grand Hotel',
+                'amenities'  => [
+                    'pool' => ['hours' => '9-5', 'location' => '2nd Floor'],
+                ],
             ],
-        ], $this->baseOptions());
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('get_directions', ['destination' => 'pool'], []);
         $arr = $result->toArray();
@@ -537,10 +698,15 @@ class PrefabsTest extends TestCase
 
     public function testConciergeGetDirectionsUnknown(): void
     {
-        $agent = new ConciergeAgent('concierge', [
-            'venue_name' => 'Grand Hotel',
-            'amenities'  => [],
-        ], $this->baseOptions());
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name' => 'Grand Hotel',
+                'amenities'  => [],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $result = $agent->onFunctionCall('get_directions', ['destination' => 'rooftop'], []);
         $arr = $result->toArray();
@@ -549,11 +715,16 @@ class PrefabsTest extends TestCase
 
     public function testConciergeSwmlRendering(): void
     {
-        $agent = new ConciergeAgent('concierge', [
-            'venue_name' => 'Test Hotel',
-            'services'   => ['room service'],
-            'amenities'  => ['pool' => ['hours' => '9-5']],
-        ], $this->baseOptions());
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name' => 'Test Hotel',
+                'services'   => ['room service'],
+                'amenities'  => ['pool' => ['hours' => '9-5']],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
 
         $swml = $agent->renderSwml();
         $this->assertSame('1.0.0', $swml['version']);
@@ -575,28 +746,46 @@ class PrefabsTest extends TestCase
 
     public function testAllPrefabsInheritAgentBase(): void
     {
+        $options = $this->baseOptions();
         $agents = [
-            new InfoGathererAgent('', [
-                ['key_name' => 'n', 'question_text' => 'Name?'],
-            ], $this->baseOptions()),
+            new InfoGathererAgent(
+                name: 'info',
+                questions: [['key_name' => 'n', 'question_text' => 'Name?']],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new SurveyAgent('', [
-                ['id' => 'q1', 'text' => 'Q?', 'type' => 'rating', 'scale' => 5, 'required' => true],
-            ], $this->baseOptions()),
+            new SurveyAgent(
+                name: 'survey',
+                questions: [['id' => 'q1', 'text' => 'Q?', 'type' => 'rating', 'scale' => 5, 'required' => true]],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new ReceptionistAgent('', [
-                ['name' => 'sales', 'description' => 'Sales', 'number' => '+1555'],
-            ], $this->baseOptions()),
+            new ReceptionistAgent(
+                name: 'receptionist',
+                departments: [['name' => 'sales', 'description' => 'Sales', 'number' => '+1555']],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new FAQBotAgent('', [
-                ['question' => 'Q?', 'answer' => 'A.'],
-            ], $this->baseOptions()),
+            new FAQBotAgent(
+                name: 'faq',
+                faqs: [['question' => 'Q?', 'answer' => 'A.']],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new ConciergeAgent('', [
-                'venue_name' => 'Hotel',
-                'services'   => ['room service'],
-                'amenities'  => ['pool' => []],
-            ], $this->baseOptions()),
+            new ConciergeAgent(
+                name: 'concierge',
+                venueInfo: [
+                    'venue_name' => 'Hotel',
+                    'services'   => ['room service'],
+                    'amenities'  => ['pool' => []],
+                ],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
         ];
 
         foreach ($agents as $agent) {
@@ -607,28 +796,46 @@ class PrefabsTest extends TestCase
 
     public function testAllPrefabsCanRenderSwml(): void
     {
+        $options = $this->baseOptions();
         $agents = [
-            new InfoGathererAgent('', [
-                ['key_name' => 'n', 'question_text' => 'Name?'],
-            ], $this->baseOptions()),
+            new InfoGathererAgent(
+                name: 'info',
+                questions: [['key_name' => 'n', 'question_text' => 'Name?']],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new SurveyAgent('', [
-                ['id' => 'q1', 'text' => 'Q?', 'type' => 'rating', 'scale' => 5, 'required' => true],
-            ], $this->baseOptions()),
+            new SurveyAgent(
+                name: 'survey',
+                questions: [['id' => 'q1', 'text' => 'Q?', 'type' => 'rating', 'scale' => 5, 'required' => true]],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new ReceptionistAgent('', [
-                ['name' => 'sales', 'description' => 'Sales', 'number' => '+1555'],
-            ], $this->baseOptions()),
+            new ReceptionistAgent(
+                name: 'receptionist',
+                departments: [['name' => 'sales', 'description' => 'Sales', 'number' => '+1555']],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new FAQBotAgent('', [
-                ['question' => 'Q?', 'answer' => 'A.'],
-            ], $this->baseOptions()),
+            new FAQBotAgent(
+                name: 'faq',
+                faqs: [['question' => 'Q?', 'answer' => 'A.']],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
 
-            new ConciergeAgent('', [
-                'venue_name' => 'Hotel',
-                'services'   => ['room service'],
-                'amenities'  => ['pool' => []],
-            ], $this->baseOptions()),
+            new ConciergeAgent(
+                name: 'concierge',
+                venueInfo: [
+                    'venue_name' => 'Hotel',
+                    'services'   => ['room service'],
+                    'amenities'  => ['pool' => []],
+                ],
+                basicAuthUser: $options['basicAuthUser'],
+                basicAuthPassword: $options['basicAuthPassword']
+            ),
         ];
 
         foreach ($agents as $agent) {
@@ -641,9 +848,13 @@ class PrefabsTest extends TestCase
 
     public function testAllPrefabsHaveHandleRequest(): void
     {
-        $agent = new InfoGathererAgent('', [
-            ['key_name' => 'n', 'question_text' => 'Name?'],
-        ], $this->baseOptions());
+        $options = $this->baseOptions();
+        $agent = new InfoGathererAgent(
+            name: 'info',
+            questions: [['key_name' => 'n', 'question_text' => 'Name?']],
+            basicAuthUser: $options['basicAuthUser'],
+            basicAuthPassword: $options['basicAuthPassword']
+        );
 
         $this->assertTrue(method_exists($agent, 'handleRequest'));
     }

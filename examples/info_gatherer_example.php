@@ -11,13 +11,13 @@ require 'vendor/autoload.php';
 use SignalWire\Prefabs\InfoGathererAgent;
 
 $agent = new InfoGathererAgent(
+    name: 'contact-form',
     questions: [
         ['key_name' => 'name',   'question_text' => 'What is your full name?'],
         ['key_name' => 'phone',  'question_text' => 'What is your phone number?', 'confirm' => true],
         ['key_name' => 'age',    'question_text' => 'What is your age?'],
         ['key_name' => 'reason', 'question_text' => 'What are you contacting us about today?'],
     ],
-    name:  'contact-form',
     route: '/contact',
 );
 

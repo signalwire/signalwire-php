@@ -26,21 +26,57 @@ class SurveyAgent extends AgentBase
     /**
      * @param string $name Agent name
      * @param list<array{id: string, text: string, type: string, required?: bool, scale?: int, choices?: list<string>}> $questions
-     * @param array $options Additional options (introduction, conclusion, brand_name, max_retries, plus AgentBase options)
+     * @param string $route
+     * @param string|null $host
+     * @param int|null $port
+     * @param string|null $basicAuthUser
+     * @param string|null $basicAuthPassword
+     * @param bool $autoAnswer
+     * @param bool $recordCall
+     * @param bool $usePom
+     * @param string|null $surveyName
+     * @param string $introduction
+     * @param string $conclusion
+     * @param string $brandName
+     * @param int $maxRetries
      */
-    public function __construct(string $name, array $questions, array $options = [])
-    {
-        $this->surveyName     = $options['survey_name'] ?? ($name !== '' ? $name : 'Survey');
-        $this->introduction   = $options['introduction'] ?? '';
-        $this->conclusion     = $options['conclusion'] ?? '';
-        $this->brandName      = $options['brand_name'] ?? '';
-        $this->maxRetries     = $options['max_retries'] ?? 2;
+    public function __construct(
+        string $name,
+        array $questions,
+        string $route = '/survey',
+        ?string $host = null,
+        ?int $port = null,
+        ?string $basicAuthUser = null,
+        ?string $basicAuthPassword = null,
+        bool $autoAnswer = true,
+        bool $recordCall = false,
+        bool $usePom = true,
+        ?string $surveyName = null,
+        string $introduction = '',
+        string $conclusion = '',
+        string $brandName = '',
+        int $maxRetries = 2,
+    ) {
+        $this->surveyName     = $surveyName ?? ($name !== '' ? $name : 'Survey');
+        $this->introduction   = $introduction;
+        $this->conclusion     = $conclusion;
+        $this->brandName      = $brandName;
+        $this->maxRetries     = $maxRetries;
         $this->surveyQuestions = $questions;
 
-        $options['name']  = $name !== '' ? $name : 'survey';
-        $options['route'] = $options['route'] ?? '/survey';
+        $name = $name !== '' ? $name : 'survey';
 
-        parent::__construct($options);
+        parent::__construct(
+            name: $name,
+            route: $route,
+            host: $host,
+            port: $port,
+            basicAuthUser: $basicAuthUser,
+            basicAuthPassword: $basicAuthPassword,
+            autoAnswer: $autoAnswer,
+            recordCall: $recordCall,
+            usePom: $usePom,
+        );
 
         $this->usePom = true;
 

@@ -86,10 +86,22 @@
                   "kind": "self"
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "host",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "log_level",
+                  "type": "string",
+                  "required": false,
+                  "default": "info"
                 }
               ],
               "returns": "void"
@@ -706,9 +718,63 @@
                   "kind": "self"
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "name",
+                  "type": "string",
                   "required": true
+                },
+                {
+                  "name": "route",
+                  "type": "string",
+                  "required": false,
+                  "default": "/"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "signing_key",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -5079,9 +5145,39 @@
                   "kind": "self"
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "name",
+                  "type": "string",
                   "required": true
+                },
+                {
+                  "name": "route",
+                  "type": "string",
+                  "required": false,
+                  "default": "/"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -5894,10 +5990,52 @@
                   "required": true
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "route",
+                  "type": "string",
                   "required": false,
-                  "default": []
+                  "default": "/concierge"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "void"
@@ -5954,10 +6092,64 @@
                   "required": true
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "route",
+                  "type": "string",
                   "required": false,
-                  "default": []
+                  "default": "/faq"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "persona",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "suggest_related",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "void"
@@ -6005,10 +6197,52 @@
                   "required": true
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "route",
+                  "type": "string",
                   "required": false,
-                  "default": []
+                  "default": "/info_gatherer"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "void"
@@ -6047,10 +6281,58 @@
                   "required": true
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "route",
+                  "type": "string",
                   "required": false,
-                  "default": []
+                  "default": "/receptionist"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "greeting",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -6098,10 +6380,82 @@
                   "required": true
                 },
                 {
-                  "name": "options",
-                  "type": "any",
+                  "name": "route",
+                  "type": "string",
                   "required": false,
-                  "default": []
+                  "default": "/survey"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "survey_name",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "introduction",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "conclusion",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "brand_name",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "max_retries",
+                  "type": "int",
+                  "required": false,
+                  "default": 2
                 }
               ],
               "returns": "void"

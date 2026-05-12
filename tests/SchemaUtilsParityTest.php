@@ -121,7 +121,7 @@ class SchemaUtilsParityTest extends TestCase
 
     public function testServiceSchemaUtilsAccessor(): void
     {
-        $svc = new Service(['name' => 'test']);
+        $svc = new Service(name: 'test');
         $su = $svc->getSchemaUtils();
         $this->assertInstanceOf(SchemaUtils::class, $su);
         $this->assertNotEmpty($su->getAllVerbNames());

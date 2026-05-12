@@ -35,10 +35,10 @@ require 'vendor/autoload.php';
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
-$agent = new AgentBase([
-    'name'  => 'gather_per_question_functions_demo',
-    'route' => '/',
-]);
+$agent = new AgentBase(
+    name:  'gather_per_question_functions_demo',
+    route: '/'
+);
 
 // Tools that the step would normally have available — but during
 // gather questioning, they're all locked out unless they appear in a
