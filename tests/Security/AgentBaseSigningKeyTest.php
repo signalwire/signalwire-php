@@ -47,11 +47,15 @@ class AgentBaseSigningKeyTest extends TestCase
 
     private function makeAgent(array $opts = []): AgentBase
     {
-        return new AgentBase(array_merge([
-            'name' => 'test-agent',
-            'basic_auth_user' => 'testuser',
-            'basic_auth_password' => 'testpass',
-        ], $opts));
+        return new AgentBase(
+            name: $opts['name'] ?? 'test-agent',
+            route: $opts['route'] ?? '/',
+            host: $opts['host'] ?? null,
+            port: $opts['port'] ?? null,
+            basicAuthUser: $opts['basic_auth_user'] ?? 'testuser',
+            basicAuthPassword: $opts['basic_auth_password'] ?? 'testpass',
+            signingKey: $opts['signing_key'] ?? null,
+        );
     }
 
     private function authHeader(): array

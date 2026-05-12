@@ -45,12 +45,12 @@ use SignalWire\SWML\Service;
  */
 function buildAiSidecarService(string $publicUrl = 'https://your-host.example.com/sales-sidecar'): Service
 {
-    $svc = new Service([
-        'name'  => 'sales-sidecar',
-        'route' => '/sales-sidecar',
-        'host'  => '0.0.0.0',
-        'port'  => (int) (getenv('PORT') ?: 3000),
-    ]);
+    $svc = new Service(
+        name:  'sales-sidecar',
+        route: '/sales-sidecar',
+        host:  '0.0.0.0',
+        port:  (int) (getenv('PORT') ?: 3000),
+    );
 
     // 1. Emit any SWML — including ai_sidecar. SWML\Service exposes the
     //    underlying Document so callers can drop in arbitrary verb hashes

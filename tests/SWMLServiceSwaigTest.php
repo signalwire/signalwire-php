@@ -34,11 +34,14 @@ class SWMLServiceSwaigTest extends TestCase
 
     private function svc(array $opts = []): Service
     {
-        return new Service(array_merge([
-            'name' => 'svc',
-            'basic_auth_user' => 'u',
-            'basic_auth_password' => 'p',
-        ], $opts));
+        return new Service(
+            name: $opts['name'] ?? 'svc',
+            route: $opts['route'] ?? '/',
+            host: $opts['host'] ?? null,
+            port: $opts['port'] ?? null,
+            basicAuthUser: $opts['basic_auth_user'] ?? 'u',
+            basicAuthPassword: $opts['basic_auth_password'] ?? 'p',
+        );
     }
 
     private function auth(): array

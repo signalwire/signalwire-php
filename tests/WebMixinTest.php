@@ -20,7 +20,7 @@ class WebMixinTest extends TestCase
 {
     public function testOnRequestDelegatesToOnSwmlRequest(): void
     {
-        $svc = new class(['name' => 't']) extends Service {
+        $svc = new class(name: 't') extends Service {
             public ?array $lastRequestData = null;
             public ?string $lastCallbackPath = null;
             public ?array $customReturn = null;
@@ -45,19 +45,19 @@ class WebMixinTest extends TestCase
 
     public function testOnSwmlRequestDefaultReturnsNull(): void
     {
-        $svc = new Service(['name' => 't']);
+        $svc = new Service(name: 't');
         $this->assertNull($svc->onSwmlRequest(null, null));
     }
 
     public function testOnRequestDefaultReturnsNull(): void
     {
-        $svc = new Service(['name' => 't']);
+        $svc = new Service(name: 't');
         $this->assertNull($svc->onRequest(null, null));
     }
 
     public function testOnRequestPassesNullsToHook(): void
     {
-        $svc = new class(['name' => 't']) extends Service {
+        $svc = new class(name: 't') extends Service {
             public bool $called = false;
             public ?array $sawData = null;
             public ?string $sawPath = null;
@@ -83,12 +83,7 @@ class WebMixinTest extends TestCase
 
     public function testManualSetProxyUrlOverridesAutoDetection(): void
     {
-        $agent = new \SignalWire\Agent\AgentBase([
-            'name' => 'pxy-agent',
-            'route' => '/agent',
-            'basic_auth_user' => 'u',
-            'basic_auth_password' => 'p',
-        ]);
+        $agent = new \SignalWire\Agent\AgentBase(name: 'pxy-agent', route: '/agent', basicAuthUser: 'u', basicAuthPassword: 'p');
 
         $ret = $agent->manualSetProxyUrl('https://abc.ngrok.io/');
         // Fluent return — chains like every other AgentBase setter.
@@ -105,11 +100,7 @@ class WebMixinTest extends TestCase
 
     public function testManualSetProxyUrlEmptyStringNoOps(): void
     {
-        $agent = new \SignalWire\Agent\AgentBase([
-            'name' => 'pxy-agent-2',
-            'basic_auth_user' => 'u',
-            'basic_auth_password' => 'p',
-        ]);
+        $agent = new \SignalWire\Agent\AgentBase(name: 'pxy-agent-2', basicAuthUser: 'u', basicAuthPassword: 'p');
 
         // Empty proxy URL must not stomp the auto-detected value (Python
         // returns early without mutating state).
@@ -124,11 +115,7 @@ class WebMixinTest extends TestCase
 
     public function testSetDynamicConfigCallbackStoresCallback(): void
     {
-        $agent = new \SignalWire\Agent\AgentBase([
-            'name' => 'dc-agent',
-            'basic_auth_user' => 'u',
-            'basic_auth_password' => 'p',
-        ]);
+        $agent = new \SignalWire\Agent\AgentBase(name: 'dc-agent', basicAuthUser: 'u', basicAuthPassword: 'p');
 
         $invocations = [];
         $cb = function ($q, $b, $h, $a) use (&$invocations): void {
@@ -153,11 +140,7 @@ class WebMixinTest extends TestCase
 
     public function testSetDynamicConfigCallbackReplaceable(): void
     {
-        $agent = new \SignalWire\Agent\AgentBase([
-            'name' => 'dc-agent-2',
-            'basic_auth_user' => 'u',
-            'basic_auth_password' => 'p',
-        ]);
+        $agent = new \SignalWire\Agent\AgentBase(name: 'dc-agent-2', basicAuthUser: 'u', basicAuthPassword: 'p');
 
         $first = function () { return 'first'; };
         $second = function () { return 'second'; };

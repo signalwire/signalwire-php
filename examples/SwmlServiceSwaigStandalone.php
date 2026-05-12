@@ -47,12 +47,12 @@ use SignalWire\SWML\Service;
  */
 function buildStandaloneSwaigService(): Service
 {
-    $svc = new Service([
-        'name'  => 'standalone-swaig',
-        'route' => '/standalone',
-        'host'  => '0.0.0.0',
-        'port'  => (int) (getenv('PORT') ?: 3000),
-    ]);
+    $svc = new Service(
+        name:  'standalone-swaig',
+        route: '/standalone',
+        host:  '0.0.0.0',
+        port:  (int) (getenv('PORT') ?: 3000),
+    );
 
     // 1. Build a minimal SWML document. Any verbs are fine — the SWAIG
     //    HTTP surface is independent of what the document contains.

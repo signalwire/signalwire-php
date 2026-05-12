@@ -34,11 +34,7 @@ class ToolTokenTest extends TestCase
 
     private function makeAgent(): AgentBase
     {
-        $a = new AgentBase([
-            'name' => 'test-agent',
-            'basic_auth_user' => 'testuser',
-            'basic_auth_password' => 'testpass',
-        ]);
+        $a = new AgentBase(name: 'test-agent', basicAuthUser: 'testuser', basicAuthPassword: 'testpass');
         $a->defineTool(
             'test_tool',
             't',
@@ -62,11 +58,7 @@ class ToolTokenTest extends TestCase
 
     public function testValidateToolTokenRejectsUnknownFunction(): void
     {
-        $a = new AgentBase([
-            'name' => 'test-agent',
-            'basic_auth_user' => 'testuser',
-            'basic_auth_password' => 'testpass',
-        ]);
+        $a = new AgentBase(name: 'test-agent', basicAuthUser: 'testuser', basicAuthPassword: 'testpass');
         $this->assertFalse(
             $a->validateToolToken('not_registered', 'any_token', 'call_123'),
             'expected false for unregistered function',
