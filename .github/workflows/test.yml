@@ -4,6 +4,10 @@ name: Test
 # against the Python reference, and the no-cheat-tests audit. Mirrors
 # `bash scripts/run-ci.sh` so there's no drift between local and CI.
 
+env:
+  # Opt into Node.js 24 ahead of GitHub's 2026-06-02 default switch.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   pull_request:
   push:
