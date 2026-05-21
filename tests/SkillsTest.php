@@ -449,6 +449,204 @@ class SkillsTest extends TestCase
     }
 
     // ══════════════════════════════════════════════════════════════════════
+    //  WebSearch response_prefix / response_postfix wrapping (3)
+    //
+    //  Mirrors Python signalwire/skills/web_search/skill.py commit 8aad242.
+    //  Wraps the successful search response (only) with the configured
+    //  prefix / postfix; error and no-results paths stay unwrapped.
+    //
+    //  Tests use a real PHP `-S` fixture server bound to an ephemeral
+    //  port and pointed at via WEB_SEARCH_BASE_URL — no transport
+    //  mocking, no Guzzle MockHandler. The fixture returns a fixed
+    //  Google CSE-shaped JSON body.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Boot a php -S fixture that always returns a fixed JSON body for
+     * any request. Returns [proc, ephemeral_port, tmp_script_path].
+     *
+     * @return array{0: resource, 1: int, 2: string}
+     */
+    private function bootWebSearchFixture(string $jsonBody): array
+    {
+        $escaped = var_export($jsonBody, true);
+        $script = <<<PHP
+        <?php
+        header('Content-Type: application/json');
+        echo {$escaped};
+        PHP;
+        $tmp = \tempnam(\sys_get_temp_dir(), 'sw_web_search_fx_') . '.php';
+        \file_put_contents($tmp, $script);
+
+        // Bind an ephemeral port.
+        $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        \socket_bind($sock, '127.0.0.1', 0);
+        \socket_getsockname($sock, $addr, $port);
+        \socket_close($sock);
+
+        $cmd = \escapeshellcmd(PHP_BINARY)
+            . ' -S 127.0.0.1:' . (int) $port
+            . ' ' . \escapeshellarg($tmp);
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $proc = \proc_open($cmd, $descriptors, $pipes);
+        $this->assertIsResource($proc, 'Failed to spawn php -S fixture');
+        \fclose($pipes[0]);
+        \stream_set_blocking($pipes[1], false);
+        \stream_set_blocking($pipes[2], false);
+
+        // Wait for bind.
+        $ok = false;
+        $deadline = \microtime(true) + 5.0;
+        while (\microtime(true) < $deadline) {
+            $err = 0;
+            $errStr = '';
+            $conn = @\fsockopen('127.0.0.1', $port, $err, $errStr, 0.2);
+            if ($conn !== false) {
+                \fclose($conn);
+                $ok = true;
+                break;
+            }
+            \usleep(50_000);
+        }
+        $this->assertTrue($ok, "php -S fixture did not bind to 127.0.0.1:{$port}");
+
+        return [$proc, (int) $port, $tmp];
+    }
+
+    private function tearDownWebSearchFixture(mixed $proc, string $tmp): void
+    {
+        // Defensively cast: proc_terminate signature only accepts resource.
+        if (\is_resource($proc)) {
+            @\proc_terminate($proc, SIGTERM);
+            @\proc_close($proc);
+        }
+        @\unlink($tmp);
+    }
+
+    private function googleCseJsonBody(): string
+    {
+        return (string) \json_encode([
+            'items' => [
+                [
+                    'title'   => 'Result One',
+                    'link'    => 'https://example.com/one',
+                    'snippet' => 'First snippet content.',
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Construct + register a WebSearch skill directly (bypassing
+     * SkillManager so we don't drag in unrelated AgentBase merge
+     * methods). Returns the agent so the caller can dispatch.
+     *
+     * @param array<string,mixed> $params
+     */
+    private function registerWebSearchSkill(array $params): AgentBase
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\WebSearch($agent, $params);
+        $this->assertTrue($skill->setup(), 'WebSearch setup() should succeed');
+        $skill->registerTools();
+        return $agent;
+    }
+
+    public function testWebSearchResponsePrefixWrapsSuccessfulResponse(): void
+    {
+        [$proc, $port, $tmp] = $this->bootWebSearchFixture($this->googleCseJsonBody());
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+
+            $agent = $this->registerWebSearchSkill([
+                'api_key'           => 'fake-key',
+                'search_engine_id'  => 'fake-cx',
+                'response_prefix'   => 'PREFIX_HEADER:',
+            ]);
+
+            $result = $agent->onFunctionCall(
+                'web_search',
+                ['query' => 'hello'],
+                [],
+            );
+
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+            $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
+            $this->assertStringContainsString('Web search results for "hello"', $body);
+            $this->assertStringContainsString('Title: Result One', $body);
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+        }
+    }
+
+    public function testWebSearchResponsePostfixWrapsSuccessfulResponse(): void
+    {
+        [$proc, $port, $tmp] = $this->bootWebSearchFixture($this->googleCseJsonBody());
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+
+            $agent = $this->registerWebSearchSkill([
+                'api_key'           => 'fake-key',
+                'search_engine_id'  => 'fake-cx',
+                'response_prefix'   => 'PREFIX_HEADER:',
+                'response_postfix'  => 'POSTFIX_FOOTER.',
+            ]);
+
+            $result = $agent->onFunctionCall(
+                'web_search',
+                ['query' => 'hello'],
+                [],
+            );
+
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+            $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
+            $this->assertStringEndsWith("\n\nPOSTFIX_FOOTER.", $body);
+            $this->assertStringContainsString('Title: Result One', $body);
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+        }
+    }
+
+    public function testWebSearchEmptyPrefixPostfixLeavesResponseUnwrapped(): void
+    {
+        [$proc, $port, $tmp] = $this->bootWebSearchFixture($this->googleCseJsonBody());
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+
+            $agent = $this->registerWebSearchSkill([
+                'api_key'           => 'fake-key',
+                'search_engine_id'  => 'fake-cx',
+            ]);
+
+            $result = $agent->onFunctionCall(
+                'web_search',
+                ['query' => 'hello'],
+                [],
+            );
+
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+            // Bare response — no prefix / postfix markers anywhere.
+            $this->assertStringStartsWith('Web search results for "hello"', $body);
+            $this->assertStringContainsString('Title: Result One', $body);
+            // The body ends with a trailing newline (the per-result block
+            // pushes an empty line after each result). No postfix appended.
+            $this->assertStringEndsWith("\n", $body);
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
     //  Individual skill instantiation test (1)
     // ══════════════════════════════════════════════════════════════════════
 

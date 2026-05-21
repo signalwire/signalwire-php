@@ -3709,6 +3709,12 @@
                   "name": "voice",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "params",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -3767,6 +3773,20 @@
               ],
               "returns": "any"
             },
+            "get_language_params": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "code",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
             "set_function_includes": {
               "params": [
                 {
@@ -3803,6 +3823,25 @@
                 },
                 {
                   "name": "fillers",
+                  "type": "any",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "set_language_params": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "code",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "params",
                   "type": "any",
                   "required": true
                 }

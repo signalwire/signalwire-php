@@ -483,14 +483,75 @@ class AgentBase extends Service
         return $this;
     }
 
-    public function addLanguage(string $name, string $code, string $voice): self
-    {
-        $this->languages[] = [
+    /**
+     * Add a language configuration to support multilingual conversations.
+     *
+     * @param array<string,mixed>|null $params Optional per-language
+     *     params dict (engine-specific tuning, voice settings, etc.).
+     *     Emitted as the language object's `params` key in SWML when
+     *     non-empty. Empty / null omits the key.
+     */
+    public function addLanguage(
+        string $name,
+        string $code,
+        string $voice,
+        ?array $params = null,
+    ): self {
+        $language = [
             'name'  => $name,
             'code'  => $code,
             'voice' => $voice,
         ];
+        // Per-language params (engine-specific tuning, voice settings,
+        // etc.). Only emit the key when non-empty so we don't pollute
+        // SWML with empty objects.
+        if ($params !== null && $params !== []) {
+            $language['params'] = $params;
+        }
+        $this->languages[] = $language;
         return $this;
+    }
+
+    /**
+     * Set (or replace) the per-language `params` dict on an
+     * already-added language. Useful when language entries are built
+     * up via addLanguage() first and engine-specific tuning is added
+     * later (e.g., from a config loader).
+     *
+     * @param array<string,mixed> $params Engine-specific params dict
+     *     to attach. Empty array removes the key. No-op when `code`
+     *     isn't found.
+     */
+    public function setLanguageParams(string $code, array $params): self
+    {
+        foreach ($this->languages as $i => $language) {
+            if (($language['code'] ?? null) === $code) {
+                if ($params !== []) {
+                    $this->languages[$i]['params'] = $params;
+                } else {
+                    unset($this->languages[$i]['params']);
+                }
+                break;
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Read the per-language `params` dict for a previously-added
+     * language. Returns null when unset or when the code is unknown
+     * (no exception path).
+     *
+     * @return array<string,mixed>|null
+     */
+    public function getLanguageParams(string $code): ?array
+    {
+        foreach ($this->languages as $language) {
+            if (($language['code'] ?? null) === $code) {
+                return $language['params'] ?? null;
+            }
+        }
+        return null;
     }
 
     public function setLanguages(array $languages): self

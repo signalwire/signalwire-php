@@ -70,6 +70,15 @@ class WebSearch extends SkillBase
         $noResultsMessage = (string) ($this->params['no_results_message']
             ?? 'No results found for the given query.');
 
+        // Optional prefix/postfix wrapped around every non-empty search
+        // result. Use these to give the calling agent a mechanical cue
+        // (e.g. "tell the user this came from a public web search")
+        // without needing prompt-side rules. Mirrors the
+        // native_vector_search wrapping pattern (response_format_callback
+        // in the Python reference).
+        $responsePrefix = (string) ($this->params['response_prefix'] ?? '');
+        $responsePostfix = (string) ($this->params['response_postfix'] ?? '');
+
         $this->defineTool(
             $toolName,
             'Search the web for high-quality information, automatically filtering low-quality results',
@@ -86,6 +95,8 @@ class WebSearch extends SkillBase
                 $numResults,
                 $timeout,
                 $noResultsMessage,
+                $responsePrefix,
+                $responsePostfix,
             ): FunctionResult {
                 $query = trim((string) ($args['query'] ?? ''));
                 if ($query === '') {
@@ -155,7 +166,17 @@ class WebSearch extends SkillBase
                     $lines[] = "Snippet: {$snippet}";
                     $lines[] = '';
                 }
-                return new FunctionResult(implode("\n", $lines));
+                $response = implode("\n", $lines);
+                // Wrap with prefix/postfix on the success path only —
+                // error / no-results responses above are deliberately
+                // left unwrapped to match the Python reference.
+                if ($responsePrefix !== '') {
+                    $response = $responsePrefix . "\n\n" . $response;
+                }
+                if ($responsePostfix !== '') {
+                    $response = $response . "\n\n" . $responsePostfix;
+                }
+                return new FunctionResult($response);
             }
         );
     }

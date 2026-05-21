@@ -325,6 +325,123 @@ class AgentBaseTest extends TestCase
         $this->assertSame('rachel', $ai['languages'][0]['voice']);
     }
 
+    // ------------------------------------------------------------------
+    // 12b. Per-language params: addLanguage(params=...),
+    //      setLanguageParams, getLanguageParams.
+    //
+    //      Mirrors Python tests/unit/core/mixins/test_ai_config_mixin.py
+    //      ::TestPerLanguageParams. SWML wire key stays snake_case
+    //      ("params"); PHP method names are camelCase.
+    // ------------------------------------------------------------------
+
+    public function testAddLanguageWithParamsAttachesParams(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage(
+            'English',
+            'en-US',
+            'josh',
+            params: ['stability' => 0.5, 'similarity_boost' => 0.75],
+        );
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(
+            ['stability' => 0.5, 'similarity_boost' => 0.75],
+            $ai['languages'][0]['params'],
+        );
+    }
+
+    public function testAddLanguageWithoutParamsOmitsKey(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('French', 'fr-FR', 'fr-FR-Neural2-A');
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+    }
+
+    public function testAddLanguageWithEmptyParamsOmitsKey(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('French', 'fr-FR', 'v', params: []);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+    }
+
+    public function testGetLanguageParamsReturnsSetDict(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v', params: ['a' => 1]);
+        $this->assertSame(['a' => 1], $agent->getLanguageParams('en-US'));
+    }
+
+    public function testGetLanguageParamsReturnsNullWhenUnset(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v');
+        $this->assertNull($agent->getLanguageParams('en-US'));
+    }
+
+    public function testGetLanguageParamsReturnsNullForUnknownCode(): void
+    {
+        $agent = $this->makeAgent();
+        $this->assertNull($agent->getLanguageParams('zh-CN'));
+    }
+
+    public function testSetLanguageParamsReplacesExisting(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v', params: ['a' => 1]);
+        $agent->setLanguageParams('en-US', ['b' => 2]);
+
+        $this->assertSame(['b' => 2], $agent->getLanguageParams('en-US'));
+        // And the SWML output reflects the replacement.
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(['b' => 2], $ai['languages'][0]['params']);
+    }
+
+    public function testSetLanguageParamsAddsWhenUnset(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v');
+        $agent->setLanguageParams('en-US', ['c' => 3]);
+
+        $this->assertSame(['c' => 3], $agent->getLanguageParams('en-US'));
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(['c' => 3], $ai['languages'][0]['params']);
+    }
+
+    public function testSetLanguageParamsEmptyArrayRemovesKey(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v', params: ['a' => 1]);
+        $agent->setLanguageParams('en-US', []);
+
+        $this->assertNull($agent->getLanguageParams('en-US'));
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+    }
+
+    public function testSetLanguageParamsUnknownCodeIsNoop(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v');
+        $agent->setLanguageParams('zh-CN', ['a' => 1]);
+
+        // The known language remains untouched.
+        $this->assertNull($agent->getLanguageParams('en-US'));
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+    }
+
+    public function testSetLanguageParamsReturnsSelfForChaining(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'v');
+        $this->assertSame($agent, $agent->setLanguageParams('en-US', ['a' => 1]));
+    }
+
     public function testAddPronunciation(): void
     {
         $agent = $this->makeAgent();
