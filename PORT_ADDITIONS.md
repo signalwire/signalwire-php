@@ -48,6 +48,7 @@ signalwire.core.agent_base.AgentBase.create_tool_token: PHP-additional-API: PHP'
 signalwire.core.agent_base.AgentBase.define_contexts: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.enable_debug_events: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.get_contexts: PHP-prompt-getter: explicit prompt accessor 'get_contexts' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
+signalwire.core.agent_base.AgentBase.get_language_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.get_post_prompt: PHP-prompt-getter: explicit prompt accessor 'get_post_prompt' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
 signalwire.core.agent_base.AgentBase.get_prompt: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.get_raw_prompt: PHP-prompt-getter: explicit prompt accessor 'get_raw_prompt' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
@@ -67,6 +68,7 @@ signalwire.core.agent_base.AgentBase.set_dynamic_config_callback: PHP idiomatic 
 signalwire.core.agent_base.AgentBase.set_function_includes: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_global_data: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_internal_fillers: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.set_language_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_languages: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_native_functions: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_param: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
