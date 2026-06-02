@@ -562,10 +562,16 @@ class SkillsTest extends TestCase
         try {
             \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
 
+            // snippets_only keeps the wrapping test focused on prefix /
+            // postfix behavior (and fast/deterministic) — the default path
+            // now scrapes each result page, which is exercised separately
+            // below. The snippet formatter is still a "successful, non-empty
+            // result", so the wrapping rules apply identically.
             $agent = $this->registerWebSearchSkill([
                 'api_key'           => 'fake-key',
                 'search_engine_id'  => 'fake-cx',
                 'response_prefix'   => 'PREFIX_HEADER:',
+                'snippets_only'     => true,
             ]);
 
             $result = $agent->onFunctionCall(
@@ -577,7 +583,7 @@ class SkillsTest extends TestCase
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
             $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
-            $this->assertStringContainsString('Web search results for "hello"', $body);
+            $this->assertStringContainsString("Snippet-only results for 'hello'", $body);
             $this->assertStringContainsString('Title: Result One', $body);
         } finally {
             \putenv('WEB_SEARCH_BASE_URL');
@@ -596,6 +602,7 @@ class SkillsTest extends TestCase
                 'search_engine_id'  => 'fake-cx',
                 'response_prefix'   => 'PREFIX_HEADER:',
                 'response_postfix'  => 'POSTFIX_FOOTER.',
+                'snippets_only'     => true,
             ]);
 
             $result = $agent->onFunctionCall(
@@ -624,6 +631,7 @@ class SkillsTest extends TestCase
             $agent = $this->registerWebSearchSkill([
                 'api_key'           => 'fake-key',
                 'search_engine_id'  => 'fake-cx',
+                'snippets_only'     => true,
             ]);
 
             $result = $agent->onFunctionCall(
@@ -635,7 +643,7 @@ class SkillsTest extends TestCase
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
             // Bare response — no prefix / postfix markers anywhere.
-            $this->assertStringStartsWith('Web search results for "hello"', $body);
+            $this->assertStringStartsWith("Snippet-only results for 'hello'", $body);
             $this->assertStringContainsString('Title: Result One', $body);
             // The body ends with a trailing newline (the per-result block
             // pushes an empty line after each result). No postfix appended.
@@ -643,6 +651,415 @@ class SkillsTest extends TestCase
         } finally {
             \putenv('WEB_SEARCH_BASE_URL');
             $this->tearDownWebSearchFixture($proc, $tmp);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  WebSearch latency control: per_page_timeout / overall_deadline /
+    //  parallel_scrape / snippets_only (7)
+    //
+    //  Ports Python signalwire/skills/web_search/skill.py commits
+    //  51101da (params + behavior) + 295745b (schema). The PHP skill runs
+    //  scrapes SEQUENTIALLY (single-threaded; parallel_scrape accepted for
+    //  parity only), but enforces the overall_deadline + per_page_timeout
+    //  budget — the contracted guarantee that a slow site can't blow past
+    //  the kernel webhook timeout.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Boot a php -S fixture that ROUTES by request path and logs every
+     * path it sees to a sidecar file:
+     *   - path contains "customsearch" -> the Google CSE JSON body (fast).
+     *   - any other path (a page scrape) -> $pageHtml, optionally after
+     *     sleeping $pageSleepSeconds (to exercise per_page_timeout).
+     *
+     * Returns [proc, ephemeral_port, tmp_script_path, request_log_path].
+     *
+     * @return array{0: resource, 1: int, 2: string, 3: string}
+     */
+    private function bootWebSearchRoutingFixture(
+        string $cseJsonBody,
+        string $pageHtml,
+        float $pageSleepSeconds = 0.0,
+    ): array {
+        $logPath = \tempnam(\sys_get_temp_dir(), 'sw_web_search_log_');
+        $cseExport = \var_export($cseJsonBody, true);
+        $htmlExport = \var_export($pageHtml, true);
+        $logExport = \var_export($logPath, true);
+        $sleepMicros = (int) \round($pageSleepSeconds * 1_000_000);
+
+        // NB: this heredoc is double-quoted-style, so backslashes that
+        // form a recognised escape (\f, \u, \n, ...) are interpolated. The
+        // generated script runs at global scope, so call built-ins WITHOUT
+        // a leading backslash to avoid e.g. "\file_put_contents" -> form
+        // feed + "ile_put_contents". Only $ and {} are escaped below.
+        $script = <<<PHP
+        <?php
+        \$path = \$_SERVER['REQUEST_URI'] ?? '/';
+        @file_put_contents({$logExport}, \$path . "\\n", FILE_APPEND);
+        if (strpos(\$path, 'customsearch') !== false) {
+            header('Content-Type: application/json');
+            echo {$cseExport};
+            exit;
+        }
+        // Page scrape: optionally stall to trip per_page_timeout.
+        if ({$sleepMicros} > 0) {
+            usleep({$sleepMicros});
+        }
+        header('Content-Type: text/html');
+        echo {$htmlExport};
+        PHP;
+        $tmp = \tempnam(\sys_get_temp_dir(), 'sw_web_search_rt_') . '.php';
+        \file_put_contents($tmp, $script);
+
+        $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        \socket_bind($sock, '127.0.0.1', 0);
+        \socket_getsockname($sock, $addr, $port);
+        \socket_close($sock);
+
+        $cmd = \escapeshellcmd(PHP_BINARY)
+            . ' -S 127.0.0.1:' . (int) $port
+            . ' ' . \escapeshellarg($tmp);
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $proc = \proc_open($cmd, $descriptors, $pipes);
+        $this->assertIsResource($proc, 'Failed to spawn php -S routing fixture');
+        \fclose($pipes[0]);
+        \stream_set_blocking($pipes[1], false);
+        \stream_set_blocking($pipes[2], false);
+
+        $ok = false;
+        $deadline = \microtime(true) + 5.0;
+        while (\microtime(true) < $deadline) {
+            $err = 0;
+            $errStr = '';
+            $conn = @\fsockopen('127.0.0.1', $port, $err, $errStr, 0.2);
+            if ($conn !== false) {
+                \fclose($conn);
+                $ok = true;
+                break;
+            }
+            \usleep(50_000);
+        }
+        $this->assertTrue($ok, "php -S routing fixture did not bind to 127.0.0.1:{$port}");
+
+        return [$proc, (int) $port, $tmp, $logPath];
+    }
+
+    /** @return list<string> Recorded request paths, in order. */
+    private function readRequestLog(string $logPath): array
+    {
+        $raw = \is_file($logPath) ? (string) \file_get_contents($logPath) : '';
+        $lines = \array_values(\array_filter(
+            \explode("\n", $raw),
+            static fn(string $l): bool => $l !== '',
+        ));
+        return $lines;
+    }
+
+    /**
+     * A multi-result CSE body so deadline / parallel tests have several
+     * candidate pages to (not) scrape.
+     */
+    private function googleCseMultiJsonBody(): string
+    {
+        return (string) \json_encode([
+            'items' => [
+                ['title' => 'Alpha', 'link' => 'https://example.com/a', 'snippet' => 'Alpha snippet text.'],
+                ['title' => 'Beta',  'link' => 'https://example.com/b', 'snippet' => 'Beta snippet text.'],
+                ['title' => 'Gamma', 'link' => 'https://example.com/c', 'snippet' => 'Gamma snippet text.'],
+            ],
+        ]);
+    }
+
+    public function testWebSearchSnippetsOnlySkipsPageFetch(): void
+    {
+        // snippets_only must short-circuit BEFORE any page scrape. Only the
+        // CSE call should hit the fixture; no scrape request at all.
+        [$proc, $port, $tmp, $log] = $this->bootWebSearchRoutingFixture(
+            $this->googleCseMultiJsonBody(),
+            '<html><body>SHOULD NOT BE FETCHED</body></html>',
+        );
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+            $agent = $this->registerWebSearchSkill([
+                'api_key'          => 'fake-key',
+                'search_engine_id' => 'fake-cx',
+                'snippets_only'    => true,
+            ]);
+
+            $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+
+            // Snippet formatter output, carrying the CSE titles + snippets.
+            $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
+            $this->assertStringContainsString('Title: Alpha', $body);
+            $this->assertStringContainsString('Snippet: Alpha snippet text.', $body);
+            $this->assertStringNotContainsString('SHOULD NOT BE FETCHED', $body);
+
+            // Exactly one HTTP request, and it was the CSE call.
+            $paths = $this->readRequestLog($log);
+            $this->assertCount(1, $paths, 'snippets_only must issue ONLY the CSE call');
+            $this->assertStringContainsString('customsearch', $paths[0]);
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+            @\unlink($log);
+        }
+    }
+
+    public function testWebSearchOverallDeadlineTruncatesToSnippetFallback(): void
+    {
+        // Deterministic deadline enforcement: overall_deadline = 0.0 means
+        // the budget is already spent by the time the scrape loop starts, so
+        // EVERY page is abandoned and the handler falls back to formatting
+        // the CSE snippets — a non-empty response, NOT the empty no-results
+        // message. No sleeping / real slowness required.
+        [$proc, $port, $tmp, $log] = $this->bootWebSearchRoutingFixture(
+            $this->googleCseMultiJsonBody(),
+            '<html><body>Page body that would otherwise score well for alpha beta gamma.</body></html>',
+        );
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+            $agent = $this->registerWebSearchSkill([
+                'api_key'          => 'fake-key',
+                'search_engine_id' => 'fake-cx',
+                'overall_deadline' => 0.0,
+                'no_results_message' => 'NO_RESULTS_SENTINEL for {query}',
+            ]);
+
+            $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+
+            // Snippet fallback fired: non-empty, carries titles + snippets.
+            $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
+            $this->assertStringContainsString('Title: Alpha', $body);
+            $this->assertStringContainsString('Snippet: Alpha snippet text.', $body);
+            // It is NOT the empty no-results message and NOT a full scrape.
+            $this->assertStringNotContainsString('NO_RESULTS_SENTINEL', $body);
+            $this->assertStringNotContainsString('Web search results for', $body);
+
+            // Deadline abandoned all scrapes: only the CSE call was issued,
+            // no page was fetched.
+            $paths = $this->readRequestLog($log);
+            $this->assertCount(1, $paths, 'overall_deadline=0 must abandon every scrape');
+            $this->assertStringContainsString('customsearch', $paths[0]);
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+            @\unlink($log);
+        }
+    }
+
+    public function testWebSearchPerPageTimeoutAbandonsSlowPage(): void
+    {
+        // The page scrape sleeps ~1.5s; per_page_timeout floors to 1s of
+        // cURL CURLOPT_TIMEOUT, so the fetch is cut off and returns null.
+        // With no scraped result the handler falls back to snippets. The
+        // assertion that matters: the call RETURNS (doesn't hang) with the
+        // non-empty snippet fallback. Also bound the whole call's wall time
+        // well under any kernel-style limit.
+        [$proc, $port, $tmp, $log] = $this->bootWebSearchRoutingFixture(
+            $this->googleCseMultiJsonBody(),
+            '<html><body>Slow page body for alpha beta gamma that arrives too late.</body></html>',
+            pageSleepSeconds: 1.5,
+        );
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+            $agent = $this->registerWebSearchSkill([
+                'api_key'          => 'fake-key',
+                'search_engine_id' => 'fake-cx',
+                'per_page_timeout' => 0.2,   // floors to 1s cURL timeout
+                'overall_deadline' => 8.0,
+            ]);
+
+            $started = \microtime(true);
+            $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
+            $elapsed = \microtime(true) - $started;
+
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+
+            // Every page timed out -> snippet fallback (non-empty).
+            $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
+            $this->assertStringContainsString('Title: Alpha', $body);
+
+            // At least one page WAS attempted (per_page_timeout governs the
+            // fetch, the page is not skipped outright like the deadline case).
+            $paths = $this->readRequestLog($log);
+            $this->assertGreaterThanOrEqual(2, count($paths), 'a page fetch should have been attempted');
+            $this->assertStringContainsString('customsearch', $paths[0]);
+
+            // Whole call stayed bounded well under a kernel-style timeout
+            // even though three 1.5s-sleeping pages were in the candidate set
+            // (the per-page cURL timeout caps each at ~1s).
+            $this->assertLessThan(7.0, $elapsed, 'per_page_timeout must bound total latency');
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+            @\unlink($log);
+        }
+    }
+
+    public function testWebSearchScrapesAndFormatsQualityPage(): void
+    {
+        // Happy path: the page scrape succeeds and the extracted text is
+        // on-topic, so it clears the quality threshold and the handler
+        // returns the FULL "Web search results" block (proving the scrape
+        // phase is real, not dead code). The CSE body's single result links
+        // to a page rich in the query terms.
+        $cse = (string) \json_encode([
+            'items' => [[
+                'title'   => 'Quality Doc',
+                'link'    => 'https://example.com/quality',
+                'snippet' => 'short snippet',
+            ]],
+        ]);
+        // Long, on-topic HTML so length + relevance both score high.
+        $topic = \str_repeat('alpha beta gamma delta epsilon content. ', 80);
+        $html = "<html><body><p>{$topic}</p></body></html>";
+
+        [$proc, $port, $tmp, $log] = $this->bootWebSearchRoutingFixture($cse, $html);
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+            $agent = $this->registerWebSearchSkill([
+                'api_key'          => 'fake-key',
+                'search_engine_id' => 'fake-cx',
+                'overall_deadline' => 8.0,
+                'per_page_timeout' => 3.0,
+            ]);
+
+            $result = $agent->onFunctionCall('web_search', ['query' => 'alpha beta gamma'], []);
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+
+            // Full scraped-result format, with extracted page content.
+            $this->assertStringContainsString('Web search results for "alpha beta gamma"', $body);
+            $this->assertStringContainsString('Title: Quality Doc', $body);
+            $this->assertStringContainsString('Content: ', $body);
+            $this->assertStringContainsString('alpha beta gamma delta epsilon content', $body);
+            // It scraped a page, so >1 request hit the fixture.
+            $paths = $this->readRequestLog($log);
+            $this->assertGreaterThanOrEqual(2, count($paths));
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+            @\unlink($log);
+        }
+    }
+
+    public function testWebSearchParameterSchemaAdvertisesAllLatencyParams(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\WebSearch($agent, [
+            'api_key'          => 'fake-key',
+            'search_engine_id' => 'fake-cx',
+        ]);
+        $props = $skill->getParameterSchema()['properties'];
+
+        // Every latency / response param the skill reads must be advertised
+        // (guards the recurring "read a param but forgot the schema entry"
+        // drift; mirrors Python test_every_setup_param_is_advertised).
+        foreach (
+            ['response_prefix', 'response_postfix', 'per_page_timeout',
+             'overall_deadline', 'parallel_scrape', 'snippets_only']
+            as $key
+        ) {
+            $this->assertArrayHasKey($key, $props, "schema omits {$key}");
+        }
+
+        // Defaults match the Python reference exactly.
+        $this->assertSame(2.0, $props['per_page_timeout']['default']);
+        $this->assertSame(10.0, $props['overall_deadline']['default']);
+        $this->assertSame('number', $props['per_page_timeout']['type']);
+        $this->assertSame('number', $props['overall_deadline']['type']);
+        $this->assertTrue($props['parallel_scrape']['default']);
+        $this->assertFalse($props['snippets_only']['default']);
+        $this->assertSame('boolean', $props['parallel_scrape']['type']);
+        $this->assertSame('boolean', $props['snippets_only']['type']);
+        $this->assertSame('', $props['response_prefix']['default']);
+        $this->assertSame('', $props['response_postfix']['default']);
+    }
+
+    public function testWebSearchDefaultLatencyParamsAreApplied(): void
+    {
+        // With no latency params supplied, the skill uses the Python
+        // defaults: snippets_only=false (so it scrapes) and a generous
+        // 10s deadline (so a single fast page is not abandoned). The
+        // single quality page is therefore scraped and fully formatted.
+        $cse = (string) \json_encode([
+            'items' => [[
+                'title'   => 'Default Doc',
+                'link'    => 'https://example.com/default',
+                'snippet' => 'snippet',
+            ]],
+        ]);
+        $topic = \str_repeat('weather forecast today details. ', 80);
+        $html = "<html><body>{$topic}</body></html>";
+
+        [$proc, $port, $tmp, $log] = $this->bootWebSearchRoutingFixture($cse, $html);
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+            $agent = $this->registerWebSearchSkill([
+                'api_key'          => 'fake-key',
+                'search_engine_id' => 'fake-cx',
+            ]);
+
+            $result = $agent->onFunctionCall('web_search', ['query' => 'weather forecast'], []);
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+
+            // Default path scraped (not snippets_only) and the page cleared
+            // the default quality threshold.
+            $this->assertStringContainsString('Web search results for "weather forecast"', $body);
+            $this->assertStringContainsString('weather forecast today details', $body);
+            $paths = $this->readRequestLog($log);
+            $this->assertGreaterThanOrEqual(2, count($paths), 'default path must scrape');
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+            @\unlink($log);
+        }
+    }
+
+    public function testWebSearchParallelScrapeFlagIsAcceptedRunsSequential(): void
+    {
+        // parallel_scrape is accepted for API/schema parity. PHP runs
+        // sequentially; the flag must not change correctness — the deadline
+        // is still enforced. Set parallel_scrape=true AND overall_deadline=0
+        // and confirm the same snippet fallback as the sequential deadline
+        // case (i.e. the flag did not bypass the deadline).
+        [$proc, $port, $tmp, $log] = $this->bootWebSearchRoutingFixture(
+            $this->googleCseMultiJsonBody(),
+            '<html><body>body alpha beta gamma</body></html>',
+        );
+        try {
+            \putenv("WEB_SEARCH_BASE_URL=http://127.0.0.1:{$port}");
+            $agent = $this->registerWebSearchSkill([
+                'api_key'          => 'fake-key',
+                'search_engine_id' => 'fake-cx',
+                'parallel_scrape'  => true,
+                'overall_deadline' => 0.0,
+            ]);
+
+            $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
+            $this->assertNotNull($result);
+            $body = $result->toArray()['response'];
+
+            $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
+            $paths = $this->readRequestLog($log);
+            // Deadline honored regardless of the parallel flag: no page fetch.
+            $this->assertCount(1, $paths);
+            $this->assertStringContainsString('customsearch', $paths[0]);
+        } finally {
+            \putenv('WEB_SEARCH_BASE_URL');
+            $this->tearDownWebSearchFixture($proc, $tmp);
+            @\unlink($log);
         }
     }
 

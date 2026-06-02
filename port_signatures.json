@@ -16694,6 +16694,15 @@
               ],
               "returns": "string"
             },
+            "get_parameter_schema": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "get_prompt_sections": {
               "params": [
                 {
