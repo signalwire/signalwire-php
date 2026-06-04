@@ -23,12 +23,44 @@ class HttpClient
     /** @var int Request timeout in seconds. */
     private int $timeout = 30;
 
-    public function __construct(string $projectId, string $token, string $baseUrl)
+    /**
+     * Path to a CA bundle (PEM) used to verify the server certificate over
+     * HTTPS, or null to use cURL's default trust store. TLS peer verification
+     * is always on (cURL's default); this only selects which CA to trust.
+     */
+    private ?string $caBundle;
+
+    /**
+     * @param string|null $caBundle Optional CA bundle (PEM) for HTTPS peer
+     *   verification. Falls back to the SIGNALWIRE_CA_FILE / SSL_CERT_FILE
+     *   env vars (PHP's cURL does not honor those env vars on its own).
+     */
+    public function __construct(string $projectId, string $token, string $baseUrl, ?string $caBundle = null)
     {
         $this->projectId = $projectId;
         $this->token = $token;
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->authHeader = 'Basic ' . base64_encode($projectId . ':' . $token);
+        $this->caBundle = self::resolveCaBundle($caBundle);
+    }
+
+    /**
+     * Resolve the effective CA bundle: explicit arg wins, otherwise the
+     * SIGNALWIRE_CA_FILE then SSL_CERT_FILE env vars (which cURL itself does
+     * not consult), otherwise null (cURL's built-in default store).
+     */
+    private static function resolveCaBundle(?string $explicit): ?string
+    {
+        if ($explicit !== null && $explicit !== '') {
+            return $explicit;
+        }
+        foreach (['SIGNALWIRE_CA_FILE', 'SSL_CERT_FILE'] as $envVar) {
+            $val = getenv($envVar);
+            if (is_string($val) && $val !== '') {
+                return $val;
+            }
+        }
+        return null;
     }
 
     public function getProjectId(): string
@@ -178,7 +210,17 @@ class HttpClient
             CURLOPT_TIMEOUT        => $this->timeout,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_CUSTOMREQUEST  => $method,
+            // Real TLS verification is always on (these are cURL's defaults,
+            // set explicitly for clarity). Never disabled.
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
+
+        // Trust a specific CA bundle when configured (PHP's cURL ignores the
+        // SSL_CERT_FILE / CURL_CA_BUNDLE env vars, so we wire CAINFO directly).
+        if ($this->caBundle !== null) {
+            curl_setopt($ch, CURLOPT_CAINFO, $this->caBundle);
+        }
 
         if ($body !== null && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));

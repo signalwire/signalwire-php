@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ a075304c7a7f134a8ab0a607b19eedd8cd8955c2",
+  "generated_from": "signalwire-php @ e94958dee5ceca0c4160a646964e1d29995a84aa",
   "modules": {
     "signalwire": {
       "classes": {
@@ -701,6 +701,9 @@
           "denoise",
           "denoise_stop",
           "detect",
+          "detect_answering_machine",
+          "detect_digit",
+          "detect_fax",
           "disconnect",
           "dispatch_event",
           "echo",
@@ -717,6 +720,12 @@
           "pay",
           "play",
           "play_and_collect",
+          "play_audio",
+          "play_ringtone",
+          "play_silence",
+          "play_tts",
+          "prompt_audio",
+          "prompt_tts",
           "queue_enter",
           "queue_leave",
           "receive_fax",
@@ -730,7 +739,10 @@
           "transcribe",
           "transfer",
           "unhold",
-          "user_event"
+          "user_event",
+          "wait_for_answered",
+          "wait_for_ending",
+          "wait_for_ringing"
         ],
         "CollectAction": [
           "get_collect_result",
@@ -864,6 +876,7 @@
     "signalwire.relay.web_socket": {
       "classes": {
         "WebSocket": [
+          "__init__",
           "close",
           "connect",
           "is_connected",
@@ -1709,6 +1722,7 @@
           "get_description",
           "get_global_data",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "get_version",
           "register_tools",

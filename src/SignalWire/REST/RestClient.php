@@ -70,7 +70,7 @@ class RestClient
      *                          - "http://127.0.0.1:8080"   → used verbatim (test fixtures)
      *                          Falls back to SIGNALWIRE_SPACE env var.
      */
-    public function __construct(string $projectId = '', string $token = '', string $space = '')
+    public function __construct(string $projectId = '', string $token = '', string $space = '', ?string $caBundle = null)
     {
         $this->projectId = $projectId !== '' ? $projectId : (string) getenv('SIGNALWIRE_PROJECT_ID');
         $this->token     = $token     !== '' ? $token     : (string) getenv('SIGNALWIRE_API_TOKEN');
@@ -98,7 +98,7 @@ class RestClient
         $this->baseUrl = preg_match('#^https?://#i', $this->space)
             ? rtrim($this->space, '/')
             : 'https://' . $this->space;
-        $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl);
+        $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl, $caBundle);
     }
 
     // -----------------------------------------------------------------

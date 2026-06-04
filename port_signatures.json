@@ -8347,6 +8347,15 @@
               ],
               "returns": "string"
             },
+            "ca_file": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
             "calls": {
               "params": [
                 {
@@ -9137,6 +9146,12 @@
                 {
                   "name": "self",
                   "kind": "self"
+                },
+                {
+                  "name": "ca_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -9184,6 +9199,12 @@
                   "type": "float",
                   "required": false,
                   "default": 10
+                },
+                {
+                  "name": "ca_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -9455,6 +9476,12 @@
                   "name": "base_url",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "ca_bundle",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -9844,6 +9871,12 @@
                   "type": "string",
                   "required": false,
                   "default": ""
+                },
+                {
+                  "name": "ca_bundle",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"

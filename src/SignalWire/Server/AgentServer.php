@@ -299,7 +299,13 @@ class AgentServer
     }
 
     /**
-     * Start the server using PHP's built-in server (blocking).
+     * Start the server (blocking).
+     *
+     * Mirrors Python's AgentServer SSL handling: when ``SWML_SSL_ENABLED`` is
+     * truthy and ``SWML_SSL_CERT_PATH`` / ``SWML_SSL_KEY_PATH`` point at a
+     * readable cert + key, the server is served over verified HTTPS via a
+     * Workerman SSL worker. Otherwise it falls back to PHP's built-in
+     * (plaintext HTTP) server.
      */
     public function serve(): void
     {
@@ -310,10 +316,105 @@ class AgentServer
             $this->logger->info("  Agent '{$agent->getName()}' registered at {$route}");
         }
 
+        [$certPath, $keyPath] = $this->resolveSslPaths();
+        if ($certPath !== null && $keyPath !== null) {
+            $this->serveTls($certPath, $keyPath);
+            return;
+        }
+
         $addr = "{$this->host}:{$this->port}";
         $router = $this->createRouterScript();
         $cmd = sprintf('php -S %s %s', escapeshellarg($addr), escapeshellarg($router));
         passthru($cmd);
+    }
+
+    /**
+     * Resolve the SSL cert/key paths from the environment, mirroring
+     * Python's ``SWML_SSL_ENABLED`` / ``SWML_SSL_CERT_PATH`` /
+     * ``SWML_SSL_KEY_PATH`` contract. Returns ``[cert, key]`` when SSL is
+     * enabled AND both files exist; otherwise ``[null, null]`` (plaintext).
+     *
+     * @return array{0: string|null, 1: string|null}
+     */
+    private function resolveSslPaths(): array
+    {
+        $enabled = strtolower((string) (getenv('SWML_SSL_ENABLED') ?: '')) ;
+        if (!in_array($enabled, ['true', '1', 'yes'], true)) {
+            return [null, null];
+        }
+        $cert = getenv('SWML_SSL_CERT_PATH') ?: '';
+        $key  = getenv('SWML_SSL_KEY_PATH') ?: '';
+        if ($cert === '' || !is_file($cert)) {
+            $this->logger->warn("SSL cert not found: {$cert}");
+            return [null, null];
+        }
+        if ($key === '' || !is_file($key)) {
+            $this->logger->warn("SSL key not found: {$key}");
+            return [null, null];
+        }
+        return [$cert, $key];
+    }
+
+    /**
+     * Serve the registered agents over verified HTTPS using a Workerman SSL
+     * worker (blocking — runs the Workerman event loop). PHP's built-in
+     * ``php -S`` server speaks HTTP only, so TLS termination is delegated to
+     * Workerman's ``transport => 'ssl'`` socket with ``local_cert`` /
+     * ``local_pk``. Each inbound HTTP request is translated to the SDK's
+     * existing {@see self::handleRequest()} and the resulting
+     * ``[status, headers, body]`` is written back verbatim.
+     */
+    private function serveTls(string $certPath, string $keyPath): void
+    {
+        if (!class_exists(\Workerman\Worker::class)) {
+            throw new \RuntimeException(
+                'HTTPS serving requires workerman/workerman (composer require workerman/workerman)'
+            );
+        }
+
+        $this->logger->info("Starting with SSL - cert: {$certPath}, key: {$keyPath}");
+
+        $worker = new \Workerman\Worker(
+            "http://{$this->host}:{$this->port}",
+            ['ssl' => [
+                'local_cert'  => $certPath,
+                'local_pk'    => $keyPath,
+                'verify_peer' => false, // server side: we present a cert, we don't require a client cert
+            ]],
+        );
+        $worker->name = 'signalwire-agent-server';
+        $worker->count = 1;
+        $worker->transport = 'ssl';
+
+        $server = $this;
+        $worker->onMessage = static function (
+            \Workerman\Connection\TcpConnection $connection,
+            \Workerman\Protocols\Http\Request $request
+        ) use ($server): void {
+            $headers = [];
+            $rawHeaders = $request->header();
+            if (is_array($rawHeaders)) {
+                foreach ($rawHeaders as $name => $value) {
+                    $headers[(string) $name] = is_array($value) ? implode(', ', $value) : (string) $value;
+                }
+            }
+            $body = $request->rawBody();
+
+            [$status, $respHeaders, $respBody] = $server->handleRequest(
+                $request->method(),
+                $request->path(),
+                $headers,
+                $body === '' ? null : $body,
+            );
+
+            $connection->send(new \Workerman\Protocols\Http\Response(
+                $status,
+                $respHeaders,
+                $respBody,
+            ));
+        };
+
+        \Workerman\Worker::runAll();
     }
 
     // ======================================================================

@@ -27,6 +27,15 @@ class Client
     public array   $contexts = [];
     public bool    $connected = false;
     public ?string $sessionId = null;
+
+    /**
+     * Optional path to a CA bundle (PEM) used to verify the server
+     * certificate on ``wss://`` connections. Sourced from the ``ca_file``
+     * option or the ``SIGNALWIRE_CA_FILE`` / ``SSL_CERT_FILE`` env vars.
+     * Peer verification stays enabled regardless; this only selects which
+     * CA to trust (system store when null).
+     */
+    public ?string $caFile = null;
     public ?string $protocol = null;
     public ?string $authorizationState = null;
     public string  $agent = 'signalwire-agents-php/1.0';
@@ -115,6 +124,21 @@ class Client
             $this->relayPath = $options['path'];
         }
 
+        // CA bundle for wss:// peer verification. Option wins; otherwise fall
+        // back to SIGNALWIRE_CA_FILE then SSL_CERT_FILE (the latter is the
+        // conventional OpenSSL override the test harness sets).
+        if (isset($options['ca_file']) && is_string($options['ca_file']) && $options['ca_file'] !== '') {
+            $this->caFile = $options['ca_file'];
+        } else {
+            foreach (['SIGNALWIRE_CA_FILE', 'SSL_CERT_FILE'] as $envVar) {
+                $val = getenv($envVar);
+                if (is_string($val) && $val !== '') {
+                    $this->caFile = $val;
+                    break;
+                }
+            }
+        }
+
         $this->logger = Logger::getLogger('relay.client');
 
         // Validate credentials at construction. Either project+token or
@@ -170,7 +194,7 @@ class Client
      */
     protected function createSocket(): WebSocket
     {
-        return new WebSocket();
+        return new WebSocket($this->caFile);
     }
 
     /**

@@ -248,6 +248,7 @@ signalwire.relay.message.Message.on_completed: PHP idiomatic getter on the Messa
 signalwire.relay.message.Message.resolve: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.relay_error.RelayError: PHP exception class corresponding to Python's `signalwire.relay.client.RelayError`; lives in its own module because PHP's autoloader is one-class-per-file.
 signalwire.relay.web_socket.WebSocket: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
+signalwire.relay.web_socket.WebSocket.__init__: Port-internal WebSocket transport adapter (phrity/websocket-backed); constructor accepts an optional CA-bundle path for wss:// peer verification. Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.close: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.connect: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.is_connected: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
