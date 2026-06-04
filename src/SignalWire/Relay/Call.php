@@ -165,6 +165,110 @@ class Call
         return $this;
     }
 
+    // ──────────────────────────────────────────────────────────────────
+    //  State-wait convenience (typed waits over the call lifecycle)
+    // ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Lifecycle ordering used by the state-wait short-circuit.
+     * ``created < ringing < answered < ending < ended`` — mirrors Python's
+     * ``Call._wait_for_state`` ordering at relay/call.py.
+     *
+     * @var array<int,string>
+     */
+    private const STATE_ORDER = [
+        Constants::CALL_STATE_CREATED,
+        Constants::CALL_STATE_RINGING,
+        Constants::CALL_STATE_ANSWERED,
+        Constants::CALL_STATE_ENDING,
+        Constants::CALL_STATE_ENDED,
+    ];
+
+    /**
+     * Wait until the call reaches ``$target`` (or a later lifecycle state),
+     * pumping inbound frames via ``$client->readOnce()`` — the same loop
+     * {@see Action::wait()} uses, so we never mock the transport.
+     *
+     * If the call is ALREADY at or past ``$target`` this returns immediately
+     * (matching Python's ``_wait_for_state`` which short-circuits when
+     * ``rank(state) >= rank(target)``). Returns null on timeout.
+     *
+     * @param string         $target  Target lifecycle state.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     */
+    private function waitForState(string $target, int|float|null $timeout): bool
+    {
+        $targetRank = $this->stateRank($target);
+
+        // Already at or past the target -> return immediately.
+        if ($this->stateRank($this->state) >= $targetRank) {
+            return true;
+        }
+
+        $deadline = microtime(true) + ($timeout ?? 30);
+        while ($this->stateRank($this->state) < $targetRank
+            && microtime(true) < $deadline
+        ) {
+            if (method_exists($this->client, 'readOnce')) {
+                $this->client->readOnce();
+            } else {
+                break;
+            }
+        }
+
+        return $this->stateRank($this->state) >= $targetRank;
+    }
+
+    /**
+     * Rank a lifecycle state for the state-wait ordering. Unknown states
+     * rank -1 (never satisfies a forward wait), matching Python's
+     * ``order.index(s) if s in order else -1``.
+     */
+    private function stateRank(string $state): int
+    {
+        $idx = array_search($state, self::STATE_ORDER, true);
+        return $idx === false ? -1 : (int) $idx;
+    }
+
+    /**
+     * Wait until the call is answered (immediate if already answered or past
+     * it). Typed wait over the call lifecycle, mirroring Python's
+     * ``Call.wait_for_answered(timeout)``.
+     *
+     * @return bool True once the call is answered (or already past it); false
+     *   on timeout.
+     */
+    public function waitForAnswered(int|float|null $timeout = null): bool
+    {
+        return $this->waitForState(Constants::CALL_STATE_ANSWERED, $timeout);
+    }
+
+    /**
+     * Wait until the call is ringing (immediate if already ringing or past
+     * it). Typed wait over the call lifecycle, mirroring Python's
+     * ``Call.wait_for_ringing(timeout)``.
+     *
+     * @return bool True once the call is ringing (or already past it); false
+     *   on timeout.
+     */
+    public function waitForRinging(int|float|null $timeout = null): bool
+    {
+        return $this->waitForState(Constants::CALL_STATE_RINGING, $timeout);
+    }
+
+    /**
+     * Wait until the call is ending (immediate if already ending or past it).
+     * Typed wait over the call lifecycle, mirroring Python's
+     * ``Call.wait_for_ending(timeout)``.
+     *
+     * @return bool True once the call is ending (or already past it); false
+     *   on timeout.
+     */
+    public function waitForEnding(int|float|null $timeout = null): bool
+    {
+        return $this->waitForState(Constants::CALL_STATE_ENDING, $timeout);
+    }
+
     /**
      * Mark every outstanding action as completed.  Called when the call
      * enters a terminal state (ended).
@@ -415,6 +519,92 @@ class Call
     }
 
     /**
+     * Play text-to-speech. Typed convenience over {@see play()}.
+     *
+     * Restores the legacy ``play_tts(text=...)`` ergonomics so callers don't
+     * hand-build the ``{type:"tts", params:{...}}`` media shape. Mirrors
+     * Python's ``Call.play_tts(text, *, language, gender, voice, volume,
+     * on_completed)``. Optional ``language`` / ``gender`` / ``voice`` are
+     * nested under ``params`` only when supplied; ``volume`` rides at the
+     * top level via the generic play frame; ``control_id`` / ``on_completed``
+     * are honored from ``$opts``.
+     *
+     * Wire shape: play ``[{type:"tts", params:{text, language?, gender?,
+     * voice?}}]`` with optional top-level ``volume``.
+     *
+     * @param array<string,mixed> $opts ``language``/``gender``/``voice``/
+     *   ``volume`` plus the usual ``control_id`` / ``on_completed``.
+     */
+    public function playTts(string $text, array $opts = []): PlayAction
+    {
+        $params = ['text' => $text];
+        foreach (['language', 'gender', 'voice'] as $key) {
+            if (isset($opts[$key])) {
+                $params[$key] = $opts[$key];
+            }
+        }
+        $playOpts = $this->carryPlayOpts($opts);
+        return $this->play([['type' => 'tts', 'params' => $params]], $playOpts);
+    }
+
+    /**
+     * Play an audio file from a URL. Typed convenience over {@see play()}.
+     *
+     * Mirrors Python's ``Call.play_audio(url, *, volume, on_completed)``.
+     *
+     * Wire shape: play ``[{type:"audio", params:{url}}]`` with optional
+     * top-level ``volume``.
+     *
+     * @param array<string,mixed> $opts ``volume`` plus ``control_id`` /
+     *   ``on_completed``.
+     */
+    public function playAudio(string $url, array $opts = []): PlayAction
+    {
+        $playOpts = $this->carryPlayOpts($opts);
+        return $this->play([['type' => 'audio', 'params' => ['url' => $url]]], $playOpts);
+    }
+
+    /**
+     * Play silence for ``$duration`` seconds. Typed convenience over
+     * {@see play()}. Mirrors Python's ``Call.play_silence(duration, *,
+     * on_completed)``.
+     *
+     * Wire shape: play ``[{type:"silence", params:{duration}}]``.
+     *
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     */
+    public function playSilence(int|float $duration, array $opts = []): PlayAction
+    {
+        $playOpts = $this->carryPlayOpts($opts);
+        return $this->play(
+            [['type' => 'silence', 'params' => ['duration' => $duration]]],
+            $playOpts,
+        );
+    }
+
+    /**
+     * Play a named ringtone by country code. Typed convenience over
+     * {@see play()}. Mirrors Python's ``Call.play_ringtone(name, *,
+     * duration, volume, on_completed)``. ``duration`` is nested under
+     * ``params`` only when supplied; ``volume`` rides at the top level.
+     *
+     * Wire shape: play ``[{type:"ringtone", params:{name, duration?}}]`` with
+     * optional top-level ``volume``.
+     *
+     * @param array<string,mixed> $opts ``duration``/``volume`` plus
+     *   ``control_id`` / ``on_completed``.
+     */
+    public function playRingtone(string $name, array $opts = []): PlayAction
+    {
+        $params = ['name' => $name];
+        if (isset($opts['duration'])) {
+            $params['duration'] = $opts['duration'];
+        }
+        $playOpts = $this->carryPlayOpts($opts);
+        return $this->play([['type' => 'ringtone', 'params' => $params]], $playOpts);
+    }
+
+    /**
      * @param array<string,mixed> $audio  Recording config (``format``, etc.)
      */
     public function record(array $audio, array $opts = []): RecordAction
@@ -460,6 +650,60 @@ class Call
     }
 
     /**
+     * Play TTS then collect input. Typed media over {@see playAndCollect()}.
+     *
+     * Mirrors Python's ``Call.prompt_tts(text, collect, *, language, gender,
+     * voice, volume, on_completed)``. Builds the same ``{type:"tts"}`` media
+     * shape as {@see playTts()} and forwards the caller's ``$collect`` object
+     * verbatim.
+     *
+     * Wire shape: play_and_collect ``[{type:"tts", params:{text, language?,
+     * gender?, voice?}}]`` + the given ``collect`` with optional top-level
+     * ``volume``.
+     *
+     * @param array<string,mixed> $collect Collect spec (``digits``/``speech``/…).
+     * @param array<string,mixed> $opts ``language``/``gender``/``voice``/
+     *   ``volume`` plus ``control_id`` / ``on_completed``.
+     */
+    public function promptTts(string $text, array $collect, array $opts = []): CollectAction
+    {
+        $params = ['text' => $text];
+        foreach (['language', 'gender', 'voice'] as $key) {
+            if (isset($opts[$key])) {
+                $params[$key] = $opts[$key];
+            }
+        }
+        $playOpts = $this->carryPlayOpts($opts);
+        return $this->playAndCollect(
+            [['type' => 'tts', 'params' => $params]],
+            $collect,
+            $playOpts,
+        );
+    }
+
+    /**
+     * Play an audio file then collect input. Typed media over
+     * {@see playAndCollect()}. Mirrors Python's ``Call.prompt_audio(url,
+     * collect, *, volume, on_completed)``.
+     *
+     * Wire shape: play_and_collect ``[{type:"audio", params:{url}}]`` + the
+     * given ``collect`` with optional top-level ``volume``.
+     *
+     * @param array<string,mixed> $collect Collect spec (``digits``/``speech``/…).
+     * @param array<string,mixed> $opts ``volume`` plus ``control_id`` /
+     *   ``on_completed``.
+     */
+    public function promptAudio(string $url, array $collect, array $opts = []): CollectAction
+    {
+        $playOpts = $this->carryPlayOpts($opts);
+        return $this->playAndCollect(
+            [['type' => 'audio', 'params' => ['url' => $url]]],
+            $collect,
+            $playOpts,
+        );
+    }
+
+    /**
      * @param array<string,mixed> $detect Detection request
      *   (``{type: 'machine'|'fax'|'digit', params: {...}}``).
      */
@@ -470,6 +714,100 @@ class Call
             DetectAction::class,
             ['detect' => $detect] + $opts,
             $opts,
+        );
+    }
+
+    /**
+     * Detect DTMF digits. Typed convenience over {@see detect()}.
+     *
+     * Mirrors Python's ``Call.detect_digit(*, digits, timeout,
+     * on_completed)``. ``digits`` is nested under ``params`` only when
+     * supplied; ``timeout`` rides at the top level via the generic detect
+     * frame.
+     *
+     * Wire shape: detect ``{type:"digit", params:{digits?}}`` with optional
+     * top-level ``timeout``.
+     *
+     * @param array<string,mixed> $opts ``digits``/``timeout`` plus
+     *   ``control_id`` / ``on_completed``.
+     */
+    public function detectDigit(array $opts = []): DetectAction
+    {
+        $params = [];
+        if (isset($opts['digits'])) {
+            $params['digits'] = $opts['digits'];
+        }
+        $detectOpts = $this->carryDetectOpts($opts);
+        // Empty params must serialize as a JSON object ({}), not an array ([]) —
+        // the RELAY detect schema requires /detect/params to be an object.
+        return $this->detect(
+            ['type' => 'digit', 'params' => $params ?: (object) []],
+            $detectOpts,
+        );
+    }
+
+    /**
+     * Detect human vs answering machine (AMD). Typed convenience over
+     * {@see detect()}. Mirrors Python's ``Call.detect_answering_machine(*,
+     * initial_timeout, end_silence_timeout, machine_voice_threshold,
+     * machine_words_threshold, detect_interruptions, detect_message_end,
+     * timeout, on_completed)``. Only the AMD keys the caller supplies are
+     * emitted under ``params`` (matches Python's only-provided-keys behavior);
+     * ``timeout`` rides at the top level.
+     *
+     * Wire shape: detect ``{type:"machine", params:{...only-provided...}}``
+     * with optional top-level ``timeout``.
+     *
+     * @param array<string,mixed> $opts any of the AMD tuning keys above plus
+     *   ``timeout`` / ``control_id`` / ``on_completed``.
+     */
+    public function detectAnsweringMachine(array $opts = []): DetectAction
+    {
+        $params = [];
+        foreach ([
+            'initial_timeout',
+            'end_silence_timeout',
+            'machine_voice_threshold',
+            'machine_words_threshold',
+            'detect_interruptions',
+            'detect_message_end',
+        ] as $key) {
+            if (isset($opts[$key])) {
+                $params[$key] = $opts[$key];
+            }
+        }
+        $detectOpts = $this->carryDetectOpts($opts);
+        // Empty params must serialize as a JSON object ({}), not an array ([]).
+        return $this->detect(
+            ['type' => 'machine', 'params' => $params ?: (object) []],
+            $detectOpts,
+        );
+    }
+
+    /**
+     * Detect a fax tone (CED/CNG). Typed convenience over {@see detect()}.
+     *
+     * Mirrors Python's ``Call.detect_fax(*, tone, timeout, on_completed)``.
+     * ``tone`` is nested under ``params`` only when supplied; ``timeout``
+     * rides at the top level.
+     *
+     * Wire shape: detect ``{type:"fax", params:{tone?}}`` with optional
+     * top-level ``timeout``.
+     *
+     * @param array<string,mixed> $opts ``tone``/``timeout`` plus
+     *   ``control_id`` / ``on_completed``.
+     */
+    public function detectFax(array $opts = []): DetectAction
+    {
+        $params = [];
+        if (isset($opts['tone'])) {
+            $params['tone'] = $opts['tone'];
+        }
+        $detectOpts = $this->carryDetectOpts($opts);
+        // Empty params must serialize as a JSON object ({}), not an array ([]).
+        return $this->detect(
+            ['type' => 'fax', 'params' => $params ?: (object) []],
+            $detectOpts,
         );
     }
 
@@ -636,6 +974,56 @@ class Call
         }
 
         return $action;
+    }
+
+    /**
+     * Build the ``$opts`` array forwarded to {@see play()} /
+     * {@see playAndCollect()} from a convenience caller's ``$opts``. Carries
+     * the top-level ``volume`` (when supplied) plus the pass-through
+     * ``control_id`` / ``on_completed`` controls; the media-shaping keys
+     * (text/url/duration/language/gender/voice/name) are consumed by the
+     * caller and deliberately NOT forwarded onto the wire frame.
+     *
+     * @param array<string,mixed> $opts
+     * @return array<string,mixed>
+     */
+    private function carryPlayOpts(array $opts): array
+    {
+        $out = [];
+        if (isset($opts['volume'])) {
+            $out['volume'] = $opts['volume'];
+        }
+        if (isset($opts['control_id'])) {
+            $out['control_id'] = $opts['control_id'];
+        }
+        if (isset($opts['on_completed'])) {
+            $out['on_completed'] = $opts['on_completed'];
+        }
+        return $out;
+    }
+
+    /**
+     * Build the ``$opts`` array forwarded to {@see detect()} from a
+     * convenience caller's ``$opts``. Carries the top-level ``timeout`` (when
+     * supplied) plus ``control_id`` / ``on_completed``; the detect ``params``
+     * keys are consumed by the caller and not forwarded directly.
+     *
+     * @param array<string,mixed> $opts
+     * @return array<string,mixed>
+     */
+    private function carryDetectOpts(array $opts): array
+    {
+        $out = [];
+        if (isset($opts['timeout'])) {
+            $out['timeout'] = $opts['timeout'];
+        }
+        if (isset($opts['control_id'])) {
+            $out['control_id'] = $opts['control_id'];
+        }
+        if (isset($opts['on_completed'])) {
+            $out['on_completed'] = $opts['on_completed'];
+        }
+        return $out;
     }
 
     /**

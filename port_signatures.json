@@ -7000,6 +7000,51 @@
               ],
               "returns": "class:signalwire.relay.call.DetectAction"
             },
+            "detect_answering_machine": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.DetectAction"
+            },
+            "detect_digit": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.DetectAction"
+            },
+            "detect_fax": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.DetectAction"
+            },
             "device": {
               "params": [
                 {
@@ -7281,6 +7326,136 @@
               ],
               "returns": "class:signalwire.relay.call.CollectAction"
             },
+            "play_audio": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.PlayAction"
+            },
+            "play_ringtone": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.PlayAction"
+            },
+            "play_silence": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "duration",
+                  "type": "union<int,float>",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.PlayAction"
+            },
+            "play_tts": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "text",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.PlayAction"
+            },
+            "prompt_audio": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "collect",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.CollectAction"
+            },
+            "prompt_tts": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "text",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "collect",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "opts",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.relay.call.CollectAction"
+            },
             "queue_enter": {
               "params": [
                 {
@@ -7546,6 +7721,51 @@
                 }
               ],
               "returns": "any"
+            },
+            "wait_for_answered": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "timeout",
+                  "type": "optional<union<int,float>>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "bool"
+            },
+            "wait_for_ending": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "timeout",
+                  "type": "optional<union<int,float>>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "bool"
+            },
+            "wait_for_ringing": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "timeout",
+                  "type": "optional<union<int,float>>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "bool"
             }
           }
         },
