@@ -2901,7 +2901,7 @@
                 },
                 {
                   "name": "direction",
-                  "type": "string",
+                  "type": "union<class:signalwire.swaig.RecordDirection,string>",
                   "required": false,
                   "default": "both"
                 }
@@ -3342,7 +3342,7 @@
                 },
                 {
                   "name": "direction",
-                  "type": "string",
+                  "type": "union<class:signalwire.swaig.TapDirection,string>",
                   "required": false,
                   "default": "both"
                 },
@@ -3557,7 +3557,7 @@
                 },
                 {
                   "name": "level",
-                  "type": "string",
+                  "type": "union<class:signalwire.logging.LogLevel,string>",
                   "required": true
                 }
               ],
@@ -3585,7 +3585,7 @@
                 },
                 {
                   "name": "level",
-                  "type": "string",
+                  "type": "union<class:signalwire.logging.LogLevel,string>",
                   "required": true
                 }
               ],
@@ -5665,6 +5665,65 @@
                 }
               ],
               "returns": "bool"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.logging.log_level": {
+      "classes": {
+        "LogLevel": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }
@@ -17132,6 +17191,124 @@
                 }
               ],
               "returns": "bool"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.swaig.record_direction": {
+      "classes": {
+        "RecordDirection": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.swaig.tap_direction": {
+      "classes": {
+        "TapDirection": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }

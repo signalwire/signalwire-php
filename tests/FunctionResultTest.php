@@ -6,6 +6,8 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\SWAIG\RecordDirection;
+use SignalWire\SWAIG\TapDirection;
 
 class FunctionResultTest extends TestCase
 {
@@ -934,5 +936,54 @@ class FunctionResultTest extends TestCase
         $this->assertSame($fr, $fr->rpcAiMessage('id', 'msg'));
         $this->assertSame($fr, $fr->rpcAiUnhold('id'));
         $this->assertSame($fr, $fr->simulateUserInput('txt'));
+    }
+
+    /**
+     * recordCall() accepts the typed RecordDirection enum and a bare string
+     * interchangeably for $direction, producing the identical emitted action.
+     * Uses RecordDirection::Listen — the value that distinguishes record_call's
+     * set {speak,listen,both} from tap's {speak,hear,both}; the Python reference
+     * validates these as two separate lists. No mocks — assertions read the real
+     * built SWML action payload.
+     */
+    public function testRecordCallAcceptsRecordDirectionEnumOrString(): void
+    {
+        // The backed enum's value is the canonical wire direction string, and
+        // record_call uses 'listen' (not tap's 'hear').
+        $this->assertSame('listen', RecordDirection::Listen->value);
+
+        $enum = new FunctionResult();
+        $enum->recordCall('rec-1', true, 'mp3', RecordDirection::Listen);
+        $string = new FunctionResult();
+        $string->recordCall('rec-1', true, 'mp3', 'listen');
+
+        $this->assertSame(
+            $string->toArray()['action'][0]['record_call'],
+            $enum->toArray()['action'][0]['record_call'],
+            'recordCall enum and string $direction must emit the identical record_call',
+        );
+        // And the wire value really is the normalized string.
+        $this->assertSame(
+            'listen',
+            $enum->toArray()['action'][0]['record_call']['direction'],
+        );
+    }
+
+    public function testTapAcceptsTapDirectionEnumOrString(): void
+    {
+        $enum = new FunctionResult();
+        $enum->tap('wss://tap.example.com', 'tap-1', TapDirection::Hear, 'PCMA');
+        $string = new FunctionResult();
+        $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
+
+        $this->assertSame(
+            $string->toArray()['action'][0]['tap'],
+            $enum->toArray()['action'][0]['tap'],
+            'tap enum and string $direction must emit the identical tap action',
+        );
+        $this->assertSame(
+            'hear',
+            $enum->toArray()['action'][0]['tap']['direction'],
+        );
     }
 }

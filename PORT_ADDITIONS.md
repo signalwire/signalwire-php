@@ -123,6 +123,15 @@ signalwire.core.skill_manager.SkillManager.list_skills: idiomatic PHP surface ex
 signalwire.skills.skill_name.SkillName.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the SkillName closed-set enum; addSkill/removeSkill/hasSkill accept SkillName|string so built-in skill names are typo-checked at the call site, with string preserved for parity (Python uses bare str) and custom skills.
 signalwire.skills.skill_name.SkillName.from: php_enum_idiom: PHP backed-enum auto-method (see SkillName.cases).
 signalwire.skills.skill_name.SkillName.try_from: php_enum_idiom: PHP backed-enum auto-method (see SkillName.cases).
+signalwire.logging.log_level.LogLevel.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the LogLevel closed-set enum (debug/info/warn/error); Logger::setLevel/shouldLog accept LogLevel|string so the level is typo-checked at the call site, with string preserved for parity (Python configures stdlib logging with bare names).
+signalwire.logging.log_level.LogLevel.from: php_enum_idiom: PHP backed-enum auto-method (see LogLevel.cases).
+signalwire.logging.log_level.LogLevel.try_from: php_enum_idiom: PHP backed-enum auto-method (see LogLevel.cases).
+signalwire.swaig.tap_direction.TapDirection.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the TapDirection closed-set enum (speak/hear/both); FunctionResult::tap accepts TapDirection|string so the direction is typo-checked at the call site, with string preserved for parity (Python's tap takes bare str — the valid set is ["speak","hear","both"]; record_call validates a distinct set, see RecordDirection).
+signalwire.swaig.tap_direction.TapDirection.from: php_enum_idiom: PHP backed-enum auto-method (see TapDirection.cases).
+signalwire.swaig.tap_direction.TapDirection.try_from: php_enum_idiom: PHP backed-enum auto-method (see TapDirection.cases).
+signalwire.swaig.record_direction.RecordDirection.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the RecordDirection closed-set enum (speak/listen/both); FunctionResult::recordCall accepts RecordDirection|string so the direction is typo-checked at the call site, with string preserved for parity (Python's record_call takes bare str — the valid set is ["speak","listen","both"], which uses "listen" where tap uses "hear"; see TapDirection).
+signalwire.swaig.record_direction.RecordDirection.from: php_enum_idiom: PHP backed-enum auto-method (see RecordDirection.cases).
+signalwire.swaig.record_direction.RecordDirection.try_from: php_enum_idiom: PHP backed-enum auto-method (see RecordDirection.cases).
 signalwire.core.swml_builder.Document: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_builder.Document.__init__: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.
 signalwire.core.swml_builder.Document.add_raw_verb: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.

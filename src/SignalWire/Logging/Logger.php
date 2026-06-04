@@ -58,9 +58,14 @@ class Logger
         return $this->level;
     }
 
-    public function setLevel(string $level): void
+    /**
+     * @param LogLevel|string $level severity level — the typed {@see LogLevel}
+     *   enum (typo-checked at the call site) or a bare string (parity with the
+     *   Python reference). Unknown string levels are ignored, as before.
+     */
+    public function setLevel(LogLevel|string $level): void
     {
-        $lower = strtolower($level);
+        $lower = strtolower($level instanceof LogLevel ? $level->value : $level);
         if (isset(self::LEVELS[$lower])) {
             $this->level = $lower;
         }
@@ -76,12 +81,17 @@ class Logger
         $this->suppressed = $suppressed;
     }
 
-    public function shouldLog(string $level): bool
+    /**
+     * @param LogLevel|string $level severity to test — the typed
+     *   {@see LogLevel} enum or a bare string (parity with Python).
+     */
+    public function shouldLog(LogLevel|string $level): bool
     {
         if ($this->suppressed) {
             return false;
         }
-        $levelNum = self::LEVELS[strtolower($level)] ?? 1;
+        $name = strtolower($level instanceof LogLevel ? $level->value : $level);
+        $levelNum = self::LEVELS[$name] ?? 1;
         $currentNum = self::LEVELS[$this->level] ?? 1;
         return $levelNum >= $currentNum;
     }

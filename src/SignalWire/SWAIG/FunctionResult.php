@@ -245,16 +245,23 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param RecordDirection|string $direction stream direction — the typed
+     *   {@see RecordDirection} enum (typo-checked at the call site) or a bare
+     *   string (parity with Python's `record_call`). Normalized to the wire
+     *   string ('speak'/'listen'/'both'). Note `record_call` uses 'listen'
+     *   where {@see FunctionResult::tap()} uses 'hear' — distinct closed sets.
+     */
     public function recordCall(
         string $controlId = '',
         bool $stereo = false,
         string $format = 'wav',
-        string $direction = 'both'
+        RecordDirection|string $direction = 'both'
     ): self {
         $record = [
             'stereo' => $stereo,
             'format' => $format,
-            'direction' => $direction,
+            'direction' => $direction instanceof RecordDirection ? $direction->value : $direction,
             'initiator' => 'system',
         ];
 
@@ -377,15 +384,21 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param TapDirection|string $direction stream direction — the typed
+     *   {@see TapDirection} enum (typo-checked at the call site) or a bare
+     *   string (parity with Python's `tap`). Normalized to the wire string
+     *   ('speak'/'hear'/'both').
+     */
     public function tap(
         string $uri,
         string $controlId = '',
-        string $direction = 'both',
+        TapDirection|string $direction = 'both',
         string $codec = 'PCMU'
     ): self {
         $tapObj = [
             'uri' => $uri,
-            'direction' => $direction,
+            'direction' => $direction instanceof TapDirection ? $direction->value : $direction,
             'codec' => $codec,
         ];
 

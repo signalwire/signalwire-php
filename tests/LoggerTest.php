@@ -6,6 +6,7 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Logging\Logger;
+use SignalWire\Logging\LogLevel;
 
 class LoggerTest extends TestCase
 {
@@ -360,5 +361,38 @@ PHP;
         Logger::reset();
         $b = Logger::getLogger('test');
         $this->assertNotSame($a, $b);
+    }
+
+    /**
+     * setLevel()/shouldLog() accept the typed LogLevel enum and a bare string
+     * interchangeably: both drive the identical level state and filtering. No
+     * mocks — the assertions read the real configured level and the real
+     * shouldLog() decision.
+     */
+    public function testSetLevelAcceptsLogLevelEnumOrString(): void
+    {
+        // The backed enum's value is the canonical level string the Logger keys on.
+        $this->assertSame('warn', LogLevel::Warn->value);
+
+        // Configure via the typed enum.
+        $enumLogger = Logger::getLogger('enum-level');
+        $enumLogger->setLevel(LogLevel::Warn);
+        $this->assertSame('warn', $enumLogger->getLevel());
+        // Real filtering: below-threshold suppressed, at/above emitted.
+        $this->assertFalse($enumLogger->shouldLog(LogLevel::Info));
+        $this->assertFalse($enumLogger->shouldLog('info'));          // string arg, same answer
+        $this->assertTrue($enumLogger->shouldLog(LogLevel::Warn));
+        $this->assertTrue($enumLogger->shouldLog('error'));
+
+        // Parity: the bare string configures the identical state (Python uses str).
+        $stringLogger = Logger::getLogger('string-level');
+        $stringLogger->setLevel('warn');
+        $this->assertSame(
+            $enumLogger->getLevel(),
+            $stringLogger->getLevel(),
+            'enum and string setLevel must yield the same level',
+        );
+        $this->assertFalse($stringLogger->shouldLog(LogLevel::Info));
+        $this->assertTrue($stringLogger->shouldLog(LogLevel::Warn));
     }
 }
