@@ -4201,7 +4201,7 @@
                 },
                 {
                   "name": "name",
-                  "type": "string",
+                  "type": "union<class:signalwire.skills.SkillName,string>",
                   "required": true
                 },
                 {
@@ -4221,7 +4221,7 @@
                 },
                 {
                   "name": "name",
-                  "type": "string",
+                  "type": "union<class:signalwire.skills.SkillName,string>",
                   "required": true
                 }
               ],
@@ -4244,7 +4244,7 @@
                 },
                 {
                   "name": "name",
-                  "type": "string",
+                  "type": "union<class:signalwire.skills.SkillName,string>",
                   "required": true
                 }
               ],
@@ -16654,6 +16654,65 @@
             "reset": {
               "params": [],
               "returns": "void"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.skills.skill_name": {
+      "classes": {
+        "SkillName": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }

@@ -12,6 +12,7 @@ use SignalWire\Security\SessionManager;
 use SignalWire\Contexts\ContextBuilder;
 use SignalWire\POM\PromptObjectModel;
 use SignalWire\Skills\SkillManager;
+use SignalWire\Skills\SkillName;
 
 class AgentBase extends Service
 {
@@ -872,15 +873,15 @@ class AgentBase extends Service
     /**
      * Add a skill by name.
      */
-    public function addSkill(string $name, array $params = []): self
+    public function addSkill(SkillName|string $name, array $params = []): self
     {
-        $this->getSkillManager()->loadSkill($name, $params);
+        $this->getSkillManager()->loadSkill($name instanceof SkillName ? $name->value : $name, $params);
         return $this;
     }
 
-    public function removeSkill(string $name): self
+    public function removeSkill(SkillName|string $name): self
     {
-        $this->getSkillManager()->unloadSkill($name);
+        $this->getSkillManager()->unloadSkill($name instanceof SkillName ? $name->value : $name);
         return $this;
     }
 
@@ -892,12 +893,12 @@ class AgentBase extends Service
         return $this->skillManager->listSkills();
     }
 
-    public function hasSkill(string $name): bool
+    public function hasSkill(SkillName|string $name): bool
     {
         if ($this->skillManager === null) {
             return false;
         }
-        return $this->skillManager->hasSkill($name);
+        return $this->skillManager->hasSkill($name instanceof SkillName ? $name->value : $name);
     }
 
     // ══════════════════════════════════════════════════════════════════════

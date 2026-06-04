@@ -7,6 +7,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Skills\SkillRegistry;
 use SignalWire\Skills\SkillManager;
+use SignalWire\Skills\SkillName;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 use SignalWire\SWML\Schema;
@@ -320,6 +321,27 @@ class SkillsTest extends TestCase
         $removed = $manager->unloadSkill('datetime');
         $this->assertTrue($removed);
         $this->assertFalse($manager->hasSkill('datetime'));
+    }
+
+    public function testAddSkillAcceptsSkillNameEnumOrString(): void
+    {
+        // The backed enum's value is the canonical wire string.
+        $this->assertSame('datetime', SkillName::Datetime->value);
+
+        // addSkill() via the typed enum loads the identical skill as the bare
+        // string; hasSkill()/removeSkill() accept the enum too.
+        $agent = $this->makeAgent();
+        $agent->addSkill(SkillName::Datetime, ['skip_prompt' => true]);
+        $this->assertTrue($agent->hasSkill('datetime'));           // string lookup
+        $this->assertTrue($agent->hasSkill(SkillName::Datetime));  // enum lookup — same skill
+
+        $agent->removeSkill(SkillName::Datetime);
+        $this->assertFalse($agent->hasSkill('datetime'));
+
+        // Parity: the bare string still works identically (Python uses str).
+        $stringAgent = $this->makeAgent();
+        $stringAgent->addSkill('datetime', ['skip_prompt' => true]);
+        $this->assertTrue($stringAgent->hasSkill(SkillName::Datetime));
     }
 
     public function testSkillManagerListSkillsReturnsLoadedSkillKeys(): void

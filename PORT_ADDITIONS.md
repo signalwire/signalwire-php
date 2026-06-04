@@ -120,6 +120,9 @@ signalwire.core.skill_base.SkillBase.get_required_env_vars: PHP idiomatic access
 signalwire.core.skill_base.SkillBase.get_version: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.supports_multiple_instances: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_manager.SkillManager.list_skills: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.skills.skill_name.SkillName.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the SkillName closed-set enum; addSkill/removeSkill/hasSkill accept SkillName|string so built-in skill names are typo-checked at the call site, with string preserved for parity (Python uses bare str) and custom skills.
+signalwire.skills.skill_name.SkillName.from: php_enum_idiom: PHP backed-enum auto-method (see SkillName.cases).
+signalwire.skills.skill_name.SkillName.try_from: php_enum_idiom: PHP backed-enum auto-method (see SkillName.cases).
 signalwire.core.swml_builder.Document: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_builder.Document.__init__: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.
 signalwire.core.swml_builder.Document.add_raw_verb: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.
