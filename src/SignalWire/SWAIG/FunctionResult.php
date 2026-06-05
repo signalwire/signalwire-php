@@ -90,49 +90,63 @@ class FunctionResult
         return $this;
     }
 
-    public function swmlTransfer(string $dest, string $aiResponse = '', bool $final = false): self
+    /**
+     * Add a SWML transfer action with AI-response setup for when the transfer
+     * completes. Parity with the Python reference `swml_transfer`: builds a SWML
+     * document whose `main` runs `{set:{ai_response}}` then `{transfer:{dest}}`,
+     * and emits a top-level `transfer` = str($final).lower() that marks the call
+     * (non-)final. `$final` defaults TRUE (permanent transfer), same as connect().
+     */
+    public function swmlTransfer(string $dest, string $aiResponse, bool $final = true): self
     {
-        $this->actions[] = ['transfer_uri' => $dest];
-
-        if ($aiResponse !== '') {
-            $this->response = $aiResponse;
-        }
+        $this->actions[] = [
+            'SWML' => [
+                'version' => '1.0.0',
+                'sections' => [
+                    'main' => [
+                        ['set' => ['ai_response' => $aiResponse]],
+                        ['transfer' => ['dest' => $dest]],
+                    ],
+                ],
+            ],
+            'transfer' => $final ? 'true' : 'false',
+        ];
 
         return $this;
     }
 
     public function hangup(): self
     {
-        $this->actions[] = ['hangup' => new \stdClass()];
+        // Python: add_action("hangup", True) -> {"hangup": true}.
+        $this->actions[] = ['hangup' => true];
         return $this;
     }
 
     public function hold(int $timeout = 300): self
     {
+        // Python: add_action("hold", timeout) -> {"hold": <int>} (bare int,
+        // not an object). Clamp to [0, 900] first (matches the reference).
         $clamped = max(0, min(900, $timeout));
-        $this->actions[] = ['hold' => ['timeout' => $clamped]];
+        $this->actions[] = ['hold' => $clamped];
         return $this;
     }
 
-    public function waitForUser(?bool $enabled = null, ?int $timeout = null, ?bool $answerFirst = null): self
+    public function waitForUser(?bool $enabled = null, ?int $timeout = null, bool $answerFirst = false): self
     {
-        if ($enabled === null && $timeout === null && $answerFirst === null) {
-            $this->actions[] = ['wait_for_user' => true];
-            return $this;
+        // Python emits a SCALAR (not an object): "answer_first" string,
+        // a timeout int, an enabled bool, or true as the final fallback —
+        // in that precedence order.
+        if ($answerFirst) {
+            $waitValue = 'answer_first';
+        } elseif ($timeout !== null) {
+            $waitValue = $timeout;
+        } elseif ($enabled !== null) {
+            $waitValue = $enabled;
+        } else {
+            $waitValue = true;
         }
 
-        $params = [];
-        if ($enabled !== null) {
-            $params['enabled'] = $enabled;
-        }
-        if ($timeout !== null) {
-            $params['timeout'] = $timeout;
-        }
-        if ($answerFirst !== null) {
-            $params['answer_first'] = $answerFirst;
-        }
-
-        $this->actions[] = ['wait_for_user' => $params];
+        $this->actions[] = ['wait_for_user' => $waitValue];
         return $this;
     }
 
@@ -150,9 +164,14 @@ class FunctionResult
         return $this;
     }
 
-    public function removeGlobalData(array $keys): self
+    /**
+     * @param string|list<string> $keys single key or list of keys to remove
+     */
+    public function removeGlobalData(string|array $keys): self
     {
-        $this->actions[] = ['remove_global_data' => ['keys' => $keys]];
+        // Python: add_action("unset_global_data", keys) -> emits the value
+        // (string or list) directly, NOT wrapped in {"keys": ...}.
+        $this->actions[] = ['unset_global_data' => $keys];
         return $this;
     }
 
@@ -162,27 +181,46 @@ class FunctionResult
         return $this;
     }
 
-    public function removeMetadata(array $keys): self
+    /**
+     * @param string|list<string> $keys single key or list of keys to remove
+     */
+    public function removeMetadata(string|array $keys): self
     {
-        $this->actions[] = ['remove_meta_data' => ['keys' => $keys]];
+        // Python: add_action("unset_meta_data", keys) -> emits the value
+        // directly (parity with remove_global_data).
+        $this->actions[] = ['unset_meta_data' => $keys];
         return $this;
     }
 
     public function swmlUserEvent(array $eventData): self
     {
-        $this->actions[] = ['user_event' => $eventData];
+        // Python wraps the event in a SWML document with the data nested under
+        // user_event.event. Note the key order here is {sections, version}
+        // (sections first) — matching the reference's swml_user_event dict.
+        $swmlAction = [
+            'sections' => [
+                'main' => [
+                    ['user_event' => ['event' => $eventData]],
+                ],
+            ],
+            'version' => '1.0.0',
+        ];
+
+        $this->actions[] = ['SWML' => $swmlAction];
         return $this;
     }
 
     public function swmlChangeStep(string $stepName): self
     {
-        $this->actions[] = ['context_switch' => ['step' => $stepName]];
+        // Python: add_action("change_step", step_name) -> bare string value.
+        $this->actions[] = ['change_step' => $stepName];
         return $this;
     }
 
     public function swmlChangeContext(string $contextName): self
     {
-        $this->actions[] = ['context_switch' => ['context' => $contextName]];
+        // Python: add_action("change_context", context_name) -> bare string.
+        $this->actions[] = ['change_context' => $contextName];
         return $this;
     }
 
@@ -213,15 +251,17 @@ class FunctionResult
     }
 
     /**
-     * @param string|bool $text
+     * After first send, replace the tool_call+result pair in history.
+     *
+     * @param string|bool $text String -> replace the tool_call with an
+     *   assistant message containing this text. True (default) -> remove the
+     *   pair entirely.
      */
-    public function replaceInHistory($text): self
+    public function replaceInHistory(string|bool $text = true): self
     {
-        if ($text === true) {
-            $this->actions[] = ['replace_history' => 'summary'];
-        } else {
-            $this->actions[] = ['replace_history' => (string) $text];
-        }
+        // Python: add_action("replace_in_history", text) -> emits the value
+        // as-is (the string, or the literal boolean true — not "summary").
+        $this->actions[] = ['replace_in_history' => $text];
         return $this;
     }
 
@@ -235,56 +275,126 @@ class FunctionResult
 
     public function playBackgroundFile(string $filename, bool $wait = false): self
     {
+        // Python action name is "playback_bg". With wait, the value is an
+        // object {file, wait:true}; without, it is the bare filename string.
         if ($wait) {
-            $this->actions[] = ['play_background_file_wait' => $filename];
+            $this->actions[] = ['playback_bg' => ['file' => $filename, 'wait' => true]];
         } else {
-            $this->actions[] = ['play_background_file' => $filename];
+            $this->actions[] = ['playback_bg' => $filename];
         }
         return $this;
     }
 
     public function stopBackgroundFile(): self
     {
-        $this->actions[] = ['stop_background_file' => true];
+        // Python action name is "stop_playback_bg" (value true).
+        $this->actions[] = ['stop_playback_bg' => true];
         return $this;
     }
 
     /**
+     * Start background call recording using SWML.
+     *
+     * Full parity with the Python reference `record_call`: validates the
+     * format ({wav,mp3,mp4}) and direction ({speak,listen,both}) closed sets,
+     * ALWAYS emits stereo/format/direction/beep/input_sensitivity, adds the
+     * optional fields only when supplied, and wraps the {"record_call": ...}
+     * verb in a full SWML document emitted via {@see FunctionResult::executeSwml()}
+     * (so it lands under the "SWML" action key).
+     *
      * @param RecordDirection|string $direction stream direction — the typed
      *   {@see RecordDirection} enum (typo-checked at the call site) or a bare
      *   string (parity with Python's `record_call`). Normalized to the wire
      *   string ('speak'/'listen'/'both'). Note `record_call` uses 'listen'
      *   where {@see FunctionResult::tap()} uses 'hear' — distinct closed sets.
+     * @throws \InvalidArgumentException on an invalid format or direction.
      */
     public function recordCall(
-        string $controlId = '',
+        ?string $controlId = null,
         bool $stereo = false,
         string $format = 'wav',
-        RecordDirection|string $direction = 'both'
+        RecordDirection|string $direction = 'both',
+        ?string $terminators = null,
+        bool $beep = false,
+        float $inputSensitivity = 44.0,
+        ?float $initialTimeout = null,
+        ?float $endSilenceTimeout = null,
+        ?float $maxLength = null,
+        ?string $statusUrl = null
     ): self {
+        $directionStr = $direction instanceof RecordDirection ? $direction->value : $direction;
+
+        // Validate format (matches the SWML record_call verb schema).
+        $validFormats = ['wav', 'mp3', 'mp4'];
+        if (!in_array($format, $validFormats, true)) {
+            throw new \InvalidArgumentException("format must be 'wav', 'mp3', or 'mp4'");
+        }
+
+        // Validate direction.
+        $validDirections = ['speak', 'listen', 'both'];
+        if (!in_array($directionStr, $validDirections, true)) {
+            throw new \InvalidArgumentException("direction must be 'speak', 'listen', or 'both'");
+        }
+
+        // Always-emitted fields (parity: stereo/format/direction/beep/
+        // input_sensitivity are present even at their defaults).
         $record = [
             'stereo' => $stereo,
             'format' => $format,
-            'direction' => $direction instanceof RecordDirection ? $direction->value : $direction,
-            'initiator' => 'system',
+            'direction' => $directionStr,
+            'beep' => $beep,
+            'input_sensitivity' => $inputSensitivity,
         ];
 
-        if ($controlId !== '') {
+        if ($controlId !== null && $controlId !== '') {
             $record['control_id'] = $controlId;
         }
+        if ($terminators !== null && $terminators !== '') {
+            $record['terminators'] = $terminators;
+        }
+        if ($initialTimeout !== null) {
+            $record['initial_timeout'] = $initialTimeout;
+        }
+        if ($endSilenceTimeout !== null) {
+            $record['end_silence_timeout'] = $endSilenceTimeout;
+        }
+        if ($maxLength !== null) {
+            $record['max_length'] = $maxLength;
+        }
+        if ($statusUrl !== null && $statusUrl !== '') {
+            $record['status_url'] = $statusUrl;
+        }
 
-        $this->actions[] = ['record_call' => $record];
-        return $this;
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['record_call' => $record],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
     }
 
-    public function stopRecordCall(string $controlId = ''): self
+    public function stopRecordCall(?string $controlId = null): self
     {
-        if ($controlId !== '') {
-            $this->actions[] = ['stop_record_call' => ['control_id' => $controlId]];
-        } else {
-            $this->actions[] = ['stop_record_call' => new \stdClass()];
-        }
-        return $this;
+        // Python wraps {"stop_record_call": {...}} in a SWML document. Empty
+        // object ({}) when no control_id is supplied.
+        $stopParams = ($controlId !== null && $controlId !== '')
+            ? ['control_id' => $controlId]
+            : new \stdClass();
+
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['stop_record_call' => $stopParams],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
     }
 
     // ── Speech & AI ──────────────────────────────────────────────────────
@@ -325,7 +435,8 @@ class FunctionResult
 
     public function enableFunctionsOnTimeout(bool $enabled = true): self
     {
-        $this->actions[] = ['functions_on_timeout' => $enabled];
+        // Python action name is "functions_on_speaker_timeout".
+        $this->actions[] = ['functions_on_speaker_timeout' => $enabled];
         return $this;
     }
 
@@ -337,27 +448,35 @@ class FunctionResult
 
     public function updateSettings(array $settings): self
     {
-        $this->actions[] = ['ai_settings' => $settings];
+        // Python action name is "settings" (not "ai_settings").
+        $this->actions[] = ['settings' => $settings];
         return $this;
     }
 
     // ── Advanced ─────────────────────────────────────────────────────────
 
     /**
-     * @param array|string $swmlContent
+     * Execute SWML content with optional transfer behavior. Parity with the
+     * Python reference `execute_swml`: a string is parsed to an array (on parse
+     * failure it is wrapped as {"raw_swml": <text>}); when $transfer is true the
+     * key "transfer" => "true" is set INSIDE the SWML document; the action is
+     * ALWAYS added under the "SWML" key (there is no separate transfer key).
+     *
+     * @param array|string $swmlContent SWML JSON string or already-decoded array.
      */
     public function executeSwml($swmlContent, bool $transfer = false): self
     {
         if (is_string($swmlContent)) {
-            $swmlContent = json_decode($swmlContent, true);
+            $decoded = json_decode($swmlContent, true);
+            // On invalid JSON, mirror Python's {"raw_swml": <text>} fallback.
+            $swmlContent = is_array($decoded) ? $decoded : ['raw_swml' => $swmlContent];
         }
 
         if ($transfer) {
-            $this->actions[] = ['transfer_swml' => $swmlContent];
-        } else {
-            $this->actions[] = ['SWML' => $swmlContent];
+            $swmlContent['transfer'] = 'true';
         }
 
+        $this->actions[] = ['SWML' => $swmlContent];
         return $this;
     }
 
@@ -552,204 +671,428 @@ class FunctionResult
 
     public function joinRoom(string $name): self
     {
-        $this->actions[] = ['join_room' => ['name' => $name]];
-        return $this;
+        // Python wraps {"join_room": {name}} in a full SWML document.
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['join_room' => ['name' => $name]],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
     }
 
     public function sipRefer(string $toUri): self
     {
-        $this->actions[] = ['sip_refer' => ['to_uri' => $toUri]];
-        return $this;
+        // Python wraps {"sip_refer": {to_uri}} in a full SWML document.
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['sip_refer' => ['to_uri' => $toUri]],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
     }
 
     /**
+     * Start background call tap using SWML.
+     *
+     * Full parity with the Python reference `tap`: validates direction
+     * ({speak,hear,both}), codec ({PCMU,PCMA}) and rtp_ptime (> 0); the only
+     * always-emitted field is `uri`; control_id/direction/codec/rtp_ptime/
+     * status_url are added only when they differ from their defaults; the
+     * {"tap": ...} verb is wrapped in a full SWML document via executeSwml.
+     *
      * @param TapDirection|string $direction stream direction — the typed
      *   {@see TapDirection} enum (typo-checked at the call site) or a bare
      *   string (parity with Python's `tap`). Normalized to the wire string
      *   ('speak'/'hear'/'both').
+     * @throws \InvalidArgumentException on invalid direction, codec, or rtp_ptime.
      */
     public function tap(
         string $uri,
-        string $controlId = '',
+        ?string $controlId = null,
         TapDirection|string $direction = 'both',
-        string $codec = 'PCMU'
+        string $codec = 'PCMU',
+        int $rtpPtime = 20,
+        ?string $statusUrl = null
     ): self {
-        $tapObj = [
-            'uri' => $uri,
-            'direction' => $direction instanceof TapDirection ? $direction->value : $direction,
-            'codec' => $codec,
-        ];
+        $directionStr = $direction instanceof TapDirection ? $direction->value : $direction;
 
-        if ($controlId !== '') {
+        // Validate direction.
+        $validDirections = ['speak', 'hear', 'both'];
+        if (!in_array($directionStr, $validDirections, true)) {
+            throw new \InvalidArgumentException(
+                'direction must be one of ' . self::pythonList($validDirections)
+            );
+        }
+
+        // Validate codec.
+        $validCodecs = ['PCMU', 'PCMA'];
+        if (!in_array($codec, $validCodecs, true)) {
+            throw new \InvalidArgumentException(
+                'codec must be one of ' . self::pythonList($validCodecs)
+            );
+        }
+
+        // Validate rtp_ptime.
+        if ($rtpPtime <= 0) {
+            throw new \InvalidArgumentException('rtp_ptime must be a positive integer');
+        }
+
+        // Only `uri` is always present; everything else is emitted only when
+        // it differs from its default (parity with the reference).
+        $tapObj = ['uri' => $uri];
+
+        if ($controlId !== null && $controlId !== '') {
             $tapObj['control_id'] = $controlId;
         }
-
-        $this->actions[] = ['tap' => $tapObj];
-        return $this;
-    }
-
-    public function stopTap(string $controlId = ''): self
-    {
-        if ($controlId !== '') {
-            $this->actions[] = ['stop_tap' => ['control_id' => $controlId]];
-        } else {
-            $this->actions[] = ['stop_tap' => new \stdClass()];
+        if ($directionStr !== 'both') {
+            $tapObj['direction'] = $directionStr;
         }
-        return $this;
-    }
+        if ($codec !== 'PCMU') {
+            $tapObj['codec'] = $codec;
+        }
+        if ($rtpPtime !== 20) {
+            $tapObj['rtp_ptime'] = $rtpPtime;
+        }
+        if ($statusUrl !== null && $statusUrl !== '') {
+            $tapObj['status_url'] = $statusUrl;
+        }
 
-    public function sendSms(
-        string $to,
-        string $from,
-        string $body,
-        array $media = [],
-        array $tags = []
-    ): self {
-        $sms = [
-            'to_number' => $to,
-            'from_number' => $from,
-            'body' => $body,
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['tap' => $tapObj],
+                ],
+            ],
         ];
 
+        return $this->executeSwml($swmlDoc);
+    }
+
+    public function stopTap(?string $controlId = null): self
+    {
+        // Python wraps {"stop_tap": {...}} in a SWML document; {} when no
+        // control_id is supplied.
+        $stopParams = ($controlId !== null && $controlId !== '')
+            ? ['control_id' => $controlId]
+            : new \stdClass();
+
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['stop_tap' => $stopParams],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
+    }
+
+    /**
+     * Send a text message to a PSTN phone number using SWML.
+     *
+     * Full parity with the Python reference `send_sms`: either body or media
+     * (or both) must be provided; the {"send_sms": ...} verb is wrapped in a
+     * full SWML document via executeSwml. Optional fields (body/media/tags/
+     * region) are emitted only when supplied.
+     *
+     * @param list<string> $media URLs to send (optional if $body is given).
+     * @param list<string> $tags  tags for UI searching.
+     * @throws \InvalidArgumentException if neither body nor media is provided.
+     */
+    public function sendSms(
+        string $toNumber,
+        string $fromNumber,
+        ?string $body = null,
+        array $media = [],
+        array $tags = [],
+        ?string $region = null
+    ): self {
+        // Validate that at least body or media is provided.
+        if (($body === null || $body === '') && empty($media)) {
+            throw new \InvalidArgumentException('Either body or media must be provided');
+        }
+
+        $sms = [
+            'to_number' => $toNumber,
+            'from_number' => $fromNumber,
+        ];
+
+        if ($body !== null && $body !== '') {
+            $sms['body'] = $body;
+        }
         if (!empty($media)) {
             $sms['media'] = $media;
         }
         if (!empty($tags)) {
             $sms['tags'] = $tags;
         }
-
-        $this->actions[] = ['send_sms' => $sms];
-        return $this;
-    }
-
-    public function pay(
-        string $connectorUrl,
-        string $inputMethod = 'dtmf',
-        string $actionUrl = '',
-        int $timeout = 600,
-        int $maxAttempts = 3
-    ): self {
-        $payObj = [
-            'payment_connector_url' => $connectorUrl,
-            'input_method' => $inputMethod,
-            'timeout' => $timeout,
-            'max_attempts' => $maxAttempts,
-        ];
-
-        if ($actionUrl !== '') {
-            $payObj['action_url'] = $actionUrl;
+        if ($region !== null && $region !== '') {
+            $sms['region'] = $region;
         }
 
-        $this->actions[] = ['pay' => $payObj];
-        return $this;
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['send_sms' => $sms],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
+    }
+
+    /**
+     * Process payment using the SWML pay action.
+     *
+     * Full parity with the Python reference `pay` (19 user-facing params): the
+     * SWML document runs `{set:{ai_response}}` then `{pay:{...}}`. The wire key
+     * for the collection method is `input` (NOT `input_method`); numeric and
+     * boolean fields are stringified ("5"/"true"); `postal_code` is emitted as a
+     * lowercased bool-string when a bool, or verbatim when a string. Optional
+     * fields (status_url/charge_amount/description/parameters/prompts) are
+     * emitted only when supplied.
+     *
+     * @param bool|string                  $postalCode      prompt-for-postal (bool) or an actual postcode (string).
+     * @param list<array<string,string>>   $parameters      name/value pairs for the connector.
+     * @param list<array<string,mixed>>    $prompts         custom prompt configs.
+     */
+    public function pay(
+        string $paymentConnectorUrl,
+        string $inputMethod = 'dtmf',
+        ?string $statusUrl = null,
+        string $paymentMethod = 'credit-card',
+        int $timeout = 5,
+        int $maxAttempts = 1,
+        bool $securityCode = true,
+        bool|string $postalCode = true,
+        int $minPostalCodeLength = 0,
+        string $tokenType = 'reusable',
+        ?string $chargeAmount = null,
+        string $currency = 'usd',
+        string $language = 'en-US',
+        string $voice = 'woman',
+        ?string $description = null,
+        string $validCardTypes = 'visa mastercard amex',
+        ?array $parameters = null,
+        ?array $prompts = null,
+        ?string $aiResponse = 'The payment status is ${pay_result}, do not mention anything else about collecting payment if successful.'
+    ): self {
+        $payParams = [
+            'payment_connector_url' => $paymentConnectorUrl,
+            'input' => $inputMethod,
+            'payment_method' => $paymentMethod,
+            'timeout' => (string) $timeout,
+            'max_attempts' => (string) $maxAttempts,
+            'security_code' => $securityCode ? 'true' : 'false',
+            'min_postal_code_length' => (string) $minPostalCodeLength,
+            'token_type' => $tokenType,
+            'currency' => $currency,
+            'language' => $language,
+            'voice' => $voice,
+            'valid_card_types' => $validCardTypes,
+        ];
+
+        // postal_code: lowercased bool-string when a bool, verbatim when a string.
+        if (is_bool($postalCode)) {
+            $payParams['postal_code'] = $postalCode ? 'true' : 'false';
+        } else {
+            $payParams['postal_code'] = $postalCode;
+        }
+
+        if ($statusUrl !== null && $statusUrl !== '') {
+            $payParams['status_url'] = $statusUrl;
+        }
+        if ($chargeAmount !== null && $chargeAmount !== '') {
+            $payParams['charge_amount'] = $chargeAmount;
+        }
+        if ($description !== null && $description !== '') {
+            $payParams['description'] = $description;
+        }
+        if (!empty($parameters)) {
+            $payParams['parameters'] = $parameters;
+        }
+        if (!empty($prompts)) {
+            $payParams['prompts'] = $prompts;
+        }
+
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['set' => ['ai_response' => $aiResponse]],
+                    ['pay' => $payParams],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
     }
 
     // ── RPC ──────────────────────────────────────────────────────────────
 
-    public function executeRpc(string $method, array $params = []): self
-    {
-        $rpc = [
-            'method' => $method,
-            'jsonrpc' => '2.0',
+    /**
+     * Execute an RPC method on a call using SWML.
+     *
+     * Parity with the Python reference `execute_rpc`: the rpc params are
+     * keyed {method, call_id?, node_id?, params?} (call_id/node_id are
+     * TOP-LEVEL siblings of method/params, NOT nested inside params) and the
+     * {"execute_rpc": ...} verb is wrapped in a full SWML document. There is
+     * no `jsonrpc` envelope — method strings are bare (e.g. "dial", not
+     * "calling.dial").
+     *
+     * @param array<string,mixed>|null $params optional RPC method parameters.
+     */
+    public function executeRpc(
+        string $method,
+        ?array $params = null,
+        ?string $callId = null,
+        ?string $nodeId = null
+    ): self {
+        $rpcParams = ['method' => $method];
+
+        if ($callId !== null && $callId !== '') {
+            $rpcParams['call_id'] = $callId;
+        }
+        if ($nodeId !== null && $nodeId !== '') {
+            $rpcParams['node_id'] = $nodeId;
+        }
+        if (!empty($params)) {
+            $rpcParams['params'] = $params;
+        }
+
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['execute_rpc' => $rpcParams],
+                ],
+            ],
         ];
 
-        if (!empty($params)) {
-            $rpc['params'] = $params;
-        }
-
-        $this->actions[] = ['execute_rpc' => $rpc];
-        return $this;
+        return $this->executeSwml($swmlDoc);
     }
 
+    /**
+     * Dial out to a number with a destination SWML URL using execute_rpc.
+     * Parity: method="dial", params={devices:{type,params:{to_number,
+     * from_number}}, dest_swml}.
+     */
     public function rpcDial(
-        string $to,
-        string $from = '',
-        ?string $destSwml = null,
-        ?int $callTimeout = null,
-        string $region = ''
+        string $toNumber,
+        string $fromNumber,
+        string $destSwml,
+        string $deviceType = 'phone'
     ): self {
-        $params = ['to_number' => $to];
-
-        if ($from !== '') {
-            $params['from_number'] = $from;
-        }
-        if ($destSwml !== null) {
-            $params['dest_swml'] = $destSwml;
-        }
-        if ($callTimeout !== null) {
-            $params['call_timeout'] = $callTimeout;
-        }
-        if ($region !== '') {
-            $params['region'] = $region;
-        }
-
-        return $this->executeRpc('calling.dial', $params);
-    }
-
-    public function rpcAiMessage(string $callId, string $messageText): self
-    {
-        return $this->executeRpc('calling.ai_message', [
-            'call_id' => $callId,
-            'message_text' => $messageText,
+        return $this->executeRpc('dial', [
+            'devices' => [
+                'type' => $deviceType,
+                'params' => [
+                    'to_number' => $toNumber,
+                    'from_number' => $fromNumber,
+                ],
+            ],
+            'dest_swml' => $destSwml,
         ]);
     }
 
+    /**
+     * Inject a message into an AI agent on another call using execute_rpc.
+     * Parity: method="ai_message", call_id top-level, params={role,
+     * message_text}. `role` defaults to "system".
+     */
+    public function rpcAiMessage(string $callId, string $messageText, string $role = 'system'): self
+    {
+        return $this->executeRpc('ai_message', [
+            'role' => $role,
+            'message_text' => $messageText,
+        ], $callId);
+    }
+
+    /**
+     * Unhold another call using execute_rpc.
+     * Parity: method="ai_unhold", call_id top-level, params={}.
+     */
     public function rpcAiUnhold(string $callId): self
     {
-        return $this->executeRpc('calling.ai_unhold', [
-            'call_id' => $callId,
-        ]);
+        return $this->executeRpc('ai_unhold', [], $callId);
     }
 
     public function simulateUserInput(string $text): self
     {
-        $this->actions[] = ['simulate_user_input' => $text];
+        // Python action name is "user_input" (not "simulate_user_input").
+        $this->actions[] = ['user_input' => $text];
         return $this;
     }
 
     // ── Payment Helpers (static) ─────────────────────────────────────────
 
+    /**
+     * Create a payment-prompt structure for use with {@see FunctionResult::pay()}.
+     * Parity with the Python reference `create_payment_prompt`:
+     * {"for": $forSituation, "actions": $actions, "card_type"?, "error_type"?}.
+     *
+     * @param list<array<string,string>> $actions   actions with 'type'/'phrase' keys.
+     * @param string|null                $cardType  space-separated card types.
+     * @param string|null                $errorType space-separated error types.
+     * @return array<string,mixed>
+     */
     public static function createPaymentPrompt(
-        string $text,
-        string $language = 'en-US',
-        string $voice = ''
+        string $forSituation,
+        array $actions,
+        ?string $cardType = null,
+        ?string $errorType = null
     ): array {
         $prompt = [
-            'text' => $text,
-            'language' => $language,
+            'for' => $forSituation,
+            'actions' => $actions,
         ];
 
-        if ($voice !== '') {
-            $prompt['voice'] = $voice;
+        if ($cardType !== null && $cardType !== '') {
+            $prompt['card_type'] = $cardType;
+        }
+        if ($errorType !== null && $errorType !== '') {
+            $prompt['error_type'] = $errorType;
         }
 
         return $prompt;
     }
 
-    public static function createPaymentAction(
-        string $type,
-        string $text,
-        string $language = 'en-US',
-        string $voice = ''
-    ): array {
-        $action = [
-            'type' => $type,
-            'text' => $text,
-            'language' => $language,
+    /**
+     * Create a payment action for use in payment prompts.
+     * Parity: {"type": $actionType, "phrase": $phrase}.
+     *
+     * @return array<string,string>
+     */
+    public static function createPaymentAction(string $actionType, string $phrase): array
+    {
+        return [
+            'type' => $actionType,
+            'phrase' => $phrase,
         ];
-
-        if ($voice !== '') {
-            $action['voice'] = $voice;
-        }
-
-        return $action;
     }
 
-    public static function createPaymentParameter(
-        string $name,
-        string $type,
-        array $config = []
-    ): array {
-        return array_merge(['name' => $name, 'type' => $type], $config);
+    /**
+     * Create a payment parameter (name/value pair) for {@see FunctionResult::pay()}.
+     * Parity: {"name": $name, "value": $value}.
+     *
+     * @return array<string,string>
+     */
+    public static function createPaymentParameter(string $name, string $value): array
+    {
+        return [
+            'name' => $name,
+            'value' => $value,
+        ];
     }
 }

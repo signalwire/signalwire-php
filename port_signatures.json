@@ -2596,7 +2596,7 @@
                   "name": "final",
                   "type": "bool",
                   "required": false,
-                  "default": false
+                  "default": true
                 },
                 {
                   "name": "from",
@@ -2610,26 +2610,14 @@
             "create_payment_action": {
               "params": [
                 {
-                  "name": "type",
+                  "name": "action_type",
                   "type": "string",
                   "required": true
                 },
                 {
-                  "name": "text",
+                  "name": "phrase",
                   "type": "string",
                   "required": true
-                },
-                {
-                  "name": "language",
-                  "type": "string",
-                  "required": false,
-                  "default": "en-US"
-                },
-                {
-                  "name": "voice",
-                  "type": "string",
-                  "required": false,
-                  "default": ""
                 }
               ],
               "returns": "any"
@@ -2642,15 +2630,9 @@
                   "required": true
                 },
                 {
-                  "name": "type",
+                  "name": "value",
                   "type": "string",
                   "required": true
-                },
-                {
-                  "name": "config",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "any"
@@ -2658,21 +2640,26 @@
             "create_payment_prompt": {
               "params": [
                 {
-                  "name": "text",
+                  "name": "for_situation",
                   "type": "string",
                   "required": true
                 },
                 {
-                  "name": "language",
-                  "type": "string",
-                  "required": false,
-                  "default": "en-US"
+                  "name": "actions",
+                  "type": "any",
+                  "required": true
                 },
                 {
-                  "name": "voice",
-                  "type": "string",
+                  "name": "card_type",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": ""
+                  "default": null
+                },
+                {
+                  "name": "error_type",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -2720,9 +2707,21 @@
                 },
                 {
                   "name": "params",
-                  "type": "any",
+                  "type": "optional<any>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "call_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "node_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -2908,7 +2907,7 @@
                   "kind": "self"
                 },
                 {
-                  "name": "connector_url",
+                  "name": "payment_connector_url",
                   "type": "string",
                   "required": true
                 },
@@ -2919,22 +2918,106 @@
                   "default": "dtmf"
                 },
                 {
-                  "name": "action_url",
+                  "name": "status_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "payment_method",
                   "type": "string",
                   "required": false,
-                  "default": ""
+                  "default": "credit-card"
                 },
                 {
                   "name": "timeout",
                   "type": "int",
                   "required": false,
-                  "default": 600
+                  "default": 5
                 },
                 {
                   "name": "max_attempts",
                   "type": "int",
                   "required": false,
-                  "default": 3
+                  "default": 1
+                },
+                {
+                  "name": "security_code",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "postal_code",
+                  "type": "union<string,bool>",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "min_postal_code_length",
+                  "type": "int",
+                  "required": false,
+                  "default": 0
+                },
+                {
+                  "name": "token_type",
+                  "type": "string",
+                  "required": false,
+                  "default": "reusable"
+                },
+                {
+                  "name": "charge_amount",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "currency",
+                  "type": "string",
+                  "required": false,
+                  "default": "usd"
+                },
+                {
+                  "name": "language",
+                  "type": "string",
+                  "required": false,
+                  "default": "en-US"
+                },
+                {
+                  "name": "voice",
+                  "type": "string",
+                  "required": false,
+                  "default": "woman"
+                },
+                {
+                  "name": "description",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "valid_card_types",
+                  "type": "string",
+                  "required": false,
+                  "default": "visa mastercard amex"
+                },
+                {
+                  "name": "parameters",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "prompts",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "ai_response",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": "The payment status is ${pay_result}, do not mention anything else about collecting payment if successful."
                 }
               ],
               "returns": "any"
@@ -2967,9 +3050,9 @@
                 },
                 {
                   "name": "control_id",
-                  "type": "string",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": ""
+                  "default": null
                 },
                 {
                   "name": "stereo",
@@ -2988,6 +3071,48 @@
                   "type": "union<class:signalwire.swaig.RecordDirection,string>",
                   "required": false,
                   "default": "both"
+                },
+                {
+                  "name": "terminators",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "beep",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "input_sensitivity",
+                  "type": "float",
+                  "required": false,
+                  "default": 44
+                },
+                {
+                  "name": "initial_timeout",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "end_silence_timeout",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "max_length",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "status_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -3000,7 +3125,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "any",
+                  "type": "union<any,string>",
                   "required": true
                 }
               ],
@@ -3014,7 +3139,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "any",
+                  "type": "union<any,string>",
                   "required": true
                 }
               ],
@@ -3028,8 +3153,9 @@
                 },
                 {
                   "name": "text",
-                  "type": "any",
-                  "required": true
+                  "type": "union<string,bool>",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "any"
@@ -3049,6 +3175,12 @@
                   "name": "message_text",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "role",
+                  "type": "string",
+                  "required": false,
+                  "default": "system"
                 }
               ],
               "returns": "any"
@@ -3074,33 +3206,25 @@
                   "kind": "self"
                 },
                 {
-                  "name": "to",
+                  "name": "to_number",
                   "type": "string",
                   "required": true
                 },
                 {
-                  "name": "from",
+                  "name": "from_number",
                   "type": "string",
-                  "required": false,
-                  "default": ""
+                  "required": true
                 },
                 {
                   "name": "dest_swml",
-                  "type": "optional<string>",
-                  "required": false,
-                  "default": null
+                  "type": "string",
+                  "required": true
                 },
                 {
-                  "name": "call_timeout",
-                  "type": "optional<int>",
-                  "required": false,
-                  "default": null
-                },
-                {
-                  "name": "region",
+                  "name": "device_type",
                   "type": "string",
                   "required": false,
-                  "default": ""
+                  "default": "phone"
                 }
               ],
               "returns": "any"
@@ -3126,19 +3250,20 @@
                   "kind": "self"
                 },
                 {
-                  "name": "to",
+                  "name": "to_number",
                   "type": "string",
                   "required": true
                 },
                 {
-                  "name": "from",
+                  "name": "from_number",
                   "type": "string",
                   "required": true
                 },
                 {
                   "name": "body",
-                  "type": "string",
-                  "required": true
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 },
                 {
                   "name": "media",
@@ -3151,6 +3276,12 @@
                   "type": "any",
                   "required": false,
                   "default": []
+                },
+                {
+                  "name": "region",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -3279,9 +3410,9 @@
                 },
                 {
                   "name": "control_id",
-                  "type": "string",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": ""
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -3294,9 +3425,9 @@
                 },
                 {
                   "name": "control_id",
-                  "type": "string",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": ""
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -3381,14 +3512,13 @@
                 {
                   "name": "ai_response",
                   "type": "string",
-                  "required": false,
-                  "default": ""
+                  "required": true
                 },
                 {
                   "name": "final",
                   "type": "bool",
                   "required": false,
-                  "default": false
+                  "default": true
                 }
               ],
               "returns": "any"
@@ -3420,9 +3550,9 @@
                 },
                 {
                   "name": "control_id",
-                  "type": "string",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": ""
+                  "default": null
                 },
                 {
                   "name": "direction",
@@ -3435,6 +3565,18 @@
                   "type": "string",
                   "required": false,
                   "default": "PCMU"
+                },
+                {
+                  "name": "rtp_ptime",
+                  "type": "int",
+                  "required": false,
+                  "default": 20
+                },
+                {
+                  "name": "status_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -3519,9 +3661,9 @@
                 },
                 {
                   "name": "answer_first",
-                  "type": "optional<bool>",
+                  "type": "bool",
                   "required": false,
-                  "default": null
+                  "default": false
                 }
               ],
               "returns": "any"

@@ -169,104 +169,122 @@ class FunctionResultTest extends TestCase
         $this->assertSame('false', $temp->toArray()['action'][0]['transfer']);
     }
 
-    public function testSwmlTransferBasic(): void
+    // swmlTransfer parity with Python swml_transfer: builds a SWML document
+    // {set:{ai_response}, transfer:{dest}} and a top-level transfer="true"/
+    // "false" (final defaults TRUE). The invented bare transfer_uri action is
+    // gone; the ai_response goes INTO the SWML set verb, not onto response.
+
+    public function testSwmlTransferBasicDefaultsFinalTrue(): void
     {
         $fr = new FunctionResult();
-        $fr->swmlTransfer('https://example.com/swml');
+        $fr->swmlTransfer('https://example.com/swml', 'Goodbye!');
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame('https://example.com/swml', $action['transfer_uri']);
+        $main = $action['SWML']['sections']['main'];
+        $this->assertSame('1.0.0', $action['SWML']['version']);
+        $this->assertSame(['ai_response' => 'Goodbye!'], $main[0]['set']);
+        $this->assertSame(['dest' => 'https://example.com/swml'], $main[1]['transfer']);
+        // final defaults TRUE -> permanent transfer.
+        $this->assertSame('true', $action['transfer']);
     }
 
-    public function testSwmlTransferWithAiResponse(): void
+    public function testSwmlTransferFinalFalse(): void
     {
         $fr = new FunctionResult();
+        $fr->swmlTransfer('https://example.com/swml', 'Back to you', false);
+        $action = $fr->toArray()['action'][0];
+
+        $this->assertSame('false', $action['transfer']);
+        $main = $action['SWML']['sections']['main'];
+        $this->assertSame(['ai_response' => 'Back to you'], $main[0]['set']);
+        $this->assertSame(['dest' => 'https://example.com/swml'], $main[1]['transfer']);
+    }
+
+    public function testSwmlTransferAiResponseGoesIntoSwmlNotResponse(): void
+    {
+        // The ai_response is set inside the SWML `set` verb; it must NOT
+        // overwrite the FunctionResult's top-level response text.
+        $fr = new FunctionResult('original');
         $fr->swmlTransfer('https://example.com/swml', 'Transferring now');
         $arr = $fr->toArray();
 
-        $this->assertSame('Transferring now', $arr['response']);
-        $this->assertSame('https://example.com/swml', $arr['action'][0]['transfer_uri']);
-    }
-
-    public function testSwmlTransferEmptyAiResponseDoesNotOverride(): void
-    {
-        $fr = new FunctionResult('original');
-        $fr->swmlTransfer('https://example.com/swml', '');
-        $this->assertSame('original', $fr->toArray()['response']);
+        $this->assertSame('original', $arr['response']);
+        $this->assertSame(
+            ['ai_response' => 'Transferring now'],
+            $arr['action'][0]['SWML']['sections']['main'][0]['set']
+        );
     }
 
     public function testHangup(): void
     {
+        // Python: add_action("hangup", True) -> {"hangup": true}.
         $fr = new FunctionResult();
         $fr->hangup();
         $action = $fr->toArray()['action'][0];
 
-        $this->assertArrayHasKey('hangup', $action);
-        $json = json_encode($action['hangup']);
-        $this->assertSame('{}', $json);
+        $this->assertTrue($action['hangup']);
     }
 
     public function testHoldDefault(): void
     {
+        // Python emits a bare int, not {"timeout": N}.
         $fr = new FunctionResult();
         $fr->hold();
-        $action = $fr->toArray()['action'][0];
-
-        $this->assertSame(300, $action['hold']['timeout']);
+        $this->assertSame(300, $fr->toArray()['action'][0]['hold']);
     }
 
     public function testHoldClampsLow(): void
     {
         $fr = new FunctionResult();
         $fr->hold(-50);
-        $this->assertSame(0, $fr->toArray()['action'][0]['hold']['timeout']);
+        $this->assertSame(0, $fr->toArray()['action'][0]['hold']);
     }
 
     public function testHoldClampsHigh(): void
     {
         $fr = new FunctionResult();
         $fr->hold(9999);
-        $this->assertSame(900, $fr->toArray()['action'][0]['hold']['timeout']);
+        $this->assertSame(900, $fr->toArray()['action'][0]['hold']);
     }
 
     public function testHoldWithinRange(): void
     {
         $fr = new FunctionResult();
         $fr->hold(450);
-        $this->assertSame(450, $fr->toArray()['action'][0]['hold']['timeout']);
+        $this->assertSame(450, $fr->toArray()['action'][0]['hold']);
     }
 
-    public function testWaitForUserNoParams(): void
+    // waitForUser parity: Python emits a SCALAR value (string/int/bool), never
+    // an object. Precedence: answer_first ("answer_first") > timeout (int) >
+    // enabled (bool) > true.
+
+    public function testWaitForUserNoParamsEmitsTrue(): void
     {
         $fr = new FunctionResult();
         $fr->waitForUser();
-        $action = $fr->toArray()['action'][0];
-
-        $this->assertTrue($action['wait_for_user']);
+        $this->assertTrue($fr->toArray()['action'][0]['wait_for_user']);
     }
 
-    public function testWaitForUserWithParams(): void
+    public function testWaitForUserAnswerFirstWins(): void
     {
         $fr = new FunctionResult();
-        $fr->waitForUser(true, 30, false);
-        $wfu = $fr->toArray()['action'][0]['wait_for_user'];
-
-        $this->assertIsArray($wfu);
-        $this->assertTrue($wfu['enabled']);
-        $this->assertSame(30, $wfu['timeout']);
-        $this->assertFalse($wfu['answer_first']);
+        // answer_first takes precedence over both timeout and enabled.
+        $fr->waitForUser(true, 30, true);
+        $this->assertSame('answer_first', $fr->toArray()['action'][0]['wait_for_user']);
     }
 
-    public function testWaitForUserPartialParams(): void
+    public function testWaitForUserTimeoutEmitsInt(): void
     {
         $fr = new FunctionResult();
         $fr->waitForUser(null, 60);
-        $wfu = $fr->toArray()['action'][0]['wait_for_user'];
+        $this->assertSame(60, $fr->toArray()['action'][0]['wait_for_user']);
+    }
 
-        $this->assertIsArray($wfu);
-        $this->assertArrayNotHasKey('enabled', $wfu);
-        $this->assertSame(60, $wfu['timeout']);
-        $this->assertArrayNotHasKey('answer_first', $wfu);
+    public function testWaitForUserEnabledEmitsBool(): void
+    {
+        $fr = new FunctionResult();
+        $fr->waitForUser(false);
+        $this->assertFalse($fr->toArray()['action'][0]['wait_for_user']);
     }
 
     public function testStop(): void
@@ -287,13 +305,24 @@ class FunctionResultTest extends TestCase
         $this->assertSame(['key' => 'value'], $action['set_global_data']);
     }
 
-    public function testRemoveGlobalData(): void
+    public function testRemoveGlobalDataList(): void
     {
+        // Python action name is "unset_global_data"; the value is emitted
+        // directly (no {"keys": ...} wrapper).
         $fr = new FunctionResult();
         $fr->removeGlobalData(['k1', 'k2']);
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame(['keys' => ['k1', 'k2']], $action['remove_global_data']);
+        $this->assertSame(['k1', 'k2'], $action['unset_global_data']);
+        $this->assertArrayNotHasKey('remove_global_data', $action);
+    }
+
+    public function testRemoveGlobalDataSingleString(): void
+    {
+        // Python accepts Union[str, List[str]] and emits a string as-is.
+        $fr = new FunctionResult();
+        $fr->removeGlobalData('mykey');
+        $this->assertSame('mykey', $fr->toArray()['action'][0]['unset_global_data']);
     }
 
     public function testSetMetadata(): void
@@ -307,38 +336,48 @@ class FunctionResultTest extends TestCase
 
     public function testRemoveMetadata(): void
     {
+        // Python action name is "unset_meta_data"; value emitted directly.
         $fr = new FunctionResult();
         $fr->removeMetadata(['x', 'y']);
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame(['keys' => ['x', 'y']], $action['remove_meta_data']);
+        $this->assertSame(['x', 'y'], $action['unset_meta_data']);
+        $this->assertArrayNotHasKey('remove_meta_data', $action);
     }
 
     public function testSwmlUserEvent(): void
     {
+        // Python wraps the event in a SWML document, nesting the data under
+        // user_event.event. Key order is {sections, version} (sections first).
         $fr = new FunctionResult();
         $fr->swmlUserEvent(['type' => 'custom', 'data' => 123]);
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame(['type' => 'custom', 'data' => 123], $action['user_event']);
+        $this->assertSame('1.0.0', $action['SWML']['version']);
+        $userEvent = $action['SWML']['sections']['main'][0]['user_event'];
+        $this->assertSame(['event' => ['type' => 'custom', 'data' => 123]], $userEvent);
     }
 
     public function testSwmlChangeStep(): void
     {
+        // Python: add_action("change_step", step_name) -> bare string.
         $fr = new FunctionResult();
         $fr->swmlChangeStep('greeting');
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame(['step' => 'greeting'], $action['context_switch']);
+        $this->assertSame('greeting', $action['change_step']);
+        $this->assertArrayNotHasKey('context_switch', $action);
     }
 
     public function testSwmlChangeContext(): void
     {
+        // Python: add_action("change_context", context_name) -> bare string.
         $fr = new FunctionResult();
         $fr->swmlChangeContext('billing');
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame(['context' => 'billing'], $action['context_switch']);
+        $this->assertSame('billing', $action['change_context']);
+        $this->assertArrayNotHasKey('context_switch', $action);
     }
 
     public function testSwitchContextSimple(): void
@@ -369,16 +408,21 @@ class FunctionResultTest extends TestCase
 
     public function testReplaceInHistoryWithString(): void
     {
+        // Python action name is "replace_in_history"; the string is emitted
+        // verbatim (not converted to "summary").
         $fr = new FunctionResult();
         $fr->replaceInHistory('redacted');
-        $this->assertSame('redacted', $fr->toArray()['action'][0]['replace_history']);
+        $action = $fr->toArray()['action'][0];
+        $this->assertSame('redacted', $action['replace_in_history']);
+        $this->assertArrayNotHasKey('replace_history', $action);
     }
 
-    public function testReplaceInHistoryWithTrue(): void
+    public function testReplaceInHistoryDefaultTrue(): void
     {
+        // Default is the literal boolean true (remove the pair entirely).
         $fr = new FunctionResult();
-        $fr->replaceInHistory(true);
-        $this->assertSame('summary', $fr->toArray()['action'][0]['replace_history']);
+        $fr->replaceInHistory();
+        $this->assertTrue($fr->toArray()['action'][0]['replace_in_history']);
     }
 
     // ── Media ─────────────────────────────────────────────────────────────
@@ -392,73 +436,103 @@ class FunctionResultTest extends TestCase
 
     public function testPlayBackgroundFileDefault(): void
     {
+        // Python action name is "playback_bg"; bare filename without wait.
         $fr = new FunctionResult();
         $fr->playBackgroundFile('music.mp3');
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame('music.mp3', $action['play_background_file']);
-        $this->assertArrayNotHasKey('play_background_file_wait', $action);
+        $this->assertSame('music.mp3', $action['playback_bg']);
     }
 
     public function testPlayBackgroundFileWithWait(): void
     {
+        // With wait, the value is an object {file, wait:true}.
         $fr = new FunctionResult();
         $fr->playBackgroundFile('music.mp3', true);
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame('music.mp3', $action['play_background_file_wait']);
-        $this->assertArrayNotHasKey('play_background_file', $action);
+        $this->assertSame(['file' => 'music.mp3', 'wait' => true], $action['playback_bg']);
     }
 
     public function testStopBackgroundFile(): void
     {
+        // Python action name is "stop_playback_bg".
         $fr = new FunctionResult();
         $fr->stopBackgroundFile();
-        $this->assertTrue($fr->toArray()['action'][0]['stop_background_file']);
+        $this->assertTrue($fr->toArray()['action'][0]['stop_playback_bg']);
     }
+
+    // recordCall parity: the {"record_call": ...} verb is wrapped in a full
+    // SWML document (via executeSwml, lands under "SWML"). stereo/format/
+    // direction/beep/input_sensitivity are ALWAYS emitted; the invented
+    // "initiator" field is gone.
 
     public function testRecordCallDefaults(): void
     {
         $fr = new FunctionResult();
         $fr->recordCall();
-        $rec = $fr->toArray()['action'][0]['record_call'];
+        $rec = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
 
         $this->assertFalse($rec['stereo']);
         $this->assertSame('wav', $rec['format']);
         $this->assertSame('both', $rec['direction']);
-        $this->assertSame('system', $rec['initiator']);
+        $this->assertFalse($rec['beep']);
+        $this->assertSame(44.0, $rec['input_sensitivity']);
         $this->assertArrayNotHasKey('control_id', $rec);
+        $this->assertArrayNotHasKey('initiator', $rec);
     }
 
-    public function testRecordCallWithControlId(): void
+    public function testRecordCallWithAllParams(): void
     {
         $fr = new FunctionResult();
-        $fr->recordCall('rec-1', true, 'mp3', 'speak');
-        $rec = $fr->toArray()['action'][0]['record_call'];
+        $fr->recordCall('rec-1', true, 'mp3', 'speak', '#', true, 30.0, 5.0, 2.0, 60.0, 'https://example.com/status');
+        $rec = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
 
         $this->assertSame('rec-1', $rec['control_id']);
         $this->assertTrue($rec['stereo']);
         $this->assertSame('mp3', $rec['format']);
         $this->assertSame('speak', $rec['direction']);
+        $this->assertTrue($rec['beep']);
+        $this->assertSame(30.0, $rec['input_sensitivity']);
+        $this->assertSame('#', $rec['terminators']);
+        $this->assertSame(5.0, $rec['initial_timeout']);
+        $this->assertSame(2.0, $rec['end_silence_timeout']);
+        $this->assertSame(60.0, $rec['max_length']);
+        $this->assertSame('https://example.com/status', $rec['status_url']);
+    }
+
+    public function testRecordCallInvalidFormatThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("format must be 'wav', 'mp3', or 'mp4'");
+        (new FunctionResult())->recordCall('id', false, 'aac');
+    }
+
+    public function testRecordCallInvalidDirectionThrows(): void
+    {
+        // record_call rejects 'hear' (that belongs to tap's set, not this one).
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("direction must be 'speak', 'listen', or 'both'");
+        (new FunctionResult())->recordCall('id', false, 'wav', 'hear');
     }
 
     public function testStopRecordCallWithoutControlId(): void
     {
+        // SWML-wrapped; empty object ({}) when no control_id.
         $fr = new FunctionResult();
         $fr->stopRecordCall();
-        $action = $fr->toArray()['action'][0];
+        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_record_call'];
 
-        $json = json_encode($action['stop_record_call']);
-        $this->assertSame('{}', $json);
+        $this->assertSame('{}', json_encode($stop));
     }
 
     public function testStopRecordCallWithControlId(): void
     {
         $fr = new FunctionResult();
         $fr->stopRecordCall('rec-1');
-        $action = $fr->toArray()['action'][0];
+        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_record_call'];
 
-        $this->assertSame(['control_id' => 'rec-1'], $action['stop_record_call']);
+        $this->assertSame(['control_id' => 'rec-1'], $stop);
     }
 
     // ── Speech & AI ───────────────────────────────────────────────────────
@@ -504,16 +578,19 @@ class FunctionResultTest extends TestCase
 
     public function testEnableFunctionsOnTimeoutDefault(): void
     {
+        // Python action name is "functions_on_speaker_timeout".
         $fr = new FunctionResult();
         $fr->enableFunctionsOnTimeout();
-        $this->assertTrue($fr->toArray()['action'][0]['functions_on_timeout']);
+        $action = $fr->toArray()['action'][0];
+        $this->assertTrue($action['functions_on_speaker_timeout']);
+        $this->assertArrayNotHasKey('functions_on_timeout', $action);
     }
 
     public function testEnableFunctionsOnTimeoutFalse(): void
     {
         $fr = new FunctionResult();
         $fr->enableFunctionsOnTimeout(false);
-        $this->assertFalse($fr->toArray()['action'][0]['functions_on_timeout']);
+        $this->assertFalse($fr->toArray()['action'][0]['functions_on_speaker_timeout']);
     }
 
     public function testEnableExtensiveDataDefault(): void
@@ -532,12 +609,12 @@ class FunctionResultTest extends TestCase
 
     public function testUpdateSettings(): void
     {
+        // Python action name is "settings" (not "ai_settings").
         $fr = new FunctionResult();
         $fr->updateSettings(['temperature' => 0.7, 'top_p' => 0.9]);
-        $this->assertSame(
-            ['temperature' => 0.7, 'top_p' => 0.9],
-            $fr->toArray()['action'][0]['ai_settings']
-        );
+        $action = $fr->toArray()['action'][0];
+        $this->assertSame(['temperature' => 0.7, 'top_p' => 0.9], $action['settings']);
+        $this->assertArrayNotHasKey('ai_settings', $action);
     }
 
     // ── Advanced ──────────────────────────────────────────────────────────
@@ -566,13 +643,27 @@ class FunctionResultTest extends TestCase
 
     public function testExecuteSwmlWithTransfer(): void
     {
+        // Python sets transfer="true" INSIDE the SWML document and still adds
+        // it under the "SWML" action key (no separate transfer_swml key).
         $swml = ['sections' => ['main' => [['answer' => []]]]];
         $fr = new FunctionResult();
         $fr->executeSwml($swml, true);
         $action = $fr->toArray()['action'][0];
 
-        $this->assertSame($swml, $action['transfer_swml']);
-        $this->assertArrayNotHasKey('SWML', $action);
+        $this->assertArrayNotHasKey('transfer_swml', $action);
+        $this->assertSame('true', $action['SWML']['transfer']);
+        $this->assertSame($swml['sections'], $action['SWML']['sections']);
+    }
+
+    public function testExecuteSwmlInvalidStringFallsBackToRawSwml(): void
+    {
+        // Parity: a non-JSON string is wrapped as {"raw_swml": <text>}.
+        $fr = new FunctionResult();
+        $fr->executeSwml('not valid json at all');
+        $this->assertSame(
+            ['raw_swml' => 'not valid json at all'],
+            $fr->toArray()['action'][0]['SWML']
+        );
     }
 
     // ── joinConference ────────────────────────────────────────────────────
@@ -758,76 +849,110 @@ class FunctionResultTest extends TestCase
 
     public function testJoinRoom(): void
     {
+        // Python wraps {"join_room": {name}} in a full SWML document.
         $fr = new FunctionResult();
         $fr->joinRoom('video-room');
-        $this->assertSame(['name' => 'video-room'], $fr->toArray()['action'][0]['join_room']);
+        $joinRoom = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['join_room'];
+        $this->assertSame(['name' => 'video-room'], $joinRoom);
     }
 
     public function testSipRefer(): void
     {
+        // Python wraps {"sip_refer": {to_uri}} in a full SWML document.
         $fr = new FunctionResult();
         $fr->sipRefer('sip:agent@example.com');
-        $this->assertSame(
-            ['to_uri' => 'sip:agent@example.com'],
-            $fr->toArray()['action'][0]['sip_refer']
-        );
+        $sipRefer = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['sip_refer'];
+        $this->assertSame(['to_uri' => 'sip:agent@example.com'], $sipRefer);
     }
 
-    public function testTapBasic(): void
+    // tap parity: the {"tap": ...} verb is SWML-wrapped (executeSwml -> "SWML").
+    // Only `uri` is always present; control_id/direction/codec/rtp_ptime/
+    // status_url are emitted only when they differ from their defaults.
+
+    public function testTapBasicOmitsDefaults(): void
     {
         $fr = new FunctionResult();
         $fr->tap('wss://tap.example.com');
-        $t = $fr->toArray()['action'][0]['tap'];
+        $t = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
 
         $this->assertSame('wss://tap.example.com', $t['uri']);
-        $this->assertSame('both', $t['direction']);
-        $this->assertSame('PCMU', $t['codec']);
+        // direction/codec/rtp_ptime/status_url are at defaults -> omitted.
+        $this->assertArrayNotHasKey('direction', $t);
+        $this->assertArrayNotHasKey('codec', $t);
+        $this->assertArrayNotHasKey('rtp_ptime', $t);
         $this->assertArrayNotHasKey('control_id', $t);
+        $this->assertArrayNotHasKey('status_url', $t);
     }
 
-    public function testTapWithControlId(): void
+    public function testTapWithAllParams(): void
     {
         $fr = new FunctionResult();
-        $fr->tap('wss://tap.example.com', 'tap-1', 'speak', 'PCMA');
-        $t = $fr->toArray()['action'][0]['tap'];
+        $fr->tap('wss://tap.example.com', 'tap-1', 'speak', 'PCMA', 40, 'https://example.com/status');
+        $t = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
 
         $this->assertSame('tap-1', $t['control_id']);
         $this->assertSame('speak', $t['direction']);
         $this->assertSame('PCMA', $t['codec']);
+        $this->assertSame(40, $t['rtp_ptime']);
+        $this->assertSame('https://example.com/status', $t['status_url']);
+    }
+
+    public function testTapInvalidDirectionThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('direction must be one of');
+        (new FunctionResult())->tap('wss://t', null, 'listen'); // 'listen' is record_call's, not tap's
+    }
+
+    public function testTapInvalidCodecThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('codec must be one of');
+        (new FunctionResult())->tap('wss://t', null, 'both', 'OPUS');
+    }
+
+    public function testTapInvalidRtpPtimeThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('rtp_ptime must be a positive integer');
+        (new FunctionResult())->tap('wss://t', null, 'both', 'PCMU', 0);
     }
 
     public function testStopTapWithoutControlId(): void
     {
         $fr = new FunctionResult();
         $fr->stopTap();
-        $json = json_encode($fr->toArray()['action'][0]['stop_tap']);
-        $this->assertSame('{}', $json);
+        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_tap'];
+        $this->assertSame('{}', json_encode($stop));
     }
 
     public function testStopTapWithControlId(): void
     {
         $fr = new FunctionResult();
         $fr->stopTap('tap-1');
-        $this->assertSame(
-            ['control_id' => 'tap-1'],
-            $fr->toArray()['action'][0]['stop_tap']
-        );
+        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_tap'];
+        $this->assertSame(['control_id' => 'tap-1'], $stop);
     }
+
+    // sendSms parity: the {"send_sms": ...} verb is SWML-wrapped (executeSwml
+    // -> "SWML"); to_number/from_number always present; body/media/tags/region
+    // emitted only when supplied; raises if neither body nor media is given.
 
     public function testSendSmsBasic(): void
     {
         $fr = new FunctionResult();
         $fr->sendSms('+15551111111', '+15552222222', 'Hello');
-        $sms = $fr->toArray()['action'][0]['send_sms'];
+        $sms = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['send_sms'];
 
         $this->assertSame('+15551111111', $sms['to_number']);
         $this->assertSame('+15552222222', $sms['from_number']);
         $this->assertSame('Hello', $sms['body']);
         $this->assertArrayNotHasKey('media', $sms);
         $this->assertArrayNotHasKey('tags', $sms);
+        $this->assertArrayNotHasKey('region', $sms);
     }
 
-    public function testSendSmsWithMediaAndTags(): void
+    public function testSendSmsWithMediaTagsAndRegion(): void
     {
         $fr = new FunctionResult();
         $fr->sendSms(
@@ -835,174 +960,292 @@ class FunctionResultTest extends TestCase
             '+15552222222',
             'See image',
             ['https://example.com/img.png'],
-            ['campaign' => 'promo']
+            ['campaign' => 'promo'],
+            'us'
         );
-        $sms = $fr->toArray()['action'][0]['send_sms'];
+        $sms = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['send_sms'];
 
         $this->assertSame(['https://example.com/img.png'], $sms['media']);
         $this->assertSame(['campaign' => 'promo'], $sms['tags']);
+        $this->assertSame('us', $sms['region']);
     }
 
-    public function testPayBasic(): void
+    public function testSendSmsMediaOnlyNoBody(): void
+    {
+        // body is optional when media is provided.
+        $fr = new FunctionResult();
+        $fr->sendSms('+15551111111', '+15552222222', null, ['https://example.com/img.png']);
+        $sms = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['send_sms'];
+
+        $this->assertArrayNotHasKey('body', $sms);
+        $this->assertSame(['https://example.com/img.png'], $sms['media']);
+    }
+
+    public function testSendSmsNeitherBodyNorMediaThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Either body or media must be provided');
+        (new FunctionResult())->sendSms('+15551111111', '+15552222222');
+    }
+
+    // pay parity: the {"pay": ...} verb is SWML-wrapped, preceded by a
+    // {set:{ai_response}} verb. The collection-method wire key is `input`
+    // (NOT input_method); numbers and booleans are stringified; the invented
+    // `action_url` is gone (the status URL is `status_url`).
+
+    public function testPayBasicDefaults(): void
     {
         $fr = new FunctionResult();
         $fr->pay('https://pay.example.com/connector');
-        $p = $fr->toArray()['action'][0]['pay'];
+        $main = $fr->toArray()['action'][0]['SWML']['sections']['main'];
 
+        // First verb sets the default ai_response.
+        $this->assertStringStartsWith('The payment status is', $main[0]['set']['ai_response']);
+
+        $p = $main[1]['pay'];
         $this->assertSame('https://pay.example.com/connector', $p['payment_connector_url']);
-        $this->assertSame('dtmf', $p['input_method']);
-        $this->assertSame(600, $p['timeout']);
-        $this->assertSame(3, $p['max_attempts']);
-        $this->assertArrayNotHasKey('action_url', $p);
+        $this->assertSame('dtmf', $p['input']);                 // wire key is `input`
+        $this->assertSame('credit-card', $p['payment_method']);
+        $this->assertSame('5', $p['timeout']);                  // stringified
+        $this->assertSame('1', $p['max_attempts']);
+        $this->assertSame('true', $p['security_code']);
+        $this->assertSame('0', $p['min_postal_code_length']);
+        $this->assertSame('reusable', $p['token_type']);
+        $this->assertSame('usd', $p['currency']);
+        $this->assertSame('en-US', $p['language']);
+        $this->assertSame('woman', $p['voice']);
+        $this->assertSame('visa mastercard amex', $p['valid_card_types']);
+        $this->assertSame('true', $p['postal_code']);           // bool -> "true"
+        // Optionals absent at default.
+        $this->assertArrayNotHasKey('status_url', $p);
+        $this->assertArrayNotHasKey('charge_amount', $p);
+        $this->assertArrayNotHasKey('input_method', $p);        // invented key gone
+        $this->assertArrayNotHasKey('action_url', $p);          // invented key gone
     }
 
     public function testPayWithAllOptions(): void
     {
         $fr = new FunctionResult();
-        $fr->pay('https://pay.example.com/connector', 'voice', 'https://pay.example.com/action', 120, 5);
-        $p = $fr->toArray()['action'][0]['pay'];
+        $fr->pay(
+            'https://pay.example.com/connector',
+            'dtmf',
+            'https://pay.example.com/status',
+            'credit-card',
+            120,
+            5,
+            false,
+            '94105',          // postal_code as a string
+            5,
+            'one-time',
+            '19.99',
+            'eur',
+            'es-MX',
+            'man',
+            'Premium plan',
+            'visa mastercard',
+            [['name' => 'order', 'value' => '42']],
+            [['for' => 'payment-card-number', 'actions' => []]],
+            'Custom response'
+        );
+        $p = $fr->toArray()['action'][0]['SWML']['sections']['main'][1]['pay'];
 
-        $this->assertSame('voice', $p['input_method']);
-        $this->assertSame('https://pay.example.com/action', $p['action_url']);
-        $this->assertSame(120, $p['timeout']);
-        $this->assertSame(5, $p['max_attempts']);
+        $this->assertSame('120', $p['timeout']);
+        $this->assertSame('5', $p['max_attempts']);
+        $this->assertSame('false', $p['security_code']);
+        $this->assertSame('94105', $p['postal_code']);          // string verbatim
+        $this->assertSame('5', $p['min_postal_code_length']);
+        $this->assertSame('one-time', $p['token_type']);
+        $this->assertSame('19.99', $p['charge_amount']);
+        $this->assertSame('eur', $p['currency']);
+        $this->assertSame('es-MX', $p['language']);
+        $this->assertSame('man', $p['voice']);
+        $this->assertSame('Premium plan', $p['description']);
+        $this->assertSame('visa mastercard', $p['valid_card_types']);
+        $this->assertSame('https://pay.example.com/status', $p['status_url']);
+        $this->assertSame([['name' => 'order', 'value' => '42']], $p['parameters']);
+        $this->assertSame([['for' => 'payment-card-number', 'actions' => []]], $p['prompts']);
+        // Custom ai_response overrides the default.
+        $set = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['set'];
+        $this->assertSame('Custom response', $set['ai_response']);
     }
 
     // ── RPC ───────────────────────────────────────────────────────────────
 
-    public function testExecuteRpcWithoutParams(): void
+    // execute_rpc parity: the {"execute_rpc": ...} verb is SWML-wrapped; there
+    // is NO jsonrpc envelope; method strings are bare (e.g. "dial", not
+    // "calling.dial"); call_id/node_id are TOP-LEVEL siblings of method/params.
+
+    /** Reach into the SWML-wrapped execute_rpc params. */
+    private static function rpcOf(FunctionResult $fr): array
+    {
+        return $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['execute_rpc'];
+    }
+
+    public function testExecuteRpcMethodOnly(): void
     {
         $fr = new FunctionResult();
-        $fr->executeRpc('calling.status');
-        $rpc = $fr->toArray()['action'][0]['execute_rpc'];
+        $fr->executeRpc('ai_unhold');
+        $rpc = self::rpcOf($fr);
 
-        $this->assertSame('calling.status', $rpc['method']);
-        $this->assertSame('2.0', $rpc['jsonrpc']);
+        $this->assertSame('ai_unhold', $rpc['method']);
+        $this->assertArrayNotHasKey('jsonrpc', $rpc);
         $this->assertArrayNotHasKey('params', $rpc);
+        $this->assertArrayNotHasKey('call_id', $rpc);
+        $this->assertArrayNotHasKey('node_id', $rpc);
     }
 
-    public function testExecuteRpcWithParams(): void
+    public function testExecuteRpcWithCallIdNodeIdAndParams(): void
     {
         $fr = new FunctionResult();
-        $fr->executeRpc('calling.dial', ['to_number' => '+15551234567']);
-        $rpc = $fr->toArray()['action'][0]['execute_rpc'];
+        $fr->executeRpc('ai_message', ['role' => 'system', 'message_text' => 'hi'], 'c1', 'n1');
+        $rpc = self::rpcOf($fr);
 
-        $this->assertSame('calling.dial', $rpc['method']);
-        $this->assertSame(['to_number' => '+15551234567'], $rpc['params']);
+        $this->assertSame('ai_message', $rpc['method']);
+        // call_id / node_id are siblings of method, NOT nested in params.
+        $this->assertSame('c1', $rpc['call_id']);
+        $this->assertSame('n1', $rpc['node_id']);
+        $this->assertSame(['role' => 'system', 'message_text' => 'hi'], $rpc['params']);
     }
 
-    public function testRpcDialMinimal(): void
+    public function testRpcDialNestsDevices(): void
     {
         $fr = new FunctionResult();
-        $fr->rpcDial('+15551234567');
-        $rpc = $fr->toArray()['action'][0]['execute_rpc'];
+        $fr->rpcDial('+15551234567', '+15559876543', 'https://example.com/swml');
+        $rpc = self::rpcOf($fr);
 
-        $this->assertSame('calling.dial', $rpc['method']);
-        $this->assertSame('2.0', $rpc['jsonrpc']);
-        $this->assertSame('+15551234567', $rpc['params']['to_number']);
-        $this->assertArrayNotHasKey('from_number', $rpc['params']);
-        $this->assertArrayNotHasKey('dest_swml', $rpc['params']);
-        $this->assertArrayNotHasKey('call_timeout', $rpc['params']);
-        $this->assertArrayNotHasKey('region', $rpc['params']);
+        $this->assertSame('dial', $rpc['method']);
+        $this->assertArrayNotHasKey('jsonrpc', $rpc);
+        $this->assertSame(
+            [
+                'devices' => [
+                    'type' => 'phone',
+                    'params' => [
+                        'to_number' => '+15551234567',
+                        'from_number' => '+15559876543',
+                    ],
+                ],
+                'dest_swml' => 'https://example.com/swml',
+            ],
+            $rpc['params']
+        );
     }
 
-    public function testRpcDialFull(): void
+    public function testRpcDialCustomDeviceType(): void
     {
         $fr = new FunctionResult();
-        $fr->rpcDial('+15551234567', '+15559876543', 'https://example.com/swml', 30, 'us-east');
-        $rpc = $fr->toArray()['action'][0]['execute_rpc'];
-
-        $this->assertSame('+15559876543', $rpc['params']['from_number']);
-        $this->assertSame('https://example.com/swml', $rpc['params']['dest_swml']);
-        $this->assertSame(30, $rpc['params']['call_timeout']);
-        $this->assertSame('us-east', $rpc['params']['region']);
+        $fr->rpcDial('+1', '+2', 'https://swml', 'sip');
+        $rpc = self::rpcOf($fr);
+        $this->assertSame('sip', $rpc['params']['devices']['type']);
     }
 
     public function testRpcAiMessage(): void
     {
         $fr = new FunctionResult();
         $fr->rpcAiMessage('call-abc-123', 'Please hold');
-        $rpc = $fr->toArray()['action'][0]['execute_rpc'];
+        $rpc = self::rpcOf($fr);
 
-        $this->assertSame('calling.ai_message', $rpc['method']);
-        $this->assertSame('call-abc-123', $rpc['params']['call_id']);
+        $this->assertSame('ai_message', $rpc['method']);
+        $this->assertSame('call-abc-123', $rpc['call_id']);   // top-level
+        $this->assertSame('system', $rpc['params']['role']);  // default role
         $this->assertSame('Please hold', $rpc['params']['message_text']);
+        $this->assertArrayNotHasKey('call_id', $rpc['params']);
+    }
+
+    public function testRpcAiMessageCustomRole(): void
+    {
+        $fr = new FunctionResult();
+        $fr->rpcAiMessage('c1', 'msg', 'user');
+        $rpc = self::rpcOf($fr);
+        $this->assertSame('user', $rpc['params']['role']);
     }
 
     public function testRpcAiUnhold(): void
     {
         $fr = new FunctionResult();
         $fr->rpcAiUnhold('call-xyz-789');
-        $rpc = $fr->toArray()['action'][0]['execute_rpc'];
+        $rpc = self::rpcOf($fr);
 
-        $this->assertSame('calling.ai_unhold', $rpc['method']);
-        $this->assertSame('call-xyz-789', $rpc['params']['call_id']);
+        $this->assertSame('ai_unhold', $rpc['method']);
+        $this->assertSame('call-xyz-789', $rpc['call_id']);   // top-level
+        // Empty params dict is dropped (Python's `if params:` is falsy for {}).
+        $this->assertArrayNotHasKey('params', $rpc);
     }
 
     public function testSimulateUserInput(): void
     {
+        // Python action name is "user_input".
         $fr = new FunctionResult();
         $fr->simulateUserInput('I need help');
-        $this->assertSame('I need help', $fr->toArray()['action'][0]['simulate_user_input']);
+        $action = $fr->toArray()['action'][0];
+        $this->assertSame('I need help', $action['user_input']);
+        $this->assertArrayNotHasKey('simulate_user_input', $action);
     }
 
     // ── Payment Helpers (static) ──────────────────────────────────────────
 
-    public function testCreatePaymentPromptDefaults(): void
-    {
-        $prompt = FunctionResult::createPaymentPrompt('Enter card number');
+    // Static payment-helper parity with Python:
+    //   create_payment_prompt(for_situation, actions, card_type?, error_type?)
+    //     -> {"for":..., "actions":..., "card_type"?, "error_type"?}
+    //   create_payment_action(action_type, phrase) -> {"type":..., "phrase":...}
+    //   create_payment_parameter(name, value)       -> {"name":..., "value":...}
 
-        $this->assertSame('Enter card number', $prompt['text']);
-        $this->assertSame('en-US', $prompt['language']);
-        $this->assertArrayNotHasKey('voice', $prompt);
+    public function testCreatePaymentPromptBasic(): void
+    {
+        $actions = [['type' => 'Say', 'phrase' => 'Enter card number']];
+        $prompt = FunctionResult::createPaymentPrompt('payment-card-number', $actions);
+
+        $this->assertSame('payment-card-number', $prompt['for']);
+        $this->assertSame($actions, $prompt['actions']);
+        $this->assertArrayNotHasKey('card_type', $prompt);
+        $this->assertArrayNotHasKey('error_type', $prompt);
+        // Old invented keys are gone.
+        $this->assertArrayNotHasKey('text', $prompt);
+        $this->assertArrayNotHasKey('language', $prompt);
     }
 
-    public function testCreatePaymentPromptWithVoice(): void
+    public function testCreatePaymentPromptWithCardAndErrorType(): void
     {
-        $prompt = FunctionResult::createPaymentPrompt('Enter card', 'es-MX', 'Polly.Miguel');
+        $actions = [['type' => 'Play', 'phrase' => 'https://example.com/p.mp3']];
+        $prompt = FunctionResult::createPaymentPrompt('x', $actions, 'visa amex', 'timeout invalid');
 
-        $this->assertSame('es-MX', $prompt['language']);
-        $this->assertSame('Polly.Miguel', $prompt['voice']);
+        $this->assertSame('visa amex', $prompt['card_type']);
+        $this->assertSame('timeout invalid', $prompt['error_type']);
     }
 
-    public function testCreatePaymentActionDefaults(): void
+    public function testCreatePaymentActionShape(): void
     {
-        $action = FunctionResult::createPaymentAction('collect', 'Enter your number');
+        $action = FunctionResult::createPaymentAction('Say', 'Enter your number');
 
-        $this->assertSame('collect', $action['type']);
-        $this->assertSame('Enter your number', $action['text']);
-        $this->assertSame('en-US', $action['language']);
-        $this->assertArrayNotHasKey('voice', $action);
+        $this->assertSame(['type' => 'Say', 'phrase' => 'Enter your number'], $action);
     }
 
-    public function testCreatePaymentActionWithVoice(): void
+    public function testCreatePaymentParameterShape(): void
     {
-        $action = FunctionResult::createPaymentAction('confirm', 'Confirm?', 'fr-FR', 'Polly.Lea');
+        $param = FunctionResult::createPaymentParameter('card_number', '4111');
 
-        $this->assertSame('confirm', $action['type']);
-        $this->assertSame('fr-FR', $action['language']);
-        $this->assertSame('Polly.Lea', $action['voice']);
+        $this->assertSame(['name' => 'card_number', 'value' => '4111'], $param);
     }
 
-    public function testCreatePaymentParameterBasic(): void
+    public function testCreatePaymentHelpersComposeIntoPay(): void
     {
-        $param = FunctionResult::createPaymentParameter('card_number', 'credit_card');
+        // The helpers feed pay()'s parameters/prompts arrays end-to-end.
+        $param = FunctionResult::createPaymentParameter('order', '42');
+        $action = FunctionResult::createPaymentAction('Say', 'Card?');
+        $prompt = FunctionResult::createPaymentPrompt('payment-card-number', [$action]);
 
-        $this->assertSame('card_number', $param['name']);
-        $this->assertSame('credit_card', $param['type']);
-    }
+        $fr = (new FunctionResult())->pay(
+            'https://pay.example.com/connector',
+            'dtmf', null, 'credit-card', 5, 1, true, true, 0, 'reusable',
+            null, 'usd', 'en-US', 'woman', null, 'visa mastercard amex',
+            [$param], [$prompt]
+        );
+        $p = $fr->toArray()['action'][0]['SWML']['sections']['main'][1]['pay'];
 
-    public function testCreatePaymentParameterWithConfig(): void
-    {
-        $param = FunctionResult::createPaymentParameter('card_number', 'credit_card', [
-            'min_length' => 13,
-            'max_length' => 19,
-        ]);
-
-        $this->assertSame('card_number', $param['name']);
-        $this->assertSame('credit_card', $param['type']);
-        $this->assertSame(13, $param['min_length']);
-        $this->assertSame(19, $param['max_length']);
+        $this->assertSame([['name' => 'order', 'value' => '42']], $p['parameters']);
+        $this->assertSame(
+            [['for' => 'payment-card-number', 'actions' => [['type' => 'Say', 'phrase' => 'Card?']]]],
+            $p['prompts']
+        );
     }
 
     // ── Method Chaining ──────────────────────────────────────────────────
@@ -1062,7 +1305,7 @@ class FunctionResultTest extends TestCase
         $this->assertSame($fr, $fr->addAction(['a' => 'b']));
         $this->assertSame($fr, $fr->addActions([['c' => 'd']]));
         $this->assertSame($fr, $fr->connect('+1'));
-        $this->assertSame($fr, $fr->swmlTransfer('uri'));
+        $this->assertSame($fr, $fr->swmlTransfer('uri', 'response'));
         $this->assertSame($fr, $fr->hangup());
         $this->assertSame($fr, $fr->hold());
         $this->assertSame($fr, $fr->waitForUser());
@@ -1098,7 +1341,7 @@ class FunctionResultTest extends TestCase
         $this->assertSame($fr, $fr->sendSms('a', 'b', 'c'));
         $this->assertSame($fr, $fr->pay('url'));
         $this->assertSame($fr, $fr->executeRpc('m'));
-        $this->assertSame($fr, $fr->rpcDial('+1'));
+        $this->assertSame($fr, $fr->rpcDial('+1', '+2', 'https://swml'));
         $this->assertSame($fr, $fr->rpcAiMessage('id', 'msg'));
         $this->assertSame($fr, $fr->rpcAiUnhold('id'));
         $this->assertSame($fr, $fr->simulateUserInput('txt'));
@@ -1115,7 +1358,8 @@ class FunctionResultTest extends TestCase
     public function testRecordCallAcceptsRecordDirectionEnumOrString(): void
     {
         // The backed enum's value is the canonical wire direction string, and
-        // record_call uses 'listen' (not tap's 'hear').
+        // record_call uses 'listen' (not tap's 'hear'). recordCall now routes
+        // through the SWML document, so read the verb out of it.
         $this->assertSame('listen', RecordDirection::Listen->value);
 
         $enum = new FunctionResult();
@@ -1123,16 +1367,16 @@ class FunctionResultTest extends TestCase
         $string = new FunctionResult();
         $string->recordCall('rec-1', true, 'mp3', 'listen');
 
+        $enumRec = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+        $stringRec = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+
         $this->assertSame(
-            $string->toArray()['action'][0]['record_call'],
-            $enum->toArray()['action'][0]['record_call'],
+            $stringRec,
+            $enumRec,
             'recordCall enum and string $direction must emit the identical record_call',
         );
         // And the wire value really is the normalized string.
-        $this->assertSame(
-            'listen',
-            $enum->toArray()['action'][0]['record_call']['direction'],
-        );
+        $this->assertSame('listen', $enumRec['direction']);
     }
 
     public function testTapAcceptsTapDirectionEnumOrString(): void
@@ -1142,14 +1386,14 @@ class FunctionResultTest extends TestCase
         $string = new FunctionResult();
         $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
 
+        $enumTap = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+        $stringTap = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+
         $this->assertSame(
-            $string->toArray()['action'][0]['tap'],
-            $enum->toArray()['action'][0]['tap'],
+            $stringTap,
+            $enumTap,
             'tap enum and string $direction must emit the identical tap action',
         );
-        $this->assertSame(
-            'hear',
-            $enum->toArray()['action'][0]['tap']['direction'],
-        );
+        $this->assertSame('hear', $enumTap['direction']);
     }
 }
