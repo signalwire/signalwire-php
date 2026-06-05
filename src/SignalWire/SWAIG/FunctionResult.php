@@ -66,13 +66,15 @@ class FunctionResult
 
     // ── Call Control ─────────────────────────────────────────────────────
 
-    public function connect(string $destination, bool $final = false, string $from = ''): self
+    public function connect(string $destination, bool $final = true, string $from = ''): self
     {
         $connectObj = ['to' => $destination];
         if ($from !== '') {
             $connectObj['from'] = $from;
         }
 
+        // final=true -> permanent transfer; matches the Python reference
+        // (function_result.py connect: "transfer": str(final).lower()).
         $this->actions[] = [
             'SWML' => [
                 'sections' => [
@@ -80,7 +82,9 @@ class FunctionResult
                         ['connect' => $connectObj],
                     ],
                 ],
+                'version' => '1.0.0',
             ],
+            'transfer' => $final ? 'true' : 'false',
         ];
 
         return $this;

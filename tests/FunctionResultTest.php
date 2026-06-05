@@ -140,6 +140,9 @@ class FunctionResultTest extends TestCase
         $connect = $action['SWML']['sections']['main'][0]['connect'];
         $this->assertSame('+15551234567', $connect['to']);
         $this->assertArrayNotHasKey('from', $connect);
+        // final defaults true -> top-level "transfer" + SWML "version" (parity with Python connect)
+        $this->assertSame('true', $action['transfer']);
+        $this->assertSame('1.0.0', $action['SWML']['version']);
     }
 
     public function testConnectWithFrom(): void
@@ -159,6 +162,11 @@ class FunctionResultTest extends TestCase
 
         $this->assertArrayHasKey('SWML', $action);
         $this->assertSame('+15551234567', $action['SWML']['sections']['main'][0]['connect']['to']);
+        $this->assertSame('true', $action['transfer']);
+
+        $temp = new FunctionResult();
+        $temp->connect('+15551234567', false);
+        $this->assertSame('false', $temp->toArray()['action'][0]['transfer']);
     }
 
     public function testSwmlTransferBasic(): void
