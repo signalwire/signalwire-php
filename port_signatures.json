@@ -3062,7 +3062,7 @@
                 },
                 {
                   "name": "format",
-                  "type": "string",
+                  "type": "union<class:signalwire.swaig.RecordFormat,string>",
                   "required": false,
                   "default": "wav"
                 },
@@ -3562,7 +3562,7 @@
                 },
                 {
                   "name": "codec",
-                  "type": "string",
+                  "type": "union<class:signalwire.swaig.Codec,string>",
                   "required": false,
                   "default": "PCMU"
                 },
@@ -17422,9 +17422,127 @@
         }
       }
     },
+    "signalwire.swaig.codec": {
+      "classes": {
+        "Codec": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            }
+          }
+        }
+      }
+    },
     "signalwire.swaig.record_direction": {
       "classes": {
         "RecordDirection": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.swaig.record_format": {
+      "classes": {
+        "RecordFormat": {
           "methods": {
             "__init__": {
               "params": [

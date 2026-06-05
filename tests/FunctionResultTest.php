@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
+use SignalWire\SWAIG\Codec;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWAIG\RecordDirection;
+use SignalWire\SWAIG\RecordFormat;
 use SignalWire\SWAIG\TapDirection;
 
 class FunctionResultTest extends TestCase
@@ -1479,5 +1481,178 @@ class FunctionResultTest extends TestCase
             'tap enum and string $direction must emit the identical tap action',
         );
         $this->assertSame('hear', $enumTap['direction']);
+    }
+
+    /**
+     * Each RecordFormat case's backing value is the exact wire string the SWML
+     * `record_call` verb expects ({wav,mp3,mp4}). No mocks — these are the
+     * literal enum values that get serialized.
+     */
+    public function testRecordFormatCaseWireValues(): void
+    {
+        $this->assertSame('wav', RecordFormat::Wav->value);
+        $this->assertSame('mp3', RecordFormat::Mp3->value);
+        $this->assertSame('mp4', RecordFormat::Mp4->value);
+        // The closed set is exactly these three — no more, no fewer.
+        $this->assertSame(
+            ['wav', 'mp3', 'mp4'],
+            array_map(static fn (RecordFormat $f): string => $f->value, RecordFormat::cases()),
+        );
+    }
+
+    /**
+     * recordCall() accepts the typed RecordFormat enum and a bare string
+     * interchangeably for $format, producing the BYTE-IDENTICAL emitted
+     * record_call action. Uses RecordFormat::Mp4 — the value that was added when
+     * the Python reference was fixed to {wav,mp3,mp4}. No mocks — assertions read
+     * the real built SWML action payload, then compare the two serializations.
+     */
+    public function testRecordCallAcceptsRecordFormatEnumOrString(): void
+    {
+        $enum = new FunctionResult();
+        $enum->recordCall('rec-1', true, RecordFormat::Mp4, 'listen');
+        $string = new FunctionResult();
+        $string->recordCall('rec-1', true, 'mp4', 'listen');
+
+        $enumRec = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+        $stringRec = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+
+        $this->assertSame(
+            $stringRec,
+            $enumRec,
+            'recordCall enum and string $format must emit the identical record_call',
+        );
+        // And the wire value really is the normalized format string.
+        $this->assertSame('mp4', $enumRec['format']);
+        // Byte-identical at the JSON-serialization level, not just array-equal.
+        $this->assertSame(
+            json_encode($string->toArray()),
+            json_encode($enum->toArray()),
+        );
+    }
+
+    /**
+     * Every RecordFormat value round-trips through recordCall() to the wire
+     * unchanged, and the typed enum is byte-identical to the equivalent string
+     * for each case. No mocks.
+     */
+    public function testRecordFormatEveryValueRoundTripsToWire(): void
+    {
+        foreach (RecordFormat::cases() as $fmt) {
+            $enum = new FunctionResult();
+            $enum->recordCall('rc', false, $fmt, 'both');
+            $string = new FunctionResult();
+            $string->recordCall('rc', false, $fmt->value, 'both');
+
+            $enumRec = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+            $this->assertSame($fmt->value, $enumRec['format']);
+            $this->assertSame(
+                json_encode($string->toArray()),
+                json_encode($enum->toArray()),
+                "RecordFormat::{$fmt->name} must emit identically to its string '{$fmt->value}'",
+            );
+        }
+    }
+
+    /**
+     * An out-of-set $format string is still rejected by recordCall()'s existing
+     * validation (parity with Python's ValueError). The enum narrows the type at
+     * compile time; the string arm keeps the runtime guard.
+     */
+    public function testRecordCallStillRejectsOutOfSetFormatString(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("format must be 'wav', 'mp3', or 'mp4'");
+        (new FunctionResult())->recordCall('rc', false, 'ogg', 'both');
+    }
+
+    /**
+     * Each Codec case's backing value is the exact (upper-case) wire string the
+     * SWML `tap` verb expects ({PCMU,PCMA}). This is the SWAIG tap codec set
+     * only — NOT the larger RELAY connect codec superset. No mocks.
+     */
+    public function testCodecCaseWireValues(): void
+    {
+        $this->assertSame('PCMU', Codec::Pcmu->value);
+        $this->assertSame('PCMA', Codec::Pcma->value);
+        // The closed set is exactly these two — the tap vocabulary, not RELAY's.
+        $this->assertSame(
+            ['PCMU', 'PCMA'],
+            array_map(static fn (Codec $c): string => $c->value, Codec::cases()),
+        );
+    }
+
+    /**
+     * tap() accepts the typed Codec enum and a bare string interchangeably for
+     * $codec, producing the BYTE-IDENTICAL emitted tap action. Uses Codec::Pcma
+     * — the non-default value, so the `codec` key is actually present in the
+     * output. No mocks — assertions read the real built SWML action payload.
+     */
+    public function testTapAcceptsCodecEnumOrString(): void
+    {
+        $enum = new FunctionResult();
+        $enum->tap('wss://tap.example.com', 'tap-1', 'hear', Codec::Pcma);
+        $string = new FunctionResult();
+        $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
+
+        $enumTap = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+        $stringTap = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+
+        $this->assertSame(
+            $stringTap,
+            $enumTap,
+            'tap enum and string $codec must emit the identical tap action',
+        );
+        // And the wire value really is the normalized codec string.
+        $this->assertSame('PCMA', $enumTap['codec']);
+        $this->assertSame(
+            json_encode($string->toArray()),
+            json_encode($enum->toArray()),
+        );
+    }
+
+    /**
+     * Every Codec value round-trips through tap() to the wire unchanged, and the
+     * typed enum is byte-identical to the equivalent string for each case. The
+     * default codec (PCMU) is suppressed from the output by tap()'s
+     * default-omission logic — the enum and string must agree on that too. No mocks.
+     */
+    public function testCodecEveryValueRoundTripsToWire(): void
+    {
+        foreach (Codec::cases() as $codec) {
+            $enum = new FunctionResult();
+            // rtp_ptime 40 (non-default) guarantees a non-empty tap object even
+            // when the codec itself is the suppressed default.
+            $enum->tap('wss://t', 'c', 'both', $codec, 40);
+            $string = new FunctionResult();
+            $string->tap('wss://t', 'c', 'both', $codec->value, 40);
+
+            $this->assertSame(
+                json_encode($string->toArray()),
+                json_encode($enum->toArray()),
+                "Codec::{$codec->name} must emit identically to its string '{$codec->value}'",
+            );
+
+            // Non-default codec (PCMA) appears on the wire; default (PCMU) is omitted.
+            $tap = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+            if ($codec->value === 'PCMU') {
+                $this->assertArrayNotHasKey('codec', $tap);
+            } else {
+                $this->assertSame($codec->value, $tap['codec']);
+            }
+        }
+    }
+
+    /**
+     * An out-of-set $codec string is still rejected by tap()'s existing
+     * validation (parity with Python's ValueError). 'OPUS' is a valid RELAY
+     * connect codec but NOT a valid SWAIG tap codec — proving the two
+     * vocabularies are deliberately not unified.
+     */
+    public function testTapStillRejectsOutOfSetCodecString(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('codec must be one of');
+        (new FunctionResult())->tap('wss://t', null, 'both', 'OPUS');
     }
 }

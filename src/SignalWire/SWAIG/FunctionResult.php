@@ -324,6 +324,11 @@ class FunctionResult
      * verb in a full SWML document emitted via {@see FunctionResult::executeSwml()}
      * (so it lands under the "SWML" action key).
      *
+     * @param RecordFormat|string $format recording container format — the typed
+     *   {@see RecordFormat} enum (typo-checked at the call site) or a bare string
+     *   (parity with Python's `record_call`). Normalized to the wire string
+     *   ('wav'/'mp3'/'mp4'). 'mp4' is valid for the SWML `record_call` verb,
+     *   distinct from the RELAY `record` action's 2-value format set.
      * @param RecordDirection|string $direction stream direction — the typed
      *   {@see RecordDirection} enum (typo-checked at the call site) or a bare
      *   string (parity with Python's `record_call`). Normalized to the wire
@@ -334,7 +339,7 @@ class FunctionResult
     public function recordCall(
         ?string $controlId = null,
         bool $stereo = false,
-        string $format = 'wav',
+        RecordFormat|string $format = 'wav',
         RecordDirection|string $direction = 'both',
         ?string $terminators = null,
         bool $beep = false,
@@ -344,11 +349,12 @@ class FunctionResult
         ?float $maxLength = null,
         ?string $statusUrl = null
     ): self {
+        $formatStr = $format instanceof RecordFormat ? $format->value : $format;
         $directionStr = $direction instanceof RecordDirection ? $direction->value : $direction;
 
         // Validate format (matches the SWML record_call verb schema).
         $validFormats = ['wav', 'mp3', 'mp4'];
-        if (!in_array($format, $validFormats, true)) {
+        if (!in_array($formatStr, $validFormats, true)) {
             throw new \InvalidArgumentException("format must be 'wav', 'mp3', or 'mp4'");
         }
 
@@ -362,7 +368,7 @@ class FunctionResult
         // input_sensitivity are present even at their defaults).
         $record = [
             'stereo' => $stereo,
-            'format' => $format,
+            'format' => $formatStr,
             'direction' => $directionStr,
             'beep' => $beep,
             'input_sensitivity' => $inputSensitivity,
@@ -755,17 +761,22 @@ class FunctionResult
      *   {@see TapDirection} enum (typo-checked at the call site) or a bare
      *   string (parity with Python's `tap`). Normalized to the wire string
      *   ('speak'/'hear'/'both').
+     * @param Codec|string $codec media codec — the typed {@see Codec} enum
+     *   (typo-checked at the call site) or a bare string (parity with Python's
+     *   `tap`). Normalized to the wire string ('PCMU'/'PCMA'). This is the SWAIG
+     *   tap codec set only, NOT the larger RELAY stream/connect codec superset.
      * @throws \InvalidArgumentException on invalid direction, codec, or rtp_ptime.
      */
     public function tap(
         string $uri,
         ?string $controlId = null,
         TapDirection|string $direction = 'both',
-        string $codec = 'PCMU',
+        Codec|string $codec = 'PCMU',
         int $rtpPtime = 20,
         ?string $statusUrl = null
     ): self {
         $directionStr = $direction instanceof TapDirection ? $direction->value : $direction;
+        $codecStr = $codec instanceof Codec ? $codec->value : $codec;
 
         // Validate direction.
         $validDirections = ['speak', 'hear', 'both'];
@@ -777,7 +788,7 @@ class FunctionResult
 
         // Validate codec.
         $validCodecs = ['PCMU', 'PCMA'];
-        if (!in_array($codec, $validCodecs, true)) {
+        if (!in_array($codecStr, $validCodecs, true)) {
             throw new \InvalidArgumentException(
                 'codec must be one of ' . self::pythonList($validCodecs)
             );
@@ -798,8 +809,8 @@ class FunctionResult
         if ($directionStr !== 'both') {
             $tapObj['direction'] = $directionStr;
         }
-        if ($codec !== 'PCMU') {
-            $tapObj['codec'] = $codec;
+        if ($codecStr !== 'PCMU') {
+            $tapObj['codec'] = $codecStr;
         }
         if ($rtpPtime !== 20) {
             $tapObj['rtp_ptime'] = $rtpPtime;
