@@ -357,19 +357,193 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Join an ad-hoc audio conference with RELAY and CXML calls using SWML.
+     *
+     * Full parity with signalwire-python core/function_result.py
+     * `join_conference`: 18 optional parameters, 7 validations, and the
+     * same simple/full emission. When every parameter is at its default the
+     * payload collapses to the bare conference-NAME string
+     * ({"join_conference": "<name>"}); otherwise it is the object form keyed
+     * by snake_case wire keys, with each key emitted only when it differs
+     * from its default. The {"join_conference": ...} payload is wrapped in a
+     * full SWML document and emitted through {@see FunctionResult::executeSwml()}
+     * — the same path Python's `record_call` uses — so it lands under the
+     * "SWML" action key.
+     *
+     * Note: Python uses `wait_url` (SWML URL) for hold music; there is no
+     * `hold_audio` parameter. (The previously-invented `holdAudio`/`hold_audio`
+     * had no Python equivalent and was removed.)
+     *
+     * @param mixed $result Switch on return_value when object {} or cond when
+     *                      array []; null to omit (parity with Python `Optional[Any]`).
+     * @throws \InvalidArgumentException on any of the 7 validation failures.
+     */
     public function joinConference(
         string $name,
         bool $muted = false,
         string $beep = 'true',
-        string $holdAudio = 'ring'
+        bool $startOnEnter = true,
+        bool $endOnExit = false,
+        ?string $waitUrl = null,
+        int $maxParticipants = 250,
+        string $record = 'do-not-record',
+        ?string $region = null,
+        string $trim = 'trim-silence',
+        ?string $coach = null,
+        ?string $statusCallbackEvent = null,
+        ?string $statusCallback = null,
+        string $statusCallbackMethod = 'POST',
+        ?string $recordingStatusCallback = null,
+        string $recordingStatusCallbackMethod = 'POST',
+        string $recordingStatusCallbackEvent = 'completed',
+        mixed $result = null
     ): self {
-        $this->actions[] = ['join_conference' => [
-            'name' => $name,
-            'muted' => $muted,
-            'beep' => $beep,
-            'hold_audio' => $holdAudio,
-        ]];
-        return $this;
+        // Validate beep parameter.
+        $validBeepValues = ['true', 'false', 'onEnter', 'onExit'];
+        if (!in_array($beep, $validBeepValues, true)) {
+            throw new \InvalidArgumentException(
+                'beep must be one of ' . self::pythonList($validBeepValues)
+            );
+        }
+
+        // Validate max_participants.
+        if ($maxParticipants <= 0 || $maxParticipants > 250) {
+            throw new \InvalidArgumentException(
+                'max_participants must be a positive integer <= 250'
+            );
+        }
+
+        // Validate record parameter.
+        $validRecordValues = ['do-not-record', 'record-from-start'];
+        if (!in_array($record, $validRecordValues, true)) {
+            throw new \InvalidArgumentException(
+                'record must be one of ' . self::pythonList($validRecordValues)
+            );
+        }
+
+        // Validate trim parameter.
+        $validTrimValues = ['trim-silence', 'do-not-trim'];
+        if (!in_array($trim, $validTrimValues, true)) {
+            throw new \InvalidArgumentException(
+                'trim must be one of ' . self::pythonList($validTrimValues)
+            );
+        }
+
+        // Validate status_callback_method / recording_status_callback_method.
+        $validMethods = ['GET', 'POST'];
+        if (!in_array($statusCallbackMethod, $validMethods, true)) {
+            throw new \InvalidArgumentException(
+                'status_callback_method must be one of ' . self::pythonList($validMethods)
+            );
+        }
+        if (!in_array($recordingStatusCallbackMethod, $validMethods, true)) {
+            throw new \InvalidArgumentException(
+                'recording_status_callback_method must be one of ' . self::pythonList($validMethods)
+            );
+        }
+
+        // Validate name (after the closed-set checks, mirroring Python order).
+        if (trim($name) === '') {
+            throw new \InvalidArgumentException('name cannot be empty');
+        }
+
+        // Simple form — when everything is at its default, the payload is just
+        // the conference name string.
+        if (
+            !$muted && $beep === 'true' && $startOnEnter && !$endOnExit &&
+            $waitUrl === null && $maxParticipants === 250 && $record === 'do-not-record' &&
+            $region === null && $trim === 'trim-silence' && $coach === null &&
+            $statusCallbackEvent === null && $statusCallback === null &&
+            $statusCallbackMethod === 'POST' && $recordingStatusCallback === null &&
+            $recordingStatusCallbackMethod === 'POST' &&
+            $recordingStatusCallbackEvent === 'completed' && $result === null
+        ) {
+            $joinParams = $name;
+        } else {
+            // Full object form — emit each non-default param under its
+            // snake_case wire key.
+            $joinParams = ['name' => $name];
+            if ($muted) {
+                $joinParams['muted'] = $muted;
+            }
+            if ($beep !== 'true') {
+                $joinParams['beep'] = $beep;
+            }
+            if (!$startOnEnter) {
+                $joinParams['start_on_enter'] = $startOnEnter;
+            }
+            if ($endOnExit) {
+                $joinParams['end_on_exit'] = $endOnExit;
+            }
+            if ($waitUrl !== null && $waitUrl !== '') {
+                $joinParams['wait_url'] = $waitUrl;
+            }
+            if ($maxParticipants !== 250) {
+                $joinParams['max_participants'] = $maxParticipants;
+            }
+            if ($record !== 'do-not-record') {
+                $joinParams['record'] = $record;
+            }
+            if ($region !== null && $region !== '') {
+                $joinParams['region'] = $region;
+            }
+            if ($trim !== 'trim-silence') {
+                $joinParams['trim'] = $trim;
+            }
+            if ($coach !== null && $coach !== '') {
+                $joinParams['coach'] = $coach;
+            }
+            if ($statusCallbackEvent !== null && $statusCallbackEvent !== '') {
+                $joinParams['status_callback_event'] = $statusCallbackEvent;
+            }
+            if ($statusCallback !== null && $statusCallback !== '') {
+                $joinParams['status_callback'] = $statusCallback;
+            }
+            if ($statusCallbackMethod !== 'POST') {
+                $joinParams['status_callback_method'] = $statusCallbackMethod;
+            }
+            if ($recordingStatusCallback !== null && $recordingStatusCallback !== '') {
+                $joinParams['recording_status_callback'] = $recordingStatusCallback;
+            }
+            if ($recordingStatusCallbackMethod !== 'POST') {
+                $joinParams['recording_status_callback_method'] = $recordingStatusCallbackMethod;
+            }
+            if ($recordingStatusCallbackEvent !== 'completed') {
+                $joinParams['recording_status_callback_event'] = $recordingStatusCallbackEvent;
+            }
+            if ($result !== null) {
+                $joinParams['result'] = $result;
+            }
+        }
+
+        // Wrap in a full SWML document and emit via executeSwml (same path
+        // Python's record_call uses → lands under the "SWML" action key).
+        $swmlDoc = [
+            'version' => '1.0.0',
+            'sections' => [
+                'main' => [
+                    ['join_conference' => $joinParams],
+                ],
+            ],
+        ];
+
+        return $this->executeSwml($swmlDoc);
+    }
+
+    /**
+     * Render a list of strings the way Python's `repr(list)` does
+     * (e.g. ['true', 'false', 'onEnter', 'onExit']) so the validation
+     * messages match the reference byte-for-byte.
+     *
+     * @param list<string> $values
+     */
+    private static function pythonList(array $values): string
+    {
+        return '[' . implode(', ', array_map(
+            static fn (string $v): string => "'" . $v . "'",
+            $values
+        )) . ']';
     }
 
     public function joinRoom(string $name): self

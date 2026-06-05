@@ -567,27 +567,185 @@ class FunctionResultTest extends TestCase
         $this->assertArrayNotHasKey('SWML', $action);
     }
 
-    public function testJoinConferenceDefaults(): void
-    {
-        $fr = new FunctionResult();
-        $fr->joinConference('myconf');
-        $jc = $fr->toArray()['action'][0]['join_conference'];
+    // ── joinConference ────────────────────────────────────────────────────
+    //
+    // Parity with signalwire-python core/function_result.py join_conference.
+    // The reference wraps {"join_conference": ...} in a full SWML document and
+    // emits it through execute_swml (the same path record_call uses), so the
+    // payload lands under the "SWML" action key, NOT a bare "join_conference".
+    // All-defaults collapses to the bare conference-NAME string; any non-default
+    // promotes to the object form keyed by snake_case wire keys. Mirrors
+    // tests/unit/core/test_function_result.py::TestJoinConference. No mocks —
+    // assertions read the real built SWML action payload.
 
-        $this->assertSame('myconf', $jc['name']);
-        $this->assertFalse($jc['muted']);
-        $this->assertSame('true', $jc['beep']);
-        $this->assertSame('ring', $jc['hold_audio']);
+    public function testJoinConferenceSimpleNameAllDefaults(): void
+    {
+        // Parity: test_join_conference_simple_name_all_defaults
+        $result = (new FunctionResult())->joinConference('my-conference');
+
+        $swml = $result->toArray()['action'][0]['SWML'];
+        $joinParams = $swml['sections']['main'][0]['join_conference'];
+        // Simple form: just the conference name string.
+        $this->assertSame('my-conference', $joinParams);
     }
 
-    public function testJoinConferenceCustom(): void
+    public function testJoinConferenceComplexParams(): void
     {
-        $fr = new FunctionResult();
-        $fr->joinConference('room1', true, 'false', 'music');
-        $jc = $fr->toArray()['action'][0]['join_conference'];
+        // Parity: test_join_conference_complex_params
+        $result = (new FunctionResult())->joinConference(
+            'team-meeting',
+            true,                                       // muted
+            'onEnter',                                  // beep
+            false,                                      // startOnEnter
+            true,                                       // endOnExit
+            'https://example.com/hold-music',           // waitUrl
+            50,                                         // maxParticipants
+            'record-from-start',                        // record
+            'us-east',                                  // region
+            'do-not-trim',                              // trim
+            'call-id-123',                              // coach
+            'start end',                                // statusCallbackEvent
+            'https://example.com/callback',             // statusCallback
+            'GET',                                      // statusCallbackMethod
+            'https://example.com/rec-callback',         // recordingStatusCallback
+            'GET',                                      // recordingStatusCallbackMethod
+            'in-progress',                              // recordingStatusCallbackEvent
+            ['key' => 'value']                          // result
+        );
 
-        $this->assertTrue($jc['muted']);
-        $this->assertSame('false', $jc['beep']);
-        $this->assertSame('music', $jc['hold_audio']);
+        $swml = $result->toArray()['action'][0]['SWML'];
+        $joinParams = $swml['sections']['main'][0]['join_conference'];
+        $this->assertIsArray($joinParams);
+        $this->assertSame('team-meeting', $joinParams['name']);
+        $this->assertTrue($joinParams['muted']);
+        $this->assertSame('onEnter', $joinParams['beep']);
+        $this->assertFalse($joinParams['start_on_enter']);
+        $this->assertTrue($joinParams['end_on_exit']);
+        $this->assertSame('https://example.com/hold-music', $joinParams['wait_url']);
+        $this->assertSame(50, $joinParams['max_participants']);
+        $this->assertSame('record-from-start', $joinParams['record']);
+        $this->assertSame('us-east', $joinParams['region']);
+        $this->assertSame('do-not-trim', $joinParams['trim']);
+        $this->assertSame('call-id-123', $joinParams['coach']);
+        $this->assertSame('start end', $joinParams['status_callback_event']);
+        $this->assertSame('https://example.com/callback', $joinParams['status_callback']);
+        $this->assertSame('GET', $joinParams['status_callback_method']);
+        $this->assertSame('https://example.com/rec-callback', $joinParams['recording_status_callback']);
+        $this->assertSame('GET', $joinParams['recording_status_callback_method']);
+        $this->assertSame('in-progress', $joinParams['recording_status_callback_event']);
+        $this->assertSame(['key' => 'value'], $joinParams['result']);
+    }
+
+    public function testJoinConferenceInvalidBeep(): void
+    {
+        // Parity: test_join_conference_invalid_beep
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('beep must be one of');
+        (new FunctionResult())->joinConference('conf', false, 'invalid');
+    }
+
+    public function testJoinConferenceMaxParticipantsTooHigh(): void
+    {
+        // Parity: test_join_conference_max_participants_too_high
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
+        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 300);
+    }
+
+    public function testJoinConferenceMaxParticipantsZero(): void
+    {
+        // Parity: test_join_conference_max_participants_zero
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
+        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 0);
+    }
+
+    public function testJoinConferenceMaxParticipantsNegative(): void
+    {
+        // Parity: test_join_conference_max_participants_negative
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
+        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, -5);
+    }
+
+    public function testJoinConferenceInvalidRecord(): void
+    {
+        // Parity: test_join_conference_invalid_record
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('record must be one of');
+        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 250, 'always');
+    }
+
+    public function testJoinConferenceInvalidTrim(): void
+    {
+        // Parity: test_join_conference_invalid_trim
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('trim must be one of');
+        (new FunctionResult())->joinConference(
+            'conf', false, 'true', true, false, null, 250, 'do-not-record', null, 'bad-value'
+        );
+    }
+
+    public function testJoinConferenceEmptyName(): void
+    {
+        // Parity: test_join_conference_empty_name
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('name cannot be empty');
+        (new FunctionResult())->joinConference('', true);
+    }
+
+    public function testJoinConferenceWhitespaceName(): void
+    {
+        // Parity: test_join_conference_whitespace_name
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('name cannot be empty');
+        (new FunctionResult())->joinConference('   ', true);
+    }
+
+    public function testJoinConferenceInvalidStatusCallbackMethod(): void
+    {
+        // Parity: test_join_conference_invalid_status_callback_method
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('status_callback_method must be one of');
+        (new FunctionResult())->joinConference(
+            'conf', false, 'true', true, false, null, 250, 'do-not-record', null,
+            'trim-silence', null, null, null, 'PUT'
+        );
+    }
+
+    public function testJoinConferenceInvalidRecordingStatusCallbackMethod(): void
+    {
+        // Parity: test_join_conference_invalid_recording_status_callback_method
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('recording_status_callback_method must be one of');
+        (new FunctionResult())->joinConference(
+            'conf', false, 'true', true, false, null, 250, 'do-not-record', null,
+            'trim-silence', null, null, null, 'POST', null, 'DELETE'
+        );
+    }
+
+    public function testJoinConferenceChaining(): void
+    {
+        // Parity: test_join_conference_chaining
+        $result = new FunctionResult();
+        $ret = $result->joinConference('conf');
+        $this->assertSame($result, $ret);
+    }
+
+    public function testJoinConferenceExactBeepMessageRendersPythonList(): void
+    {
+        // The reference renders the valid set with Python list repr, e.g.
+        // beep must be one of ['true', 'false', 'onEnter', 'onExit'].
+        // Mirror that exact rendering so a port user sees the same message.
+        try {
+            (new FunctionResult())->joinConference('conf', false, 'nope');
+            $this->fail('expected InvalidArgumentException for invalid beep');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertSame(
+                "beep must be one of ['true', 'false', 'onEnter', 'onExit']",
+                $e->getMessage()
+            );
+        }
     }
 
     public function testJoinRoom(): void
