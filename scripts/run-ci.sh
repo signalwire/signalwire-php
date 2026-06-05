@@ -9,6 +9,10 @@
 #   2. signature regen                    — python adapter + signature_dump.php
 #   3. drift gate                         — porting-sdk diff_port_signatures.py
 #   4. no-cheat gate                      — porting-sdk audit_no_cheat_tests.py
+#   5. emission gate                      — porting-sdk diff_port_emission.py
+#                                           (byte-compare FunctionResult.toArray()
+#                                            vs Python to_dict() over the shared
+#                                            81-entry corpus; needs no mocks)
 
 set -u
 set -o pipefail
@@ -79,6 +83,14 @@ run_gate "DRIFT" "diff_port_signatures vs python reference" \
 # Gate 4: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
+
+# Gate 5: emission — byte-compare the native FunctionResult serialisation against
+# Python's to_dict() across the shared corpus. Pure serialisation: no mock
+# servers, no network. The dump command runs with cwd = the port root.
+run_gate "EMISSION" "diff_port_emission vs python to_dict()" \
+    python3 "$PORTING_SDK_DIR/scripts/diff_port_emission.py" \
+        --dump-cmd "php scripts/emit_corpus.php" \
+        --port-repo "$PORT_ROOT"
 
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
