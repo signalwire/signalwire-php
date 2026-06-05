@@ -6,6 +6,7 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Serverless\Adapter;
+use SignalWire\Serverless\ExecutionMode;
 
 class ServerlessTest extends TestCase
 {
@@ -558,6 +559,204 @@ class ServerlessTest extends TestCase
         $result = Adapter::handleAzure($agent, $request);
 
         $this->assertSame(200, $result['status']);
+    }
+
+    // ==================================================================
+    // 28. ExecutionMode — each case backs its exact wire/dispatch string
+    // ==================================================================
+
+    public function testExecutionModeBackingStrings(): void
+    {
+        $this->assertSame('lambda', ExecutionMode::Lambda->value);
+        $this->assertSame('gcf', ExecutionMode::Gcf->value);
+        $this->assertSame('azure', ExecutionMode::Azure->value);
+        $this->assertSame('cgi', ExecutionMode::Cgi->value);
+        $this->assertSame('server', ExecutionMode::Server->value);
+
+        // The enum's value set is exactly the strings detect() can return.
+        $values = array_map(fn(ExecutionMode $m) => $m->value, ExecutionMode::cases());
+        sort($values);
+        $this->assertSame(['azure', 'cgi', 'gcf', 'lambda', 'server'], $values);
+    }
+
+    // ==================================================================
+    // 29. detectMode() returns the typed mode and round-trips with detect()
+    // ==================================================================
+
+    public function testDetectModeTypedAndRoundTrips(): void
+    {
+        // Default (server) environment.
+        $this->assertSame(ExecutionMode::Server, Adapter::detectMode());
+        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+
+        putenv('AWS_LAMBDA_FUNCTION_NAME=fn');
+        $this->assertSame(ExecutionMode::Lambda, Adapter::detectMode());
+        $this->assertSame('lambda', Adapter::detect());
+        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+        putenv('AWS_LAMBDA_FUNCTION_NAME');
+
+        putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
+        $this->assertSame(ExecutionMode::Azure, Adapter::detectMode());
+        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+        putenv('AZURE_FUNCTIONS_ENVIRONMENT');
+
+        $_SERVER['GATEWAY_INTERFACE'] = 'CGI/1.1';
+        $this->assertSame(ExecutionMode::Cgi, Adapter::detectMode());
+        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+    }
+
+    // ==================================================================
+    // 30. isServerless() — server is the only non-serverless mode
+    // ==================================================================
+
+    public function testExecutionModeIsServerless(): void
+    {
+        $this->assertFalse(ExecutionMode::Server->isServerless());
+        $this->assertTrue(ExecutionMode::Lambda->isServerless());
+        $this->assertTrue(ExecutionMode::Gcf->isServerless());
+        $this->assertTrue(ExecutionMode::Azure->isServerless());
+        $this->assertTrue(ExecutionMode::Cgi->isServerless());
+    }
+
+    // ==================================================================
+    // 31. coerce() accepts the enum OR its backing string
+    // ==================================================================
+
+    public function testExecutionModeCoerceAcceptsEnumAndString(): void
+    {
+        // String arm (parity with the stringly-typed original).
+        $this->assertSame(ExecutionMode::Azure, ExecutionMode::coerce('azure'));
+        $this->assertSame(ExecutionMode::Cgi, ExecutionMode::coerce('cgi'));
+
+        // Enum arm (passthrough).
+        $this->assertSame(ExecutionMode::Lambda, ExecutionMode::coerce(ExecutionMode::Lambda));
+
+        // Out-of-set string is rejected loudly.
+        $this->expectException(\ValueError::class);
+        ExecutionMode::coerce('totally-bogus');
+    }
+
+    // ==================================================================
+    // 32. serve($agent, ExecutionMode::Server) dispatches to agent->run()
+    // ==================================================================
+
+    public function testServeWithEnumServerCallsRun(): void
+    {
+        $agent = $this->makeRecordingAgent();
+
+        Adapter::serve($agent, ExecutionMode::Server);
+
+        $this->assertTrue($agent->ran, 'serve(Server) should call agent->run()');
+        $this->assertSame(0, $agent->handleRequestCalls, 'no request handling in server mode');
+    }
+
+    // ==================================================================
+    // 33. serve($agent, 'server') — string accepted ALONGSIDE the enum
+    // ==================================================================
+
+    public function testServeWithStringServerCallsRun(): void
+    {
+        $agent = $this->makeRecordingAgent();
+
+        Adapter::serve($agent, 'server');
+
+        $this->assertTrue($agent->ran, "serve('server') should behave identically to serve(ExecutionMode::Server)");
+        $this->assertSame(0, $agent->handleRequestCalls);
+    }
+
+    // ==================================================================
+    // 34. serve($agent, ExecutionMode::Azure) dispatches to handleAzure path
+    //     (real behavior: handleRequest invoked, JSON response emitted)
+    // ==================================================================
+
+    public function testServeWithEnumAzureDispatchesToHandler(): void
+    {
+        $agent = $this->makeRecordingAgent();
+
+        // serve() reads php://input for azure; with no body it parses to []
+        // and still drives handleAzure -> agent->handleRequest.
+        ob_start();
+        Adapter::serve($agent, ExecutionMode::Azure);
+        $output = ob_get_clean();
+
+        $this->assertFalse($agent->ran, 'azure mode must NOT call run()');
+        $this->assertSame(1, $agent->handleRequestCalls, 'azure mode drives handleRequest exactly once');
+
+        // The emitted Azure envelope is JSON with a status field.
+        $decoded = json_decode($output, true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(200, $decoded['status']);
+    }
+
+    // ==================================================================
+    // 35. serve($agent, 'azure') — string arm reaches the same handler
+    // ==================================================================
+
+    public function testServeWithStringAzureDispatchesToHandler(): void
+    {
+        $agent = $this->makeRecordingAgent();
+
+        ob_start();
+        Adapter::serve($agent, 'azure');
+        $output = ob_get_clean();
+
+        $this->assertFalse($agent->ran);
+        $this->assertSame(1, $agent->handleRequestCalls);
+        $decoded = json_decode($output, true);
+        $this->assertSame(200, $decoded['status']);
+    }
+
+    // ==================================================================
+    // 36. serve($agent, <bad string>) raises ValueError (no silent fallback)
+    // ==================================================================
+
+    public function testServeWithUnknownModeStringRaises(): void
+    {
+        $agent = $this->makeRecordingAgent();
+
+        $this->expectException(\ValueError::class);
+        Adapter::serve($agent, 'not-a-real-mode');
+    }
+
+    // ==================================================================
+    // 37. serve($agent) with no mode auto-detects (server by default)
+    // ==================================================================
+
+    public function testServeNoModeAutoDetectsServer(): void
+    {
+        $agent = $this->makeRecordingAgent();
+
+        // No serverless env set (setUp cleared them) -> auto-detect server.
+        Adapter::serve($agent);
+
+        $this->assertTrue($agent->ran, 'default env auto-detects server -> run()');
+    }
+
+    // ==================================================================
+    //  Helper: a real recording agent (NOT a PHPUnit mock — a concrete
+    //  object whose handleRequest()/run() record that they were invoked).
+    // ==================================================================
+
+    private function makeRecordingAgent(): object
+    {
+        return new class {
+            public bool $ran = false;
+            public int $handleRequestCalls = 0;
+
+            public function run(): void
+            {
+                $this->ran = true;
+            }
+
+            /**
+             * @return array{int, array<string, string>, string}
+             */
+            public function handleRequest(string $method, string $path, array $headers = [], ?string $body = null): array
+            {
+                $this->handleRequestCalls++;
+                return [200, ['Content-Type' => 'application/json'], '{"ok":true}'];
+            }
+        };
     }
 
     // ==================================================================

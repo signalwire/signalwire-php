@@ -222,6 +222,76 @@ class RelayTest extends TestCase
     }
 
     // =====================================================================
+    //  Event immutability — readonly value object (4 tests)
+    // =====================================================================
+
+    /**
+     * The eventType field is readonly: writing it after construction is a
+     * hard \Error, never silent state corruption. (External access trips the
+     * private-property guard, which is itself the no-mutation contract.)
+     */
+    #[Test]
+    public function eventEventTypeIsImmutable(): void
+    {
+        $event = new Event('calling.call.state', ['call_id' => 'c1']);
+
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage('SignalWire\Relay\Event::$eventType');
+
+        // @phpstan-ignore-next-line — deliberately illegal write under test.
+        $event->eventType = 'calling.call.play';
+    }
+
+    #[Test]
+    public function eventParamsIsImmutable(): void
+    {
+        $event = new Event('calling.call.state', ['call_id' => 'c1']);
+
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage('SignalWire\Relay\Event::$params');
+
+        // @phpstan-ignore-next-line — deliberately illegal write under test.
+        $event->params = ['call_id' => 'tampered'];
+    }
+
+    #[Test]
+    public function eventTimestampIsImmutable(): void
+    {
+        $event = new Event('calling.call.state', ['call_id' => 'c1'], 1700000000.0);
+
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage('SignalWire\Relay\Event::$timestamp');
+
+        // @phpstan-ignore-next-line — deliberately illegal write under test.
+        $event->timestamp = 0.0;
+    }
+
+    /**
+     * Immutability does not change observable construction behaviour: an
+     * explicit timestamp is preserved verbatim, and omitting it (passing the
+     * 0 sentinel) still computes a positive microtime default.
+     */
+    #[Test]
+    public function eventReadonlyPreservesConstructionBehaviour(): void
+    {
+        $explicit = new Event('calling.call.state', ['k' => 'v'], 1700000000.0);
+        $this->assertSame(1700000000.0, $explicit->getTimestamp());
+        $this->assertSame(['k' => 'v'], $explicit->getParams());
+
+        $computed = new Event('calling.call.state', []);
+        $this->assertGreaterThan(0.0, $computed->getTimestamp());
+
+        // A failed write leaves the object intact (the value never changed).
+        try {
+            // @phpstan-ignore-next-line — deliberately illegal write under test.
+            $explicit->eventType = 'mutated';
+        } catch (\Error) {
+            // expected
+        }
+        $this->assertSame('calling.call.state', $explicit->getEventType());
+    }
+
+    // =====================================================================
     //  Action (12 tests)
     // =====================================================================
 

@@ -14,26 +14,40 @@ class Adapter
      * Detect the current runtime environment.
      *
      * @return string One of 'lambda', 'gcf', 'azure', 'cgi', or 'server'.
+     *                For a typed result, see {@see detectMode()}.
      */
     public static function detect(): string
     {
+        return self::detectMode()->value;
+    }
+
+    /**
+     * Detect the current runtime environment as a typed {@see ExecutionMode}.
+     *
+     * The typed counterpart to {@see detect()}: same detection logic and
+     * precedence, but returns the enum (autocompletion, exhaustive `match`,
+     * `->isServerless()`) instead of a bare string. `detectMode()->value`
+     * equals `detect()`.
+     */
+    public static function detectMode(): ExecutionMode
+    {
         if (getenv('AWS_LAMBDA_FUNCTION_NAME') !== false) {
-            return 'lambda';
+            return ExecutionMode::Lambda;
         }
 
         if (getenv('FUNCTION_TARGET') !== false || getenv('K_SERVICE') !== false) {
-            return 'gcf';
+            return ExecutionMode::Gcf;
         }
 
         if (getenv('AZURE_FUNCTIONS_ENVIRONMENT') !== false) {
-            return 'azure';
+            return ExecutionMode::Azure;
         }
 
         if (isset($_SERVER['GATEWAY_INTERFACE']) || getenv('GATEWAY_INTERFACE') !== false) {
-            return 'cgi';
+            return ExecutionMode::Cgi;
         }
 
-        return 'server';
+        return ExecutionMode::Server;
     }
 
     /**
@@ -197,13 +211,19 @@ class Adapter
      * For 'server', calls agent->run().
      *
      * @param object $agent An AgentBase or Service instance.
+     * @param ExecutionMode|string|null $mode Optional explicit mode override.
+     *        Pass an {@see ExecutionMode} (typed) or its backing string
+     *        ('lambda'/'gcf'/'azure'/'cgi'/'server', for parity) to pin the
+     *        dispatch instead of auto-detecting via {@see detectMode()}. An
+     *        out-of-set string raises \ValueError. Defaults to null
+     *        (auto-detect), preserving the original single-argument behaviour.
      */
-    public static function serve(object $agent): void
+    public static function serve(object $agent, ExecutionMode|string|null $mode = null): void
     {
-        $env = self::detect();
+        $resolved = $mode === null ? self::detectMode() : ExecutionMode::coerce($mode);
 
-        switch ($env) {
-            case 'lambda':
+        switch ($resolved) {
+            case ExecutionMode::Lambda:
                 // Lambda requires an event/context from the runtime API;
                 // in a real deployment this would be invoked by the runtime.
                 // Here we provide a minimal entrypoint that reads from stdin.
@@ -214,22 +234,22 @@ class Adapter
                 echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 break;
 
-            case 'gcf':
+            case ExecutionMode::Gcf:
                 self::handleGcf($agent);
                 break;
 
-            case 'azure':
+            case ExecutionMode::Azure:
                 $input = file_get_contents('php://input') ?: '{}';
                 $request = json_decode($input, true) ?? [];
                 $response = self::handleAzure($agent, $request);
                 echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 break;
 
-            case 'cgi':
+            case ExecutionMode::Cgi:
                 self::handleCgi($agent);
                 break;
 
-            default:
+            case ExecutionMode::Server:
                 $agent->run();
                 break;
         }

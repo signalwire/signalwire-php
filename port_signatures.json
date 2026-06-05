@@ -346,6 +346,10 @@
               "params": [],
               "returns": "string"
             },
+            "detect_mode": {
+              "params": [],
+              "returns": "class:signalwire.serverless.ExecutionMode"
+            },
             "handle_azure": {
               "params": [
                 {
@@ -407,6 +411,12 @@
                   "name": "agent",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "mode",
+                  "type": "optional<union<class:signalwire.serverless.ExecutionMode,string>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -15636,6 +15646,84 @@
                 }
               ],
               "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.serverless.execution_mode": {
+      "classes": {
+        "ExecutionMode": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "coerce": {
+              "params": [
+                {
+                  "name": "mode",
+                  "type": "union<any,string>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "is_serverless": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }

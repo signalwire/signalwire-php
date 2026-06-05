@@ -427,8 +427,15 @@ SKIP_PATH_RE = re.compile(
 
 # Recognise namespace and class declarations
 RE_NAMESPACE = re.compile(r"^\s*namespace\s+([\\\w]+)\s*;")
+# Matches a class-like declaration: `class`, `final class`, `abstract class`,
+# or a PHP 8.1 `enum` (with or without a `: backingType`). Enums are included
+# so their public methods land on the enum (mirroring the reflection-based
+# `isEnum()` handling in enumerate_signatures.py) instead of leaking out as
+# `__module__` free functions. The enum's auto-generated cases/from/cases()/
+# tryFrom() are not `public function` declarations, so they're naturally
+# excluded — only hand-written public methods on the enum are captured.
 RE_CLASS = re.compile(
-    r"^\s*(?:final\s+|abstract\s+)?class\s+([A-Za-z_]\w*)"
+    r"^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+([A-Za-z_]\w*)"
 )
 RE_PUBLIC_METHOD = re.compile(
     r"^\s*public\s+(?:static\s+)?function\s+(\w+)\s*\("
