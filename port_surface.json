@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ edd328d1934348c195b1bfe91d1c78bd707695d5",
+  "generated_from": "signalwire-php @ d3db16faa815306b39db21bea74223adfac9dde6",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1769,6 +1769,25 @@
     "signalwire.swaig.codec": {
       "classes": {
         "Codec": []
+      },
+      "functions": []
+    },
+    "signalwire.swaig.parameter_schema": {
+      "classes": {
+        "ParameterSchema": [
+          "array",
+          "boolean",
+          "create",
+          "enum",
+          "integer",
+          "number",
+          "object",
+          "required",
+          "required_names",
+          "string",
+          "to_argument",
+          "to_dict"
+        ]
       },
       "functions": []
     },
