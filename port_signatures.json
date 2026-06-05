@@ -7189,6 +7189,15 @@
               ],
               "returns": "string"
             },
+            "call_state": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<class:signalwire.relay.CallState>"
+            },
             "clear_digit_bindings": {
               "params": [
                 {
@@ -8597,6 +8606,84 @@
         }
       }
     },
+    "signalwire.relay.call_state": {
+      "classes": {
+        "CallState": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "is_terminal": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "try_from_wire": {
+              "params": [
+                {
+                  "name": "wire",
+                  "type": "optional<string>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            }
+          }
+        }
+      }
+    },
     "signalwire.relay.client": {
       "classes": {
         "RelayClient": {
@@ -9051,6 +9138,176 @@
         }
       }
     },
+    "signalwire.relay.device": {
+      "classes": {
+        "Device": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "type",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "params",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "void"
+            },
+            "params": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "phone": {
+              "params": [
+                {
+                  "name": "to_number",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "from_number",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "sip": {
+              "params": [
+                {
+                  "name": "to",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "to_dict": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "type": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.relay.dial_state": {
+      "classes": {
+        "DialState": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "is_terminal": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "try_from_wire": {
+              "params": [
+                {
+                  "name": "wire",
+                  "type": "optional<string>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            }
+          }
+        }
+      }
+    },
     "signalwire.relay.event": {
       "classes": {
         "Event": {
@@ -9079,6 +9336,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "dial_state": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<class:signalwire.relay.DialState>"
             },
             "get_call_id": {
               "params": [
@@ -9335,6 +9601,15 @@
               ],
               "returns": "bool"
             },
+            "message_state": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<class:signalwire.relay.MessageState>"
+            },
             "on": {
               "params": [
                 {
@@ -9392,6 +9667,84 @@
                 }
               ],
               "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.relay.message_state": {
+      "classes": {
+        "MessageState": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "cases": {
+              "params": [],
+              "returns": "any"
+            },
+            "from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "is_terminal": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "try_from": {
+              "params": [
+                {
+                  "name": "value",
+                  "type": "union<string,int>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "try_from_wire": {
+              "params": [
+                {
+                  "name": "wire",
+                  "type": "optional<string>",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "value": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }

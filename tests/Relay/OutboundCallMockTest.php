@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
+use SignalWire\Relay\Device;
 use SignalWire\Relay\RelayError;
 
 /**
@@ -95,6 +96,42 @@ class OutboundCallMockTest extends TestCase
         $this->assertSame('t-frame', $p['tag'] ?? null);
         $this->assertIsArray($p['devices'] ?? null);
         $this->assertSame('phone', $p['devices'][0][0]['type'] ?? null);
+    }
+
+    // ------------------------------------------------------------------
+    // Typed Device value object is a drop-in for the hand-written array:
+    // the dialed device, as it lands on the wire, is byte-identical
+    // whether built by Device::phone()->toArray() or the literal. Drives
+    // the real dial path + asserts against the mock journal (no mocks of
+    // the transport). PORT_ADDITION.
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function dialWithTypedDeviceProducesIdenticalWireFrame(): void
+    {
+        $this->mock->scenarios()->armDial([
+            'tag'            => 't-device',
+            'winner_call_id' => 'winner-device',
+            'states'         => ['created', 'answered'],
+            'node_id'        => 'node-mock-1',
+            'device'         => self::phoneDevice(),
+        ]);
+
+        // Build the device via the typed value object instead of a literal.
+        $device = Device::phone('+15551112222', '+15553334444');
+        $this->client->dial(
+            [[$device->toArray()]],
+            ['tag' => 't-device', 'dial_timeout' => 5.0],
+        );
+
+        $entries = $this->mock->journal()->recv('calling.dial');
+        $this->assertCount(1, $entries);
+        $wireDevice = $entries[0]->frame['params']['devices'][0][0] ?? null;
+
+        // The device on the wire is exactly what the hand-written literal
+        // would have produced — same keys, values, AND order.
+        $this->assertSame(self::phoneDevice(), $wireDevice);
+        $this->assertSame($device->toArray(), $wireDevice);
     }
 
     #[Test]

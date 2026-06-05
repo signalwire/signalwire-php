@@ -75,6 +75,22 @@ class Event
         return $this->params['state'] ?? null;
     }
 
+    /**
+     * The dial outcome carried by a `calling.call.dial` event as a typed
+     * {@see DialState}, read from the `dial_state` (or legacy `state`) param,
+     * or null when absent / outside the known closed set (a forward-compatible
+     * server value).
+     *
+     * Offered ALONGSIDE the raw `getParams()['dial_state']` string for parity:
+     * the wire string stays available; `dialState()` is the typed view for
+     * autocompletion + an exhaustive `match` + `->isTerminal()`. PORT_ADDITION.
+     */
+    public function dialState(): ?DialState
+    {
+        $wire = $this->params['dial_state'] ?? $this->params['state'] ?? null;
+        return is_string($wire) ? DialState::tryFromWire($wire) : null;
+    }
+
     public function toArray(): array
     {
         return [

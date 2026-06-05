@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Message;
+use SignalWire\Relay\MessageState;
 
 /**
  * Real-mock-backed tests for messaging (``send_message`` + inbound).
@@ -154,6 +155,59 @@ class MessagingMockTest extends TestCase
 
         // Behavioural + journal: at least one messaging.send + the pushed state.
         $this->assertNotEmpty($this->mock->journal()->recv('messaging.send'));
+    }
+
+    // ------------------------------------------------------------------
+    // Typed MessageState accessor agrees with the string after a real
+    // dispatched messaging.state event (PORT_ADDITION, drives the real
+    // recv loop — no mocks of the transport).
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function messageStateTypedAccessorAgreesWithStringAfterDispatch(): void
+    {
+        $msg = $this->client->sendMessage([
+            'to_number'   => '+15551112222',
+            'from_number' => '+15553334444',
+            'body'        => 'hi',
+        ]);
+        $messageId = $msg->getMessageId();
+
+        // Initial queued state: typed accessor agrees with the string and is
+        // not terminal.
+        $this->assertSame('queued', $msg->getState());
+        $this->assertSame(MessageState::Queued, $msg->messageState());
+        $this->assertFalse($msg->messageState()?->isTerminal());
+
+        // Drive a real terminal delivered state through the recv loop.
+        $this->mock->push([
+            'jsonrpc' => '2.0',
+            'id'      => bin2hex(random_bytes(8)),
+            'method'  => 'signalwire.event',
+            'params'  => [
+                'event_type' => 'messaging.state',
+                'params'     => [
+                    'message_id'    => $messageId,
+                    'message_state' => 'delivered',
+                    'from_number'   => '+15553334444',
+                    'to_number'     => '+15551112222',
+                    'body'          => 'hi',
+                ],
+            ],
+        ]);
+        $resolved = MockTest::pumpUntil(
+            $this->client,
+            fn() => $msg->isDone(),
+            5.0,
+        );
+        $this->assertTrue($resolved, 'delivered event did not resolve the Message');
+
+        // The typed accessor reflects the SAME state the string carries after
+        // the dispatched event, and now reports terminal.
+        $this->assertSame('delivered', $msg->getState());
+        $this->assertSame(MessageState::Delivered, $msg->messageState());
+        $this->assertSame($msg->getState(), $msg->messageState()?->value);
+        $this->assertTrue($msg->messageState()?->isTerminal());
     }
 
     #[Test]

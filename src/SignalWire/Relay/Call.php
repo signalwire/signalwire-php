@@ -165,6 +165,21 @@ class Call
         return $this;
     }
 
+    /**
+     * The current call lifecycle state as a typed {@see CallState}, or null
+     * when the raw {@see $state} string is outside the known closed set
+     * (a forward-compatible server value).
+     *
+     * Offered ALONGSIDE the bare-string {@see $state} property for parity with
+     * the Python reference: `$call->state` stays the canonical string;
+     * `$call->callState()` is the typed view for autocompletion + an
+     * exhaustive `match` + `->isTerminal()`. PORT_ADDITION.
+     */
+    public function callState(): ?CallState
+    {
+        return CallState::tryFromWire($this->state);
+    }
+
     // ──────────────────────────────────────────────────────────────────
     //  State-wait convenience (typed waits over the call lifecycle)
     // ──────────────────────────────────────────────────────────────────

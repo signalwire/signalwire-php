@@ -222,6 +222,21 @@ class Message
         return $this->state;
     }
 
+    /**
+     * The current delivery state as a typed {@see MessageState}, or null when
+     * the raw {@see getState()} string is outside the known closed set
+     * (a forward-compatible server value).
+     *
+     * Offered ALONGSIDE the bare-string {@see getState()} accessor for parity
+     * with the Python reference: `getState()` stays the canonical string;
+     * `messageState()` is the typed view for autocompletion + an exhaustive
+     * `match` + `->isTerminal()`. PORT_ADDITION.
+     */
+    public function messageState(): ?MessageState
+    {
+        return MessageState::tryFromWire($this->state);
+    }
+
     public function getReason(): ?string
     {
         return $this->reason;

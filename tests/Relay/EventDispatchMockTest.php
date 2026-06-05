@@ -7,6 +7,7 @@ namespace SignalWire\Tests\Relay;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use SignalWire\Relay\Call;
+use SignalWire\Relay\CallState;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Event;
 
@@ -391,6 +392,44 @@ class EventDispatchMockTest extends TestCase
         $this->assertSame('ending', $call->state);
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.answer'));
+    }
+
+    // ------------------------------------------------------------------
+    // Typed CallState accessor agrees with the string after a real
+    // dispatched calling.call.state event (PORT_ADDITION, drives the
+    // real recv loop — no mocks of the transport).
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function callStateTypedAccessorAgreesWithStringAfterDispatch(): void
+    {
+        $call = $this->answeredInboundCall('ec-typed');
+
+        // Before the terminal event: answered, not terminal.
+        $this->assertSame('answered', $call->state);
+        $this->assertSame(CallState::Answered, $call->callState());
+        $this->assertFalse($call->callState()?->isTerminal());
+
+        // Drive a real ending->state event through the recv loop.
+        $this->mock->push(self::bareEventFrame('calling.call.state', [
+            'call_id'    => 'ec-typed',
+            'call_state' => 'ended',
+            'direction'  => 'inbound',
+        ]));
+        $reached = MockTest::pumpUntil(
+            $this->client,
+            fn() => $call->state === 'ended',
+            5.0,
+        );
+        $this->assertTrue($reached);
+
+        // The typed accessor reflects the SAME state the string carries, and
+        // now reports terminal — proving the enum tracks the dispatched event,
+        // not a hand-set value.
+        $this->assertSame('ended', $call->state);
+        $this->assertSame(CallState::Ended, $call->callState());
+        $this->assertSame($call->state, $call->callState()?->value);
+        $this->assertTrue($call->callState()?->isTerminal());
     }
 
     #[Test]
