@@ -15,17 +15,20 @@ class FunctionResultTest extends TestCase
 
     public function testDefaultConstructionHasEmptyResponseAndNoPostProcess(): void
     {
+        // An otherwise-empty result defaults to "Action completed." (Python parity).
         $fr = new FunctionResult();
         $arr = $fr->toArray();
 
-        $this->assertSame('', $arr['response']);
+        $this->assertSame('Action completed.', $arr['response']);
         $this->assertArrayNotHasKey('action', $arr);
         $this->assertArrayNotHasKey('post_process', $arr);
     }
 
     public function testConstructionWithResponseAndPostProcess(): void
     {
+        // post_process only appears alongside an action (Python parity).
         $fr = new FunctionResult('hello', true);
+        $fr->addAction(['stop' => true]);
         $arr = $fr->toArray();
 
         $this->assertSame('hello', $arr['response']);
@@ -34,8 +37,11 @@ class FunctionResultTest extends TestCase
 
     public function testConstructionWithNullResponseDefaultsToEmptyString(): void
     {
+        // null defaults to '' internally; with an action present, the empty
+        // response is omitted (not emitted as null).
         $fr = new FunctionResult(null);
-        $this->assertSame('', $fr->toArray()['response']);
+        $fr->addAction(['stop' => true]);
+        $this->assertArrayNotHasKey('response', $fr->toArray());
     }
 
     // ── Core ──────────────────────────────────────────────────────────────
@@ -51,6 +57,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->setPostProcess(true);
+        $fr->addAction(['stop' => true]);
         $this->assertTrue($fr->toArray()['post_process']);
     }
 
@@ -84,10 +91,12 @@ class FunctionResultTest extends TestCase
 
     // ── Serialization ─────────────────────────────────────────────────────
 
-    public function testToArrayIncludesResponseAlways(): void
+    public function testToArrayOmitsEmptyResponseWhenActionPresent(): void
     {
+        // Empty response is omitted when an action is present (Python parity).
         $fr = new FunctionResult();
-        $this->assertArrayHasKey('response', $fr->toArray());
+        $fr->addAction(['stop' => true]);
+        $this->assertArrayNotHasKey('response', $fr->toArray());
     }
 
     public function testToArrayOmitsActionWhenEmpty(): void
@@ -111,9 +120,18 @@ class FunctionResultTest extends TestCase
 
     public function testToArrayIncludesPostProcessWhenTrue(): void
     {
-        $fr = new FunctionResult('', true);
+        $fr = new FunctionResult('resp', true);
+        $fr->addAction(['stop' => true]);
         $this->assertArrayHasKey('post_process', $fr->toArray());
         $this->assertTrue($fr->toArray()['post_process']);
+    }
+
+    public function testToArrayOmitsPostProcessWithoutAction(): void
+    {
+        // post_process is dropped when there are no actions, even if set true
+        // (Python to_dict: `if self.post_process and self.action`).
+        $fr = new FunctionResult('resp', true);
+        $this->assertArrayNotHasKey('post_process', $fr->toArray());
     }
 
     public function testToJsonProducesValidJson(): void
@@ -382,15 +400,21 @@ class FunctionResultTest extends TestCase
 
     public function testSwitchContextSimple(): void
     {
+        // Python: when ONLY system_prompt is supplied (no user_prompt /
+        // consolidate / full_reset / isolated), the action value is the BARE
+        // system-prompt STRING ({"context_switch": "<prompt>"}), not an object.
+        // Parity with function_result.py:switch_context's simple branch and the
+        // verified Go/Rust siblings.
         $fr = new FunctionResult();
         $fr->switchContext('You are a helpful agent.');
         $cs = $fr->toArray()['action'][0]['context_switch'];
 
-        $this->assertSame('You are a helpful agent.', $cs['system_prompt']);
-        $this->assertArrayNotHasKey('user_prompt', $cs);
-        $this->assertArrayNotHasKey('consolidate', $cs);
-        $this->assertArrayNotHasKey('full_reset', $cs);
-        $this->assertArrayNotHasKey('isolated', $cs);
+        $this->assertSame('You are a helpful agent.', $cs);
+        // Bare string on the wire, not an object.
+        $this->assertStringContainsString(
+            '"context_switch":"You are a helpful agent."',
+            $fr->toJson()
+        );
     }
 
     public function testSwitchContextFull(): void
@@ -404,6 +428,23 @@ class FunctionResultTest extends TestCase
         $this->assertTrue($cs['consolidate']);
         $this->assertTrue($cs['full_reset']);
         $this->assertTrue($cs['isolated']);
+    }
+
+    public function testSwitchContextNonDefaultFlagPromotesToObjectForm(): void
+    {
+        // The simple-string branch only fires when system_prompt is the ONLY
+        // thing set. Any non-default flag (here this port's `isolated` extension)
+        // promotes to the object form with system_prompt present — it must NOT
+        // collapse to a bare string. Parity with Go/Rust's documented `isolated`
+        // handling (object branch).
+        $fr = new FunctionResult();
+        $fr->switchContext('sys', '', false, false, true);
+        $cs = $fr->toArray()['action'][0]['context_switch'];
+
+        $this->assertIsArray($cs);
+        $this->assertSame('sys', $cs['system_prompt']);
+        $this->assertTrue($cs['isolated']);
+        $this->assertArrayNotHasKey('user_prompt', $cs);
     }
 
     public function testReplaceInHistoryWithString(): void
@@ -546,9 +587,19 @@ class FunctionResultTest extends TestCase
 
     public function testClearDynamicHints(): void
     {
+        // Python (function_result.py): {"clear_dynamic_hints": {}} — the value is
+        // an empty OBJECT, not a boolean. Every other port emits {} too. Assert on
+        // the encoded JSON string: an empty stdClass renders as {}, whereas the
+        // old buggy `true` (or a PHP empty array []) would NOT contain "{}".
         $fr = new FunctionResult();
         $fr->clearDynamicHints();
-        $this->assertTrue($fr->toArray()['action'][0]['clear_dynamic_hints']);
+
+        $value = $fr->toArray()['action'][0]['clear_dynamic_hints'];
+        $this->assertInstanceOf(\stdClass::class, $value);
+        // On the wire the action is a JSON object, NOT a boolean and NOT [].
+        $this->assertStringContainsString('"clear_dynamic_hints":{}', $fr->toJson());
+        $this->assertStringNotContainsString('"clear_dynamic_hints":true', $fr->toJson());
+        $this->assertStringNotContainsString('"clear_dynamic_hints":[]', $fr->toJson());
     }
 
     public function testSetEndOfSpeechTimeout(): void
@@ -632,13 +683,19 @@ class FunctionResultTest extends TestCase
 
     public function testExecuteSwmlWithString(): void
     {
+        // A SWML string is decoded preserving OBJECTS: a nested empty object {}
+        // must stay {} on the wire, NOT collapse to [] (which json_decode(...,
+        // true) would do). Python's json.loads keeps it a dict; Go/Rust keep it
+        // an object. Assert on the encoded JSON so the {}-vs-[] distinction is
+        // visible (a PHP empty array would render as []).
         $swmlJson = '{"sections":{"main":[{"answer":{}}]}}';
         $fr = new FunctionResult();
         $fr->executeSwml($swmlJson);
-        $action = $fr->toArray()['action'][0];
 
-        $expected = ['sections' => ['main' => [['answer' => []]]]];
-        $this->assertSame($expected, $action['SWML']);
+        $this->assertSame(
+            '{"sections":{"main":[{"answer":{}}]}}',
+            json_encode($fr->toArray()['action'][0]['SWML'])
+        );
     }
 
     public function testExecuteSwmlWithTransfer(): void
@@ -662,6 +719,33 @@ class FunctionResultTest extends TestCase
         $fr->executeSwml('not valid json at all');
         $this->assertSame(
             ['raw_swml' => 'not valid json at all'],
+            $fr->toArray()['action'][0]['SWML']
+        );
+    }
+
+    public function testExecuteSwmlStringWithTransferPreservesEmptyObject(): void
+    {
+        // String + transfer: the nested empty object {} must be preserved AND
+        // transfer="true" set as a sibling INSIDE the SWML doc. Byte-identical to
+        // Python execute_swml('{"sections":{"main":[{"answer":{}}]}}', True) ->
+        // {"SWML":{"sections":{"main":[{"answer":{}}]},"transfer":"true"}}.
+        $fr = new FunctionResult();
+        $fr->executeSwml('{"sections":{"main":[{"answer":{}}]}}', true);
+
+        $this->assertSame(
+            '{"SWML":{"sections":{"main":[{"answer":{}}]},"transfer":"true"}}',
+            json_encode($fr->toArray()['action'][0])
+        );
+    }
+
+    public function testExecuteSwmlInvalidStringWithTransfer(): void
+    {
+        // raw_swml fallback still injects transfer="true" as a sibling key.
+        // Parity: {"SWML":{"raw_swml":"not json","transfer":"true"}}.
+        $fr = new FunctionResult();
+        $fr->executeSwml('not json', true);
+        $this->assertSame(
+            ['raw_swml' => 'not json', 'transfer' => 'true'],
             $fr->toArray()['action'][0]['SWML']
         );
     }

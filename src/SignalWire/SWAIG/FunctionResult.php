@@ -46,14 +46,25 @@ class FunctionResult
 
     public function toArray(): array
     {
-        $result = ['response' => $this->response];
+        $result = [];
+
+        // response is omitted when empty (Python parity).
+        if ($this->response !== '') {
+            $result['response'] = $this->response;
+        }
 
         if (!empty($this->actions)) {
             $result['action'] = $this->actions;
         }
 
-        if ($this->postProcess) {
+        // post_process only matters when there are actions to execute.
+        if ($this->postProcess && !empty($this->actions)) {
             $result['post_process'] = true;
+        }
+
+        // Ensure at least one of response or action is present.
+        if (empty($result)) {
+            $result['response'] = 'Action completed.';
         }
 
         return $result;
@@ -231,6 +242,17 @@ class FunctionResult
         bool $fullReset = false,
         bool $isolated = false
     ): self {
+        // Python: when ONLY system_prompt is supplied (no user_prompt /
+        // consolidate / full_reset — and, for this port's documented `isolated`
+        // extension, no isolated), the action value is the BARE system-prompt
+        // STRING ({"context_switch": "<prompt>"}), not an object. Parity with
+        // the simple/object branch in function_result.py:switch_context and the
+        // verified Go/Rust siblings.
+        if ($systemPrompt !== '' && $userPrompt === '' && !$consolidate && !$fullReset && !$isolated) {
+            $this->actions[] = ['context_switch' => $systemPrompt];
+            return $this;
+        }
+
         $ctx = ['system_prompt' => $systemPrompt];
 
         if ($userPrompt !== '') {
@@ -407,7 +429,11 @@ class FunctionResult
 
     public function clearDynamicHints(): self
     {
-        $this->actions[] = ['clear_dynamic_hints' => true];
+        // Python: self.action.append({"clear_dynamic_hints": {}}) — the value is
+        // an empty OBJECT, not a boolean. In PHP an empty array [] json_encodes
+        // to [] (a JSON array), so we MUST use new \stdClass() to emit {} (parity
+        // with every other port: Go map[string]any{}, Rust json!({})).
+        $this->actions[] = ['clear_dynamic_hints' => new \stdClass()];
         return $this;
     }
 
@@ -467,9 +493,26 @@ class FunctionResult
     public function executeSwml($swmlContent, bool $transfer = false): self
     {
         if (is_string($swmlContent)) {
-            $decoded = json_decode($swmlContent, true);
-            // On invalid JSON, mirror Python's {"raw_swml": <text>} fallback.
-            $swmlContent = is_array($decoded) ? $decoded : ['raw_swml' => $swmlContent];
+            // Decode to OBJECTS, not associative arrays: json_decode($s, true)
+            // collapses every nested empty object {} into an empty array [],
+            // which would then re-encode as [] on the wire (a value-TYPE
+            // divergence from Python's json.loads, which keeps {} a dict — and
+            // from the Go/Rust siblings, which preserve {} too). Object-mode
+            // decode keeps {} a stdClass and JSON arrays as PHP arrays.
+            $decoded = json_decode($swmlContent);
+            if ($decoded instanceof \stdClass) {
+                if ($transfer) {
+                    $decoded->transfer = 'true';
+                }
+                $this->actions[] = ['SWML' => $decoded];
+                return $this;
+            }
+            // On invalid JSON (or a non-object top level), mirror Python's
+            // {"raw_swml": <text>} fallback. (Python only spreads when the
+            // top-level parse yields a dict; everything else is raw_swml.)
+            $swmlContent = is_array($decoded)
+                ? $decoded
+                : ['raw_swml' => $swmlContent];
         }
 
         if ($transfer) {

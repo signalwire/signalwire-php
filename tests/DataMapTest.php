@@ -304,15 +304,18 @@ class DataMapTest extends TestCase
 
     public function testOutputOnWebhookWithFunctionResult(): void
     {
+        // post_process flows through DataMap output only alongside an action
+        // (Python envelope parity: post_process requires an action).
         $fr = new FunctionResult('OK');
         $fr->setPostProcess(true);
+        $fr->addAction(['stop' => true]);
 
         $dm = new DataMap('fn');
         $dm->webhook('GET', 'https://a.com');
         $dm->output($fr);
         $result = $dm->toSwaigFunction();
 
-        $expected = ['response' => 'OK', 'post_process' => true];
+        $expected = ['response' => 'OK', 'action' => [['stop' => true]], 'post_process' => true];
         $this->assertSame($expected, $result['data_map']['webhooks'][0]['output']);
     }
 
