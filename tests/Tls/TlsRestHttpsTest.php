@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Tls;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\RestClient;
 use SignalWire\REST\SignalWireRestError;
@@ -23,9 +24,8 @@ use SignalWire\REST\SignalWireRestError;
  *
  * A negative test issues the same GET with NO trusted CA and asserts the
  * handshake is rejected, proving genuine certificate verification.
- *
- * @group tls
  */
+#[Group('tls')]
 final class TlsRestHttpsTest extends TestCase
 {
     private static ?string $certs = null;
