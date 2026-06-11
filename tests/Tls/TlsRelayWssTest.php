@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Tls;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Client as RelayClient;
 
@@ -24,9 +25,8 @@ use SignalWire\Relay\Client as RelayClient;
  * A negative test points an otherwise-identical client (NO trusted CA) at the
  * same endpoint and asserts the handshake is rejected — proving the cert is
  * actually verified, not skipped.
- *
- * @group tls
  */
+#[Group('tls')]
 final class TlsRelayWssTest extends TestCase
 {
     private static ?string $certs = null;

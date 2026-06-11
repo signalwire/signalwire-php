@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Tls;
 
+use PHPUnit\Framework\Attributes\Depends;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,9 +24,8 @@ use PHPUnit\Framework\TestCase;
  *
  * A negative test reaches the same endpoint with NO trusted CA and asserts the
  * handshake is rejected, proving the server's cert is genuinely verified.
- *
- * @group tls
  */
+#[Group('tls')]
 final class TlsServerHttpsTest extends TestCase
 {
     private static ?string $certs = null;
@@ -151,9 +152,7 @@ final class TlsServerHttpsTest extends TestCase
         $this->assertSame('healthy', $payload['status'] ?? null, 'health status not "healthy"');
     }
 
-    /**
-     * @depends testHealthOverHttpsWithTrustedCa
-     */
+    #[Depends('testHealthOverHttpsWithTrustedCa')]
     public function testUntrustedClientIsRejected(): void
     {
         $url = 'https://127.0.0.1:' . self::$port . '/health';
