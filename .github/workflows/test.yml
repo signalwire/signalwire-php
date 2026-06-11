@@ -18,12 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout signalwire-php
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: signalwire-php
 
       - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: signalwire/porting-sdk
           path: porting-sdk
@@ -33,7 +33,7 @@ jobs:
       # signalwire-python oracle (FunctionResult), which pulls fastapi via
       # signalwire/__init__. Check it out so the EMISSION gate has its reference.
       - name: Checkout signalwire-python (EMISSION oracle)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: signalwire/signalwire-python
           path: signalwire-python
