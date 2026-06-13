@@ -7,7 +7,7 @@
     "keywords": ["signalwire", "ai", "agents", "swml", "swaig", "voip", "telephony"],
     "homepage": "https://github.com/signalwire/signalwire-php",
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "ext-json": "*",
         "ext-mbstring": "*",
         "ext-openssl": "*",
