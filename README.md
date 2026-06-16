@@ -98,8 +98,8 @@ The [`examples/`](examples/) directory contains working examples:
 | [contexts_demo.php](examples/contexts_demo.php) | Multi-persona workflow with context switching and step navigation |
 | [datamap_demo.php](examples/datamap_demo.php) | Server-side API tools without webhooks |
 | [skills_demo.php](examples/skills_demo.php) | Loading built-in skills (datetime, math) |
-| [call_flow.php](examples/call_flow.php) | Call flow verbs, debug events, FunctionResult actions |
-| [session_state.php](examples/session_state.php) | on_summary, global data, post-prompt summaries |
+| [call_flow_and_actions_demo.php](examples/call_flow_and_actions_demo.php) | Call flow verbs, debug events, FunctionResult actions |
+| [session_and_state_demo.php](examples/session_and_state_demo.php) | on_summary, global data, post-prompt summaries |
 | [multi_agent_server.php](examples/multi_agent_server.php) | Multiple agents on one server |
 | [simple_dynamic_agent.php](examples/simple_dynamic_agent.php) | Per-request dynamic configuration, multi-tenant routing |
 
