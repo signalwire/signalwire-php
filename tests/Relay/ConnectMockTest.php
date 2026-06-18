@@ -23,8 +23,26 @@ class ConnectMockTest extends TestCase
 
     protected function setUp(): void
     {
+        // Unscoped shared harness — used only for relayHost()/wsUrl() and for
+        // building hand-rolled clients. Tests that assert on journaled connect
+        // frames re-scope a harness to their own client's session via
+        // scopedFor() so they see ONLY their own frames and run parallel-safe.
+        // No global reset here: a global wipe would race a concurrent test.
         $this->mock = MockTest::harness();
-        $this->mock->reset();
+    }
+
+    /**
+     * Return a harness view scoped to a connected client's RELAY session, so
+     * journal reads see only that client's frames. Pass several clients to
+     * cover a reconnect pair (the second connect reuses the first's session
+     * id when it resumes a protocol, so scoping to either id surfaces both).
+     */
+    private function scopedFor(RelayClient $client): RelayHarness
+    {
+        $h = MockTest::harness();
+        $scoped = new RelayHarness($h->httpUrl(), $h->wsPort(), $h->httpPort());
+        $scoped->scopeTo((string) $client->sessionId);
+        return $scoped;
     }
 
     // ------------------------------------------------------------------
@@ -34,7 +52,7 @@ class ConnectMockTest extends TestCase
     #[Test]
     public function connectReturnsProtocolString(): void
     {
-        $client = MockTest::client();
+        [$client, $mock] = MockTest::scopedClient();
         try {
             $this->assertTrue($client->connected);
             $this->assertNotNull($client->protocol);
@@ -43,21 +61,22 @@ class ConnectMockTest extends TestCase
                 (string) $client->protocol,
                 'unexpected protocol: ' . var_export($client->protocol, true),
             );
+
+            // Journal assertion — the connect frame was recorded (scoped to
+            // this client's session, so exactly one even under parallelism).
+            $entries = $mock->journal()->recv('signalwire.connect');
+            $this->assertCount(1, $entries, 'exactly one signalwire.connect was journaled');
         } finally {
             $client->disconnect();
         }
-
-        // Journal assertion — the connect frame was recorded.
-        $entries = $this->mock->journal()->recv('signalwire.connect');
-        $this->assertCount(1, $entries, 'exactly one signalwire.connect was journaled');
     }
 
     #[Test]
     public function connectJournalRecordsSignalwireConnect(): void
     {
-        $client = MockTest::client();
+        [$client, $mock] = MockTest::scopedClient();
         try {
-            $entries = $this->mock->journal()->recv('signalwire.connect');
+            $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
         } finally {
             $client->disconnect();
@@ -67,9 +86,9 @@ class ConnectMockTest extends TestCase
     #[Test]
     public function connectJournalCarriesProjectAndToken(): void
     {
-        $client = MockTest::client();
+        [$client, $mock] = MockTest::scopedClient();
         try {
-            $entries = $this->mock->journal()->recv('signalwire.connect');
+            $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
             $auth = $entries[0]->frame['params']['authentication'] ?? null;
             $this->assertIsArray($auth);
@@ -83,9 +102,9 @@ class ConnectMockTest extends TestCase
     #[Test]
     public function connectJournalCarriesContexts(): void
     {
-        $client = MockTest::client();
+        [$client, $mock] = MockTest::scopedClient();
         try {
-            $entries = $this->mock->journal()->recv('signalwire.connect');
+            $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
             $this->assertSame(['default'], $entries[0]->frame['params']['contexts'] ?? null);
         } finally {
@@ -96,9 +115,9 @@ class ConnectMockTest extends TestCase
     #[Test]
     public function connectJournalCarriesAgentAndVersion(): void
     {
-        $client = MockTest::client();
+        [$client, $mock] = MockTest::scopedClient();
         try {
-            $entries = $this->mock->journal()->recv('signalwire.connect');
+            $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
             $p = $entries[0]->frame['params'] ?? [];
             $this->assertIsArray($p);
@@ -112,9 +131,9 @@ class ConnectMockTest extends TestCase
     #[Test]
     public function connectJournalEventAcksTrue(): void
     {
-        $client = MockTest::client();
+        [$client, $mock] = MockTest::scopedClient();
         try {
-            $entries = $this->mock->journal()->recv('signalwire.connect');
+            $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
             $this->assertTrue($entries[0]->frame['params']['event_acks'] ?? null);
         } finally {
@@ -131,7 +150,9 @@ class ConnectMockTest extends TestCase
     {
         $issuedProtocol = null;
 
-        $c1 = MockTest::client();
+        // scopedClient() (NOT the legacy client(), which does a GLOBAL journal
+        // reset that would wipe concurrent workers' journals under parallelism).
+        [$c1] = MockTest::scopedClient();
         try {
             $issuedProtocol = $c1->protocol;
             $this->assertNotNull($issuedProtocol);
@@ -150,24 +171,26 @@ class ConnectMockTest extends TestCase
         $c2->protocol = $issuedProtocol;
         try {
             $c2->connect();
+            // The resume connect carries the protocol and is journaled under
+            // c2's own session — scope to it so we read only this test's frame.
+            $matches = [];
+            foreach ($this->scopedFor($c2)->journal()->recv('signalwire.connect') as $entry) {
+                if (($entry->frame['params']['protocol'] ?? null) === $issuedProtocol) {
+                    $matches[] = $entry;
+                }
+            }
+            $this->assertNotEmpty($matches, 'no resume connect carried the issued protocol');
         } finally {
             $c2->disconnect();
         }
-
-        // Find a connect frame that carries the resumed protocol.
-        $matches = [];
-        foreach ($this->mock->journal()->recv('signalwire.connect') as $entry) {
-            if (($entry->frame['params']['protocol'] ?? null) === $issuedProtocol) {
-                $matches[] = $entry;
-            }
-        }
-        $this->assertNotEmpty($matches, 'no resume connect carried the issued protocol');
     }
 
     #[Test]
     public function reconnectWithProtocolPreservesProtocolValue(): void
     {
-        $c1 = MockTest::client();
+        // scopedClient() (NOT the legacy client(), which does a GLOBAL journal
+        // reset that would wipe concurrent workers' journals under parallelism).
+        [$c1] = MockTest::scopedClient();
         try {
             $issuedProtocol = $c1->protocol;
             $this->assertNotNull($issuedProtocol);
@@ -185,19 +208,19 @@ class ConnectMockTest extends TestCase
         try {
             $c2->connect();
             $this->assertSame($issuedProtocol, $c2->protocol);
+
+            // Confirm c2's own journaled connect carries that protocol.
+            $found = false;
+            foreach ($this->scopedFor($c2)->journal()->recv('signalwire.connect') as $entry) {
+                if (($entry->frame['params']['protocol'] ?? null) === $issuedProtocol) {
+                    $found = true;
+                    break;
+                }
+            }
+            $this->assertTrue($found, 'no journal entry carried the resumed protocol');
         } finally {
             $c2->disconnect();
         }
-
-        // Confirm at least one journaled connect carries that protocol.
-        $found = false;
-        foreach ($this->mock->journal()->recv('signalwire.connect') as $entry) {
-            if (($entry->frame['params']['protocol'] ?? null) === $issuedProtocol) {
-                $found = true;
-                break;
-            }
-        }
-        $this->assertTrue($found, 'no journal entry carried the resumed protocol');
     }
 
     // ------------------------------------------------------------------
@@ -207,9 +230,8 @@ class ConnectMockTest extends TestCase
     #[Test]
     public function connectRejectsEmptyCredsAtConstructor(): void
     {
-        // Reset journal so we can also assert that nothing was sent.
-        $this->mock->reset();
-
+        // No journal reset needed: the constructor throws before any wire I/O,
+        // and a global reset would race a concurrent test under parallelism.
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/project and token are required/');
         new RelayClient(['project' => '', 'token' => '', 'host' => 'anywhere']);
@@ -268,18 +290,18 @@ class ConnectMockTest extends TestCase
         try {
             $client->connect();
             $this->assertTrue($client->connected);
+
+            $entries = $this->scopedFor($client)->journal()->recv('signalwire.connect');
+            $this->assertCount(1, $entries);
+            $auth = $entries[0]->frame['params']['authentication'] ?? null;
+            $this->assertIsArray($auth);
+            $this->assertSame('fake-jwt-eyJ.AaaA.BbB', $auth['jwt_token'] ?? null);
+            // JWT path: project/token must NOT be on the wire.
+            $this->assertArrayNotHasKey('project', $auth);
+            $this->assertArrayNotHasKey('token', $auth);
         } finally {
             $client->disconnect();
         }
-
-        $entries = $this->mock->journal()->recv('signalwire.connect');
-        $this->assertCount(1, $entries);
-        $auth = $entries[0]->frame['params']['authentication'] ?? null;
-        $this->assertIsArray($auth);
-        $this->assertSame('fake-jwt-eyJ.AaaA.BbB', $auth['jwt_token'] ?? null);
-        // JWT path: project/token must NOT be on the wire.
-        $this->assertArrayNotHasKey('project', $auth);
-        $this->assertArrayNotHasKey('token', $auth);
     }
 }
 

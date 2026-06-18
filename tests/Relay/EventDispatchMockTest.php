@@ -26,9 +26,7 @@ class EventDispatchMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = MockTest::client();
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     protected function tearDown(): void
@@ -276,9 +274,11 @@ class EventDispatchMockTest extends TestCase
     public function dialEventRoutesViaTagWhenNoTopLevelCallId(): void
     {
         // Use a fresh client so the dial is independent of the shared one.
-        $client = MockTest::client();
+        // It needs its OWN scoped harness so the armed scenario and journal
+        // reads target this second client's session, not setUp's.
+        [$client, $mock] = MockTest::scopedClient();
         try {
-            $this->mock->scenarios()->armDial([
+            $mock->scenarios()->armDial([
                 'tag'            => 'ec-tag-route',
                 'winner_call_id' => 'WINTAG',
                 'states'         => ['created', 'answered'],
@@ -291,7 +291,7 @@ class EventDispatchMockTest extends TestCase
             );
             $this->assertSame('WINTAG', $call->callId);
 
-            $sends = $this->mock->journal()->send('calling.call.dial');
+            $sends = $mock->journal()->send('calling.call.dial');
             $this->assertNotEmpty($sends);
             $inner = $sends[count($sends) - 1]->frame['params']['params'] ?? [];
             // Top-level params: tag, dial_state, call. NO call_id.

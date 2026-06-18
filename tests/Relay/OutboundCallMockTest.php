@@ -27,9 +27,7 @@ class OutboundCallMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = MockTest::client();
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     protected function tearDown(): void
@@ -91,7 +89,25 @@ class OutboundCallMockTest extends TestCase
             ['tag' => 't-frame', 'dial_timeout' => 5.0],
         );
         $entries = $this->mock->journal()->recv('calling.dial');
-        $this->assertCount(1, $entries);
+        $diag = '';
+        if (count($entries) !== 1) {
+            $globalRaw = \SignalWire\Tests\Relay\RelayMockHttp::get($this->mock->httpUrl() . '/__mock__/journal');
+            $global = json_decode($globalRaw, true) ?: [];
+            $dials = [];
+            $sessions = [];
+            foreach ($global as $e) {
+                $sessions[$e['session_id'] ?? '?'] = true;
+                if (($e['method'] ?? '') === 'calling.dial' && ($e['direction'] ?? '') === 'recv') {
+                    $dials[] = ['session_id' => $e['session_id'] ?? '?', 'tag' => $e['frame']['params']['tag'] ?? '?'];
+                }
+            }
+            $diag = "\nDIAG scopedSid=" . $this->mock->sessionId()
+                . " clientSid=" . (string) $this->client->sessionId
+                . " globalEntries=" . count($global)
+                . " distinctSessions=" . count($sessions)
+                . " globalDials=" . json_encode($dials);
+        }
+        $this->assertCount(1, $entries, $diag);
         $p = $entries[0]->frame['params'] ?? [];
         $this->assertSame('t-frame', $p['tag'] ?? null);
         $this->assertIsArray($p['devices'] ?? null);
@@ -164,8 +180,12 @@ class OutboundCallMockTest extends TestCase
         $worker = AsyncWorker::launch(<<<'WORKER'
             $http = $argv[1];
             $winnerCallId = $argv[2];
+            // Session id scopes both the journal read and the push so this
+            // worker only ever sees / targets ITS test's client — parallel-safe.
+            $sid = $argv[3] ?? '';
+            $q = $sid !== '' ? '?session_id=' . rawurlencode($sid) : '';
             for ($i = 0; $i < 400; $i++) {
-                $body = @file_get_contents($http . '/__mock__/journal');
+                $body = @file_get_contents($http . '/__mock__/journal' . $q);
                 if (is_string($body)) {
                     $entries = json_decode($body, true) ?? [];
                     foreach ($entries as $e) {
@@ -175,7 +195,6 @@ class OutboundCallMockTest extends TestCase
                         ) {
                             $tag = $e['frame']['params']['tag'] ?? '';
                             if ($tag === '') break 2;
-                            file_put_contents('/tmp/auto_tag.txt', $tag);
                             $payload = json_encode([
                                 'frame' => [
                                     'jsonrpc' => '2.0',
@@ -212,14 +231,14 @@ class OutboundCallMockTest extends TestCase
                                     'timeout' => 5,
                                 ],
                             ]);
-                            @file_get_contents($http . '/__mock__/push', false, $ctx);
+                            @file_get_contents($http . '/__mock__/push' . $q, false, $ctx);
                             exit(0);
                         }
                     }
                 }
                 usleep(50_000);
             }
-            WORKER, [$this->mock->httpUrl(), 'auto-tag-winner']);
+            WORKER, [$this->mock->httpUrl(), 'auto-tag-winner', $this->mock->sessionId()]);
 
         try {
             $call = $this->client->dial(
@@ -253,8 +272,12 @@ class OutboundCallMockTest extends TestCase
         $worker = AsyncWorker::launch(<<<'WORKER'
             $http = $argv[1];
             $tag = $argv[2];
+            // Session id scopes both the journal read and the push so this
+            // worker only ever sees / targets ITS test's client — parallel-safe.
+            $sid = $argv[3] ?? '';
+            $q = $sid !== '' ? '?session_id=' . rawurlencode($sid) : '';
             for ($i = 0; $i < 400; $i++) {
-                $body = @file_get_contents($http . '/__mock__/journal');
+                $body = @file_get_contents($http . '/__mock__/journal' . $q);
                 if (is_string($body)) {
                     $entries = json_decode($body, true) ?? [];
                     foreach ($entries as $e) {
@@ -286,14 +309,14 @@ class OutboundCallMockTest extends TestCase
                                     'timeout' => 5,
                                 ],
                             ]);
-                            @file_get_contents($http . '/__mock__/push', false, $ctx);
+                            @file_get_contents($http . '/__mock__/push' . $q, false, $ctx);
                             exit(0);
                         }
                     }
                 }
                 usleep(50_000);
             }
-            WORKER, [$this->mock->httpUrl(), 't-fail']);
+            WORKER, [$this->mock->httpUrl(), 't-fail', $this->mock->sessionId()]);
 
         try {
             $thrown = null;

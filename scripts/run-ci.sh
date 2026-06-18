@@ -44,6 +44,73 @@ PORTING_SDK_DIR="$(resolve_porting_sdk)" || {
     exit 2
 }
 
+# ── Mock-server lifecycle (for the PARALLEL test gate) ────────────────────
+#
+# The mock-backed suites are session-isolated (RELAY journal/scenarios scoped
+# by the connect-handshake sessionid; REST journal/scenarios scoped by the
+# per-test random project's Authorization header), so they are safe to run
+# under file/process parallelism. But paratest runs each test file in its own
+# PHP process, and the per-test harness's probe-OR-spawn helper would otherwise
+# have several workers race to spawn the mock — and worse, the worker that
+# spawned it kills it (via register_shutdown_function) when that worker exits,
+# yanking the server out from under still-running workers.
+#
+# Fix: spawn each mock ONCE here, wait for health, export the fixed ports so
+# every worker just probes-and-reuses (never spawns, never registers a kill
+# hook), and tear them down in a trap. This mirrors the dotnet lifecycle in
+# MOCK_TEST_HARNESS.md.
+MOCK_SIGNALWIRE_PORT="${MOCK_SIGNALWIRE_PORT:-8768}"
+MOCK_RELAY_PORT="${MOCK_RELAY_PORT:-8778}"
+MOCK_RELAY_HTTP_PORT="${MOCK_RELAY_HTTP_PORT:-9778}"
+export MOCK_SIGNALWIRE_PORT MOCK_RELAY_PORT MOCK_RELAY_HTTP_PORT
+
+PARALLEL_PROCS="${PARATEST_PROCS:-8}"
+MOCK_PIDS=""
+PYTHON_BIN="${MOCK_SIGNALWIRE_PYTHON:-$(command -v python3 || command -v python || echo python3)}"
+
+probe_mock() {  # $1 = url, $2 = needle
+    curl -fsS --max-time 2 "$1" 2>/dev/null | grep -q "$2"
+}
+
+spawn_mocks() {
+    local relay_pkg signalwire_pkg
+    relay_pkg="$PORTING_SDK_DIR/test_harness/mock_relay"
+    signalwire_pkg="$PORTING_SDK_DIR/test_harness/mock_signalwire"
+
+    if ! probe_mock "http://127.0.0.1:$MOCK_SIGNALWIRE_PORT/__mock__/health" '"specs_loaded"'; then
+        PYTHONPATH="$signalwire_pkg${PYTHONPATH:+:$PYTHONPATH}" \
+            "$PYTHON_BIN" -m mock_signalwire --host 127.0.0.1 \
+            --port "$MOCK_SIGNALWIRE_PORT" --log-level error >/dev/null 2>&1 &
+        MOCK_PIDS="$MOCK_PIDS $!"
+    fi
+    if ! probe_mock "http://127.0.0.1:$MOCK_RELAY_HTTP_PORT/__mock__/health" '"schemas_loaded"'; then
+        PYTHONPATH="$relay_pkg${PYTHONPATH:+:$PYTHONPATH}" \
+            "$PYTHON_BIN" -m mock_relay --host 127.0.0.1 \
+            --ws-port "$MOCK_RELAY_PORT" --http-port "$MOCK_RELAY_HTTP_PORT" \
+            --log-level error >/dev/null 2>&1 &
+        MOCK_PIDS="$MOCK_PIDS $!"
+    fi
+
+    local deadline=$(( $(date +%s) + 30 ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+        if probe_mock "http://127.0.0.1:$MOCK_SIGNALWIRE_PORT/__mock__/health" '"specs_loaded"' \
+            && probe_mock "http://127.0.0.1:$MOCK_RELAY_HTTP_PORT/__mock__/health" '"schemas_loaded"'; then
+            return 0
+        fi
+        sleep 0.2
+    done
+    echo "FATAL: mock servers did not become ready" >&2
+    return 1
+}
+
+kill_mocks() {
+    [ -n "$MOCK_PIDS" ] || return 0
+    # shellcheck disable=SC2086
+    kill $MOCK_PIDS 2>/dev/null || true
+    MOCK_PIDS=""
+}
+trap kill_mocks EXIT INT TERM
+
 FAILED_GATES=""
 
 run_gate() {
@@ -100,9 +167,17 @@ cd "$PORT_ROOT"
 
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
 
-# Gate 1: phpunit
-run_gate "TEST" "vendor/bin/phpunit" \
-    vendor/bin/phpunit
+# Gate 1: tests — run the full suite in PARALLEL via paratest (each file in
+# its own process). The mock-backed suites are session-isolated, so file
+# parallelism is safe; pure-unit files run independently too. We pre-spawn the
+# shared mock servers once (see spawn_mocks) so workers probe-and-reuse rather
+# than each spawning (and killing) their own.
+if spawn_mocks; then
+    run_gate "TEST" "paratest -p $PARALLEL_PROCS (parallel)" \
+        vendor/bin/paratest --runner=WrapperRunner -p "$PARALLEL_PROCS" --no-coverage
+else
+    FAILED_GATES="$FAILED_GATES TEST"
+fi
 
 # Gate 2: signature regen
 run_gate "SIGNATURES" "regenerate port_signatures.json" \

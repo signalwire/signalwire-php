@@ -243,7 +243,12 @@ class Client
 
         $result = $this->execute('signalwire.connect', $params);
 
-        $this->sessionId = $result['session_id'] ?? $this->sessionId;
+        // The RELAY ConnectResult carries the server-assigned id under the
+        // ``sessionid`` key (switchblade's ConnectResult shape; the mock
+        // mirrors it). Read that key — the journal records this connection's
+        // frames under the same value, which lets a test scope its journal
+        // reads/resets to its own session for concurrency-safe testing.
+        $this->sessionId = $result['sessionid'] ?? $this->sessionId;
         $this->protocol  = $result['protocol']   ?? $this->protocol;
         // Capture authorization blob if RELAY/audit fixture sent one.
         $authBlob = $result['authorization'] ?? null;

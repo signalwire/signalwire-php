@@ -26,9 +26,7 @@ class InboundCallMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = MockTest::client();
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     protected function tearDown(): void
@@ -455,11 +453,18 @@ class InboundCallMockTest extends TestCase
         // thread on its expect_recv waiting for calling.answer that the
         // SDK can't ship until we read.
         $http = $this->mock->httpUrl();
+        // Stamp every push/expect_recv op with THIS test's session id so the
+        // timeline (run from a forked curl that bypasses the harness's own
+        // op-stamping) targets only this client and expect_recv matches only
+        // this session's frames — parallel-safe. The output file is also made
+        // session-unique so concurrent runs don't clobber each other's status.
+        $sid = $this->mock->sessionId();
+        $outFile = sys_get_temp_dir() . '/scenario_play_' . $sid . '.out';
         $cmd = sprintf(
             'curl -fsS -X POST -H "Content-Type: application/json" '
-            . '-d %s %s/__mock__/scenario_play > /tmp/scenario_play.out 2>&1 & echo $!',
+            . '-d %s %s/__mock__/scenario_play > %s 2>&1 & echo $!',
             escapeshellarg(json_encode([
-                ['push' => ['frame' => [
+                ['push' => ['session_id' => $sid, 'frame' => [
                     'jsonrpc' => '2.0',
                     'id'      => bin2hex(random_bytes(8)),
                     'method'  => 'signalwire.event',
@@ -482,12 +487,13 @@ class InboundCallMockTest extends TestCase
                         ],
                     ],
                 ]]],
-                ['expect_recv' => ['method' => 'calling.answer', 'timeout_ms' => 5000]],
-                ['push' => ['frame' => self::stateFrame('c-scen', 'answered')]],
+                ['expect_recv' => ['method' => 'calling.answer', 'timeout_ms' => 5000, 'session_id' => $sid]],
+                ['push' => ['session_id' => $sid, 'frame' => self::stateFrame('c-scen', 'answered')]],
                 ['sleep_ms' => 50],
-                ['push' => ['frame' => self::stateFrame('c-scen', 'ended')]],
+                ['push' => ['session_id' => $sid, 'frame' => self::stateFrame('c-scen', 'ended')]],
             ], JSON_THROW_ON_ERROR)),
             escapeshellarg($http),
+            escapeshellarg($outFile),
         );
         $pid = trim((string) shell_exec($cmd));
         $this->assertNotEmpty($pid, 'failed to fork scenario_play curl');
@@ -508,8 +514,8 @@ class InboundCallMockTest extends TestCase
         $deadline = microtime(true) + 5.0;
         $out = '';
         while (microtime(true) < $deadline) {
-            if (file_exists('/tmp/scenario_play.out')) {
-                $out = (string) file_get_contents('/tmp/scenario_play.out');
+            if (file_exists($outFile)) {
+                $out = (string) file_get_contents($outFile);
                 if (str_contains($out, 'completed') || str_contains($out, 'timeout')) {
                     break;
                 }

@@ -22,9 +22,7 @@ class CompatMessagesFaxesMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- Messages -------------------------------------------------------
@@ -52,7 +50,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Messages/MM_U1',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Messages/MM_U1',
             $j->path
         );
         $body = $j->bodyMap();
@@ -78,7 +76,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Messages/MM_X/Media/ME_X',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Messages/MM_X/Media/ME_X',
             $j->path
         );
     }
@@ -99,7 +97,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Messages/MM_D/Media/ME_D',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Messages/MM_D/Media/ME_D',
             $j->path
         );
     }
@@ -123,7 +121,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Faxes/FX_U2',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Faxes/FX_U2',
             $j->path
         );
         $body = $j->bodyMap();
@@ -149,7 +147,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Faxes/FX_LM_X/Media',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Faxes/FX_LM_X/Media',
             $j->path
         );
     }
@@ -171,7 +169,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Faxes/FX_G/Media/ME_G',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Faxes/FX_G/Media/ME_G',
             $j->path
         );
     }
@@ -190,7 +188,7 @@ class CompatMessagesFaxesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Faxes/FX_D/Media/ME_D',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Faxes/FX_D/Media/ME_D',
             $j->path
         );
     }

@@ -25,9 +25,7 @@ class QueueAndDigitMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = MockTest::client();
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     protected function tearDown(): void

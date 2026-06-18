@@ -22,9 +22,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- Recordings ----------------------------------------------------
@@ -45,7 +43,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Recordings',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Recordings',
             $j->path
         );
     }
@@ -67,7 +65,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Recordings/RE_GET',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Recordings/RE_GET',
             $j->path
         );
     }
@@ -86,7 +84,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Recordings/RE_DEL',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Recordings/RE_DEL',
             $j->path
         );
     }
@@ -109,7 +107,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Transcriptions',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Transcriptions',
             $j->path
         );
     }
@@ -131,7 +129,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Transcriptions/TR_GET',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Transcriptions/TR_GET',
             $j->path
         );
     }
@@ -150,7 +148,7 @@ class CompatRecordingsTranscriptionsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Transcriptions/TR_DEL',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Transcriptions/TR_DEL',
             $j->path
         );
     }

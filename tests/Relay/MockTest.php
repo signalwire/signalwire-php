@@ -46,21 +46,32 @@ class MockTest extends TestCase
      */
     public function testHarnessIsReachable(): void
     {
-        $h = self::harness();
-        $h->reset();
-        $this->assertSame(self::resolveHttpPort(), $h->httpPort());
-        $this->assertStringStartsWith('ws://127.0.0.1:', $h->wsUrl());
-        $this->assertStringStartsWith('http://127.0.0.1:', $h->httpUrl());
-        // Hitting /__mock__/health via the harness returns at least one
-        // entry of the mock's introspection — sanity-check journal/scenarios
-        // are wired up.
-        $this->assertSame([], $h->journal()->all());
+        // Use a SCOPED client so this sentinel is parallel-safe: it neither
+        // wipes the shared journal (a global reset would race a concurrent
+        // test) nor asserts on the global journal (other sessions' frames are
+        // in it). A fresh session's scoped journal contains only its own
+        // connect frame.
+        [$client, $mock] = self::scopedClient();
+        try {
+            $this->assertSame(self::resolveHttpPort(), $mock->httpPort());
+            $this->assertStringStartsWith('ws://127.0.0.1:', $mock->wsUrl());
+            $this->assertStringStartsWith('http://127.0.0.1:', $mock->httpUrl());
+            $this->assertNotSame('', $mock->sessionId(), 'client captured a session id');
+            // Scoped journal sees this session's own signalwire.connect.
+            $this->assertNotEmpty($mock->journal()->recv('signalwire.connect'));
+        } finally {
+            $client->disconnect();
+        }
     }
 
     /**
      * Boot a freshly connected RelayClient pointed at the local mock server.
      * Resets the journal + scenarios before returning. The caller is
      * responsible for calling $client->disconnect() on teardown.
+     *
+     * Legacy/unscoped helper — kept for callers that drive the shared mock
+     * serially (and resets the GLOBAL journal/scenarios). Parallel-safe tests
+     * should use {@link scopedClient()} instead.
      *
      * @param array<string,mixed> $extra Additional constructor options.
      */
@@ -84,6 +95,49 @@ class MockTest extends TestCase
     }
 
     /**
+     * Boot a freshly connected RelayClient plus a per-test {@link RelayHarness}
+     * scoped to THIS client's RELAY session, so the test's journal reads/resets
+     * see only its own frames and scenario arming/pushes target only its own
+     * session — making the shared mock safe under file/process parallelism.
+     *
+     * Isolation key: the server-assigned ``sessionid`` from the connect
+     * handshake (RELAY's session key), captured by the SDK into
+     * ``$client->sessionId``. The mock journals this connection's frames under
+     * that id and scopes scenarios by it, so a scoped harness threads
+     * ``?session_id=<id>`` onto every control-plane call.
+     *
+     * No global reset is needed: a brand-new session starts with an empty
+     * (scoped) journal. The caller MUST call ``$client->disconnect()`` on
+     * teardown.
+     *
+     * @param array<string,mixed> $extra Additional constructor options.
+     * @return array{0: RelayClient, 1: RelayHarness}  [client, scopedHarness]
+     */
+    public static function scopedClient(array $extra = []): array
+    {
+        $shared = self::harness();
+        $opts = array_merge(
+            [
+                'project'  => 'test_proj',
+                'token'    => 'test_tok',
+                'host'     => $shared->relayHost(),
+                'scheme'   => 'ws',
+                'contexts' => ['default'],
+            ],
+            $extra,
+        );
+        $client = new RelayClient($opts);
+        $client->connect();
+
+        // Per-call harness view scoped to THIS client's session id, so the
+        // test only ever sees/disturbs its own frames + scenarios.
+        $mock = new RelayHarness($shared->httpUrl(), $shared->wsPort(), $shared->httpPort());
+        $mock->scopeTo((string) $client->sessionId);
+
+        return [$client, $mock];
+    }
+
+    /**
      * Return the Harness (lazily booting the mock server). Tests that need
      * to inspect the journal or push scenarios should call this directly;
      * client() is a convenience wrapper that also resets state.
@@ -104,51 +158,79 @@ class MockTest extends TestCase
         $httpPort = self::resolveHttpPort();
         $base = 'http://127.0.0.1:' . $httpPort;
 
-        if (self::probeHealth($base)) {
+        // Probe with retries BEFORE deciding to spawn. Under heavy parallel
+        // load (e.g. paratest with many workers), the single-threaded mock can
+        // be slow to answer a health probe; a single short probe would falsely
+        // conclude "not running" and spawn a REDUNDANT server on the same port
+        // — which then can't bind and leaves WS/HTTP hitting inconsistent
+        // instances. Retrying over a few seconds detects a busy-but-alive
+        // server and reuses it, so under parallelism exactly one server is ever
+        // used. (The run-ci.sh lifecycle pre-spawns one; this is the safety net
+        // for any worker that probes while the server is saturated.)
+        if (self::probeHealthWithRetries($base)) {
             self::$sharedHarness = new RelayHarness($base, $wsPort, $httpPort);
             return self::$sharedHarness;
         }
 
-        try {
-            self::$mockProcess = self::spawnMockServer($wsPort, $httpPort);
-        } catch (\Throwable $e) {
-            self::$startupFailure = $e;
-            throw new \RuntimeException(
-                'MockTest: failed to spawn `python -m mock_relay`: ' . $e->getMessage()
-                . ' (set MOCK_RELAY_PORT / MOCK_RELAY_HTTP_PORT to use a pre-running instance)',
-                0,
-                $e
-            );
+        // Serialize spawning across parallel paratest workers with a
+        // cross-process file lock so AT MOST ONE worker ever spawns a server on
+        // this port. After acquiring the lock we re-probe: another worker may
+        // have just spawned it while we waited. We deliberately do NOT register
+        // a per-worker shutdown hook to kill the server — under parallelism the
+        // worker that spawned it usually exits first, and killing the shared
+        // server would yank it out from under still-running workers. The mock
+        // is reused across runs (probe-and-reuse) and torn down by the
+        // run-ci.sh lifecycle trap; a leaked idle server between local runs is
+        // harmless (the next run reuses it).
+        $lock = @fopen(sys_get_temp_dir() . '/sw_mock_relay_' . $httpPort . '.lock', 'c');
+        if ($lock !== false) {
+            @flock($lock, LOCK_EX);
         }
-
-        $deadline = microtime(true) + self::STARTUP_TIMEOUT_SEC;
-        while (microtime(true) < $deadline) {
+        try {
+            // Re-probe under the lock — another worker may have spawned it.
             if (self::probeHealth($base)) {
                 self::$sharedHarness = new RelayHarness($base, $wsPort, $httpPort);
-                $proc = self::$mockProcess;
-                register_shutdown_function(static function () use ($proc): void {
-                    if (is_resource($proc)) {
-                        @proc_terminate($proc);
-                        @proc_close($proc);
-                    }
-                });
                 return self::$sharedHarness;
             }
-            usleep(150_000);
+            try {
+                self::$mockProcess = self::spawnMockServer($wsPort, $httpPort);
+            } catch (\Throwable $e) {
+                self::$startupFailure = $e;
+                throw new \RuntimeException(
+                    'MockTest: failed to spawn `python -m mock_relay`: ' . $e->getMessage()
+                    . ' (set MOCK_RELAY_PORT / MOCK_RELAY_HTTP_PORT to use a pre-running instance)',
+                    0,
+                    $e
+                );
+            }
+
+            $deadline = microtime(true) + self::STARTUP_TIMEOUT_SEC;
+            while (microtime(true) < $deadline) {
+                if (self::probeHealth($base)) {
+                    self::$sharedHarness = new RelayHarness($base, $wsPort, $httpPort);
+                    return self::$sharedHarness;
+                }
+                usleep(150_000);
+            }
+            if (is_resource(self::$mockProcess)) {
+                @proc_terminate(self::$mockProcess);
+                @proc_close(self::$mockProcess);
+                self::$mockProcess = null;
+            }
+            $err = new \RuntimeException(
+                'MockTest: `python -m mock_relay` did not become ready within '
+                . self::STARTUP_TIMEOUT_SEC . 's on http port ' . $httpPort
+                . ' (clone porting-sdk next to signalwire-php so tests can find '
+                . 'porting-sdk/test_harness/mock_relay/, or pip install the mock_relay package)'
+            );
+            self::$startupFailure = $err;
+            throw $err;
+        } finally {
+            if ($lock !== false) {
+                @flock($lock, LOCK_UN);
+                @fclose($lock);
+            }
         }
-        if (is_resource(self::$mockProcess)) {
-            @proc_terminate(self::$mockProcess);
-            @proc_close(self::$mockProcess);
-            self::$mockProcess = null;
-        }
-        $err = new \RuntimeException(
-            'MockTest: `python -m mock_relay` did not become ready within '
-            . self::STARTUP_TIMEOUT_SEC . 's on http port ' . $httpPort
-            . ' (clone porting-sdk next to signalwire-php so tests can find '
-            . 'porting-sdk/test_harness/mock_relay/, or pip install the mock_relay package)'
-        );
-        self::$startupFailure = $err;
-        throw $err;
     }
 
     /**
@@ -295,14 +377,16 @@ class MockTest extends TestCase
 
     /**
      * Probe /__mock__/health. Returns true on 200 + "schemas_loaded" in body.
+     * A generous timeout so a busy (but alive) single-threaded mock under
+     * parallel load isn't mistaken for "down".
      */
     private static function probeHealth(string $base): bool
     {
         $ch = curl_init($base . '/__mock__/health');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 2,
-            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
         ]);
         $body = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -311,6 +395,23 @@ class MockTest extends TestCase
             return false;
         }
         return str_contains($body, '"schemas_loaded"');
+    }
+
+    /**
+     * Probe repeatedly for up to ~10s before concluding the server is down.
+     * Reuses a busy-but-alive server under parallel load so no worker ever
+     * spawns a redundant second server on an occupied port.
+     */
+    private static function probeHealthWithRetries(string $base): bool
+    {
+        $deadline = microtime(true) + 10.0;
+        do {
+            if (self::probeHealth($base)) {
+                return true;
+            }
+            usleep(200_000);
+        } while (microtime(true) < $deadline);
+        return false;
     }
 }
 
@@ -326,6 +427,15 @@ final class RelayHarness
     private RelayJournal $journal;
     private RelayScenarios $scenarios;
 
+    /**
+     * When set, journal reads/resets, scenario arming/reset, and the default
+     * target of push()/inboundCall()/scenarioPlay() are scoped to this session
+     * id (the server-assigned ``sessionid`` from the connect handshake), so a
+     * test only ever sees/disturbs its own frames. Empty => global (legacy,
+     * single-threaded). {@link MockTest::scopedClient()} sets this.
+     */
+    private string $sessionId = '';
+
     public function __construct(string $httpUrl, int $wsPort, int $httpPort)
     {
         $this->httpUrl = $httpUrl;
@@ -333,6 +443,25 @@ final class RelayHarness
         $this->httpPort = $httpPort;
         $this->journal = new RelayJournal($httpUrl);
         $this->scenarios = new RelayScenarios($httpUrl);
+    }
+
+    /**
+     * Scope this harness to one RELAY session (the connect-handshake
+     * ``sessionid``). Threads ``?session_id=<id>`` onto every control-plane
+     * call so the harness is safe to use concurrently with other tests against
+     * the one shared mock.
+     */
+    public function scopeTo(string $sessionId): void
+    {
+        $this->sessionId = $sessionId;
+        $this->journal->scopeTo($sessionId);
+        $this->scenarios->scopeTo($sessionId);
+    }
+
+    /** The session id this harness is scoped to ('' when unscoped). */
+    public function sessionId(): string
+    {
+        return $this->sessionId;
     }
 
     public function httpUrl(): string
@@ -378,9 +507,13 @@ final class RelayHarness
      */
     public function push(array $frame, ?string $sessionId = null): array
     {
+        // Default to this harness's session so a parallel test's client never
+        // receives the push; an explicit arg overrides; an unscoped harness
+        // with no arg broadcasts (legacy single-threaded behavior).
+        $target = $sessionId ?? ($this->sessionId !== '' ? $this->sessionId : null);
         $url = $this->httpUrl . '/__mock__/push';
-        if ($sessionId !== null && $sessionId !== '') {
-            $url .= '?session_id=' . rawurlencode($sessionId);
+        if ($target !== null && $target !== '') {
+            $url .= '?session_id=' . rawurlencode($target);
         }
         $payload = json_encode(['frame' => $frame], JSON_THROW_ON_ERROR);
         $body = RelayMockHttp::postJson($url, $payload);
@@ -396,6 +529,12 @@ final class RelayHarness
      */
     public function inboundCall(array $opts = []): array
     {
+        // Target this harness's session by default so the inbound-call sequence
+        // is delivered only to this test's client (an unscoped harness
+        // broadcasts, as before). An explicit opts['session_id'] overrides.
+        if ($this->sessionId !== '' && !array_key_exists('session_id', $opts)) {
+            $opts['session_id'] = $this->sessionId;
+        }
         $payload = json_encode($opts, JSON_THROW_ON_ERROR);
         $body = RelayMockHttp::postJson($this->httpUrl . '/__mock__/inbound_call', $payload);
         return self::decode($body);
@@ -409,6 +548,13 @@ final class RelayHarness
      */
     public function scenarioPlay(array $ops): array
     {
+        // When scoped, stamp every push/expect_recv op with this session id
+        // (unless the op already carries one), so the timeline targets only
+        // this test's client and expect_recv matches only this session's
+        // frames — making it parallel-safe.
+        if ($this->sessionId !== '') {
+            $ops = array_map(fn (array $op): array => $this->scopeOp($op), $ops);
+        }
         $payload = json_encode($ops, JSON_THROW_ON_ERROR);
         $body = RelayMockHttp::postJson(
             $this->httpUrl . '/__mock__/scenario_play',
@@ -416,6 +562,26 @@ final class RelayHarness
             timeoutSec: 30,
         );
         return self::decode($body);
+    }
+
+    /**
+     * Inject this harness's session id into a timeline op's push/expect_recv
+     * spec when the op doesn't already specify a session_id. Leaves sleep ops
+     * untouched.
+     *
+     * @param array<string,mixed> $op
+     * @return array<string,mixed>
+     */
+    private function scopeOp(array $op): array
+    {
+        foreach (['push', 'expect_recv'] as $key) {
+            $spec = $op[$key] ?? null;
+            if (is_array($spec) && !array_key_exists('session_id', $spec)) {
+                $spec['session_id'] = $this->sessionId;
+                $op[$key] = $spec;
+            }
+        }
+        return $op;
     }
 
     /**
@@ -461,21 +627,43 @@ final class RelayJournal
 {
     private string $base;
 
+    /**
+     * When set, journal reads/resets are scoped to this session id (the
+     * server-assigned ``sessionid``), so a test only ever sees its own frames.
+     * Empty => global (legacy, single-threaded).
+     */
+    private string $sessionId = '';
+
     public function __construct(string $base)
     {
         $this->base = $base;
     }
 
+    /** Scope journal reads/resets to one session id. */
+    public function scopeTo(string $sessionId): void
+    {
+        $this->sessionId = $sessionId;
+    }
+
+    /** ``?session_id=<id>`` suffix when scoped, else ''. */
+    private function sessionQuery(): string
+    {
+        return $this->sessionId !== ''
+            ? '?session_id=' . rawurlencode($this->sessionId)
+            : '';
+    }
+
     /**
      * Return every frame the mock recorded since the last reset, in
      * arrival order (server PoV: ``recv`` = frame from the SDK,
-     * ``send`` = frame from the server back to the SDK).
+     * ``send`` = frame from the server back to the SDK). Scoped to this
+     * session when set.
      *
      * @return list<RelayJournalEntry>
      */
     public function all(): array
     {
-        $body = RelayMockHttp::get($this->base . '/__mock__/journal');
+        $body = RelayMockHttp::get($this->base . '/__mock__/journal' . $this->sessionQuery());
         $decoded = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
         if (!is_array($decoded)) {
             throw new \RuntimeException('mock_relay: journal body is not a JSON array');
@@ -556,7 +744,7 @@ final class RelayJournal
 
     public function reset(): void
     {
-        RelayMockHttp::post($this->base . '/__mock__/journal/reset');
+        RelayMockHttp::post($this->base . '/__mock__/journal/reset' . $this->sessionQuery());
     }
 }
 
@@ -612,13 +800,35 @@ final class RelayScenarios
 {
     private string $base;
 
+    /**
+     * When set, scenarios are armed/reset under this session id (scenarios are
+     * session-scoped on the mock), so a scoped harness arms only its own queue
+     * and clears only its own — safe under parallel execution. Empty => global.
+     */
+    private string $sessionId = '';
+
     public function __construct(string $base)
     {
         $this->base = $base;
     }
 
+    /** Scope scenario arming/reset to one session id. */
+    public function scopeTo(string $sessionId): void
+    {
+        $this->sessionId = $sessionId;
+    }
+
+    /** ``?session_id=<id>`` suffix when scoped, else ''. */
+    private function sessionQuery(): string
+    {
+        return $this->sessionId !== ''
+            ? '?session_id=' . rawurlencode($this->sessionId)
+            : '';
+    }
+
     /**
      * Queue scripted post-RPC events for the named method (FIFO consume-once).
+     * Scoped to this harness's session when set.
      *
      * @param list<array<string,mixed>> $events
      */
@@ -626,14 +836,14 @@ final class RelayScenarios
     {
         $payload = json_encode($events, JSON_THROW_ON_ERROR);
         RelayMockHttp::postJson(
-            $this->base . '/__mock__/scenarios/' . rawurlencode($method),
+            $this->base . '/__mock__/scenarios/' . rawurlencode($method) . $this->sessionQuery(),
             $payload,
         );
     }
 
     /**
      * Queue a dial-dance scenario (winner state events + per-loser state
-     * events + final dial event).
+     * events + final dial event). Scoped to this harness's session when set.
      *
      * @param array<string,mixed> $body
      */
@@ -641,14 +851,14 @@ final class RelayScenarios
     {
         $payload = json_encode($body, JSON_THROW_ON_ERROR);
         RelayMockHttp::postJson(
-            $this->base . '/__mock__/scenarios/dial',
+            $this->base . '/__mock__/scenarios/dial' . $this->sessionQuery(),
             $payload,
         );
     }
 
     public function reset(): void
     {
-        RelayMockHttp::post($this->base . '/__mock__/scenarios/reset');
+        RelayMockHttp::post($this->base . '/__mock__/scenarios/reset' . $this->sessionQuery());
     }
 }
 

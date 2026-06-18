@@ -15,6 +15,7 @@
         "workerman/workerman": "^5.2"
     },
     "require-dev": {
+        "brianium/paratest": "^7",
         "phpunit/phpunit": "^11.0"
     },
     "autoload": {
