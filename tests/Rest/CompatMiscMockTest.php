@@ -23,9 +23,7 @@ class CompatMiscMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- CompatApplications.update -----------------------------------
@@ -54,7 +52,7 @@ class CompatMiscMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Applications/AP_UU',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Applications/AP_UU',
             $j->path
         );
         $body = $j->bodyMap();
@@ -91,7 +89,7 @@ class CompatMiscMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/LamlBins/LB_UU',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/LamlBins/LB_UU',
             $j->path
         );
         $body = $j->bodyMap();

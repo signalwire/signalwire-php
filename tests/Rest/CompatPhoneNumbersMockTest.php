@@ -22,9 +22,7 @@ class CompatPhoneNumbersMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- list -----------------------------------------------------------
@@ -45,7 +43,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/IncomingPhoneNumbers',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/IncomingPhoneNumbers',
             $j->path
         );
     }
@@ -69,7 +67,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/IncomingPhoneNumbers/PN_GET',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/IncomingPhoneNumbers/PN_GET',
             $j->path
         );
     }
@@ -99,7 +97,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/IncomingPhoneNumbers/PN_UU',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/IncomingPhoneNumbers/PN_UU',
             $j->path
         );
         $body = $j->bodyMap();
@@ -124,7 +122,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/IncomingPhoneNumbers/PN_DEL',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/IncomingPhoneNumbers/PN_DEL',
             $j->path
         );
     }
@@ -152,7 +150,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/IncomingPhoneNumbers',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/IncomingPhoneNumbers',
             $j->path
         );
         $body = $j->bodyMap();
@@ -184,7 +182,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/ImportedPhoneNumbers',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/ImportedPhoneNumbers',
             $j->path
         );
         $body = $j->bodyMap();
@@ -210,7 +208,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/AvailablePhoneNumbers',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/AvailablePhoneNumbers',
             $j->path
         );
     }
@@ -239,7 +237,7 @@ class CompatPhoneNumbersMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/AvailablePhoneNumbers/US/TollFree',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/AvailablePhoneNumbers/US/TollFree',
             $j->path
         );
         // The AreaCode should be on the query string, not body.

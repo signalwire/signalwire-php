@@ -22,9 +22,7 @@ class CompatQueuesMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- update --------------------------------------------------------
@@ -52,7 +50,7 @@ class CompatQueuesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Queues/QU_UU',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Queues/QU_UU',
             $j->path
         );
         $body = $j->bodyMap();
@@ -79,7 +77,7 @@ class CompatQueuesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Queues/QU_LMX/Members',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Queues/QU_LMX/Members',
             $j->path
         );
     }
@@ -103,7 +101,7 @@ class CompatQueuesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Queues/QU_GMX/Members/CA_GMX',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Queues/QU_GMX/Members/CA_GMX',
             $j->path
         );
     }
@@ -135,7 +133,7 @@ class CompatQueuesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Queues/QU_DMX/Members/CA_DMX',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Queues/QU_DMX/Members/CA_DMX',
             $j->path
         );
         $body = $j->bodyMap();

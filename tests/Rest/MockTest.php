@@ -52,19 +52,29 @@ class MockTest extends TestCase
      */
     public function testHarnessIsReachable(): void
     {
-        $h = self::harness();
-        $h->reset();
-        $this->assertSame(self::resolvePort(), $h->port());
-        $this->assertStringStartsWith('http://127.0.0.1:', $h->url());
-        // Hitting /__mock__/health via the harness returns at least one
-        // entry of the mock's introspection — sanity-check journal/scenarios
-        // are wired up.
-        $this->assertSame([], $h->journal()->all());
+        // Use a SCOPED harness so this sentinel is parallel-safe: it neither
+        // wipes the shared journal (a global reset would race a concurrent
+        // test) nor asserts on the global journal (other workers' requests
+        // are in it). A brand-new scope starts empty by construction.
+        [$client, $mock, $project] = self::scopedClient();
+        $this->assertSame(self::resolvePort(), $mock->port());
+        $this->assertStringStartsWith('http://127.0.0.1:', $mock->url());
+        $this->assertStringStartsWith('test_proj_', $project);
+        // This client made no request yet, so its auth-scoped journal view is
+        // empty — proving journal scoping is wired without touching shared state.
+        $this->assertSame([], $mock->journal()->all());
+        // A scoped reset is a no-op on the shared journal (verified: it returns
+        // without HTTP), so calling it can't disturb a concurrent test.
+        $mock->reset();
+        $this->assertSame([], $mock->journal()->all());
     }
 
     /**
      * Return a freshly reset RestClient pointed at the local mock server.
      * Resets the journal + scenarios before returning.
+     *
+     * Legacy/unscoped helper — kept for callers that drive the shared mock
+     * serially. Parallel-safe tests should use {@link scopedClient()} instead.
      */
     public static function client(): RestClient
     {
@@ -75,6 +85,45 @@ class MockTest extends TestCase
             'test_tok',
             $h->url()
         );
+    }
+
+    /**
+     * Build a RestClient plus a per-test {@link Harness} scoped to THIS
+     * client's requests, so the test reads only its own journal entries and
+     * consumes only its own scenario overrides — making the shared mock safe
+     * under file/process parallelism with no SDK change and no mock change.
+     *
+     * Isolation key: each client gets a unique RANDOM project
+     * (``test_proj_<12 hex>``), so its
+     * ``Authorization: Basic base64(project:token)`` header is unique. The
+     * random suffix (not a counter) keeps it collision-free across paratest
+     * workers AND separate processes hitting one shared mock. The harness
+     * filters the shared global journal by that header (client-side) and the
+     * mock_signalwire scenario store scopes overrides by it (server-side).
+     *
+     * Tests that assert on the AccountSid in a LAML path must read it from
+     * ``$mock->project()`` rather than hard-coding ``test_proj``.
+     *
+     * @return array{0: RestClient, 1: Harness, 2: string}  [client, mock, project]
+     */
+    public static function scopedClient(): array
+    {
+        $h = self::harness();
+        // Unique per-test project => unique Basic-Auth header => journal
+        // filterable per client. Random (not a counter) so concurrent
+        // workers/processes can't collide on the same project name.
+        $project = 'test_proj_' . bin2hex(random_bytes(6));
+        $token = 'test_tok';
+        $client = new RestClient($project, $token, $h->url());
+
+        // Per-call harness view scoped to this client's auth header. No reset
+        // is needed: this client starts with zero entries in the (auth-filtered)
+        // view, and its scenario overrides live under its own header.
+        $authHeader = 'Basic ' . base64_encode($project . ':' . $token);
+        $mock = new Harness($h->url(), $h->port());
+        $mock->scopeTo($authHeader, $project);
+
+        return [$client, $mock, $project];
     }
 
     /**
@@ -97,56 +146,80 @@ class MockTest extends TestCase
         $port = self::resolvePort();
         $base = 'http://127.0.0.1:' . $port;
 
-        if (self::probeHealth($base)) {
+        // Probe with retries BEFORE deciding to spawn. Under heavy parallel
+        // load (paratest with many workers) the single-threaded mock can be
+        // slow to answer a health probe; a single short probe would falsely
+        // conclude "not running" and spawn a REDUNDANT server on the same
+        // port, leaving requests hitting inconsistent instances. Retrying over
+        // a few seconds reuses a busy-but-alive server so exactly one server is
+        // ever used under parallelism.
+        if (self::probeHealthWithRetries($base)) {
             self::$sharedHarness = new Harness($base, $port);
             return self::$sharedHarness;
         }
 
-        // Spawn a subprocess. Detach stdout/stderr to /dev/null so PHPUnit
-        // doesn't hang waiting on the child's pipes.
-        try {
-            self::$mockProcess = self::spawnMockServer($port);
-        } catch (\Throwable $e) {
-            self::$startupFailure = $e;
-            throw new \RuntimeException(
-                'MockTest: failed to spawn `python -m mock_signalwire`: ' . $e->getMessage()
-                . ' (set MOCK_SIGNALWIRE_PORT to use a pre-running instance)',
-                0,
-                $e
-            );
+        // Serialize spawning across parallel paratest workers with a
+        // cross-process file lock so AT MOST ONE worker ever spawns a server on
+        // this port. After acquiring the lock we re-probe: another worker may
+        // have spawned it while we waited. We deliberately do NOT register a
+        // per-worker shutdown hook to kill the server — under parallelism the
+        // worker that spawned it usually exits first, and killing the shared
+        // server would yank it out from under still-running workers. The mock
+        // is reused across runs (probe-and-reuse) and torn down by the
+        // run-ci.sh lifecycle trap; a leaked idle server between local runs is
+        // harmless (the next run reuses it).
+        $lock = @fopen(sys_get_temp_dir() . '/sw_mock_signalwire_' . $port . '.lock', 'c');
+        if ($lock !== false) {
+            @flock($lock, LOCK_EX);
         }
-
-        $deadline = microtime(true) + self::STARTUP_TIMEOUT_SEC;
-        while (microtime(true) < $deadline) {
+        try {
+            // Re-probe under the lock — another worker may have spawned it.
             if (self::probeHealth($base)) {
                 self::$sharedHarness = new Harness($base, $port);
-                // Register a shutdown hook so the child is cleaned up when
-                // PHPUnit exits.
-                $proc = self::$mockProcess;
-                register_shutdown_function(static function () use ($proc): void {
-                    if (is_resource($proc)) {
-                        @proc_terminate($proc);
-                        @proc_close($proc);
-                    }
-                });
                 return self::$sharedHarness;
             }
-            usleep(150_000);
+            // Spawn a subprocess. Detach stdout/stderr to /dev/null so PHPUnit
+            // doesn't hang waiting on the child's pipes.
+            try {
+                self::$mockProcess = self::spawnMockServer($port);
+            } catch (\Throwable $e) {
+                self::$startupFailure = $e;
+                throw new \RuntimeException(
+                    'MockTest: failed to spawn `python -m mock_signalwire`: ' . $e->getMessage()
+                    . ' (set MOCK_SIGNALWIRE_PORT to use a pre-running instance)',
+                    0,
+                    $e
+                );
+            }
+
+            $deadline = microtime(true) + self::STARTUP_TIMEOUT_SEC;
+            while (microtime(true) < $deadline) {
+                if (self::probeHealth($base)) {
+                    self::$sharedHarness = new Harness($base, $port);
+                    return self::$sharedHarness;
+                }
+                usleep(150_000);
+            }
+            // Timed out — kill the child and give up.
+            if (is_resource(self::$mockProcess)) {
+                @proc_terminate(self::$mockProcess);
+                @proc_close(self::$mockProcess);
+                self::$mockProcess = null;
+            }
+            $err = new \RuntimeException(
+                'MockTest: `python -m mock_signalwire` did not become ready within '
+                . self::STARTUP_TIMEOUT_SEC . 's on port ' . $port
+                . ' (clone porting-sdk next to signalwire-php so tests can find '
+                . 'porting-sdk/test_harness/mock_signalwire/, or pip install the mock_signalwire package)'
+            );
+            self::$startupFailure = $err;
+            throw $err;
+        } finally {
+            if ($lock !== false) {
+                @flock($lock, LOCK_UN);
+                @fclose($lock);
+            }
         }
-        // Timed out — kill the child and give up.
-        if (is_resource(self::$mockProcess)) {
-            @proc_terminate(self::$mockProcess);
-            @proc_close(self::$mockProcess);
-            self::$mockProcess = null;
-        }
-        $err = new \RuntimeException(
-            'MockTest: `python -m mock_signalwire` did not become ready within '
-            . self::STARTUP_TIMEOUT_SEC . 's on port ' . $port
-            . ' (clone porting-sdk next to signalwire-php so tests can find '
-            . 'porting-sdk/test_harness/mock_signalwire/, or pip install the mock_signalwire package)'
-        );
-        self::$startupFailure = $err;
-        throw $err;
     }
 
     private static function resolvePort(): int
@@ -266,8 +339,8 @@ class MockTest extends TestCase
         $ch = curl_init($base . '/__mock__/health');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 2,
-            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
         ]);
         $body = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -276,6 +349,23 @@ class MockTest extends TestCase
             return false;
         }
         return str_contains($body, '"specs_loaded"');
+    }
+
+    /**
+     * Probe repeatedly for up to ~10s before concluding the server is down.
+     * Reuses a busy-but-alive server under parallel load so no worker ever
+     * spawns a redundant second server on an occupied port.
+     */
+    private static function probeHealthWithRetries(string $base): bool
+    {
+        $deadline = microtime(true) + 10.0;
+        do {
+            if (self::probeHealth($base)) {
+                return true;
+            }
+            usleep(200_000);
+        } while (microtime(true) < $deadline);
+        return false;
     }
 }
 
@@ -290,12 +380,42 @@ final class Harness
     private Journal $journal;
     private Scenarios $scenarios;
 
+    /**
+     * The unique random project this harness's client authenticates with
+     * (``test_proj_<hex>``). Tests that assert on the AccountSid embedded in
+     * a LAML path read it from here instead of hard-coding ``test_proj``.
+     * Empty on an unscoped/raw harness.
+     */
+    private string $project = '';
+
     public function __construct(string $url, int $port)
     {
         $this->url = $url;
         $this->port = $port;
         $this->journal = new Journal($url);
         $this->scenarios = new Scenarios($url);
+    }
+
+    /**
+     * Scope this harness to one client, identified by its ``Authorization``
+     * header. After scoping: journal()/last() return only that client's
+     * requests, reset() becomes a no-op (the shared journal is never wiped —
+     * a global wipe would race a concurrent test), and scenario overrides are
+     * tagged with the header so a concurrent test can't consume them. REST is
+     * pure request/response with no handshake, so the auth header is the
+     * session key.
+     */
+    public function scopeTo(string $authHeader, string $project): void
+    {
+        $this->project = $project;
+        $this->journal->scopeTo($authHeader);
+        $this->scenarios->scopeTo($authHeader);
+    }
+
+    /** The unique random project for a scoped harness ('' when unscoped). */
+    public function project(): string
+    {
+        return $this->project;
     }
 
     public function url(): string
@@ -319,7 +439,10 @@ final class Harness
     }
 
     /**
-     * Clear journal + scenarios on the mock server.
+     * Clear journal + scenarios on the mock server. A scoped harness leaves
+     * the shared journal alone (it only ever reads its own entries, identified
+     * by auth header, so there is nothing to clear and a global wipe would
+     * race a concurrent test). Unscoped harnesses do the legacy global reset.
      */
     public function reset(): void
     {
@@ -336,13 +459,29 @@ final class Journal
 {
     private string $base;
 
+    /**
+     * When set, all()/last() return only the requests THIS test's client made,
+     * identified by its ``Authorization`` header (Basic project:token, with a
+     * per-test random project). Empty => unscoped (legacy view; returns every
+     * entry — only correct under serial execution).
+     */
+    private string $authHeader = '';
+
     public function __construct(string $base)
     {
         $this->base = $base;
     }
 
+    /** Scope journal reads to one client's Authorization header. */
+    public function scopeTo(string $authHeader): void
+    {
+        $this->authHeader = $authHeader;
+    }
+
     /**
      * Return every entry recorded since the last reset, in arrival order.
+     * Scoped to this harness's auth header when set (so a parallel test never
+     * sees another test's requests); unscoped harnesses see the whole journal.
      *
      * @return list<JournalEntry>
      */
@@ -355,14 +494,20 @@ final class Journal
         }
         $entries = [];
         foreach ($decoded as $row) {
-            $entries[] = JournalEntry::fromArray($row);
+            $entry = JournalEntry::fromArray($row);
+            if ($this->authHeader !== ''
+                && ($entry->headers['authorization'] ?? null) !== $this->authHeader) {
+                continue;
+            }
+            $entries[] = $entry;
         }
         return $entries;
     }
 
     /**
-     * Return the most recent journal entry. Throws when the journal is empty —
-     * every test that exercises the SDK should produce at least one entry.
+     * Return the most recent journal entry for THIS client. Throws when the
+     * (scoped) journal is empty — every test that exercises the SDK should
+     * produce at least one entry.
      */
     public function last(): JournalEntry
     {
@@ -375,8 +520,17 @@ final class Journal
         return $entries[count($entries) - 1];
     }
 
+    /**
+     * Clear the journal on the mock server. A scoped journal leaves the shared
+     * journal alone (it only ever reads its own entries, identified by auth
+     * header, so there is nothing to clear and a global wipe would race a
+     * concurrent test). Unscoped journals do the legacy global reset.
+     */
     public function reset(): void
     {
+        if ($this->authHeader !== '') {
+            return;
+        }
         MockHttp::post($this->base . '/__mock__/journal/reset');
     }
 }
@@ -456,15 +610,29 @@ final class Scenarios
 {
     private string $base;
 
+    /**
+     * When set, scenario overrides are scoped to THIS client's auth header
+     * (REST's session key), so a concurrent test can't consume them and a
+     * stale one can't bleed across tests. Empty => shared/unscoped bucket.
+     */
+    private string $authHeader = '';
+
     public function __construct(string $base)
     {
         $this->base = $base;
     }
 
+    /** Scope scenario overrides to one client's Authorization header. */
+    public function scopeTo(string $authHeader): void
+    {
+        $this->authHeader = $authHeader;
+    }
+
     /**
      * Stage a response override for the named operation. The status + body
      * returned here will be served the next time the route is hit;
-     * subsequent hits fall back to spec synthesis.
+     * subsequent hits fall back to spec synthesis. Scoped to this harness's
+     * auth header (server-side, via ``?session_id=``) when set.
      *
      * @param array<string,mixed> $body
      */
@@ -474,11 +642,29 @@ final class Scenarios
             ['status' => $status, 'response' => $body],
             JSON_THROW_ON_ERROR
         );
-        MockHttp::postJson($this->base . '/__mock__/scenarios/' . rawurlencode($operationId), $payload);
+        $q = $this->authHeader !== ''
+            ? '?session_id=' . rawurlencode($this->authHeader)
+            : '';
+        MockHttp::postJson(
+            $this->base . '/__mock__/scenarios/' . rawurlencode($operationId) . $q,
+            $payload
+        );
     }
 
+    /**
+     * Clear scenario overrides. A scoped harness clears only its own bucket
+     * (server-side, via ``?session_id=``) so it never disturbs a concurrent
+     * test; unscoped harnesses clear everything (legacy global reset).
+     */
     public function reset(): void
     {
+        if ($this->authHeader !== '') {
+            MockHttp::post(
+                $this->base . '/__mock__/scenarios/reset?session_id='
+                . rawurlencode($this->authHeader)
+            );
+            return;
+        }
         MockHttp::post($this->base . '/__mock__/scenarios/reset');
     }
 }

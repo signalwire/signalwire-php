@@ -23,9 +23,7 @@ class CompatTokensMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- create -------------------------------------------------------
@@ -47,7 +45,7 @@ class CompatTokensMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/tokens',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/tokens',
             $j->path
         );
         $body = $j->bodyMap();
@@ -76,7 +74,7 @@ class CompatTokensMockTest extends TestCase
         // CompatTokens.update uses PATCH (BaseResource.update -> http.patch).
         $this->assertSame('PATCH', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/tokens/TK_UU',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/tokens/TK_UU',
             $j->path
         );
         $body = $j->bodyMap();
@@ -100,7 +98,7 @@ class CompatTokensMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/tokens/TK_DEL',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/tokens/TK_DEL',
             $j->path
         );
     }

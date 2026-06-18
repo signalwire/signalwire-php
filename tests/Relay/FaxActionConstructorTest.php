@@ -29,8 +29,8 @@ class FaxActionConstructorTest extends TestCase
         // Bring up a real (mock-backed) client so we have something to
         // pass as the $client param. We never actually drive the wire
         // here — these are unit-shape tests on the Action class itself.
-        MockTest::harness()->reset();
-        $this->client = MockTest::client();
+        // Use a scoped client (no global reset) so this is parallel-safe.
+        [$this->client] = MockTest::scopedClient();
     }
 
     protected function tearDown(): void

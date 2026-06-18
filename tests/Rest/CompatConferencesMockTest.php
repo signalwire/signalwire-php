@@ -22,9 +22,7 @@ class CompatConferencesMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----- conference itself ------------------------------------------
@@ -47,7 +45,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences',
             $j->path
         );
         $this->assertNotNull($j->matchedRoute, 'spec gap: conferences.list');
@@ -70,7 +68,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_GETSID',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_GETSID',
             $j->path
         );
     }
@@ -98,7 +96,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_UPD',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_UPD',
             $j->path
         );
         $body = $j->bodyMap();
@@ -126,7 +124,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_GP/Participants/CA_GP',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_GP/Participants/CA_GP',
             $j->path
         );
     }
@@ -156,7 +154,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_M/Participants/CA_M',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_M/Participants/CA_M',
             $j->path
         );
         $body = $j->bodyMap();
@@ -181,7 +179,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_RM/Participants/CA_RM',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_RM/Participants/CA_RM',
             $j->path
         );
     }
@@ -204,7 +202,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_LRX/Recordings',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_LRX/Recordings',
             $j->path
         );
     }
@@ -226,7 +224,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_GRX/Recordings/RE_GRX',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_GRX/Recordings/RE_GRX',
             $j->path
         );
     }
@@ -256,7 +254,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_UR/Recordings/RE_UR',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_UR/Recordings/RE_UR',
             $j->path
         );
         $body = $j->bodyMap();
@@ -278,7 +276,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_DRX/Recordings/RE_DRX',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_DRX/Recordings/RE_DRX',
             $j->path
         );
     }
@@ -308,7 +306,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_SSX/Streams',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_SSX/Streams',
             $j->path
         );
         $body = $j->bodyMap();
@@ -341,7 +339,7 @@ class CompatConferencesMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Conferences/CF_TSX/Streams/ST_TSX',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Conferences/CF_TSX/Streams/ST_TSX',
             $j->path
         );
         $body = $j->bodyMap();

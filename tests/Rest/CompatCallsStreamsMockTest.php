@@ -23,9 +23,7 @@ class CompatCallsStreamsMockTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->mock = MockTest::harness();
-        $this->mock->reset();
-        $this->client = new RestClient('test_proj', 'test_tok', $this->mock->url());
+        [$this->client, $this->mock] = MockTest::scopedClient();
     }
 
     // ----------------------------------------------------------------
@@ -57,7 +55,7 @@ class CompatCallsStreamsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Calls/CA_JX1/Streams',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Calls/CA_JX1/Streams',
             $j->path
         );
         $body = $j->bodyMap();
@@ -96,7 +94,7 @@ class CompatCallsStreamsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Calls/CA_S1/Streams/ST_S1',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Calls/CA_S1/Streams/ST_S1',
             $j->path
         );
         $body = $j->bodyMap();
@@ -133,7 +131,7 @@ class CompatCallsStreamsMockTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/test_proj/Calls/CA_R1/Recordings/RE_R1',
+            '/api/laml/2010-04-01/Accounts/' . $this->mock->project() . '/Calls/CA_R1/Recordings/RE_R1',
             $j->path
         );
         $body = $j->bodyMap();
