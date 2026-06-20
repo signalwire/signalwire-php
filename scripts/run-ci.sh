@@ -252,6 +252,18 @@ run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
 run_gate "LINT" "phpstan level 5 zero findings (lint gate)" \
     vendor/bin/phpstan analyse --no-progress
 
+# Gate 9: DOC-AUDIT — every method/class referenced in docs/ + examples/ fenced
+# code blocks must resolve to a real symbol in the port surface (catches
+# phantom-API doc promises). Uses the committed port_surface.json (the
+# SURFACE-FRESH gate above already proved it is fresh) + DOC_AUDIT_IGNORE.md for
+# intentional non-symbol references (PHP stdlib, SWML auto-vivified verbs, REST
+# CrudResource URL-driven dynamic methods). Mirrors the ruby/go DOC-AUDIT gate.
+run_gate "DOC-AUDIT" "audit_docs vs port_surface.json" \
+    python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
+        --root "$PORT_ROOT" \
+        --surface "$PORT_ROOT/port_surface.json" \
+        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
+
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
     exit 0
