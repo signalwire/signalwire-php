@@ -191,7 +191,6 @@ class WebSearch extends SkillBase
                 'query' => [
                     'type' => 'string',
                     'description' => 'The search query',
-                    'required' => true,
                 ],
             ],
             function (array $args, array $rawData) use (

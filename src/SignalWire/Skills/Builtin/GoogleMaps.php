@@ -53,7 +53,6 @@ class GoogleMaps extends SkillBase
                         'description' => 'Longitude to bias results toward (optional)',
                     ],
                 ],
-                'required' => ['address'],
             ],
             'data_map' => [
                 'webhooks' => [
@@ -99,7 +98,6 @@ class GoogleMaps extends SkillBase
                         'description' => 'Longitude of the destination',
                     ],
                 ],
-                'required' => ['origin_lat', 'origin_lng', 'dest_lat', 'dest_lng'],
             ],
             'data_map' => [
                 'webhooks' => [

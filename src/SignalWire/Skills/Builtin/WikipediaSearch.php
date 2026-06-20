@@ -56,7 +56,6 @@ class WikipediaSearch extends SkillBase
                 'query' => [
                     'type' => 'string',
                     'description' => 'The topic to search for on Wikipedia',
-                    'required' => true,
                 ],
             ],
             function (array $args, array $rawData) use (

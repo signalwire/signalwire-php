@@ -33,7 +33,6 @@ class Math extends SkillBase
                 'expression' => [
                     'type' => 'string',
                     'description' => 'The mathematical expression to evaluate (e.g., "2 + 3 * 4")',
-                    'required' => true,
                 ],
             ],
             function (array $args, array $rawData): FunctionResult {

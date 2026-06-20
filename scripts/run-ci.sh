@@ -295,6 +295,21 @@ surface_diff_gate() {
 run_gate "SURFACE-DIFF" "diff_port_surface vs python reference" \
     surface_diff_gate
 
+# Gate 11: SKILL-CONTRACT — the surface/drift/emission gates see signatures +
+# symbol names + FunctionResult.toArray(); NONE sees a built-in skill's SWAIG
+# tool contract ({name, parameters, required, enum} each skill registers). This
+# differ closes that gap: it builds the Python oracle by instantiating each
+# covered reference skill, runs the PHP skill-dump program (scripts/emit_skills.php,
+# which reads the SAME shared corpus via skill_contract_corpus.py), and
+# structurally compares the two. DESCRIPTIONS + implementation (handler vs
+# DataMap) are not compared — only name/param-name/param-type/enum/required.
+# Mirrors the ruby/go SKILL-CONTRACT gate. Same prereqs as EMISSION
+# (signalwire-python adjacent; no network).
+run_gate "SKILL-CONTRACT" "diff_skill_contracts vs python reference" \
+    python3 "$PORTING_SDK_DIR/scripts/diff_skill_contracts.py" \
+        --dump-cmd "php scripts/emit_skills.php" \
+        --port-repo "$PORT_ROOT"
+
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
     exit 0
