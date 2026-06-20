@@ -264,6 +264,37 @@ run_gate "DOC-AUDIT" "audit_docs vs port_surface.json" \
         --surface "$PORT_ROOT/port_surface.json" \
         --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
 
+# Gate 10: surface-diff — diff the port's public surface against the Python
+# reference (omissions + additions). The signature DRIFT gate (Layer A) checks
+# method *signatures*; this checks surface *membership* — it catches public
+# symbols the port has that Python doesn't (helpers leaked onto the surface by a
+# refactor) and vice-versa. Regenerate the surface in place via the PHP surface
+# enumerator, diff against python_surface.json, then restore the committed copy
+# unconditionally (pass or fail). Mirrors the ruby/go SURFACE-DIFF gate. NB the
+# enumerator correctly enters Action.php's 11 co-located RELAY action classes
+# (PSR-4 multi-class file) via its brace-depth scoping + CLASS_MODULE_MAP, so
+# they appear in port_surface.json and do not read as phantom omissions.
+surface_diff_gate() {
+    git show HEAD:port_surface.json > /tmp/committed_surface_diff.json 2>/dev/null \
+        || cp "$PORT_ROOT/port_surface.json" /tmp/committed_surface_diff.json
+    python3 scripts/enumerate_surface.py
+    local regen_rc=$?
+    if [ "$regen_rc" -ne 0 ]; then
+        git checkout -- port_surface.json 2>/dev/null
+        return $regen_rc
+    fi
+    python3 "$PORTING_SDK_DIR/scripts/diff_port_surface.py" \
+        --reference "$PORTING_SDK_DIR/python_surface.json" \
+        --port-surface "$PORT_ROOT/port_surface.json" \
+        --omissions "$PORT_ROOT/PORT_OMISSIONS.md" \
+        --additions "$PORT_ROOT/PORT_ADDITIONS.md"
+    local check_rc=$?
+    git checkout -- port_surface.json 2>/dev/null
+    return $check_rc
+}
+run_gate "SURFACE-DIFF" "diff_port_surface vs python reference" \
+    surface_diff_gate
+
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
     exit 0
