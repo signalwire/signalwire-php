@@ -39,8 +39,8 @@ php examples/simple_agent.php
 | File | Description |
 |------|-------------|
 | [swaig_features_agent.php](swaig_features_agent.php) | Default webhook URL, speech fillers, declarative prompts |
-| [call_flow.php](call_flow.php) | Call flow verbs, debug events, and FunctionResult actions |
-| [session_state.php](session_state.php) | Session lifecycle: global data, summary, tool actions |
+| [call_flow_and_actions_demo.php](call_flow_and_actions_demo.php) | Call flow verbs, debug events, and FunctionResult actions |
+| [session_and_state_demo.php](session_and_state_demo.php) | Session lifecycle: global data, summary, tool actions |
 | [record_call_example.php](record_call_example.php) | FunctionResult record_call/stop_record_call helpers |
 | [room_and_sip_example.php](room_and_sip_example.php) | FunctionResult join_room, join_conference, sip_refer helpers |
 | [tap_example.php](tap_example.php) | FunctionResult tap/stop_tap for call monitoring |
