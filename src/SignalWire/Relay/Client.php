@@ -329,9 +329,10 @@ class Client
                     $this->socket->close();
                     $this->socket = null;
                 }
-                if ($this->running && !$this->closing) {
-                    $this->reconnect();
-                }
+                // Still inside the `running && !closing` loop guard (synchronous
+                // flow does not mutate them between there and here), so a read
+                // error always triggers a reconnect attempt.
+                $this->reconnect();
             }
         }
     }
@@ -362,8 +363,12 @@ class Client
 
         // Register a pending-response slot.
         $this->pending[$id] = [
-            'resolve' => function (array $r) use (&$result) { $result = $r; },
-            'reject'  => function (array $e) use (&$error)  { $error = $e; },
+            'resolve' => function (array $r) use (&$result) {
+                $result = $r;
+            },
+            'reject'  => function (array $e) use (&$error) {
+                $error = $e;
+            },
         ];
 
         $this->send($msg);
@@ -753,7 +758,7 @@ class Client
     {
         $this->contexts = array_values(array_filter(
             $this->contexts,
-            fn(string $c) => !in_array($c, $contexts, true)
+            fn (string $c) => !in_array($c, $contexts, true)
         ));
 
         $this->execute('signalwire.unreceive', [

@@ -34,13 +34,12 @@ class Section
     public bool $numberedBullets;
 
     /**
-     * @param array{
-     *   title?: string|null,
-     *   body?: string,
-     *   bullets?: list<string>|null,
-     *   numbered?: bool|null,
-     *   numberedBullets?: bool
-     * } $params
+     * Caller-supplied (often config- or request-derived) section params.
+     * Recognised keys: title?, body?, bullets?, numbered?, numberedBullets?.
+     * The values are validated at runtime below, so the element type is
+     * deliberately open rather than a fixed shape.
+     *
+     * @param array<string,mixed> $params
      */
     public function __construct(?string $title = null, array $params = [])
     {
@@ -75,9 +74,10 @@ class Section
     }
 
     /**
-     * Append bullet points to this section.
+     * Append bullet points to this section. Elements are validated to be
+     * strings at runtime, so the param type is left open.
      *
-     * @param list<string> $bullets
+     * @param array<int,mixed> $bullets
      */
     public function addBullets(array $bullets): void
     {

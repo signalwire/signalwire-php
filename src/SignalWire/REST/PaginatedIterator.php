@@ -138,8 +138,8 @@ class PaginatedIterator implements \Iterator
             // Parse cursor/page token from next URL.
             $parsed = parse_url($nextUrl);
             $query = $parsed['query'] ?? '';
-            parse_str(is_string($query) ? $query : '', $parts);
-            $this->params = is_array($parts) ? $parts : [];
+            parse_str($query, $parts);
+            $this->params = $parts;
         } else {
             $this->done = true;
         }

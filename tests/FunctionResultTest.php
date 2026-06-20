@@ -867,7 +867,16 @@ class FunctionResultTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('trim must be one of');
         (new FunctionResult())->joinConference(
-            'conf', false, 'true', true, false, null, 250, 'do-not-record', null, 'bad-value'
+            'conf',
+            false,
+            'true',
+            true,
+            false,
+            null,
+            250,
+            'do-not-record',
+            null,
+            'bad-value'
         );
     }
 
@@ -893,8 +902,20 @@ class FunctionResultTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('status_callback_method must be one of');
         (new FunctionResult())->joinConference(
-            'conf', false, 'true', true, false, null, 250, 'do-not-record', null,
-            'trim-silence', null, null, null, 'PUT'
+            'conf',
+            false,
+            'true',
+            true,
+            false,
+            null,
+            250,
+            'do-not-record',
+            null,
+            'trim-silence',
+            null,
+            null,
+            null,
+            'PUT'
         );
     }
 
@@ -904,8 +925,22 @@ class FunctionResultTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('recording_status_callback_method must be one of');
         (new FunctionResult())->joinConference(
-            'conf', false, 'true', true, false, null, 250, 'do-not-record', null,
-            'trim-silence', null, null, null, 'POST', null, 'DELETE'
+            'conf',
+            false,
+            'true',
+            true,
+            false,
+            null,
+            250,
+            'do-not-record',
+            null,
+            'trim-silence',
+            null,
+            null,
+            null,
+            'POST',
+            null,
+            'DELETE'
         );
     }
 
@@ -1321,9 +1356,23 @@ class FunctionResultTest extends TestCase
 
         $fr = (new FunctionResult())->pay(
             'https://pay.example.com/connector',
-            'dtmf', null, 'credit-card', 5, 1, true, true, 0, 'reusable',
-            null, 'usd', 'en-US', 'woman', null, 'visa mastercard amex',
-            [$param], [$prompt]
+            'dtmf',
+            null,
+            'credit-card',
+            5,
+            1,
+            true,
+            true,
+            0,
+            'reusable',
+            null,
+            'usd',
+            'en-US',
+            'woman',
+            null,
+            'visa mastercard amex',
+            [$param],
+            [$prompt]
         );
         $p = $fr->toArray()['action'][0]['SWML']['sections']['main'][1]['pay'];
 
@@ -1354,8 +1403,8 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->say('first')
-           ->say('second')
-           ->hangup();
+            ->say('second')
+            ->hangup();
 
         $actions = $fr->toArray()['action'];
         $this->assertCount(3, $actions);

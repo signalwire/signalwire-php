@@ -465,7 +465,7 @@ class AgentServer
     {
         // Sort by longest prefix first
         $routes = array_keys($this->staticRoutes);
-        usort($routes, fn(string $a, string $b): int => strlen($b) <=> strlen($a));
+        usort($routes, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
 
         foreach ($routes as $prefix) {
             $normalPrefix = $prefix === '/' ? '' : $prefix;
@@ -541,7 +541,7 @@ class AgentServer
     private function findMatchingRoute(string $path): ?string
     {
         $routes = array_keys($this->agents);
-        usort($routes, fn(string $a, string $b): int => strlen($b) <=> strlen($a));
+        usort($routes, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
 
         foreach ($routes as $route) {
             if ($route === '/') {

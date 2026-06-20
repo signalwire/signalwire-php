@@ -6,10 +6,10 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
-use SignalWire\SWAIG\FunctionResult;
-use SignalWire\Logging\Logger;
-use SignalWire\SWML\Schema;
 use SignalWire\Contexts\ContextBuilder;
+use SignalWire\Logging\Logger;
+use SignalWire\SWAIG\FunctionResult;
+use SignalWire\SWML\Schema;
 
 class AgentBaseTest extends TestCase
 {
@@ -71,7 +71,7 @@ class AgentBaseTest extends TestCase
         $swml = $agent->renderSwml();
 
         $main = $swml['sections']['main'];
-        $verbs = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbs = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertContains('answer', $verbs);
     }
 
@@ -81,7 +81,7 @@ class AgentBaseTest extends TestCase
         $swml = $agent->renderSwml();
 
         $main = $swml['sections']['main'];
-        $verbs = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbs = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertNotContains('record_call', $verbs);
     }
 
@@ -186,7 +186,7 @@ class AgentBaseTest extends TestCase
             'lookup',
             'Look up a customer',
             ['id' => ['type' => 'string', 'description' => 'Customer ID']],
-            fn(array $args, array $raw) => new FunctionResult('found'),
+            fn (array $args, array $raw) => new FunctionResult('found'),
         );
 
         $swml = $agent->renderSwml();
@@ -626,7 +626,7 @@ class AgentBaseTest extends TestCase
         $main = $swml['sections']['main'];
 
         // Post-answer verb should be after 'answer', before 'ai'
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $answerIdx = array_search('answer', $verbNames, true);
         $playIdx = array_search('play', $verbNames, true);
         $aiIdx = array_search('ai', $verbNames, true);
@@ -643,7 +643,7 @@ class AgentBaseTest extends TestCase
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
 
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $aiIdx = array_search('ai', $verbNames, true);
         $hangupIdx = array_search('hangup', $verbNames, true);
 
@@ -658,7 +658,7 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertNotContains('play', $verbNames);
     }
 
@@ -670,7 +670,7 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertNotContains('play', $verbNames);
     }
 
@@ -682,7 +682,7 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertNotContains('hangup', $verbNames);
     }
 
@@ -701,7 +701,7 @@ class AgentBaseTest extends TestCase
         $this->assertArrayHasKey('main', $swml['sections']);
 
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertContains('answer', $verbNames);
         $this->assertContains('ai', $verbNames);
     }
@@ -763,7 +763,7 @@ class AgentBaseTest extends TestCase
             'get_weather',
             'Get the weather',
             ['city' => ['type' => 'string']],
-            fn(array $args, array $raw) => new FunctionResult('Sunny'),
+            fn (array $args, array $raw) => new FunctionResult('Sunny'),
         );
 
         $ai = $this->extractAiVerb($agent->renderSwml());
@@ -951,9 +951,9 @@ class AgentBaseTest extends TestCase
         $this->assertSame($agent, $agent->clearPreAnswerVerbs());
         $this->assertSame($agent, $agent->clearPostAnswerVerbs());
         $this->assertSame($agent, $agent->clearPostAiVerbs());
-        $this->assertSame($agent, $agent->setDynamicConfigCallback(fn() => null));
-        $this->assertSame($agent, $agent->onSummary(fn() => null));
-        $this->assertSame($agent, $agent->defineTool('t', 'd', [], fn() => null));
+        $this->assertSame($agent, $agent->setDynamicConfigCallback(fn () => null));
+        $this->assertSame($agent, $agent->onSummary(fn () => null));
+        $this->assertSame($agent, $agent->defineTool('t', 'd', [], fn () => null));
         $this->assertSame($agent, $agent->registerSwaigFunction(['function' => 'f']));
         $this->assertSame($agent, $agent->defineTools([]));
         $this->assertSame($agent, $agent->setWebHookUrl('http://x'));
@@ -1048,7 +1048,7 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
 
         $playIdx = array_search('play', $verbNames, true);
         $answerIdx = array_search('answer', $verbNames, true);
@@ -1106,7 +1106,7 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent(['record_call' => true]);
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertContains('record_call', $verbNames);
     }
 
@@ -1115,7 +1115,7 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent(['auto_answer' => false]);
         $swml = $agent->renderSwml();
         $main = $swml['sections']['main'];
-        $verbNames = array_map(fn(array $v) => array_key_first($v), $main);
+        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
         $this->assertNotContains('answer', $verbNames);
     }
 
@@ -1135,7 +1135,7 @@ class AgentBaseTest extends TestCase
             'tool1',
             'A tool',
             [],
-            fn() => new FunctionResult('ok'),
+            fn () => new FunctionResult('ok'),
         );
 
         $ai = $this->extractAiVerb($agent->renderSwml());

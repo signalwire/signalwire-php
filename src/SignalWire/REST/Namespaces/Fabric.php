@@ -49,7 +49,6 @@ class Fabric
     private ?CrudResource $cxmlWebhooks = null;
 
     // Legacy/back-compat aliases
-    private ?CrudResource $addressesAlias = null;
     private ?CrudResource $conversations = null;
     private ?CrudResource $dialPlans = null;
     private ?CrudResource $freeclimbApps = null;

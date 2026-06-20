@@ -19,6 +19,11 @@
 #                                           (byte-compare FunctionResult.toArray()
 #                                            vs Python to_dict() over the shared
 #                                            81-entry corpus; needs no mocks)
+#   7. fmt gate                           — php-cs-fixer (local: apply; CI: --dry-run)
+#   8. lint gate                          — phpstan level 5, zero findings (the floor)
+#   9. doc-audit gate                     — porting-sdk audit_docs.py
+#  10. surface-diff gate                  — porting-sdk diff_port_surface.py
+#  11. skill-contract gate                — porting-sdk diff_skill_contracts.py
 
 set -u
 set -o pipefail
@@ -208,6 +213,109 @@ run_gate "NO-CHEAT" "audit_no_cheat_tests" \
 run_gate "EMISSION" "diff_port_emission vs python to_dict()" \
     python3 "$PORTING_SDK_DIR/scripts/diff_port_emission.py" \
         --dump-cmd "php scripts/emit_corpus.php" \
+        --port-repo "$PORT_ROOT"
+
+# Gate 7: FMT — the language format gate (php: php-cs-fixer). Source-style only
+# and proven surface/emission-neutral (a reformat leaves port_signatures.json +
+# port_surface.json byte-identical modulo the generated_from git-sha, and
+# EMISSION 81/81 — verified during the FMT rollout). The .php-cs-fixer.php config
+# is scoped to formatting/whitespace/import-ordering so it cannot rewrite
+# identifiers, string contents, or array values. Mirrors the ruby/go FMT shape:
+#   * LOCAL ($CI unset)  → `fix`: reformats your working tree in place so you
+#     never hand-run it; notes if it changed files.
+#   * CI ($CI=true)      → `fix --dry-run --diff` (read-only): FAILS if any
+#     unformatted source reached CI.
+# PHP_CS_FIXER_IGNORE_ENV=1 keeps php-cs-fixer from refusing on a newer PHP
+# runtime than it formally supports — the rule set used here is version-stable.
+fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run --diff
+    else
+        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix >/dev/null
+        if ! git diff --quiet 2>/dev/null; then
+            echo "    (FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        # A residual issue php-cs-fixer can't fix must still fail the gate.
+        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run
+    fi
+}
+run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
+
+# Gate 8: LINT — the language lint gate (php: phpstan level 5, zero findings).
+# This is the blocking quality floor: phpstan.neon analyses src/ + scripts/ at
+# level 5 (the highest level reachable with ZERO genuine findings without an
+# ignore-baseline) and the burndown took it 41 → 0 with every fix at the source
+# (no @phpstan-ignore, no baseline, no silencing casts). Proven neutral:
+# port_signatures.json byte-identical, port_surface.json differs only in the
+# generated_from git-sha, EMISSION 81/81. Mirrors the go golangci / rust clippy
+# blocking-lint gate.
+#
+# --memory-limit=512M: phpstan defaults to php.ini's memory_limit, which on a
+# stock CLI install is 128M — too low for a full level-5 analysis of src/ +
+# scripts/ (it OOMs mid-run with "Result is incomplete because of severe
+# errors", not a real finding). Pin a generous limit so the gate's result
+# depends on the code, not the host php.ini. This is not a suppression: no
+# baseline, no @phpstan-ignore — the analysis still runs to completion at
+# level 5 and must report zero findings.
+run_gate "LINT" "phpstan level 5 zero findings (lint gate)" \
+    vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+
+# Gate 9: DOC-AUDIT — every method/class referenced in docs/ + examples/ fenced
+# code blocks must resolve to a real symbol in the port surface (catches
+# phantom-API doc promises). Uses the committed port_surface.json (the
+# SURFACE-FRESH gate above already proved it is fresh) + DOC_AUDIT_IGNORE.md for
+# intentional non-symbol references (PHP stdlib, SWML auto-vivified verbs, REST
+# CrudResource URL-driven dynamic methods). Mirrors the ruby/go DOC-AUDIT gate.
+run_gate "DOC-AUDIT" "audit_docs vs port_surface.json" \
+    python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
+        --root "$PORT_ROOT" \
+        --surface "$PORT_ROOT/port_surface.json" \
+        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
+
+# Gate 10: surface-diff — diff the port's public surface against the Python
+# reference (omissions + additions). The signature DRIFT gate (Layer A) checks
+# method *signatures*; this checks surface *membership* — it catches public
+# symbols the port has that Python doesn't (helpers leaked onto the surface by a
+# refactor) and vice-versa. Regenerate the surface in place via the PHP surface
+# enumerator, diff against python_surface.json, then restore the committed copy
+# unconditionally (pass or fail). Mirrors the ruby/go SURFACE-DIFF gate. NB the
+# enumerator correctly enters Action.php's 11 co-located RELAY action classes
+# (PSR-4 multi-class file) via its brace-depth scoping + CLASS_MODULE_MAP, so
+# they appear in port_surface.json and do not read as phantom omissions.
+surface_diff_gate() {
+    git show HEAD:port_surface.json > /tmp/committed_surface_diff.json 2>/dev/null \
+        || cp "$PORT_ROOT/port_surface.json" /tmp/committed_surface_diff.json
+    python3 scripts/enumerate_surface.py
+    local regen_rc=$?
+    if [ "$regen_rc" -ne 0 ]; then
+        git checkout -- port_surface.json 2>/dev/null
+        return $regen_rc
+    fi
+    python3 "$PORTING_SDK_DIR/scripts/diff_port_surface.py" \
+        --reference "$PORTING_SDK_DIR/python_surface.json" \
+        --port-surface "$PORT_ROOT/port_surface.json" \
+        --omissions "$PORT_ROOT/PORT_OMISSIONS.md" \
+        --additions "$PORT_ROOT/PORT_ADDITIONS.md"
+    local check_rc=$?
+    git checkout -- port_surface.json 2>/dev/null
+    return $check_rc
+}
+run_gate "SURFACE-DIFF" "diff_port_surface vs python reference" \
+    surface_diff_gate
+
+# Gate 11: SKILL-CONTRACT — the surface/drift/emission gates see signatures +
+# symbol names + FunctionResult.toArray(); NONE sees a built-in skill's SWAIG
+# tool contract ({name, parameters, required, enum} each skill registers). This
+# differ closes that gap: it builds the Python oracle by instantiating each
+# covered reference skill, runs the PHP skill-dump program (scripts/emit_skills.php,
+# which reads the SAME shared corpus via skill_contract_corpus.py), and
+# structurally compares the two. DESCRIPTIONS + implementation (handler vs
+# DataMap) are not compared — only name/param-name/param-type/enum/required.
+# Mirrors the ruby/go SKILL-CONTRACT gate. Same prereqs as EMISSION
+# (signalwire-python adjacent; no network).
+run_gate "SKILL-CONTRACT" "diff_skill_contracts vs python reference" \
+    python3 "$PORTING_SDK_DIR/scripts/diff_skill_contracts.py" \
+        --dump-cmd "php scripts/emit_skills.php" \
         --port-repo "$PORT_ROOT"
 
 if [ -z "$FAILED_GATES" ]; then

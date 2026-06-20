@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\Skills\SkillRegistry;
-use SignalWire\Skills\SkillManager;
-use SignalWire\Skills\SkillName;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
+use SignalWire\Skills\SkillManager;
+use SignalWire\Skills\SkillName;
+use SignalWire\Skills\SkillRegistry;
 use SignalWire\SWML\Schema;
 
 class SkillsTest extends TestCase
@@ -195,7 +195,9 @@ class SkillsTest extends TestCase
             $paths = $registry->getExternalPaths();
             $count = 0;
             foreach ($paths as $p) {
-                if ($p === $tmpDir) $count++;
+                if ($p === $tmpDir) {
+                    $count++;
+                }
             }
             $this->assertSame(1, $count);
         } finally {
@@ -462,7 +464,7 @@ class SkillsTest extends TestCase
         $this->assertArrayHasKey('functions', $aiVerb['SWAIG']);
 
         $functionNames = array_map(
-            fn(array $f) => $f['function'],
+            fn (array $f) => $f['function'],
             $aiVerb['SWAIG']['functions'],
         );
 
@@ -777,7 +779,7 @@ class SkillsTest extends TestCase
         $raw = \is_file($logPath) ? (string) \file_get_contents($logPath) : '';
         $lines = \array_values(\array_filter(
             \explode("\n", $raw),
-            static fn(string $l): bool => $l !== '',
+            static fn (string $l): bool => $l !== '',
         ));
         return $lines;
     }
@@ -989,8 +991,7 @@ class SkillsTest extends TestCase
         // drift; mirrors Python test_every_setup_param_is_advertised).
         foreach (
             ['response_prefix', 'response_postfix', 'per_page_timeout',
-             'overall_deadline', 'parallel_scrape', 'snippets_only']
-            as $key
+             'overall_deadline', 'parallel_scrape', 'snippets_only'] as $key
         ) {
             $this->assertArrayHasKey($key, $props, "schema omits {$key}");
         }

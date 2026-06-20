@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
-use SignalWire\SWAIG\FunctionResult;
 
 class GoogleMaps extends SkillBase
 {
@@ -54,7 +53,6 @@ class GoogleMaps extends SkillBase
                         'description' => 'Longitude to bias results toward (optional)',
                     ],
                 ],
-                'required' => ['address'],
             ],
             'data_map' => [
                 'webhooks' => [
@@ -100,7 +98,6 @@ class GoogleMaps extends SkillBase
                         'description' => 'Longitude of the destination',
                     ],
                 ],
-                'required' => ['origin_lat', 'origin_lng', 'dest_lat', 'dest_lng'],
             ],
             'data_map' => [
                 'webhooks' => [

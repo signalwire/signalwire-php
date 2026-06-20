@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Message;
 use SignalWire\Relay\MessageState;
@@ -144,7 +144,7 @@ class MessagingMockTest extends TestCase
         // Pump the read loop until the message resolves.
         $resolved = MockTest::pumpUntil(
             $this->client,
-            fn() => $msg->isDone(),
+            fn () => $msg->isDone(),
             5.0,
         );
         $this->assertTrue($resolved, 'delivered event did not resolve the Message');
@@ -195,7 +195,7 @@ class MessagingMockTest extends TestCase
         ]);
         $resolved = MockTest::pumpUntil(
             $this->client,
-            fn() => $msg->isDone(),
+            fn () => $msg->isDone(),
             5.0,
         );
         $this->assertTrue($resolved, 'delivered event did not resolve the Message');
@@ -231,7 +231,7 @@ class MessagingMockTest extends TestCase
                 ],
             ],
         ]);
-        $resolved = MockTest::pumpUntil($this->client, fn() => $msg->isDone(), 5.0);
+        $resolved = MockTest::pumpUntil($this->client, fn () => $msg->isDone(), 5.0);
         $this->assertTrue($resolved);
         $this->assertSame('undelivered', $msg->getState());
         $this->assertSame('carrier_blocked', $msg->getReason());
@@ -261,7 +261,7 @@ class MessagingMockTest extends TestCase
                 ],
             ],
         ]);
-        $resolved = MockTest::pumpUntil($this->client, fn() => $msg->isDone(), 5.0);
+        $resolved = MockTest::pumpUntil($this->client, fn () => $msg->isDone(), 5.0);
         $this->assertTrue($resolved);
         $this->assertSame('failed', $msg->getState());
         $this->assertNotEmpty($this->mock->journal()->recv('messaging.send'));
@@ -291,7 +291,7 @@ class MessagingMockTest extends TestCase
         ]);
         $reached = MockTest::pumpUntil(
             $this->client,
-            fn() => $msg->getState() === 'sent',
+            fn () => $msg->getState() === 'sent',
             2.0,
         );
         $this->assertTrue($reached, 'state did not advance to "sent"');
@@ -341,7 +341,7 @@ class MessagingMockTest extends TestCase
 
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => count($seen) >= 1,
+            fn () => count($seen) >= 1,
             5.0,
         );
         $this->assertTrue(
@@ -395,7 +395,7 @@ class MessagingMockTest extends TestCase
         ]);
         $reached = MockTest::pumpUntil(
             $this->client,
-            fn() => $msg->getState() === 'sent',
+            fn () => $msg->getState() === 'sent',
             5.0,
         );
         $this->assertTrue($reached);
@@ -414,7 +414,7 @@ class MessagingMockTest extends TestCase
                 ],
             ],
         ]);
-        $resolved = MockTest::pumpUntil($this->client, fn() => $msg->isDone(), 5.0);
+        $resolved = MockTest::pumpUntil($this->client, fn () => $msg->isDone(), 5.0);
         $this->assertTrue($resolved);
         $this->assertSame('delivered', $msg->getState());
         $this->assertTrue($msg->isDone());

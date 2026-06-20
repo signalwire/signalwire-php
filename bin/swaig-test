@@ -135,7 +135,7 @@ if (!$dumpSwml && !$listTools && $execName === null) {
 
 if ($file !== null) {
     if ($dumpSwml || $execName !== null) {
-        fwrite(STDERR, "Error: --file currently supports --list-tools only (got "
+        fwrite(STDERR, 'Error: --file currently supports --list-tools only (got '
             . ($dumpSwml ? '--dump-swml' : '--exec') . ")\n");
         exit(1);
     }
@@ -184,7 +184,7 @@ function doDumpSwml(): void
     } else {
         $data = json_decode($response, true);
         if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            fwrite(STDERR, "Error: Failed to parse JSON response: " . json_last_error_msg() . "\n");
+            fwrite(STDERR, 'Error: Failed to parse JSON response: ' . json_last_error_msg() . "\n");
             exit(1);
         }
         echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -199,7 +199,7 @@ function doListTools(): void
     $response = httpGet($baseUrl);
     $data = json_decode($response, true);
     if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-        fwrite(STDERR, "Error: Failed to parse JSON response: " . json_last_error_msg() . "\n");
+        fwrite(STDERR, 'Error: Failed to parse JSON response: ' . json_last_error_msg() . "\n");
         exit(1);
     }
 
@@ -397,7 +397,7 @@ function doListToolsFromFile(string $path): void
     }
 
     if (!$service instanceof \SignalWire\SWML\Service) {
-        fwrite(STDERR, "Error: could not locate a SignalWire\\SWML\\Service "
+        fwrite(STDERR, 'Error: could not locate a SignalWire\\SWML\\Service '
             . "instance in {$path}. The example must declare a build*Service() "
             . "function returning a Service, or assign one to a global.\n");
         exit(1);

@@ -76,7 +76,8 @@ final class SignalWire
         if (\defined("$skillClass::SKILL_NAME")) {
             $name = \constant("$skillClass::SKILL_NAME");
         }
-        if (!$name && \method_exists($skillClass, 'getName')) {
+        if (!$name) {
+            // $skillClass is a class-string<SkillBase>, so getName() exists.
             try {
                 $instance = new $skillClass();
                 $name = $instance->getName();
@@ -117,14 +118,6 @@ final class SignalWire
      */
     public static function list_skills_with_params(): array
     {
-        $registry = SkillRegistry::instance();
-        if (\method_exists($registry, 'getAllSkillsSchema')) {
-            return $registry->getAllSkillsSchema();
-        }
-        $out = [];
-        foreach ($registry->listSkills() as $name) {
-            $out[$name] = ['name' => $name, 'parameters' => []];
-        }
-        return $out;
+        return SkillRegistry::instance()->getAllSkillsSchema();
     }
 }

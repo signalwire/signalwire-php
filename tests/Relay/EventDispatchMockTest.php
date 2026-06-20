@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\CallState;
 use SignalWire\Relay\Client as RelayClient;
@@ -50,7 +50,7 @@ class EventDispatchMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => $callId, 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['call']),
+            fn () => isset($captured['call']),
             5.0,
         );
         $this->assertTrue($arrived);
@@ -344,7 +344,7 @@ class EventDispatchMockTest extends TestCase
         ));
         $captured = MockTest::pumpUntil(
             $this->client,
-            fn() => $this->client->authorizationState === 'test-auth-state-blob',
+            fn () => $this->client->authorizationState === 'test-auth-state-blob',
             5.0,
         );
         $this->assertTrue($captured);
@@ -385,7 +385,7 @@ class EventDispatchMockTest extends TestCase
         ]));
         $reached = MockTest::pumpUntil(
             $this->client,
-            fn() => $call->state === 'ending',
+            fn () => $call->state === 'ending',
             5.0,
         );
         $this->assertTrue($reached);
@@ -418,7 +418,7 @@ class EventDispatchMockTest extends TestCase
         ]));
         $reached = MockTest::pumpUntil(
             $this->client,
-            fn() => $call->state === 'ended',
+            fn () => $call->state === 'ended',
             5.0,
         );
         $this->assertTrue($reached);
@@ -449,7 +449,7 @@ class EventDispatchMockTest extends TestCase
         ]));
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => count($seen) >= 1,
+            fn () => count($seen) >= 1,
             2.0,
         );
         $this->assertTrue($arrived);

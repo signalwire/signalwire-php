@@ -138,7 +138,7 @@ class FAQBotAgent extends AgentBase
                 }
 
                 // Sort by score descending
-                usort($scored, fn(array $a, array $b): int => $b['score'] <=> $a['score']);
+                usort($scored, fn (array $a, array $b): int => $b['score'] <=> $a['score']);
 
                 $best = $scored[0]['faq'];
                 $response = $best['answer'];
@@ -147,7 +147,7 @@ class FAQBotAgent extends AgentBase
                 if ($capturedSuggest && count($scored) > 1) {
                     $related = array_slice($scored, 1, 3);
                     $suggestions = array_map(
-                        fn(array $item): string => $item['faq']['question'],
+                        fn (array $item): string => $item['faq']['question'],
                         $related,
                     );
                     $response .= "\n\nRelated questions: " . implode('; ', $suggestions);

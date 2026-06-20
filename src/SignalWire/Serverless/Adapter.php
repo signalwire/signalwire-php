@@ -111,10 +111,8 @@ class Adapter
             $path = substr($path, 0, $qPos);
         }
 
+        // file_get_contents(...) ?: null already collapses an empty body to null.
         $body = file_get_contents('php://input') ?: null;
-        if ($body === '') {
-            $body = null;
-        }
 
         $headers = self::extractServerHeaders();
 
@@ -179,10 +177,8 @@ class Adapter
             $path = substr($path, 0, $qPos);
         }
 
+        // file_get_contents(...) ?: null already collapses an empty body to null.
         $body = file_get_contents('php://input') ?: null;
-        if ($body === '') {
-            $body = null;
-        }
 
         $headers = self::extractServerHeaders();
 

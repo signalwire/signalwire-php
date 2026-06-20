@@ -149,7 +149,8 @@ class HttpClient
         $currentPath = $path;
         $currentParams = $params;
 
-        while ($currentPath !== null) {
+        // Exits via the `break` below when there is no `links.next` page.
+        while (true) {
             $response = $this->get($currentPath, $currentParams);
 
             // Yield the items from the current page.

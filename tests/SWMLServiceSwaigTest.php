@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
+use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
 use SignalWire\SWML\Service;
-use SignalWire\Logging\Logger;
 
 /**
  * Tests proving SWMLService can host SWAIG functions and serve a non-agent
@@ -65,7 +65,7 @@ class SWMLServiceSwaigTest extends TestCase
     public function testDefineToolRegistersFunction(): void
     {
         $svc = $this->svc();
-        $svc->defineTool('lookup', 'Look it up', [], fn() => new FunctionResult('ok'));
+        $svc->defineTool('lookup', 'Look it up', [], fn () => new FunctionResult('ok'));
         $result = $svc->onFunctionCall('lookup', [], []);
         $this->assertNotNull($result);
         $this->assertSame('ok', $result->toArray()['response']);
@@ -173,7 +173,7 @@ class SWMLServiceSwaigTest extends TestCase
             'direction' => ['remote-caller', 'local-caller'],
         ]);
         $rendered = json_decode($svc->render(), true);
-        $verbs = array_map(fn($v) => array_key_first($v), $rendered['sections']['main']);
+        $verbs = array_map(fn ($v) => array_key_first($v), $rendered['sections']['main']);
         $this->assertContains('answer', $verbs);
         $this->assertContains('ai_sidecar', $verbs);
 
@@ -182,7 +182,7 @@ class SWMLServiceSwaigTest extends TestCase
             'lookup_competitor',
             'Look up competitor pricing.',
             ['competitor' => ['type' => 'string']],
-            fn(array $args) => new FunctionResult("Pricing for {$args['competitor']}: \$99"),
+            fn (array $args) => new FunctionResult("Pricing for {$args['competitor']}: \$99"),
         );
 
         // 3. Register an event-sink endpoint via routing callback.

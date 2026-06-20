@@ -574,7 +574,7 @@ class ServerlessTest extends TestCase
         $this->assertSame('server', ExecutionMode::Server->value);
 
         // The enum's value set is exactly the strings detect() can return.
-        $values = array_map(fn(ExecutionMode $m) => $m->value, ExecutionMode::cases());
+        $values = array_map(fn (ExecutionMode $m) => $m->value, ExecutionMode::cases());
         sort($values);
         $this->assertSame(['azure', 'cgi', 'gcf', 'lambda', 'server'], $values);
     }
@@ -739,7 +739,7 @@ class ServerlessTest extends TestCase
 
     private function makeRecordingAgent(): object
     {
-        return new class {
+        return new class () {
             public bool $ran = false;
             public int $handleRequestCalls = 0;
 

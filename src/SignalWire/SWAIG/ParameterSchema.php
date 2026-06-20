@@ -164,10 +164,10 @@ final class ParameterSchema
     public function array(string $name, string $itemsKind, string $description, array $opts = []): self
     {
         $items = ['type' => $itemsKind];
-        if (isset($opts['items_enum']) && $opts['items_enum'] !== null) {
+        if (isset($opts['items_enum'])) {
             $items['enum'] = self::normalizeEnumValues($opts['items_enum']);
         }
-        if (isset($opts['items_schema']) && $opts['items_schema'] instanceof self) {
+        if (isset($opts['items_schema'])) {
             $items['type'] = 'object';
             // Nested object schemas render `required` as a schema-level list
             // (the JSON-Schema norm for nested objects), so use the raw
@@ -287,10 +287,10 @@ final class ParameterSchema
             'description' => $description,
         ];
 
-        if (isset($opts['format']) && $opts['format'] !== null) {
+        if (isset($opts['format'])) {
             $frag['format'] = $opts['format'];
         }
-        if (isset($opts['enum']) && $opts['enum'] !== null) {
+        if (isset($opts['enum'])) {
             $frag['enum'] = $opts['enum'];
         }
         if (isset($opts['__items'])) {

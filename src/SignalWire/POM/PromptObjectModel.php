@@ -63,14 +63,7 @@ class PromptObjectModel
      */
     public static function fromYaml(string|array $yamlData): PromptObjectModel
     {
-        if (is_string($yamlData)) {
-            $data = self::yamlDecode($yamlData);
-        } else {
-            $data = $yamlData;
-        }
-        if (!is_array($data)) {
-            throw new \InvalidArgumentException('YAML root must be a list of sections.');
-        }
+        $data = is_string($yamlData) ? self::yamlDecode($yamlData) : $yamlData;
         return self::fromArray($data);
     }
 

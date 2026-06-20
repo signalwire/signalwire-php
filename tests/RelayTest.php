@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use SignalWire\Relay\Constants;
-use SignalWire\Relay\Event;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Action;
-use SignalWire\Relay\PlayAction;
-use SignalWire\Relay\RecordAction;
-use SignalWire\Relay\CollectAction;
-use SignalWire\Relay\DetectAction;
-use SignalWire\Relay\FaxAction;
-use SignalWire\Relay\Message;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client;
+use SignalWire\Relay\CollectAction;
+use SignalWire\Relay\Constants;
+use SignalWire\Relay\DetectAction;
+use SignalWire\Relay\Event;
+use SignalWire\Relay\FaxAction;
+use SignalWire\Relay\Message;
+use SignalWire\Relay\PlayAction;
+use SignalWire\Relay\RecordAction;
 
 class RelayTest extends TestCase
 {
@@ -26,14 +26,16 @@ class RelayTest extends TestCase
 
     private function makeMockClient(): object
     {
-        return new class {
+        return new class () {
             public array $executed = [];
             public function execute(string $method, array $params = []): array
             {
                 $this->executed[] = ['method' => $method, 'params' => $params];
                 return [];
             }
-            public function readOnce(): void {}
+            public function readOnce(): void
+            {
+            }
         };
     }
 
@@ -843,7 +845,8 @@ class RelayTest extends TestCase
     {
         $client = $this->makeClient();
 
-        $handler = function () {};
+        $handler = function () {
+        };
         $result = $client->onCall($handler);
 
         $this->assertSame($client, $result);
@@ -855,7 +858,8 @@ class RelayTest extends TestCase
     {
         $client = $this->makeClient();
 
-        $handler = function () {};
+        $handler = function () {
+        };
         $result = $client->onMessage($handler);
 
         $this->assertSame($client, $result);
@@ -869,8 +873,11 @@ class RelayTest extends TestCase
 
         $resolved = null;
         $client->pending['req-1'] = [
-            'resolve' => function (array $r) use (&$resolved) { $resolved = $r; },
-            'reject' => function (array $e) {},
+            'resolve' => function (array $r) use (&$resolved) {
+                $resolved = $r;
+            },
+            'reject' => function (array $e) {
+            },
         ];
 
         $raw = json_encode([
@@ -975,7 +982,9 @@ class RelayTest extends TestCase
 
         $resolvedCall = null;
         $client->pendingDials['dial-tag-1'] = [
-            'resolve' => function (Call $c) use (&$resolvedCall) { $resolvedCall = $c; },
+            'resolve' => function (Call $c) use (&$resolvedCall) {
+                $resolvedCall = $c;
+            },
             'tag' => 'dial-tag-1',
         ];
 

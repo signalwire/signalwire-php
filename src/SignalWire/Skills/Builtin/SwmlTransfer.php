@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
-use SignalWire\SWAIG\FunctionResult;
 
 class SwmlTransfer extends SkillBase
 {
@@ -43,13 +42,10 @@ class SwmlTransfer extends SkillBase
         $defaultMessage = $this->params['default_message'] ?? 'Transferring your call, please hold.';
         $requiredFields = $this->params['required_fields'] ?? [];
 
-        $transferKeys = array_keys($transfers);
-
         $properties = [
             $paramName => [
                 'type' => 'string',
                 'description' => $paramDescription,
-                'enum' => $transferKeys,
             ],
         ];
 

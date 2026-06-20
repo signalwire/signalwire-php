@@ -553,7 +553,9 @@ final class JournalEntry
     public ?int $responseStatus;
     public float $timestamp;
 
-    private function __construct() {}
+    private function __construct()
+    {
+    }
 
     /**
      * @param array<string,mixed> $raw

@@ -77,7 +77,6 @@ class InfoGatherer extends SkillBase
                 'answer' => [
                     'type' => 'string',
                     'description' => 'The answer to the current question',
-                    'required' => true,
                 ],
                 'confirmed_by_user' => [
                     'type' => 'boolean',

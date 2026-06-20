@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\SWML\Service;
-use SignalWire\SWML\Schema;
 use SignalWire\Logging\Logger;
+use SignalWire\SWML\Schema;
+use SignalWire\SWML\Service;
 
 class SWMLServiceTest extends TestCase
 {

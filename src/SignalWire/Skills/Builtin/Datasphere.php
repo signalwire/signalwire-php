@@ -80,7 +80,6 @@ class Datasphere extends SkillBase
                 'query' => [
                     'type' => 'string',
                     'description' => 'The search query to find relevant knowledge',
-                    'required' => true,
                 ],
             ],
             function (array $args, array $rawData) use (

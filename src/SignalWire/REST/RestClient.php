@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace SignalWire\REST;
 
-use SignalWire\REST\Namespaces\Fabric;
+use SignalWire\REST\Namespaces\Addresses;
 use SignalWire\REST\Namespaces\Calling;
 use SignalWire\REST\Namespaces\Compat;
-use SignalWire\REST\Namespaces\Video;
-use SignalWire\REST\Namespaces\Logs;
-use SignalWire\REST\Namespaces\Registry;
-use SignalWire\REST\Namespaces\Project;
 use SignalWire\REST\Namespaces\Datasphere;
-use SignalWire\REST\Namespaces\Queues;
-use SignalWire\REST\Namespaces\NumberGroups;
-use SignalWire\REST\Namespaces\ShortCodes;
+use SignalWire\REST\Namespaces\Fabric;
 use SignalWire\REST\Namespaces\ImportedNumbers;
+use SignalWire\REST\Namespaces\Logs;
 use SignalWire\REST\Namespaces\Mfa;
-use SignalWire\REST\Namespaces\SipProfile;
-use SignalWire\REST\Namespaces\Addresses;
+use SignalWire\REST\Namespaces\NumberGroups;
+use SignalWire\REST\Namespaces\Project;
+use SignalWire\REST\Namespaces\Queues;
 use SignalWire\REST\Namespaces\Recordings;
+use SignalWire\REST\Namespaces\Registry;
+use SignalWire\REST\Namespaces\ShortCodes;
+use SignalWire\REST\Namespaces\SipProfile;
+use SignalWire\REST\Namespaces\Video;
 
 /**
  * Top-level SignalWire REST client.
@@ -73,8 +73,8 @@ class RestClient
     public function __construct(string $projectId = '', string $token = '', string $space = '', ?string $caBundle = null)
     {
         $this->projectId = $projectId !== '' ? $projectId : (string) getenv('SIGNALWIRE_PROJECT_ID');
-        $this->token     = $token     !== '' ? $token     : (string) getenv('SIGNALWIRE_API_TOKEN');
-        $this->space     = $space     !== '' ? $space     : (string) getenv('SIGNALWIRE_SPACE');
+        $this->token     = $token     !== '' ? $token : (string) getenv('SIGNALWIRE_API_TOKEN');
+        $this->space     = $space     !== '' ? $space : (string) getenv('SIGNALWIRE_SPACE');
 
         if ($this->projectId === '') {
             throw new \InvalidArgumentException(

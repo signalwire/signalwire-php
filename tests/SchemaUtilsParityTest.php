@@ -12,9 +12,9 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
+use SignalWire\SWML\Service;
 use SignalWire\Utils\SchemaUtils;
 use SignalWire\Utils\SchemaValidationError;
-use SignalWire\SWML\Service;
 
 /**
  * Parity tests for SchemaUtils — mirrors Python's
