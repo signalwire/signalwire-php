@@ -397,13 +397,13 @@ class DataMapTest extends TestCase
     {
         $dm = new DataMap('get_weather');
         $dm->purpose('Get the weather for a city')
-           ->parameter('city', 'string', 'City name', true)
-           ->parameter('unit', 'string', 'Unit', false, ['celsius', 'fahrenheit'])
-           ->expression('${args.city}', '/^test$/', ['response' => 'Test mode'])
-           ->webhook('GET', 'https://api.weather.com', ['X-Key' => 'abc'])
-           ->output(['response' => 'Weather: ${temp}'])
-           ->fallbackOutput(['response' => 'Unable to retrieve weather'])
-           ->globalErrorKeys(['error']);
+            ->parameter('city', 'string', 'City name', true)
+            ->parameter('unit', 'string', 'Unit', false, ['celsius', 'fahrenheit'])
+            ->expression('${args.city}', '/^test$/', ['response' => 'Test mode'])
+            ->webhook('GET', 'https://api.weather.com', ['X-Key' => 'abc'])
+            ->output(['response' => 'Weather: ${temp}'])
+            ->fallbackOutput(['response' => 'Unable to retrieve weather'])
+            ->globalErrorKeys(['error']);
 
         $result = $dm->toSwaigFunction();
 

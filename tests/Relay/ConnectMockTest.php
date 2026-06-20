@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Constants;
-use SignalWire\Relay\RelayError;
 
 /**
  * Real-mock-backed tests for ``SignalWire\Relay\Client::connect()``.
@@ -336,7 +335,7 @@ final class RawWsClient
         $key = base64_encode(random_bytes(16));
         $expected = base64_encode(sha1($key . self::MAGIC_GUID, true));
         $req = "GET / HTTP/1.1\r\n"
-            . "Host: " . $parts['host'] . ':' . $parts['port'] . "\r\n"
+            . 'Host: ' . $parts['host'] . ':' . $parts['port'] . "\r\n"
             . "Upgrade: websocket\r\n"
             . "Connection: Upgrade\r\n"
             . "Sec-WebSocket-Key: {$key}\r\n"

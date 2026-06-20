@@ -175,7 +175,7 @@ class AgentBaseSigningKeyTest extends TestCase
             'echo_tool',
             'Echoes input',
             ['msg' => ['type' => 'string']],
-            fn(array $args) => new \SignalWire\SWAIG\FunctionResult('Echo: ' . ($args['msg'] ?? '')),
+            fn (array $args) => new \SignalWire\SWAIG\FunctionResult('Echo: ' . ($args['msg'] ?? '')),
         );
 
         $body = json_encode([
@@ -306,7 +306,10 @@ class AgentBaseSigningKeyTest extends TestCase
 
         // Independently verify our test fixture matches the canonical hex digest.
         $this->assertTrue(WebhookValidator::validateWebhookSignature(
-            self::SIGNING_KEY, $sig, $url, $body,
+            self::SIGNING_KEY,
+            $sig,
+            $url,
+            $body,
         ));
 
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);

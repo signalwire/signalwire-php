@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use SignalWire\Relay\FaxAction;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Client as RelayClient;
+use SignalWire\Relay\FaxAction;
 
 /**
  * FaxAction is normally constructed indirectly via Call::sendFax /

@@ -6,14 +6,14 @@ namespace SignalWire\Tests;
 
 use JetBrains\PhpStorm\ArrayShape;
 use PHPUnit\Framework\TestCase;
-use SignalWire\Prefabs\InfoGathererAgent;
-use SignalWire\Prefabs\SurveyAgent;
-use SignalWire\Prefabs\ReceptionistAgent;
-use SignalWire\Prefabs\FAQBotAgent;
-use SignalWire\Prefabs\ConciergeAgent;
 use SignalWire\Agent\AgentBase;
-use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Logging\Logger;
+use SignalWire\Prefabs\ConciergeAgent;
+use SignalWire\Prefabs\FAQBotAgent;
+use SignalWire\Prefabs\InfoGathererAgent;
+use SignalWire\Prefabs\ReceptionistAgent;
+use SignalWire\Prefabs\SurveyAgent;
+use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
 
 class PrefabsTest extends TestCase
@@ -38,7 +38,7 @@ class PrefabsTest extends TestCase
         putenv('PORT');
     }
 
-    #[ArrayShape(['basicAuthUser' => "string", 'basicAuthPassword' => "string"])]
+    #[ArrayShape(['basicAuthUser' => 'string', 'basicAuthPassword' => 'string'])]
     private function baseOptions(): array
     {
         return [
@@ -138,7 +138,7 @@ class PrefabsTest extends TestCase
 
         $aiVerbs = array_filter(
             $swml['sections']['main'],
-            fn(array $v) => array_key_first($v) === 'ai',
+            fn (array $v) => array_key_first($v) === 'ai',
         );
         $this->assertNotEmpty($aiVerbs);
     }
@@ -731,7 +731,7 @@ class PrefabsTest extends TestCase
 
         $aiVerbs = array_filter(
             $swml['sections']['main'],
-            fn(array $v) => array_key_first($v) === 'ai',
+            fn (array $v) => array_key_first($v) === 'ai',
         );
         $this->assertNotEmpty($aiVerbs);
 

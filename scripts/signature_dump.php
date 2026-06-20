@@ -1,4 +1,5 @@
 <?php
+
 /**
  * signature_dump.php — load every public class under SignalWire\\ via the
  * composer autoloader and dump its public method signatures as JSON.
@@ -18,8 +19,12 @@ $classes = [];
 $sourceFiles = [];
 $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
 foreach ($rii as $f) {
-    if ($f->isDir()) continue;
-    if ($f->getExtension() !== 'php') continue;
+    if ($f->isDir()) {
+        continue;
+    }
+    if ($f->getExtension() !== 'php') {
+        continue;
+    }
     $sourceFiles[] = $f->getPathname();
     $relative = substr($f->getPathname(), strlen($root) + 1);
     if (str_ends_with($relative, '.php')) {
@@ -48,7 +53,9 @@ foreach ($classes as $fqcn) {
         fwrite(STDERR, "skipping {$fqcn}: {$e->getMessage()}\n");
         continue;
     }
-    if ($r->isInternal()) continue;
+    if ($r->isInternal()) {
+        continue;
+    }
 
     $kind = $r->isInterface() ? 'interface'
           : ($r->isTrait() ? 'trait'
@@ -65,9 +72,15 @@ foreach ($classes as $fqcn) {
 
     // Public methods (declared on this class only — not inherited)
     foreach ($r->getMethods(ReflectionMethod::IS_PUBLIC) as $m) {
-        if ($m->getDeclaringClass()->getName() !== $r->getName()) continue;
-        if ($m->isConstructor()) continue;          // already emitted above
-        if ($m->isDestructor()) continue;
+        if ($m->getDeclaringClass()->getName() !== $r->getName()) {
+            continue;
+        }
+        if ($m->isConstructor()) {
+            continue;
+        }          // already emitted above
+        if ($m->isDestructor()) {
+            continue;
+        }
         $methods[] = methodEntry($m, false);
     }
 
@@ -75,7 +88,9 @@ foreach ($classes as $fqcn) {
     // inventory aligns with Python @property idiom.
     $properties = [];
     foreach ($r->getProperties(ReflectionProperty::IS_PUBLIC) as $p) {
-        if ($p->getDeclaringClass()->getName() !== $r->getName()) continue;
+        if ($p->getDeclaringClass()->getName() !== $r->getName()) {
+            continue;
+        }
         $properties[] = [
             'name' => $p->getName(),
             'type' => typeString($p->getType()),
@@ -140,7 +155,8 @@ foreach ($declared['user'] as $fn) {
 
 echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), "\n";
 
-function methodEntry(ReflectionMethod $m, bool $isCtor): array {
+function methodEntry(ReflectionMethod $m, bool $isCtor): array
+{
     $declaringClass = $m->getDeclaringClass()->getName();
     $params = [];
     foreach ($m->getParameters() as $p) {
@@ -174,14 +190,17 @@ function methodEntry(ReflectionMethod $m, bool $isCtor): array {
     ];
 }
 
-function typeString(?ReflectionType $t, ?string $declaringClass = null): string {
-    if ($t === null) return 'mixed';
+function typeString(?ReflectionType $t, ?string $declaringClass = null): string
+{
+    if ($t === null) {
+        return 'mixed';
+    }
     if ($t instanceof ReflectionUnionType) {
-        $parts = array_map(fn($x) => typeString($x, $declaringClass), $t->getTypes());
+        $parts = array_map(fn ($x) => typeString($x, $declaringClass), $t->getTypes());
         return implode('|', $parts);
     }
     if ($t instanceof ReflectionIntersectionType) {
-        $parts = array_map(fn($x) => typeString($x, $declaringClass), $t->getTypes());
+        $parts = array_map(fn ($x) => typeString($x, $declaringClass), $t->getTypes());
         return implode('&', $parts);
     }
     if ($t instanceof ReflectionNamedType) {
@@ -190,9 +209,16 @@ function typeString(?ReflectionType $t, ?string $declaringClass = null): string 
     return (string) $t;
 }
 
-function normaliseDefault($v) {
-    if ($v === null) return null;
-    if (is_scalar($v)) return $v;
-    if (is_array($v)) return empty($v) ? [] : json_encode($v);
+function normaliseDefault($v)
+{
+    if ($v === null) {
+        return null;
+    }
+    if (is_scalar($v)) {
+        return $v;
+    }
+    if (is_array($v)) {
+        return empty($v) ? [] : json_encode($v);
+    }
     return null;
 }

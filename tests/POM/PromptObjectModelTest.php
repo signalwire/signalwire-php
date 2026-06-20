@@ -72,7 +72,7 @@ class PromptObjectModelTest extends TestCase
             . "    <title>Greeting</title>\n"
             . "    <body>Hello world</body>\n"
             . "  </section>\n"
-            . "</prompt>";
+            . '</prompt>';
         $this->assertSame($expected, $pom->renderXml());
     }
 
@@ -108,7 +108,7 @@ class PromptObjectModelTest extends TestCase
             . "      <bullet>Be clear</bullet>\n"
             . "    </bullets>\n"
             . "  </section>\n"
-            . "</prompt>";
+            . '</prompt>';
         $this->assertSame($expected, $pom->renderXml());
     }
 
@@ -146,7 +146,7 @@ class PromptObjectModelTest extends TestCase
             . "      </section>\n"
             . "    </subsections>\n"
             . "  </section>\n"
-            . "</prompt>";
+            . '</prompt>';
         $this->assertSame($expected, $pom->renderXml());
     }
 
@@ -178,7 +178,7 @@ class PromptObjectModelTest extends TestCase
             . "    <title>2. S2</title>\n"
             . "    <body>b2</body>\n"
             . "  </section>\n"
-            . "</prompt>";
+            . '</prompt>';
         $this->assertSame($expected, $pom->renderXml());
     }
 
@@ -207,7 +207,7 @@ class PromptObjectModelTest extends TestCase
             . "      <bullet id=\"2\">two</bullet>\n"
             . "    </bullets>\n"
             . "  </section>\n"
-            . "</prompt>";
+            . '</prompt>';
         $this->assertSame($expected, $pom->renderXml());
     }
 
@@ -234,7 +234,7 @@ class PromptObjectModelTest extends TestCase
             . "      }\n"
             . "    ]\n"
             . "  }\n"
-            . "]";
+            . ']';
         $this->assertSame($expected, $pom->toJson());
     }
 

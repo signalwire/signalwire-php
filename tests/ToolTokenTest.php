@@ -6,8 +6,8 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
-use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Logging\Logger;
+use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
 
 /**
@@ -39,7 +39,7 @@ class ToolTokenTest extends TestCase
             'test_tool',
             't',
             [],
-            fn(array $args, array $raw) => new FunctionResult('ok'),
+            fn (array $args, array $raw) => new FunctionResult('ok'),
             true,
         );
         return $a;

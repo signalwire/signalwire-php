@@ -292,7 +292,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        $cmd = escapeshellarg(PHP_BINARY) . " " . escapeshellarg($path) . " --help 2>&1";
+        $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($path) . ' --help 2>&1';
         exec($cmd, $output, $exitCode);
 
         $this->assertSame(0, $exitCode);
@@ -313,7 +313,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        $cmd = escapeshellarg(PHP_BINARY) . " " . escapeshellarg($path) . " 2>&1";
+        $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($path) . ' 2>&1';
         exec($cmd, $output, $exitCode);
 
         $this->assertSame(1, $exitCode);
@@ -328,7 +328,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        $cmd = escapeshellarg(PHP_BINARY) . " " . escapeshellarg($path) . " --url http://localhost:3000/ 2>&1";
+        $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($path) . ' --url http://localhost:3000/ 2>&1';
         exec($cmd, $output, $exitCode);
 
         $this->assertSame(1, $exitCode);
@@ -345,7 +345,7 @@ class CliTest extends TestCase
         $path = dirname(__DIR__) . '/bin/swaig-test';
         $output = [];
         $exitCode = 0;
-        $cmd = escapeshellarg(PHP_BINARY) . " " . escapeshellarg($path) . " --bogus 2>&1";
+        $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($path) . ' --bogus 2>&1';
         exec($cmd, $output, $exitCode);
 
         $this->assertSame(1, $exitCode);

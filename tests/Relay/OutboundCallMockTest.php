@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Device;
@@ -102,10 +102,10 @@ class OutboundCallMockTest extends TestCase
                 }
             }
             $diag = "\nDIAG scopedSid=" . $this->mock->sessionId()
-                . " clientSid=" . (string) $this->client->sessionId
-                . " globalEntries=" . count($global)
-                . " distinctSessions=" . count($sessions)
-                . " globalDials=" . json_encode($dials);
+                . ' clientSid=' . (string) $this->client->sessionId
+                . ' globalEntries=' . count($global)
+                . ' distinctSessions=' . count($sessions)
+                . ' globalDials=' . json_encode($dials);
         }
         $this->assertCount(1, $entries, $diag);
         $p = $entries[0]->frame['params'] ?? [];

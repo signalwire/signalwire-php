@@ -362,8 +362,12 @@ class Client
 
         // Register a pending-response slot.
         $this->pending[$id] = [
-            'resolve' => function (array $r) use (&$result) { $result = $r; },
-            'reject'  => function (array $e) use (&$error)  { $error = $e; },
+            'resolve' => function (array $r) use (&$result) {
+                $result = $r;
+            },
+            'reject'  => function (array $e) use (&$error) {
+                $error = $e;
+            },
         ];
 
         $this->send($msg);
@@ -753,7 +757,7 @@ class Client
     {
         $this->contexts = array_values(array_filter(
             $this->contexts,
-            fn(string $c) => !in_array($c, $contexts, true)
+            fn (string $c) => !in_array($c, $contexts, true)
         ));
 
         $this->execute('signalwire.unreceive', [

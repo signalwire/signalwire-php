@@ -211,7 +211,7 @@ class Step
     {
         if (!empty($this->sections)) {
             throw new \LogicException(
-                "Cannot use setText() when POM sections have been added. Use one approach or the other."
+                'Cannot use setText() when POM sections have been added. Use one approach or the other.'
             );
         }
         $this->text = $text;
@@ -225,7 +225,7 @@ class Step
     {
         if ($this->text !== null) {
             throw new \LogicException(
-                "Cannot add POM sections when setText() has been used. Use one approach or the other."
+                'Cannot add POM sections when setText() has been used. Use one approach or the other.'
             );
         }
         $this->sections[] = ['title' => $title, 'body' => $body];
@@ -239,7 +239,7 @@ class Step
     {
         if ($this->text !== null) {
             throw new \LogicException(
-                "Cannot add POM sections when setText() has been used. Use one approach or the other."
+                'Cannot add POM sections when setText() has been used. Use one approach or the other.'
             );
         }
         $this->sections[] = ['title' => $title, 'bullets' => $bullets];
@@ -399,7 +399,7 @@ class Step
     ): self {
         if ($this->gatherInfo === null) {
             throw new \LogicException(
-                "Must call setGatherInfo() before addGatherQuestion()"
+                'Must call setGatherInfo() before addGatherQuestion()'
             );
         }
         $this->gatherInfo->addQuestion($key, $question, [
@@ -629,7 +629,7 @@ class Context
         }
         if (count($this->steps) >= self::MAX_STEPS_PER_CONTEXT) {
             throw new \LogicException(
-                "Maximum steps per context (" . self::MAX_STEPS_PER_CONTEXT . ") exceeded"
+                'Maximum steps per context (' . self::MAX_STEPS_PER_CONTEXT . ') exceeded'
             );
         }
 
@@ -667,7 +667,7 @@ class Context
             unset($this->steps[$name]);
             $this->stepOrder = array_values(array_filter(
                 $this->stepOrder,
-                fn(string $n) => $n !== $name
+                fn (string $n) => $n !== $name
             ));
         }
         return $this;
@@ -681,7 +681,7 @@ class Context
 
         $this->stepOrder = array_values(array_filter(
             $this->stepOrder,
-            fn(string $n) => $n !== $name
+            fn (string $n) => $n !== $name
         ));
         array_splice($this->stepOrder, $position, 0, [$name]);
 
@@ -694,7 +694,7 @@ class Context
     {
         if (!empty($this->promptSections)) {
             throw new \LogicException(
-                "Cannot use setPrompt() when POM sections have been added."
+                'Cannot use setPrompt() when POM sections have been added.'
             );
         }
         $this->promptText = $prompt;
@@ -705,7 +705,7 @@ class Context
     {
         if ($this->promptText !== null) {
             throw new \LogicException(
-                "Cannot add POM sections when setPrompt() has been used."
+                'Cannot add POM sections when setPrompt() has been used.'
             );
         }
         $this->promptSections[] = ['title' => $title, 'body' => $body];
@@ -716,7 +716,7 @@ class Context
     {
         if ($this->promptText !== null) {
             throw new \LogicException(
-                "Cannot add POM sections when setPrompt() has been used."
+                'Cannot add POM sections when setPrompt() has been used.'
             );
         }
         $this->promptSections[] = ['title' => $title, 'bullets' => $bullets];
@@ -729,7 +729,7 @@ class Context
     {
         if (!empty($this->systemPromptSections)) {
             throw new \LogicException(
-                "Cannot use setSystemPrompt() when POM sections have been added."
+                'Cannot use setSystemPrompt() when POM sections have been added.'
             );
         }
         $this->systemPrompt = $systemPrompt;
@@ -740,7 +740,7 @@ class Context
     {
         if ($this->systemPrompt !== null) {
             throw new \LogicException(
-                "Cannot add POM sections when setSystemPrompt() has been used."
+                'Cannot add POM sections when setSystemPrompt() has been used.'
             );
         }
         $this->systemPromptSections[] = ['title' => $title, 'body' => $body];
@@ -751,7 +751,7 @@ class Context
     {
         if ($this->systemPrompt !== null) {
             throw new \LogicException(
-                "Cannot add POM sections when setSystemPrompt() has been used."
+                'Cannot add POM sections when setSystemPrompt() has been used.'
             );
         }
         $this->systemPromptSections[] = ['title' => $title, 'bullets' => $bullets];
@@ -1132,7 +1132,7 @@ class ContextBuilder
         }
         if (count($this->contexts) >= self::MAX_CONTEXTS) {
             throw new \LogicException(
-                "Maximum number of contexts (" . self::MAX_CONTEXTS . ") exceeded"
+                'Maximum number of contexts (' . self::MAX_CONTEXTS . ') exceeded'
             );
         }
 
@@ -1192,8 +1192,8 @@ class ContextBuilder
                 $available = array_keys($context->getSteps());
                 sort($available);
                 $errors[] = "Context '{$contextName}' has initial_step='{$initialStep}'"
-                    . " but that step does not exist. Available steps: ["
-                    . implode(', ', array_map(fn($s) => "'{$s}'", $available)) . "]";
+                    . ' but that step does not exist. Available steps: ['
+                    . implode(', ', array_map(fn ($s) => "'{$s}'", $available)) . ']';
             }
         }
 
@@ -1243,7 +1243,7 @@ class ContextBuilder
                 if ($gi !== null) {
                     if (empty($gi->getQuestions())) {
                         $errors[] = "Step '{$stepName}' in context '{$contextName}'"
-                            . " has gather_info with no questions";
+                            . ' has gather_info with no questions';
                     }
 
                     // Check for duplicate keys
@@ -1264,11 +1264,11 @@ class ContextBuilder
                             if ($stepIdx >= count($context->getStepOrder()) - 1) {
                                 $errors[] = "Step '{$stepName}' in context '{$contextName}'"
                                     . " has gather_info completion_action='next_step'"
-                                    . " but it is the last step in the context."
+                                    . ' but it is the last step in the context.'
                                     . " Either (1) add another step after '{$stepName}',"
-                                    . " (2) set completion_action to the name of an"
-                                    . " existing step in this context to jump to it, or"
-                                    . " (3) set completion_action=null (default) to stay"
+                                    . ' (2) set completion_action to the name of an'
+                                    . ' existing step in this context to jump to it, or'
+                                    . ' (3) set completion_action=null (default) to stay'
                                     . " in '{$stepName}' after gathering completes.";
                             }
                         } elseif (!isset($context->getSteps()[$action])) {
@@ -1279,7 +1279,7 @@ class ContextBuilder
                                 . " has gather_info completion_action='{$action}'"
                                 . " but '{$action}' is not a step in this context."
                                 . " Valid options: 'next_step' (advance to the next"
-                                . " sequential step), null (stay in the current step),"
+                                . ' sequential step), null (stay in the current step),'
                                 . " or one of {$availableStr}.";
                         }
                     }
@@ -1306,10 +1306,10 @@ class ContextBuilder
                     sort($reserved);
                     $reservedStr = "['" . implode("', '", $reserved) . "']";
                     $errors[] = "Tool name(s) {$collidingStr} collide with reserved"
-                        . " native tools auto-injected by contexts/steps. The names"
+                        . ' native tools auto-injected by contexts/steps. The names'
                         . " {$reservedStr} are reserved and cannot be used for"
-                        . " user-defined SWAIG tools when contexts/steps are in use."
-                        . " Rename your tool(s) to avoid the collision.";
+                        . ' user-defined SWAIG tools when contexts/steps are in use.'
+                        . ' Rename your tool(s) to avoid the collision.';
                 }
             }
         }

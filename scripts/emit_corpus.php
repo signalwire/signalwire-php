@@ -1,4 +1,5 @@
 <?php
+
 /**
  * emit_corpus.php — the PHP port's EMISSION-DUMP program for the cross-port
  * emission differ (porting-sdk/scripts/diff_port_emission.py).
@@ -61,82 +62,82 @@ function fr(string $response = '', bool $postProcess = false): FunctionResult
  */
 $corpus = [
     // ---- envelope edge cases (toArray() shape) ------------------------------
-    'envelope.empty' => fn() => fr(''),
-    'envelope.response_only' => fn() => fr('Hello, world!'),
-    'envelope.post_process_no_action' => fn() => fr('hi', true),
-    'envelope.action_only' => fn() => fr('')->hangup(),
-    'envelope.post_process_with_action' => fn() => fr('Transferring', true)->hangup(),
-    'envelope.response_and_action' => fn() => fr('Goodbye')->hangup(),
+    'envelope.empty' => fn () => fr(''),
+    'envelope.response_only' => fn () => fr('Hello, world!'),
+    'envelope.post_process_no_action' => fn () => fr('hi', true),
+    'envelope.action_only' => fn () => fr('')->hangup(),
+    'envelope.post_process_with_action' => fn () => fr('Transferring', true)->hangup(),
+    'envelope.response_and_action' => fn () => fr('Goodbye')->hangup(),
 
     // ---- connect ------------------------------------------------------------
-    'connect.final_true' => fn() => fr('')->connect('+15551234567', true),
-    'connect.final_false' => fn() => fr('')->connect('+15551234567', false),
-    'connect.from_addr' => fn() => fr('')->connect('support@example.com', false, '+15559876543'),
+    'connect.final_true' => fn () => fr('')->connect('+15551234567', true),
+    'connect.final_false' => fn () => fr('')->connect('+15551234567', false),
+    'connect.from_addr' => fn () => fr('')->connect('support@example.com', false, '+15559876543'),
 
     // ---- swml_transfer ------------------------------------------------------
-    'swml_transfer.default' => fn() => fr('')->swmlTransfer('https://dest.example.com/swml', 'Goodbye!'),
-    'swml_transfer.final_false' => fn() => fr('')->swmlTransfer(
+    'swml_transfer.default' => fn () => fr('')->swmlTransfer('https://dest.example.com/swml', 'Goodbye!'),
+    'swml_transfer.final_false' => fn () => fr('')->swmlTransfer(
         'https://dest.example.com/swml',
         'Welcome back. How else can I help?',
         false
     ),
 
     // ---- simple call-control actions ---------------------------------------
-    'hangup' => fn() => fr('')->hangup(),
-    'hold.default' => fn() => fr('')->hold(),
-    'hold.value' => fn() => fr('')->hold(120),
-    'hold.clamp_high' => fn() => fr('')->hold(5000),
-    'hold.clamp_low' => fn() => fr('')->hold(-5),
-    'stop' => fn() => fr('')->stop(),
-    'say' => fn() => fr('')->say('Please hold while I connect you.'),
+    'hangup' => fn () => fr('')->hangup(),
+    'hold.default' => fn () => fr('')->hold(),
+    'hold.value' => fn () => fr('')->hold(120),
+    'hold.clamp_high' => fn () => fr('')->hold(5000),
+    'hold.clamp_low' => fn () => fr('')->hold(-5),
+    'stop' => fn () => fr('')->stop(),
+    'say' => fn () => fr('')->say('Please hold while I connect you.'),
 
     // ---- wait_for_user (each branch) ---------------------------------------
-    'wait_for_user.default' => fn() => fr('')->waitForUser(),
-    'wait_for_user.answer_first' => fn() => fr('')->waitForUser(null, null, true),
-    'wait_for_user.timeout' => fn() => fr('')->waitForUser(null, 30),
-    'wait_for_user.enabled_true' => fn() => fr('')->waitForUser(true),
-    'wait_for_user.enabled_false' => fn() => fr('')->waitForUser(false),
+    'wait_for_user.default' => fn () => fr('')->waitForUser(),
+    'wait_for_user.answer_first' => fn () => fr('')->waitForUser(null, null, true),
+    'wait_for_user.timeout' => fn () => fr('')->waitForUser(null, 30),
+    'wait_for_user.enabled_true' => fn () => fr('')->waitForUser(true),
+    'wait_for_user.enabled_false' => fn () => fr('')->waitForUser(false),
 
     // ---- global data / metadata --------------------------------------------
-    'set_global_data' => fn() => fr('')->updateGlobalData(['plan' => 'premium', 'chips' => 1000]),
-    'unset_global_data.list' => fn() => fr('')->removeGlobalData(['plan', 'chips']),
-    'unset_global_data.str' => fn() => fr('')->removeGlobalData('plan'),
-    'set_metadata' => fn() => fr('')->setMetadata(['token' => 'abc', 'count' => 3]),
-    'unset_metadata.list' => fn() => fr('')->removeMetadata(['token', 'count']),
-    'unset_metadata.str' => fn() => fr('')->removeMetadata('token'),
+    'set_global_data' => fn () => fr('')->updateGlobalData(['plan' => 'premium', 'chips' => 1000]),
+    'unset_global_data.list' => fn () => fr('')->removeGlobalData(['plan', 'chips']),
+    'unset_global_data.str' => fn () => fr('')->removeGlobalData('plan'),
+    'set_metadata' => fn () => fr('')->setMetadata(['token' => 'abc', 'count' => 3]),
+    'unset_metadata.list' => fn () => fr('')->removeMetadata(['token', 'count']),
+    'unset_metadata.str' => fn () => fr('')->removeMetadata('token'),
 
     // ---- swml_user_event ----------------------------------------------------
-    'swml_user_event' => fn() => fr('')->swmlUserEvent([
+    'swml_user_event' => fn () => fr('')->swmlUserEvent([
         'type' => 'cards_dealt',
         'player_hand' => ['AS', 'KH'],
         'player_score' => 21,
     ]),
 
     // ---- step / context changes --------------------------------------------
-    'change_step' => fn() => fr('')->swmlChangeStep('collect_payment'),
-    'change_context' => fn() => fr('')->swmlChangeContext('billing'),
+    'change_step' => fn () => fr('')->swmlChangeStep('collect_payment'),
+    'change_context' => fn () => fr('')->swmlChangeContext('billing'),
 
     // ---- switch_context (simple vs object) ---------------------------------
-    'switch_context.simple' => fn() => fr('')->switchContext('You are now a billing agent.'),
-    'switch_context.object' => fn() => fr('')->switchContext('New system prompt', 'User said something', true, false),
-    'switch_context.full_reset' => fn() => fr('')->switchContext('Reset prompt', '', false, true),
+    'switch_context.simple' => fn () => fr('')->switchContext('You are now a billing agent.'),
+    'switch_context.object' => fn () => fr('')->switchContext('New system prompt', 'User said something', true, false),
+    'switch_context.full_reset' => fn () => fr('')->switchContext('Reset prompt', '', false, true),
 
     // ---- background file play/stop -----------------------------------------
-    'playback_bg.simple' => fn() => fr('')->playBackgroundFile('music.mp3'),
-    'playback_bg.wait' => fn() => fr('')->playBackgroundFile('music.mp3', true),
-    'stop_playback_bg' => fn() => fr('')->stopBackgroundFile(),
+    'playback_bg.simple' => fn () => fr('')->playBackgroundFile('music.mp3'),
+    'playback_bg.wait' => fn () => fr('')->playBackgroundFile('music.mp3', true),
+    'stop_playback_bg' => fn () => fr('')->stopBackgroundFile(),
 
     // ---- join_room / sip_refer ---------------------------------------------
-    'join_room' => fn() => fr('')->joinRoom('team-standup'),
-    'sip_refer' => fn() => fr('')->sipRefer('sip:agent@example.com'),
+    'join_room' => fn () => fr('')->joinRoom('team-standup'),
+    'sip_refer' => fn () => fr('')->sipRefer('sip:agent@example.com'),
 
     // ---- send_sms -----------------------------------------------------------
-    'send_sms.body' => fn() => fr('')->sendSms(
+    'send_sms.body' => fn () => fr('')->sendSms(
         '+15551112222',
         '+15553334444',
         'Your appointment is confirmed.'
     ),
-    'send_sms.full' => fn() => fr('')->sendSms(
+    'send_sms.full' => fn () => fr('')->sendSms(
         '+15551112222',
         '+15553334444',
         'See attached.',
@@ -146,8 +147,8 @@ $corpus = [
     ),
 
     // ---- pay ----------------------------------------------------------------
-    'pay.minimal' => fn() => fr('')->pay('https://pay.example.com/connector'),
-    'pay.full' => fn() => fr('')->pay(
+    'pay.minimal' => fn () => fr('')->pay('https://pay.example.com/connector'),
+    'pay.full' => fn () => fr('')->pay(
         'https://pay.example.com/connector',
         'dtmf',               // input_method
         'https://ex.com/status', // status_url
@@ -172,17 +173,17 @@ $corpus = [
         ]]
         // ai_response left at the default (the corpus passes the Python default).
     ),
-    'pay.postal_bool' => fn() => fr('')->pay(
+    'pay.postal_bool' => fn () => fr('')->pay(
         'https://pay.example.com/connector',
         postalCode: true
     ),
 
     // ---- record_call (incl. mp4 + each direction) --------------------------
-    'record_call.defaults' => fn() => fr('')->recordCall(),
-    'record_call.wav_speak' => fn() => fr('')->recordCall(format: 'wav', direction: 'speak'),
-    'record_call.mp3_listen' => fn() => fr('')->recordCall(format: 'mp3', direction: 'listen'),
-    'record_call.mp4_both' => fn() => fr('')->recordCall(format: 'mp4', direction: 'both'),
-    'record_call.full' => fn() => fr('')->recordCall(
+    'record_call.defaults' => fn () => fr('')->recordCall(),
+    'record_call.wav_speak' => fn () => fr('')->recordCall(format: 'wav', direction: 'speak'),
+    'record_call.mp3_listen' => fn () => fr('')->recordCall(format: 'mp3', direction: 'listen'),
+    'record_call.mp4_both' => fn () => fr('')->recordCall(format: 'mp4', direction: 'both'),
+    'record_call.full' => fn () => fr('')->recordCall(
         controlId: 'rec1',
         stereo: true,
         format: 'mp3',
@@ -195,14 +196,14 @@ $corpus = [
         maxLength: 120.0,
         statusUrl: 'https://ex.com/rec'
     ),
-    'stop_record_call.bare' => fn() => fr('')->stopRecordCall(),
-    'stop_record_call.id' => fn() => fr('')->stopRecordCall('rec1'),
+    'stop_record_call.bare' => fn () => fr('')->stopRecordCall(),
+    'stop_record_call.id' => fn () => fr('')->stopRecordCall('rec1'),
 
     // ---- tap (each direction / codec) --------------------------------------
-    'tap.defaults' => fn() => fr('')->tap('rtp://10.0.0.1:5004'),
-    'tap.speak_pcma' => fn() => fr('')->tap('ws://ex.com/tap', direction: 'speak', codec: 'PCMA'),
-    'tap.hear_pcmu' => fn() => fr('')->tap('wss://ex.com/tap', direction: 'hear', codec: 'PCMU'),
-    'tap.both_full' => fn() => fr('')->tap(
+    'tap.defaults' => fn () => fr('')->tap('rtp://10.0.0.1:5004'),
+    'tap.speak_pcma' => fn () => fr('')->tap('ws://ex.com/tap', direction: 'speak', codec: 'PCMA'),
+    'tap.hear_pcmu' => fn () => fr('')->tap('wss://ex.com/tap', direction: 'hear', codec: 'PCMU'),
+    'tap.both_full' => fn () => fr('')->tap(
         'rtp://10.0.0.1:5004',
         controlId: 'tap1',
         direction: 'both',
@@ -210,12 +211,12 @@ $corpus = [
         rtpPtime: 40,
         statusUrl: 'https://ex.com/tapstatus'
     ),
-    'stop_tap.bare' => fn() => fr('')->stopTap(),
-    'stop_tap.id' => fn() => fr('')->stopTap('tap1'),
+    'stop_tap.bare' => fn () => fr('')->stopTap(),
+    'stop_tap.id' => fn () => fr('')->stopTap('tap1'),
 
     // ---- join_conference (simple + full) -----------------------------------
-    'join_conference.simple' => fn() => fr('')->joinConference('sales-floor'),
-    'join_conference.full' => fn() => fr('')->joinConference(
+    'join_conference.simple' => fn () => fr('')->joinConference('sales-floor'),
+    'join_conference.full' => fn () => fr('')->joinConference(
         'sales-floor',
         muted: true,
         beep: 'onEnter',
@@ -236,64 +237,64 @@ $corpus = [
     ),
 
     // ---- execute_rpc + the three rpc helpers -------------------------------
-    'execute_rpc.minimal' => fn() => fr('')->executeRpc('ai_unhold'),
-    'execute_rpc.full' => fn() => fr('')->executeRpc(
+    'execute_rpc.minimal' => fn () => fr('')->executeRpc('ai_unhold'),
+    'execute_rpc.full' => fn () => fr('')->executeRpc(
         'ai_message',
         ['role' => 'system', 'message_text' => 'Hello'],
         'call-abc',
         'node-1'
     ),
-    'rpc_dial' => fn() => fr('')->rpcDial('+15551234567', '+15559876543', 'https://ex.com/call-agent'),
-    'rpc_ai_message' => fn() => fr('')->rpcAiMessage('call-abc', 'Please take a message.'),
-    'rpc_ai_unhold' => fn() => fr('')->rpcAiUnhold('call-abc'),
+    'rpc_dial' => fn () => fr('')->rpcDial('+15551234567', '+15559876543', 'https://ex.com/call-agent'),
+    'rpc_ai_message' => fn () => fr('')->rpcAiMessage('call-abc', 'Please take a message.'),
+    'rpc_ai_unhold' => fn () => fr('')->rpcAiUnhold('call-abc'),
 
     // ---- simulate_user_input -----------------------------------------------
-    'simulate_user_input' => fn() => fr('')->simulateUserInput("I'd like to pay my bill."),
+    'simulate_user_input' => fn () => fr('')->simulateUserInput("I'd like to pay my bill."),
 
     // ---- dynamic hints ------------------------------------------------------
-    'add_dynamic_hints' => fn() => fr('')->addDynamicHints([
+    'add_dynamic_hints' => fn () => fr('')->addDynamicHints([
         'Cabby',
         ['pattern' => 'cab bee', 'replace' => 'Cabby', 'ignore_case' => true],
     ]),
-    'clear_dynamic_hints' => fn() => fr('')->clearDynamicHints(),
+    'clear_dynamic_hints' => fn () => fr('')->clearDynamicHints(),
 
     // ---- toggle_functions / functions-on-timeout ---------------------------
     // The corpus passes a LIST of {function, active} dicts. PHP's toggleFunctions
     // takes an ASSOCIATIVE [name => active] map and rebuilds that same list, so
     // convert here (insertion order preserved → matches the oracle's list order).
-    'toggle_functions' => fn() => fr('')->toggleFunctions(['transfer' => false, 'lookup' => true]),
-    'functions_on_speaker_timeout.true' => fn() => fr('')->enableFunctionsOnTimeout(),
-    'functions_on_speaker_timeout.false' => fn() => fr('')->enableFunctionsOnTimeout(false),
+    'toggle_functions' => fn () => fr('')->toggleFunctions(['transfer' => false, 'lookup' => true]),
+    'functions_on_speaker_timeout.true' => fn () => fr('')->enableFunctionsOnTimeout(),
+    'functions_on_speaker_timeout.false' => fn () => fr('')->enableFunctionsOnTimeout(false),
 
     // ---- extensive_data -----------------------------------------------------
-    'extensive_data.true' => fn() => fr('')->enableExtensiveData(),
-    'extensive_data.false' => fn() => fr('')->enableExtensiveData(false),
+    'extensive_data.true' => fn () => fr('')->enableExtensiveData(),
+    'extensive_data.false' => fn () => fr('')->enableExtensiveData(false),
 
     // ---- replace_in_history (str + bool) -----------------------------------
-    'replace_in_history.bool' => fn() => fr('')->replaceInHistory(),
-    'replace_in_history.str' => fn() => fr('')->replaceInHistory('Summarized the order.'),
+    'replace_in_history.bool' => fn () => fr('')->replaceInHistory(),
+    'replace_in_history.str' => fn () => fr('')->replaceInHistory('Summarized the order.'),
 
     // ---- settings -----------------------------------------------------------
-    'settings' => fn() => fr('')->updateSettings(['temperature' => 0.7, 'max-tokens' => 256, 'top-p' => 0.9]),
+    'settings' => fn () => fr('')->updateSettings(['temperature' => 0.7, 'max-tokens' => 256, 'top-p' => 0.9]),
 
     // ---- speech timeouts ----------------------------------------------------
-    'end_of_speech_timeout' => fn() => fr('')->setEndOfSpeechTimeout(800),
-    'speech_event_timeout' => fn() => fr('')->setSpeechEventTimeout(1200),
+    'end_of_speech_timeout' => fn () => fr('')->setEndOfSpeechTimeout(800),
+    'speech_event_timeout' => fn () => fr('')->setSpeechEventTimeout(1200),
 
     // ---- execute_swml (dict + JSON-string + transfer) ----------------------
     // The {answer: {}} / {hangup: {}} inner values must serialise as empty
     // OBJECTS, not empty arrays — hence new \stdClass() for the dict forms. The
     // json_string form decodes in object mode inside executeSwml(), so its inner
     // {} is preserved automatically.
-    'execute_swml.dict' => fn() => fr('')->executeSwml([
+    'execute_swml.dict' => fn () => fr('')->executeSwml([
         'version' => '1.0.0',
         'sections' => ['main' => [['answer' => new \stdClass()]]],
     ]),
-    'execute_swml.dict_transfer' => fn() => fr('')->executeSwml([
+    'execute_swml.dict_transfer' => fn () => fr('')->executeSwml([
         'version' => '1.0.0',
         'sections' => ['main' => [['answer' => new \stdClass()]]],
     ], true),
-    'execute_swml.json_string' => fn() => fr('')->executeSwml(
+    'execute_swml.json_string' => fn () => fr('')->executeSwml(
         '{"version": "1.0.0", "sections": {"main": [{"hangup": {}}]}}'
     ),
 ];

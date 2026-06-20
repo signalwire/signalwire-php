@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Event;
@@ -89,7 +89,7 @@ class InboundCallMockTest extends TestCase
         ]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => count($seen) >= 1,
+            fn () => count($seen) >= 1,
             5.0,
         );
         $this->assertTrue($arrived);
@@ -115,7 +115,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-dir', 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['call_id']),
+            fn () => isset($captured['call_id']),
             5.0,
         );
         $this->assertTrue($arrived);
@@ -141,7 +141,7 @@ class InboundCallMockTest extends TestCase
         ]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['device']),
+            fn () => isset($captured['device']),
             5.0,
         );
         $this->assertTrue($arrived);
@@ -163,7 +163,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-state', 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['state']),
+            fn () => isset($captured['state']),
             5.0,
         );
         $this->assertTrue($arrived);
@@ -187,7 +187,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-ans', 'auto_states' => ['created']]);
         $done = MockTest::pumpUntil(
             $this->client,
-            fn() => count($answered) >= 1,
+            fn () => count($answered) >= 1,
             5.0,
         );
         $this->assertTrue($done);
@@ -209,7 +209,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-ans-state', 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['call']),
+            fn () => isset($captured['call']),
             5.0,
         );
         $this->assertTrue($arrived);
@@ -220,7 +220,7 @@ class InboundCallMockTest extends TestCase
         $call = $captured['call'];
         $advanced = MockTest::pumpUntil(
             $this->client,
-            fn() => $call->state === 'answered',
+            fn () => $call->state === 'answered',
             5.0,
         );
         $this->assertTrue($advanced);
@@ -245,7 +245,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-hangup', 'auto_states' => ['created']]);
         $done = MockTest::pumpUntil(
             $this->client,
-            fn() => count($hung) >= 1,
+            fn () => count($hung) >= 1,
             5.0,
         );
         $this->assertTrue($done);
@@ -269,7 +269,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-pass', 'auto_states' => ['created']]);
         $done = MockTest::pumpUntil(
             $this->client,
-            fn() => count($passed) >= 1,
+            fn () => count($passed) >= 1,
             5.0,
         );
         $this->assertTrue($done);
@@ -295,9 +295,9 @@ class InboundCallMockTest extends TestCase
         });
 
         $this->mock->inboundCall(['call_id' => 'c-seq-1', 'auto_states' => ['created']]);
-        MockTest::pumpUntil($this->client, fn() => count($seen) >= 1, 5.0);
+        MockTest::pumpUntil($this->client, fn () => count($seen) >= 1, 5.0);
         $this->mock->inboundCall(['call_id' => 'c-seq-2', 'auto_states' => ['created']]);
-        $both = MockTest::pumpUntil($this->client, fn() => count($seen) >= 2, 5.0);
+        $both = MockTest::pumpUntil($this->client, fn () => count($seen) >= 2, 5.0);
 
         $this->assertTrue($both);
         $this->assertCount(2, $seen);
@@ -322,11 +322,11 @@ class InboundCallMockTest extends TestCase
         });
 
         $this->mock->inboundCall(['call_id' => 'cb-1', 'auto_states' => ['created']]);
-        MockTest::pumpUntil($this->client, fn() => isset($callsById['cb-1']), 5.0);
+        MockTest::pumpUntil($this->client, fn () => isset($callsById['cb-1']), 5.0);
         $this->mock->inboundCall(['call_id' => 'cb-2', 'auto_states' => ['created']]);
         $both = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($callsById['cb-1'], $callsById['cb-2']),
+            fn () => isset($callsById['cb-1'], $callsById['cb-2']),
             5.0,
         );
         $this->assertTrue($both);
@@ -339,7 +339,7 @@ class InboundCallMockTest extends TestCase
         $cb2 = $callsById['cb-2'];
         $advanced = MockTest::pumpUntil(
             $this->client,
-            fn() => $cb1->state === 'answered',
+            fn () => $cb1->state === 'answered',
             5.0,
         );
         $this->assertTrue($advanced);
@@ -366,7 +366,7 @@ class InboundCallMockTest extends TestCase
         });
 
         $this->mock->inboundCall(['call_id' => 'c-scripted', 'auto_states' => ['created']]);
-        MockTest::pumpUntil($this->client, fn() => isset($captured['call']), 5.0);
+        MockTest::pumpUntil($this->client, fn () => isset($captured['call']), 5.0);
 
         $this->mock->push(self::stateFrame('c-scripted', 'answered'));
         $this->mock->push(self::stateFrame('c-scripted', 'ended'));
@@ -375,7 +375,7 @@ class InboundCallMockTest extends TestCase
         $call = $captured['call'];
         $reached = MockTest::pumpUntil(
             $this->client,
-            fn() => $call->state === 'ended',
+            fn () => $call->state === 'ended',
             5.0,
         );
         $this->assertTrue($reached);
@@ -401,7 +401,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-sync', 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['call_id']),
+            fn () => isset($captured['call_id']),
             5.0,
         );
         $this->assertTrue($arrived);
@@ -422,7 +422,7 @@ class InboundCallMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => 'c-raise', 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => count($fired) >= 1,
+            fn () => count($fired) >= 1,
             5.0,
         );
         $this->assertTrue($arrived);
@@ -544,7 +544,7 @@ class InboundCallMockTest extends TestCase
         });
 
         $this->mock->inboundCall(['call_id' => 'c-wire', 'auto_states' => ['created']]);
-        MockTest::pumpUntil($this->client, fn() => count($fired) >= 1, 5.0);
+        MockTest::pumpUntil($this->client, fn () => count($fired) >= 1, 5.0);
 
         $sends = $this->mock->journal()->send('calling.call.receive');
         $this->assertNotEmpty($sends);

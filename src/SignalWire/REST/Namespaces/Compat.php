@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SignalWire\REST\Namespaces;
 
-use SignalWire\REST\CrudResource;
 use SignalWire\REST\HttpClient;
 
 /**

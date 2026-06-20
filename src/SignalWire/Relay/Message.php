@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SignalWire\Relay;
 
-use SignalWire\Logging\Logger;
-
 /**
  * Represents a RELAY messaging message (SMS / MMS).
  *

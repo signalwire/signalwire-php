@@ -6,12 +6,12 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
+use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\Codec;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWAIG\ParameterSchema;
 use SignalWire\SWAIG\RecordFormat;
 use SignalWire\SWML\Schema;
-use SignalWire\Logging\Logger;
 
 /**
  * ParameterSchema is a typed, fluent builder over the EXACT untyped
@@ -403,7 +403,7 @@ class ParameterSchemaTest extends TestCase
             'lookup',
             'Look up a service availability',
             $builtParams,
-            fn(array $args, array $raw): FunctionResult => new FunctionResult('found'),
+            fn (array $args, array $raw): FunctionResult => new FunctionResult('found'),
         );
 
         // Render the agent's SWML and locate the SWAIG function entry.
@@ -448,7 +448,7 @@ class ParameterSchemaTest extends TestCase
                 ->string('service', 'The service')
                 ->enum('fmt', RecordFormat::cases(), 'format')
                 ->toArray(),
-            fn(array $a, array $r): FunctionResult => new FunctionResult('ok'),
+            fn (array $a, array $r): FunctionResult => new FunctionResult('ok'),
         );
 
         $hand = $this->makeAgent();
@@ -459,7 +459,7 @@ class ParameterSchemaTest extends TestCase
                 'service' => ['type' => 'string', 'description' => 'The service'],
                 'fmt' => ['type' => 'string', 'description' => 'format', 'enum' => ['wav', 'mp3', 'mp4']],
             ],
-            fn(array $a, array $r): FunctionResult => new FunctionResult('ok'),
+            fn (array $a, array $r): FunctionResult => new FunctionResult('ok'),
         );
 
         $builtArg = $this->extractAiVerb($built->renderSwml())['SWAIG']['functions'][0]['argument'];

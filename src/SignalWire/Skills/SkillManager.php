@@ -42,7 +42,7 @@ class SkillManager
         $missingVars = $instance->validateEnvVars();
 
         if (!empty($missingVars)) {
-            return [false, "Missing required environment variables: " . implode(', ', $missingVars)];
+            return [false, 'Missing required environment variables: ' . implode(', ', $missingVars)];
         }
 
         if (!$instance->setup()) {

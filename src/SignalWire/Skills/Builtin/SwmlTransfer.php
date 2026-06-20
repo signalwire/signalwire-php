@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
-use SignalWire\SWAIG\FunctionResult;
 
 class SwmlTransfer extends SkillBase
 {

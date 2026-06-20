@@ -20,7 +20,7 @@ class WebMixinTest extends TestCase
 {
     public function testOnRequestDelegatesToOnSwmlRequest(): void
     {
-        $svc = new class(name: 't') extends Service {
+        $svc = new class (name: 't') extends Service {
             public ?array $lastRequestData = null;
             public ?string $lastCallbackPath = null;
             public ?array $customReturn = null;
@@ -57,7 +57,7 @@ class WebMixinTest extends TestCase
 
     public function testOnRequestPassesNullsToHook(): void
     {
-        $svc = new class(name: 't') extends Service {
+        $svc = new class (name: 't') extends Service {
             public bool $called = false;
             public ?array $sawData = null;
             public ?string $sawPath = null;
@@ -142,8 +142,12 @@ class WebMixinTest extends TestCase
     {
         $agent = new \SignalWire\Agent\AgentBase(name: 'dc-agent-2', basicAuthUser: 'u', basicAuthPassword: 'p');
 
-        $first = function () { return 'first'; };
-        $second = function () { return 'second'; };
+        $first = function () {
+            return 'first';
+        };
+        $second = function () {
+            return 'second';
+        };
 
         $agent->setDynamicConfigCallback($first);
         $agent->setDynamicConfigCallback($second);

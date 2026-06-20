@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace SignalWire\Tests\Relay;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Call;
+use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Tests\Rest\MockTest as RestMockTest;
 
 /**
@@ -762,7 +762,9 @@ final class RelayJournalEntry
     public string $sessionId;
     public float $timestamp;
 
-    private function __construct() {}
+    private function __construct()
+    {
+    }
 
     /**
      * @param array<string,mixed> $raw

@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace SignalWire\Agent;
 
-use SignalWire\SWML\Service;
-use SignalWire\SWML\Schema;
-use SignalWire\Logging\Logger;
-use SignalWire\SWAIG\FunctionResult;
-use SignalWire\Security\SessionManager;
 use SignalWire\Contexts\ContextBuilder;
 use SignalWire\POM\PromptObjectModel;
+use SignalWire\Security\SessionManager;
 use SignalWire\Skills\SkillManager;
 use SignalWire\Skills\SkillName;
+use SignalWire\SWML\Schema;
+use SignalWire\SWML\Service;
 
 class AgentBase extends Service
 {
@@ -670,8 +668,8 @@ class AgentBase extends Service
             $supportedStr = "['" . implode("', '", $supported) . "']";
             $this->logger->warn(
                 "unknown_internal_filler_names: {$unknownStr}. "
-                . "setInternalFillers received names that the SWML schema "
-                . "does not recognize. Those entries will be ignored by "
+                . 'setInternalFillers received names that the SWML schema '
+                . 'does not recognize. Those entries will be ignored by '
                 . "the runtime. Supported names: {$supportedStr}."
             );
         }
@@ -707,9 +705,9 @@ class AgentBase extends Service
             $supportedStr = "['" . implode("', '", $supported) . "']";
             $this->logger->warn(
                 "unknown_internal_filler_name: '{$functionName}'. "
-                . "addInternalFiller received a function name the SWML "
-                . "schema does not recognize. The entry will be stored "
-                . "but the runtime will not play these fillers. "
+                . 'addInternalFiller received a function name the SWML '
+                . 'schema does not recognize. The entry will be stored '
+                . 'but the runtime will not play these fillers. '
                 . "Supported names: {$supportedStr}."
             );
         }
@@ -1249,7 +1247,7 @@ class AgentBase extends Service
             $tool = $this->tools[$name];
 
             // Strip internal keys
-            $funcDef = array_filter($tool, fn(string $key): bool => !str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
+            $funcDef = array_filter($tool, fn (string $key): bool => !str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
 
             // Add web_hook_url for callable tools (those with a handler)
             if (isset($tool['_handler'])) {

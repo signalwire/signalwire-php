@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Relay;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\CollectAction;
@@ -65,7 +65,7 @@ class CallConvenienceMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => $callId, 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['call']),
+            fn () => isset($captured['call']),
             5.0,
         );
         $this->assertTrue($arrived, "inbound call {$callId} did not reach handler");
@@ -89,7 +89,7 @@ class CallConvenienceMockTest extends TestCase
         $this->mock->inboundCall(['call_id' => $callId, 'auto_states' => ['created']]);
         $arrived = MockTest::pumpUntil(
             $this->client,
-            fn() => isset($captured['call']),
+            fn () => isset($captured['call']),
             5.0,
         );
         $this->assertTrue($arrived, "inbound call {$callId} did not reach handler");

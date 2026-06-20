@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests;
 
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use SignalWire\REST\HttpClient;
+use PHPUnit\Framework\TestCase;
 use SignalWire\REST\CrudResource;
-use SignalWire\REST\RestClient;
-use SignalWire\REST\SignalWireRestError;
-use SignalWire\REST\Namespaces\Fabric;
+use SignalWire\REST\HttpClient;
 use SignalWire\REST\Namespaces\Calling;
 use SignalWire\REST\Namespaces\Compat;
+use SignalWire\REST\Namespaces\Fabric;
+use SignalWire\REST\RestClient;
+use SignalWire\REST\SignalWireRestError;
 
 /**
  * Unit tests for the SignalWire PHP REST client.

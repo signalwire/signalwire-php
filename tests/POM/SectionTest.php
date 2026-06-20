@@ -75,7 +75,7 @@ class SectionTest extends TestCase
             . "  <bullets>\n"
             . "    <bullet>x</bullet>\n"
             . "  </bullets>\n"
-            . "</section>";
+            . '</section>';
         $this->assertSame($expected, $s->renderXml());
     }
 

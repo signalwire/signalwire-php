@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\Contexts\GatherQuestion;
-use SignalWire\Contexts\GatherInfo;
-use SignalWire\Contexts\Step;
 use SignalWire\Contexts\Context;
 use SignalWire\Contexts\ContextBuilder;
+use SignalWire\Contexts\GatherInfo;
+use SignalWire\Contexts\GatherQuestion;
+use SignalWire\Contexts\Step;
 
 class ContextsTest extends TestCase
 {
@@ -779,7 +779,7 @@ class ContextsTest extends TestCase
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
-        $this->assertStringContainsString("must have at least one step", $errors[0]);
+        $this->assertStringContainsString('must have at least one step', $errors[0]);
     }
 
     public function testValidateNoContextsRejectsEmpty(): void
@@ -881,8 +881,8 @@ class ContextsTest extends TestCase
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
-        $this->assertStringContainsString("next_step", $errors[0]);
-        $this->assertStringContainsString("last step", $errors[0]);
+        $this->assertStringContainsString('next_step', $errors[0]);
+        $this->assertStringContainsString('last step', $errors[0]);
     }
 
     public function testValidateGatherInfoCompletionActionReferencesUnknownStep(): void
@@ -895,8 +895,8 @@ class ContextsTest extends TestCase
 
         $errors = $builder->validate();
         $this->assertNotEmpty($errors);
-        $this->assertStringContainsString("unknown_step", $errors[0]);
-        $this->assertStringContainsString("is not a step", $errors[0]);
+        $this->assertStringContainsString('unknown_step', $errors[0]);
+        $this->assertStringContainsString('is not a step', $errors[0]);
     }
 
     // ── ContextBuilder toArray ───────────────────────────────────────────
@@ -1014,7 +1014,7 @@ class ContextsTest extends TestCase
     public function testContextBuilderConstructorAcceptsAgent(): void
     {
         // Mirror Python's ContextBuilder(agent) — pass an agent reference.
-        $agent = new class {
+        $agent = new class () {
             public array $tools = [];
             public function getRegisteredToolNames(): array
             {

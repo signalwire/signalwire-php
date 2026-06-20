@@ -12,7 +12,6 @@ use WebSocket\Exception\ConnectionLevelInterface;
 use WebSocket\Exception\ConnectionTimeoutException;
 use WebSocket\Message\Binary;
 use WebSocket\Message\Close;
-use WebSocket\Message\Message as PhpWebSocketMessage;
 use WebSocket\Message\Text;
 
 /**

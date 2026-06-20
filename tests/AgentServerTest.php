@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\Server\AgentServer;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
+use SignalWire\Server\AgentServer;
 use SignalWire\SWML\Schema;
 
 class AgentServerTest extends TestCase
@@ -249,7 +249,7 @@ class AgentServerTest extends TestCase
     {
         $server = new AgentServer();
         $server->register($this->makeAgent('alpha', '/alpha'));
-        $server->register($this->makeAgent('beta',  '/beta'));
+        $server->register($this->makeAgent('beta', '/beta'));
 
         [$status, , $body] = $server->handleRequest('GET', '/');
 
@@ -350,12 +350,12 @@ class AgentServerTest extends TestCase
     {
         $server = new AgentServer();
         $server->register($this->makeAgent('alpha', '/alpha'));
-        $server->register($this->makeAgent('beta',  '/beta'));
+        $server->register($this->makeAgent('beta', '/beta'));
 
         $headers = $this->authHeader();
 
         [$statusA, , $bodyA] = $server->handleRequest('GET', '/alpha', $headers);
-        [$statusB, , $bodyB] = $server->handleRequest('GET', '/beta',  $headers);
+        [$statusB, , $bodyB] = $server->handleRequest('GET', '/beta', $headers);
 
         $this->assertSame(200, $statusA);
         $this->assertSame(200, $statusB);

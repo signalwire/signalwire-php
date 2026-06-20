@@ -260,7 +260,7 @@ class WebSearch extends SkillBase
                 // Keep only well-formed item rows for downstream passes.
                 $items = array_values(array_filter(
                     $items,
-                    static fn($it): bool => is_array($it),
+                    static fn ($it): bool => is_array($it),
                 ));
                 if (count($items) === 0) {
                     return new FunctionResult(
@@ -321,7 +321,7 @@ class WebSearch extends SkillBase
                 // Best-first, capped at num_results.
                 usort(
                     $scraped,
-                    static fn(array $a, array $b): int => $b['score'] <=> $a['score'],
+                    static fn (array $a, array $b): int => $b['score'] <=> $a['score'],
                 );
                 $scraped = array_slice($scraped, 0, $numResults);
 
@@ -509,7 +509,7 @@ class WebSearch extends SkillBase
         // Query-term coverage: fraction of query words present in the text.
         $words = array_values(array_filter(
             preg_split('/\s+/', strtolower(trim($query))) ?: [],
-            static fn(string $w): bool => strlen($w) >= 3,
+            static fn (string $w): bool => strlen($w) >= 3,
         ));
         $relevance = 0.0;
         if (count($words) > 0) {
