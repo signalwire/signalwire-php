@@ -249,8 +249,16 @@ run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
 # port_signatures.json byte-identical, port_surface.json differs only in the
 # generated_from git-sha, EMISSION 81/81. Mirrors the go golangci / rust clippy
 # blocking-lint gate.
+#
+# --memory-limit=512M: phpstan defaults to php.ini's memory_limit, which on a
+# stock CLI install is 128M — too low for a full level-5 analysis of src/ +
+# scripts/ (it OOMs mid-run with "Result is incomplete because of severe
+# errors", not a real finding). Pin a generous limit so the gate's result
+# depends on the code, not the host php.ini. This is not a suppression: no
+# baseline, no @phpstan-ignore — the analysis still runs to completion at
+# level 5 and must report zero findings.
 run_gate "LINT" "phpstan level 5 zero findings (lint gate)" \
-    vendor/bin/phpstan analyse --no-progress
+    vendor/bin/phpstan analyse --no-progress --memory-limit=512M
 
 # Gate 9: DOC-AUDIT — every method/class referenced in docs/ + examples/ fenced
 # code blocks must resolve to a real symbol in the port surface (catches
