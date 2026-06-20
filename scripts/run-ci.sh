@@ -19,6 +19,11 @@
 #                                           (byte-compare FunctionResult.toArray()
 #                                            vs Python to_dict() over the shared
 #                                            81-entry corpus; needs no mocks)
+#   7. fmt gate                           — php-cs-fixer (local: apply; CI: --dry-run)
+#   8. lint gate                          — phpstan level 5, zero findings (the floor)
+#   9. doc-audit gate                     — porting-sdk audit_docs.py
+#  10. surface-diff gate                  — porting-sdk diff_port_surface.py
+#  11. skill-contract gate                — porting-sdk diff_skill_contracts.py
 
 set -u
 set -o pipefail
@@ -209,6 +214,43 @@ run_gate "EMISSION" "diff_port_emission vs python to_dict()" \
     python3 "$PORTING_SDK_DIR/scripts/diff_port_emission.py" \
         --dump-cmd "php scripts/emit_corpus.php" \
         --port-repo "$PORT_ROOT"
+
+# Gate 7: FMT — the language format gate (php: php-cs-fixer). Source-style only
+# and proven surface/emission-neutral (a reformat leaves port_signatures.json +
+# port_surface.json byte-identical modulo the generated_from git-sha, and
+# EMISSION 81/81 — verified during the FMT rollout). The .php-cs-fixer.php config
+# is scoped to formatting/whitespace/import-ordering so it cannot rewrite
+# identifiers, string contents, or array values. Mirrors the ruby/go FMT shape:
+#   * LOCAL ($CI unset)  → `fix`: reformats your working tree in place so you
+#     never hand-run it; notes if it changed files.
+#   * CI ($CI=true)      → `fix --dry-run --diff` (read-only): FAILS if any
+#     unformatted source reached CI.
+# PHP_CS_FIXER_IGNORE_ENV=1 keeps php-cs-fixer from refusing on a newer PHP
+# runtime than it formally supports — the rule set used here is version-stable.
+fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run --diff
+    else
+        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix >/dev/null
+        if ! git diff --quiet 2>/dev/null; then
+            echo "    (FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        # A residual issue php-cs-fixer can't fix must still fail the gate.
+        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run
+    fi
+}
+run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
+
+# Gate 8: LINT — the language lint gate (php: phpstan level 5, zero findings).
+# This is the blocking quality floor: phpstan.neon analyses src/ + scripts/ at
+# level 5 (the highest level reachable with ZERO genuine findings without an
+# ignore-baseline) and the burndown took it 41 → 0 with every fix at the source
+# (no @phpstan-ignore, no baseline, no silencing casts). Proven neutral:
+# port_signatures.json byte-identical, port_surface.json differs only in the
+# generated_from git-sha, EMISSION 81/81. Mirrors the go golangci / rust clippy
+# blocking-lint gate.
+run_gate "LINT" "phpstan level 5 zero findings (lint gate)" \
+    vendor/bin/phpstan analyse --no-progress
 
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
