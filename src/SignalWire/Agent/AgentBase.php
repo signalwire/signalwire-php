@@ -37,7 +37,13 @@ class AgentBase extends Service
     protected array $patternHints;
 
     // ── Languages / pronunciations ──────────────────────────────────────
-    /** @var list<array{name: string, code: string, voice: string}> */
+    /**
+     * Configured languages. Entries added via addLanguage() carry
+     * name/code/voice (+ optional params), but setLanguages() accepts
+     * arbitrary caller-supplied dicts, so the element shape is open.
+     *
+     * @var list<array<string,mixed>>
+     */
     protected array $languages;
     /** @var list<array{replace: string, with: string, ignore?: string}> */
     protected array $pronunciations;
@@ -49,7 +55,13 @@ class AgentBase extends Service
     // ── Native functions / fillers / debug ───────────────────────────────
     /** @var list<string> */
     protected array $nativeFunctions;
-    /** @var list<string> */
+    /**
+     * Internal fillers. The legacy single-arg path appends bare filler
+     * strings (int-keyed); the structured path keys a per-function map of
+     * languageCode => fillers. The shape is therefore mixed.
+     *
+     * @var array<int|string, mixed>
+     */
     protected array $internalFillers;
     protected ?string $debugEventsLevel;
 

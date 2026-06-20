@@ -149,7 +149,7 @@ class HttpHelper
         if ($body !== null) {
             $opts[CURLOPT_POSTFIELDS] = $body;
         }
-        if ($basicAuth !== null && count($basicAuth) === 2) {
+        if ($basicAuth !== null) {
             $opts[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
             $opts[CURLOPT_USERPWD] = $basicAuth[0] . ':' . $basicAuth[1];
         }

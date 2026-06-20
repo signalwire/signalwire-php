@@ -20,9 +20,6 @@ class SurveyAgent extends AgentBase
     protected string $brandName;
     protected int $maxRetries;
 
-    /** @var string[] Valid question types */
-    private const VALID_TYPES = ['rating', 'multiple_choice', 'yes_no', 'open_ended'];
-
     /**
      * @param string $name Agent name
      * @param list<array{id: string, text: string, type: string, required?: bool, scale?: int, choices?: list<string>}> $questions
@@ -139,7 +136,7 @@ class SurveyAgent extends AgentBase
                     return new FunctionResult("Unknown question ID: {$questionId}");
                 }
 
-                $type = $question['type'] ?? 'open_ended';
+                $type = $question['type'];
 
                 switch ($type) {
                     case 'rating':

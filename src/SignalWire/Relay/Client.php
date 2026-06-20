@@ -329,9 +329,10 @@ class Client
                     $this->socket->close();
                     $this->socket = null;
                 }
-                if ($this->running && !$this->closing) {
-                    $this->reconnect();
-                }
+                // Still inside the `running && !closing` loop guard (synchronous
+                // flow does not mutate them between there and here), so a read
+                // error always triggers a reconnect attempt.
+                $this->reconnect();
             }
         }
     }

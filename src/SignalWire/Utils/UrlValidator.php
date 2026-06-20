@@ -64,7 +64,7 @@ final class UrlValidator
         $log = Logger::getLogger('signalwire.url_validator');
 
         $parsed = @parse_url($url);
-        if ($parsed === false || !is_array($parsed)) {
+        if ($parsed === false) {
             $log->warn('URL validation error: malformed URL');
             return false;
         }

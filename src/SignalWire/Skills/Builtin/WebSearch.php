@@ -204,7 +204,6 @@ class WebSearch extends SkillBase
                 $responsePostfix,
                 $perPageTimeout,
                 $overallDeadline,
-                $parallelScrape,
                 $snippetsOnly,
                 $minQualityScore,
             ): FunctionResult {

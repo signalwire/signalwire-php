@@ -47,12 +47,8 @@ foreach ($classes as $fqcn) {
     if (!class_exists($fqcn) && !interface_exists($fqcn) && !trait_exists($fqcn)) {
         continue;
     }
-    try {
-        $r = new ReflectionClass($fqcn);
-    } catch (Throwable $e) {
-        fwrite(STDERR, "skipping {$fqcn}: {$e->getMessage()}\n");
-        continue;
-    }
+    // Existence is verified above, so ReflectionClass cannot throw here.
+    $r = new ReflectionClass($fqcn);
     if ($r->isInternal()) {
         continue;
     }

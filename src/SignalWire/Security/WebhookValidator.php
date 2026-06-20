@@ -106,9 +106,10 @@ final class WebhookValidator
      * @param string             $signingKey       Customer's Signing Key.
      * @param string             $signature        Header value. Empty returns false.
      * @param string             $url              Full URL SignalWire POSTed to.
-     * @param string|array<int|string,mixed> $paramsOrRawBody  Raw body string OR
-     *                            pre-parsed form params (associative or list-of-
-     *                            [key, value] pairs).
+     * @param mixed $paramsOrRawBody  Raw body string OR pre-parsed form params
+     *                            (associative or list-of-[key, value] pairs) OR
+     *                            null (treated as empty params); any other type
+     *                            throws InvalidArgumentException.
      *
      * @return bool True on match, false otherwise.
      *
@@ -208,7 +209,6 @@ final class WebhookValidator
         // Normalise to a list of [key, value] tuples preserving original order.
         $items = [];
         $isListOfPairs = array_is_list($params)
-            && count($params) > 0
             && is_array($params[0])
             && array_is_list($params[0])
             && count($params[0]) === 2;

@@ -1,0 +1,7 @@
+parameters:
+    level: 5
+    paths:
+        - src
+        - scripts
+    bootstrapFiles:
+        - vendor/autoload.php

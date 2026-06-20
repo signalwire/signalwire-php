@@ -1074,9 +1074,6 @@ class ContextBuilder
      */
     private $toolNameSupplier = null;
 
-    /** @var object|null Bound agent for collision validation. */
-    private $agent = null;
-
     /**
      * Construct a builder. The optional $agent reference mirrors Python's
      * ContextBuilder(agent) so callers (typically AgentBase) can hand the
@@ -1089,7 +1086,6 @@ class ContextBuilder
      */
     public function __construct(?object $agent = null)
     {
-        $this->agent = $agent;
         if ($agent !== null && method_exists($agent, 'getRegisteredToolNames')) {
             $this->toolNameSupplier = function () use ($agent) {
                 return $agent->getRegisteredToolNames();

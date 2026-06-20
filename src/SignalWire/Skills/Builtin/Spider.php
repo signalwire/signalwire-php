@@ -331,9 +331,7 @@ class Spider extends SkillBase
 
                 $lines = ["Extracted data from {$url}:", '', "Title: {$title}", '', 'Data:'];
                 foreach ($extracted as $field => $value) {
-                    $printable = is_array($value)
-                        ? implode(', ', array_map('strval', $value))
-                        : (string) ($value ?? 'null');
+                    $printable = $value ?? 'null';
                     $lines[] = "- {$field}: {$printable}";
                 }
                 return new FunctionResult(implode("\n", $lines));

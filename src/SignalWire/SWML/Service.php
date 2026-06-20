@@ -895,7 +895,8 @@ class Service
      * Only invoked when a $signingKey is set on the subclass — see the
      * call site in handleRequest().
      *
-     * @param array<string,string> $headers
+     * @param array<string,mixed>  $headers Inbound headers; values may be non-string
+     *                                      (e.g. multi-value headers), validated below.
      * @param string               $rawBody Raw request body bytes.
      * @param string               $path    Path the SDK sees on the inbound request.
      * @param string               $subPath Path under the service route ('/' / '/swaig' / '/post_prompt').
