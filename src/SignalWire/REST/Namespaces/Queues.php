@@ -18,7 +18,7 @@ class Queues extends CrudResource
 {
     public function __construct(HttpClient $http)
     {
-        parent::__construct($http, '/api/relay/rest/queues');
+        parent::__construct($http, '/api/relay/rest/queues', 'PUT');
     }
 
     /** @param array<string,mixed> $params @return array<string,mixed> */

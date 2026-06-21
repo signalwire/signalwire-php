@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace SignalWire\REST\Namespaces;
 
-use SignalWire\REST\CrudResource;
+use SignalWire\REST\CrudWithAddresses;
 
 /**
  * cXML applications — read-only by API design. ``create`` is implemented as
  * an explicit failure (mirroring Python's ``NotImplementedError``) because
- * the API has no create endpoint for cXML applications.
+ * the API has no create endpoint for cXML applications. Uses PUT for updates
+ * (``PUT /api/fabric/resources/cxml_applications/{id}``).
  */
-class FabricCxmlApplications extends CrudResource
+class FabricCxmlApplications extends CrudWithAddresses
 {
     /**
      * cXML applications cannot be created via this API — only PUT/GET/DELETE

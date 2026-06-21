@@ -180,6 +180,14 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "DatasphereNamespace": "signalwire.rest.namespaces.datasphere",
     "DatasphereDocuments": "signalwire.rest.namespaces.datasphere",
 
+    # Chat / PubSub token resources (Python: one module + class each)
+    "ChatResource": "signalwire.rest.namespaces.chat",
+    "PubSubResource": "signalwire.rest.namespaces.pubsub",
+
+    # Verified caller IDs + phone numbers (dedicated per-resource modules)
+    "VerifiedCallersResource": "signalwire.rest.namespaces.verified_callers",
+    "PhoneNumbersResource": "signalwire.rest.namespaces.phone_numbers",
+
     # Other small namespaces
     "Queues": "signalwire.rest.namespaces.queues",
     "QueuesResource": "signalwire.rest.namespaces.queues",

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces;
 
 use SignalWire\REST\CrudResource;
+use SignalWire\REST\CrudWithAddresses;
 use SignalWire\REST\HttpClient;
 
 /**
@@ -31,22 +32,25 @@ class Fabric
 
     private const BASE = '/api/fabric/resources';
 
-    // PUT-update resources (lazily initialised)
-    private ?CrudResource $swmlScripts = null;
-    private ?CrudResource $relayApplications = null;
+    // PUT-update resources (lazily initialised). Every fabric resource
+    // extends CrudWithAddresses so list/create/get/update/delete + the
+    // {id}/addresses sub-collection are all available, mirroring Python's
+    // FabricResource / FabricResourcePUT hierarchy.
+    private ?CrudWithAddresses $swmlScripts = null;
+    private ?CrudWithAddresses $relayApplications = null;
     private ?FabricCallFlows $callFlows = null;
     private ?FabricConferenceRooms $conferenceRooms = null;
-    private ?CrudResource $freeswitchConnectors = null;
+    private ?CrudWithAddresses $freeswitchConnectors = null;
     private ?FabricSubscribers $subscribers = null;
-    private ?CrudResource $sipEndpoints = null;
-    private ?CrudResource $cxmlScripts = null;
+    private ?CrudWithAddresses $sipEndpoints = null;
+    private ?CrudWithAddresses $cxmlScripts = null;
     private ?FabricCxmlApplications $cxmlApplications = null;
 
     // PATCH-update resources
-    private ?CrudResource $swmlWebhooks = null;
-    private ?CrudResource $aiAgents = null;
-    private ?CrudResource $sipGateways = null;
-    private ?CrudResource $cxmlWebhooks = null;
+    private ?CrudWithAddresses $swmlWebhooks = null;
+    private ?CrudWithAddresses $aiAgents = null;
+    private ?CrudWithAddresses $sipGateways = null;
+    private ?CrudWithAddresses $cxmlWebhooks = null;
 
     // Legacy/back-compat aliases
     private ?CrudResource $conversations = null;
@@ -78,15 +82,15 @@ class Fabric
     public function subscribers(): FabricSubscribers
     {
         if ($this->subscribers === null) {
-            $this->subscribers = new FabricSubscribers($this->client, self::BASE . '/subscribers');
+            $this->subscribers = new FabricSubscribers($this->client, self::BASE . '/subscribers', 'PUT');
         }
         return $this->subscribers;
     }
 
-    public function sipEndpoints(): CrudResource
+    public function sipEndpoints(): CrudWithAddresses
     {
         if ($this->sipEndpoints === null) {
-            $this->sipEndpoints = new CrudResource($this->client, self::BASE . '/sip_endpoints');
+            $this->sipEndpoints = new CrudWithAddresses($this->client, self::BASE . '/sip_endpoints', 'PUT');
         }
         return $this->sipEndpoints;
     }
@@ -94,23 +98,23 @@ class Fabric
     public function callFlows(): FabricCallFlows
     {
         if ($this->callFlows === null) {
-            $this->callFlows = new FabricCallFlows($this->client, self::BASE . '/call_flows');
+            $this->callFlows = new FabricCallFlows($this->client, self::BASE . '/call_flows', 'PUT');
         }
         return $this->callFlows;
     }
 
-    public function swmlScripts(): CrudResource
+    public function swmlScripts(): CrudWithAddresses
     {
         if ($this->swmlScripts === null) {
-            $this->swmlScripts = new CrudResource($this->client, self::BASE . '/swml_scripts');
+            $this->swmlScripts = new CrudWithAddresses($this->client, self::BASE . '/swml_scripts', 'PUT');
         }
         return $this->swmlScripts;
     }
 
-    public function relayApplications(): CrudResource
+    public function relayApplications(): CrudWithAddresses
     {
         if ($this->relayApplications === null) {
-            $this->relayApplications = new CrudResource($this->client, self::BASE . '/relay_applications');
+            $this->relayApplications = new CrudWithAddresses($this->client, self::BASE . '/relay_applications', 'PUT');
         }
         return $this->relayApplications;
     }
@@ -118,23 +122,23 @@ class Fabric
     public function conferenceRooms(): FabricConferenceRooms
     {
         if ($this->conferenceRooms === null) {
-            $this->conferenceRooms = new FabricConferenceRooms($this->client, self::BASE . '/conference_rooms');
+            $this->conferenceRooms = new FabricConferenceRooms($this->client, self::BASE . '/conference_rooms', 'PUT');
         }
         return $this->conferenceRooms;
     }
 
-    public function freeswitchConnectors(): CrudResource
+    public function freeswitchConnectors(): CrudWithAddresses
     {
         if ($this->freeswitchConnectors === null) {
-            $this->freeswitchConnectors = new CrudResource($this->client, self::BASE . '/freeswitch_connectors');
+            $this->freeswitchConnectors = new CrudWithAddresses($this->client, self::BASE . '/freeswitch_connectors', 'PUT');
         }
         return $this->freeswitchConnectors;
     }
 
-    public function cxmlScripts(): CrudResource
+    public function cxmlScripts(): CrudWithAddresses
     {
         if ($this->cxmlScripts === null) {
-            $this->cxmlScripts = new CrudResource($this->client, self::BASE . '/cxml_scripts');
+            $this->cxmlScripts = new CrudWithAddresses($this->client, self::BASE . '/cxml_scripts', 'PUT');
         }
         return $this->cxmlScripts;
     }
@@ -142,39 +146,39 @@ class Fabric
     public function cxmlApplications(): FabricCxmlApplications
     {
         if ($this->cxmlApplications === null) {
-            $this->cxmlApplications = new FabricCxmlApplications($this->client, self::BASE . '/cxml_applications');
+            $this->cxmlApplications = new FabricCxmlApplications($this->client, self::BASE . '/cxml_applications', 'PUT');
         }
         return $this->cxmlApplications;
     }
 
-    public function swmlWebhooks(): CrudResource
+    public function swmlWebhooks(): CrudWithAddresses
     {
         if ($this->swmlWebhooks === null) {
-            $this->swmlWebhooks = new CrudResource($this->client, self::BASE . '/swml_webhooks');
+            $this->swmlWebhooks = new CrudWithAddresses($this->client, self::BASE . '/swml_webhooks');
         }
         return $this->swmlWebhooks;
     }
 
-    public function aiAgents(): CrudResource
+    public function aiAgents(): CrudWithAddresses
     {
         if ($this->aiAgents === null) {
-            $this->aiAgents = new CrudResource($this->client, self::BASE . '/ai_agents');
+            $this->aiAgents = new CrudWithAddresses($this->client, self::BASE . '/ai_agents');
         }
         return $this->aiAgents;
     }
 
-    public function sipGateways(): CrudResource
+    public function sipGateways(): CrudWithAddresses
     {
         if ($this->sipGateways === null) {
-            $this->sipGateways = new CrudResource($this->client, self::BASE . '/sip_gateways');
+            $this->sipGateways = new CrudWithAddresses($this->client, self::BASE . '/sip_gateways');
         }
         return $this->sipGateways;
     }
 
-    public function cxmlWebhooks(): CrudResource
+    public function cxmlWebhooks(): CrudWithAddresses
     {
         if ($this->cxmlWebhooks === null) {
-            $this->cxmlWebhooks = new CrudResource($this->client, self::BASE . '/cxml_webhooks');
+            $this->cxmlWebhooks = new CrudWithAddresses($this->client, self::BASE . '/cxml_webhooks');
         }
         return $this->cxmlWebhooks;
     }

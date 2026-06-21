@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace SignalWire\REST\Namespaces;
 
-use SignalWire\REST\CrudResource;
+use SignalWire\REST\CrudWithAddresses;
 
 /**
- * Subscribers with SIP endpoint management.
+ * Subscribers with SIP endpoint management. Uses PUT for updates
+ * (``PUT /api/fabric/resources/subscribers/{id}``) and inherits
+ * ``listAddresses`` from CrudWithAddresses.
  */
-class FabricSubscribers extends CrudResource
+class FabricSubscribers extends CrudWithAddresses
 {
     /** @param array<string,mixed> $params @return array<string,mixed> */
     public function listSipEndpoints(string $subscriberId, array $params = []): array

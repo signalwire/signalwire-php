@@ -295,14 +295,14 @@ class RestClientTest extends TestCase
         $this->assertSame('/api/relay/rest/queues', $client->queues()->getBasePath());
         $this->assertSame('/api/relay/rest/recordings', $client->recordings()->getBasePath());
         $this->assertSame('/api/relay/rest/number_groups', $client->numberGroups()->getBasePath());
-        $this->assertSame('/api/relay/rest/verified_callers', $client->verifiedCallers()->getBasePath());
+        $this->assertSame('/api/relay/rest/verified_caller_ids', $client->verifiedCallers()->getBasePath());
         $this->assertSame('/api/relay/rest/sip_profile', $client->sipProfile()->getBasePath());
         $this->assertSame('/api/relay/rest/lookup/phone_number', $client->lookup()->getBasePath());
         $this->assertSame('/api/relay/rest/short_codes', $client->shortCodes()->getBasePath());
         $this->assertSame('/api/relay/rest/imported_phone_numbers', $client->importedNumbers()->getBasePath());
         $this->assertSame('/api/relay/rest/mfa', $client->mfa()->getBasePath());
-        $this->assertSame('/api/relay/rest/pubsub', $client->pubsub()->getBasePath());
-        $this->assertSame('/api/relay/rest/chat', $client->chat()->getBasePath());
+        $this->assertSame('/api/pubsub/tokens', $client->pubsub()->getBasePath());
+        $this->assertSame('/api/chat/tokens', $client->chat()->getBasePath());
 
         // The "namespace" wrappers below mirror Python's per-resource
         // class layout — base paths live on the sub-resources.

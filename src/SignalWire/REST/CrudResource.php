@@ -56,10 +56,19 @@ class CrudResource extends BaseResource
 {
     protected HttpClient $client;
 
-    public function __construct(HttpClient $client, string $basePath)
+    /**
+     * HTTP verb used by update(). Mirrors Python's
+     * ``CrudResource._update_method`` class attribute: the base default is
+     * PATCH, and PUT-update resources override it (either via a subclass that
+     * sets this property, or by passing ``$updateMethod`` to the constructor).
+     */
+    protected string $updateMethod = 'PATCH';
+
+    public function __construct(HttpClient $client, string $basePath, string $updateMethod = 'PATCH')
     {
         parent::__construct($client, $basePath);
         $this->client = $client;
+        $this->updateMethod = strtoupper($updateMethod);
     }
 
     public function getBasePath(): string
@@ -118,14 +127,18 @@ class CrudResource extends BaseResource
     }
 
     /**
-     * Update a resource by ID (PUT basePath/{id}).
+     * Update a resource by ID (PATCH basePath/{id} by default; PUT for
+     * resources whose canonical route uses PUT — see $updateMethod).
      *
      * @param array<string,mixed> $data JSON body.
      * @return array<string,mixed>
      */
     public function update(string $id, array $data): array
     {
-        return $this->client->put($this->path($id), $data);
+        if ($this->updateMethod === 'PUT') {
+            return $this->client->put($this->path($id), $data);
+        }
+        return $this->client->patch($this->path($id), $data);
     }
 
     /**
