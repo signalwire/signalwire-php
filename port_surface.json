@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ bccc7dcf8d2d513ec06a5412128253c171d964af",
+  "generated_from": "signalwire-php @ 18d8ffe52f288c8b68da9de608bf0076827171cf",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1294,6 +1294,7 @@
         "GenericResources": [
           "__init__",
           "assign_domain_application",
+          "assign_phone_route",
           "delete",
           "get",
           "get_base_path",
