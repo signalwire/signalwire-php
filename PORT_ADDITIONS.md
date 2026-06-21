@@ -574,3 +574,7 @@ signalwire.core.agent_base.AgentBase.get_signing_key: php_accessor: AgentBase ex
 signalwire.core.security.webhook_validator.WebhookValidator: php_idiom_class_wrapper: static class containing validator functions (Python keeps them at module level)
 signalwire.core.security.webhook_validator.WebhookValidator.validate_request: php_idiom_class_wrapper: see WebhookValidator class entry
 signalwire.core.security.webhook_validator.WebhookValidator.validate_webhook_signature: php_idiom_class_wrapper: see WebhookValidator class entry
+signalwire.core.security.security_utils.SecurityUtils: php_idiom_class_wrapper: static class hosting the security hygiene helpers (Python keeps filter_sensitive_headers/redact_url/is_valid_hostname at module level); static methods projected to module-level free functions via FREE_FUNCTION_PROJECTIONS
+signalwire.core.security.security_utils.SecurityUtils.filter_sensitive_headers: php_idiom_class_wrapper: see SecurityUtils class entry
+signalwire.core.security.security_utils.SecurityUtils.redact_url: php_idiom_class_wrapper: see SecurityUtils class entry
+signalwire.core.security.security_utils.SecurityUtils.is_valid_hostname: php_idiom_class_wrapper: see SecurityUtils class entry

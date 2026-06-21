@@ -191,6 +191,16 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
     ("SignalWire\\Security\\WebhookValidator", "validateRequest"):
         ("signalwire.core.security.webhook_validator", "validate_request"),
+    # Security hygiene helpers — Python ships them as module-level free
+    # functions (signalwire.core.security.security_utils); PHP groups the
+    # three static methods on a SecurityUtils final class for PSR-4 + IDE
+    # discoverability. Project to the Python canonical snake_case names.
+    ("SignalWire\\Security\\SecurityUtils", "filterSensitiveHeaders"):
+        ("signalwire.core.security.security_utils", "filter_sensitive_headers"),
+    ("SignalWire\\Security\\SecurityUtils", "redactUrl"):
+        ("signalwire.core.security.security_utils", "redact_url"),
+    ("SignalWire\\Security\\SecurityUtils", "isValidHostname"):
+        ("signalwire.core.security.security_utils", "is_valid_hostname"),
 }
 
 

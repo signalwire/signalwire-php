@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 94ef3cffbf7674f8c1f40599e3dd6a89206ec865",
+  "generated_from": "signalwire-php @ d856179d8cf661a1b2e26b653691d3909374e45b",
   "modules": {
     "signalwire": {
       "classes": {
@@ -450,6 +450,16 @@
           "run",
           "serve",
           "set_dynamic_config_callback"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.security.security_utils": {
+      "classes": {
+        "SecurityUtils": [
+          "filter_sensitive_headers",
+          "is_valid_hostname",
+          "redact_url"
         ]
       },
       "functions": []

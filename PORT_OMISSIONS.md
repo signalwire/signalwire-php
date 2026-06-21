@@ -927,3 +927,6 @@ signalwire.web.web_service.WebService.start: Python's WebService abstraction is 
 signalwire.web.web_service.WebService.stop: Python's WebService abstraction is not a PHP idiom — PHP uses AgentBase's built-in HTTP server (or php -S / FPM behind nginx).
 signalwire.core.security.webhook_validator.validate_webhook_signature: idiomatic_divergence: implemented as static method on the WebhookValidator class (language idiom); see PORT_ADDITIONS.md
 signalwire.core.security.webhook_validator.validate_request: idiomatic_divergence: implemented as static method on the WebhookValidator class (language idiom); see PORT_ADDITIONS.md
+signalwire.core.security.security_utils.filter_sensitive_headers: idiomatic_divergence: implemented as static method SecurityUtils::filterSensitiveHeaders (language idiom); see PORT_ADDITIONS.md
+signalwire.core.security.security_utils.redact_url: idiomatic_divergence: implemented as static method SecurityUtils::redactUrl (language idiom); see PORT_ADDITIONS.md
+signalwire.core.security.security_utils.is_valid_hostname: idiomatic_divergence: implemented as static method SecurityUtils::isValidHostname (language idiom); see PORT_ADDITIONS.md
