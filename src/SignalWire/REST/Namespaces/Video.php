@@ -29,11 +29,11 @@ class Video
     {
         $this->http = $http;
         $base = '/api/video';
-        $this->rooms = new VideoRooms($http, $base . '/rooms');
+        $this->rooms = new VideoRooms($http, $base . '/rooms', 'PUT');
         $this->roomTokens = new VideoRoomTokens($http, $base . '/room_tokens');
         $this->roomSessions = new VideoRoomSessions($http, $base . '/room_sessions');
         $this->roomRecordings = new VideoRoomRecordings($http, $base . '/room_recordings');
-        $this->conferences = new VideoConferences($http, $base . '/conferences');
+        $this->conferences = new VideoConferences($http, $base . '/conferences', 'PUT');
         $this->conferenceTokens = new VideoConferenceTokens($http, $base . '/conference_tokens');
         $this->streams = new VideoStreams($http, $base . '/streams');
     }

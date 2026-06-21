@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ d856179d8cf661a1b2e26b653691d3909374e45b",
+  "generated_from": "signalwire-php @ 18d8ffe52f288c8b68da9de608bf0076827171cf",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1101,6 +1101,15 @@
       },
       "functions": []
     },
+    "signalwire.rest.namespaces.chat": {
+      "classes": {
+        "ChatResource": [
+          "__init__",
+          "create_token"
+        ]
+      },
+      "functions": []
+    },
     "signalwire.rest.namespaces.compat": {
       "classes": {
         "CompatAccounts": [
@@ -1285,6 +1294,7 @@
         "GenericResources": [
           "__init__",
           "assign_domain_application",
+          "assign_phone_route",
           "delete",
           "get",
           "get_base_path",
@@ -1372,6 +1382,22 @@
       },
       "functions": []
     },
+    "signalwire.rest.namespaces.phone_numbers": {
+      "classes": {
+        "PhoneNumbersResource": [
+          "__init__",
+          "search",
+          "set_ai_agent",
+          "set_call_flow",
+          "set_cxml_application",
+          "set_cxml_webhook",
+          "set_relay_application",
+          "set_relay_topic",
+          "set_swml_webhook"
+        ]
+      },
+      "functions": []
+    },
     "signalwire.rest.namespaces.project": {
       "classes": {
         "ProjectNamespace": [
@@ -1385,6 +1411,15 @@
           "delete",
           "get_base_path",
           "update"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.rest.namespaces.pubsub": {
+      "classes": {
+        "PubSubResource": [
+          "__init__",
+          "create_token"
         ]
       },
       "functions": []
@@ -1472,6 +1507,16 @@
           "get",
           "get_base_path",
           "update"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.rest.namespaces.verified_callers": {
+      "classes": {
+        "VerifiedCallersResource": [
+          "__init__",
+          "redial_verification",
+          "submit_verification"
         ]
       },
       "functions": []

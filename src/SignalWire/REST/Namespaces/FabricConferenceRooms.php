@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace SignalWire\REST\Namespaces;
 
-use SignalWire\REST\CrudResource;
+use SignalWire\REST\CrudWithAddresses;
 
 /**
  * Conference rooms — uses singular ``conference_room`` for sub-resource
- * paths to mirror the Python SDK.
+ * paths to mirror the Python SDK. Uses PUT for updates
+ * (``PUT /api/fabric/resources/conference_rooms/{id}``).
  */
-class FabricConferenceRooms extends CrudResource
+class FabricConferenceRooms extends CrudWithAddresses
 {
     private function singularBase(): string
     {

@@ -20,7 +20,7 @@ class NumberGroups extends CrudResource
 
     public function __construct(HttpClient $http)
     {
-        parent::__construct($http, '/api/relay/rest/number_groups');
+        parent::__construct($http, '/api/relay/rest/number_groups', 'PUT');
     }
 
     /** @param array<string,mixed> $params @return array<string,mixed> */

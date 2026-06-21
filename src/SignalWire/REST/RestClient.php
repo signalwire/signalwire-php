@@ -6,6 +6,7 @@ namespace SignalWire\REST;
 
 use SignalWire\REST\Namespaces\Addresses;
 use SignalWire\REST\Namespaces\Calling;
+use SignalWire\REST\Namespaces\ChatResource;
 use SignalWire\REST\Namespaces\Compat;
 use SignalWire\REST\Namespaces\Datasphere;
 use SignalWire\REST\Namespaces\Fabric;
@@ -13,12 +14,15 @@ use SignalWire\REST\Namespaces\ImportedNumbers;
 use SignalWire\REST\Namespaces\Logs;
 use SignalWire\REST\Namespaces\Mfa;
 use SignalWire\REST\Namespaces\NumberGroups;
+use SignalWire\REST\Namespaces\PhoneNumbersResource;
 use SignalWire\REST\Namespaces\Project;
+use SignalWire\REST\Namespaces\PubSubResource;
 use SignalWire\REST\Namespaces\Queues;
 use SignalWire\REST\Namespaces\Recordings;
 use SignalWire\REST\Namespaces\Registry;
 use SignalWire\REST\Namespaces\ShortCodes;
 use SignalWire\REST\Namespaces\SipProfile;
+use SignalWire\REST\Namespaces\VerifiedCallersResource;
 use SignalWire\REST\Namespaces\Video;
 
 /**
@@ -41,7 +45,7 @@ class RestClient
     // -----------------------------------------------------------------
     private ?Fabric $fabric = null;
     private ?Calling $calling = null;
-    private ?CrudResource $phoneNumbers = null;
+    private ?PhoneNumbersResource $phoneNumbers = null;
     private ?Datasphere $datasphere = null;
     private ?Video $video = null;
     private ?Compat $compat = null;
@@ -49,7 +53,7 @@ class RestClient
     private ?Queues $queues = null;
     private ?Recordings $recordings = null;
     private ?NumberGroups $numberGroups = null;
-    private ?CrudResource $verifiedCallers = null;
+    private ?VerifiedCallersResource $verifiedCallers = null;
     private ?SipProfile $sipProfile = null;
     private ?CrudResource $lookup = null;
     private ?ShortCodes $shortCodes = null;
@@ -58,8 +62,8 @@ class RestClient
     private ?Registry $registry = null;
     private ?Logs $logs = null;
     private ?Project $project = null;
-    private ?CrudResource $pubsub = null;
-    private ?CrudResource $chat = null;
+    private ?PubSubResource $pubsub = null;
+    private ?ChatResource $chat = null;
 
     /**
      * @param string $projectId Project ID (falls back to SIGNALWIRE_PROJECT_ID env var).
@@ -152,11 +156,11 @@ class RestClient
         return $this->calling;
     }
 
-    /** Phone numbers. */
-    public function phoneNumbers(): CrudResource
+    /** Phone numbers (CRUD + search + typed binding helpers). */
+    public function phoneNumbers(): PhoneNumbersResource
     {
         if ($this->phoneNumbers === null) {
-            $this->phoneNumbers = new CrudResource($this->http, '/api/relay/rest/phone_numbers');
+            $this->phoneNumbers = new PhoneNumbersResource($this->http);
         }
         return $this->phoneNumbers;
     }
@@ -232,11 +236,11 @@ class RestClient
         return $this->numberGroups;
     }
 
-    /** Verified callers. */
-    public function verifiedCallers(): CrudResource
+    /** Verified caller IDs (CRUD + verification flow). */
+    public function verifiedCallers(): VerifiedCallersResource
     {
         if ($this->verifiedCallers === null) {
-            $this->verifiedCallers = new CrudResource($this->http, '/api/relay/rest/verified_callers');
+            $this->verifiedCallers = new VerifiedCallersResource($this->http);
         }
         return $this->verifiedCallers;
     }
@@ -313,20 +317,20 @@ class RestClient
         return $this->project;
     }
 
-    /** PubSub tokens. */
-    public function pubsub(): CrudResource
+    /** PubSub tokens (POST /api/pubsub/tokens). */
+    public function pubsub(): PubSubResource
     {
         if ($this->pubsub === null) {
-            $this->pubsub = new CrudResource($this->http, '/api/relay/rest/pubsub');
+            $this->pubsub = new PubSubResource($this->http);
         }
         return $this->pubsub;
     }
 
-    /** Chat tokens. */
-    public function chat(): CrudResource
+    /** Chat tokens (POST /api/chat/tokens). */
+    public function chat(): ChatResource
     {
         if ($this->chat === null) {
-            $this->chat = new CrudResource($this->http, '/api/relay/rest/chat');
+            $this->chat = new ChatResource($this->http);
         }
         return $this->chat;
     }

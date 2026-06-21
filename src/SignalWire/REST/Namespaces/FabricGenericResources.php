@@ -56,6 +56,28 @@ class FabricGenericResources
     }
 
     /**
+     * Bind a phone route to a fabric resource
+     * (``POST /api/fabric/resources/{id}/phone_routes``).
+     *
+     * Deprecated for the common binding cases — use the
+     * ``PhoneNumbersResource::set*`` helpers instead. This endpoint accepts
+     * only a narrow set of legacy resource types as the attach target; it does
+     * NOT work for ``swml_webhook`` / ``cxml_webhook`` / ``ai_agent`` bindings
+     * (those are configured on the phone number and the Fabric resource is
+     * auto-materialized). Mirrors Python ``GenericResources.assign_phone_route``.
+     *
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
+    public function assignPhoneRoute(string $resourceId, array $body): array
+    {
+        return $this->http->post(
+            $this->basePath . '/' . $resourceId . '/phone_routes',
+            $body
+        );
+    }
+
+    /**
      * Bind a domain application to a fabric resource.
      *
      * @param array<string,mixed> $body

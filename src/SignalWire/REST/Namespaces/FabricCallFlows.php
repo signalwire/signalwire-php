@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\REST\Namespaces;
 
-use SignalWire\REST\CrudResource;
+use SignalWire\REST\CrudWithAddresses;
 
 /**
  * Call flows with version management.
@@ -12,8 +12,10 @@ use SignalWire\REST\CrudResource;
  * The API uses the singular path segment ``call_flow`` for sub-collections
  * (addresses, versions) — not ``call_flows`` — so this resource rewrites
  * the collection segment for those sub-paths to mirror the Python SDK.
+ *
+ * Uses PUT for updates (``PUT /api/fabric/resources/call_flows/{id}``).
  */
-class FabricCallFlows extends CrudResource
+class FabricCallFlows extends CrudWithAddresses
 {
     /** @return string Singular sub-resource base derived from the plural basePath. */
     private function singularBase(): string

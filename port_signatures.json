@@ -9993,6 +9993,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -10110,6 +10116,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -10588,7 +10600,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest.namespaces.chat.ChatResource"
             },
             "compat": {
               "params": [
@@ -10714,7 +10726,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest.namespaces.phone_numbers.PhoneNumbersResource"
             },
             "project": {
               "params": [
@@ -10732,7 +10744,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest.namespaces.pubsub.PubSubResource"
             },
             "queues": {
               "params": [
@@ -10786,7 +10798,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest.namespaces.verified_callers.VerifiedCallersResource"
             },
             "video": {
               "params": [
@@ -11673,6 +11685,43 @@
         }
       }
     },
+    "signalwire.rest.namespaces.chat": {
+      "classes": {
+        "ChatResource": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "http",
+                  "type": "class:signalwire.rest._base.HttpClient",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "create_token": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "data",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      }
+    },
     "signalwire.rest.namespaces.compat": {
       "classes": {
         "CompatAccounts": {
@@ -11781,6 +11830,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -11823,6 +11878,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -12239,6 +12300,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -12339,6 +12406,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -12381,6 +12454,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -12834,6 +12913,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -13303,6 +13388,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -13386,6 +13477,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -13429,6 +13526,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -13542,7 +13645,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "call_flows": {
               "params": [
@@ -13596,7 +13699,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "cxml_webhooks": {
               "params": [
@@ -13605,7 +13708,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "dial_plans": {
               "params": [
@@ -13632,7 +13735,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "get_client": {
               "params": [
@@ -13659,7 +13762,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "resources": {
               "params": [
@@ -13677,7 +13780,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "sip_gateways": {
               "params": [
@@ -13686,7 +13789,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "sip_profiles": {
               "params": [
@@ -13713,7 +13816,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "swml_webhooks": {
               "params": [
@@ -13722,7 +13825,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
             "tokens": {
               "params": [
@@ -13877,6 +13980,25 @@
               ],
               "returns": "any"
             },
+            "assign_phone_route": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "any",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
             "delete": {
               "params": [
                 {
@@ -13968,6 +14090,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -14606,6 +14734,242 @@
         }
       }
     },
+    "signalwire.rest.namespaces.phone_numbers": {
+      "classes": {
+        "PhoneNumbersResource": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "http",
+                  "type": "class:signalwire.rest._base.HttpClient",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "search": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "params",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_ai_agent": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "agent_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_call_flow": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "flow_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "version",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_cxml_application": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "application_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_cxml_webhook": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "fallback_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "status_callback_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_relay_application": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_relay_topic": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "topic",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "status_callback_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "set_swml_webhook": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "resource_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "extra",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      }
+    },
     "signalwire.rest.namespaces.project": {
       "classes": {
         "ProjectNamespace": {
@@ -14712,6 +15076,43 @@
                   "name": "body",
                   "type": "any",
                   "required": true
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.rest.namespaces.pubsub": {
+      "classes": {
+        "PubSubResource": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "http",
+                  "type": "class:signalwire.rest._base.HttpClient",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "create_token": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "data",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "any"
@@ -15399,6 +15800,62 @@
         }
       }
     },
+    "signalwire.rest.namespaces.verified_callers": {
+      "classes": {
+        "VerifiedCallersResource": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "http",
+                  "type": "class:signalwire.rest._base.HttpClient",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "redial_verification": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "caller_id",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "submit_verification": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "caller_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "data",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      }
+    },
     "signalwire.rest.namespaces.video": {
       "classes": {
         "VideoConferenceTokens": {
@@ -15478,6 +15935,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -15912,6 +16375,12 @@
                   "name": "base_path",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "update_method",
+                  "type": "string",
+                  "required": false,
+                  "default": "PATCH"
                 }
               ],
               "returns": "void"
