@@ -41,6 +41,9 @@ class MockTest extends TestCase
     private const STARTUP_TIMEOUT_SEC = 30;
     private const HTTP_TIMEOUT_SEC = 5;
 
+    /** Process-cached dynamically picked port (null until first resolved). */
+    private static ?int $dynamicPort = null;
+
     private static ?Harness $sharedHarness = null;
     private static ?\Throwable $startupFailure = null;
     /** @var resource|null cached subprocess handle; null if we're reusing an external server. */
@@ -231,7 +234,39 @@ class MockTest extends TestCase
                 return $p;
             }
         }
-        return self::DEFAULT_PORT;
+        // No env override: pick a free port dynamically so concurrent runs
+        // never collide on a fixed default. Cached for the life of the process
+        // so every harness() call in this worker agrees on one port (and the
+        // per-port lock file stays consistent across the probe/spawn dance).
+        if (self::$dynamicPort === null) {
+            self::$dynamicPort = self::pickFreePort(self::DEFAULT_PORT);
+        }
+        return self::$dynamicPort;
+    }
+
+    /**
+     * Ask the OS for a free TCP port by binding to :0 on loopback, reading
+     * back the assigned port, then closing the socket. Falls back to the
+     * supplied default if the bind fails for any reason (the subsequent
+     * spawn + health-poll then fails loud rather than hanging silently).
+     */
+    private static function pickFreePort(int $fallback): int
+    {
+        $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        if ($sock === false) {
+            return $fallback;
+        }
+        $name = stream_socket_get_name($sock, false);
+        fclose($sock);
+        if (!is_string($name)) {
+            return $fallback;
+        }
+        $pos = strrpos($name, ':');
+        if ($pos === false) {
+            return $fallback;
+        }
+        $port = (int) substr($name, $pos + 1);
+        return $port > 0 ? $port : $fallback;
     }
 
     /**
