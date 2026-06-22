@@ -64,14 +64,39 @@ PORTING_SDK_DIR="$(resolve_porting_sdk)" || {
 # every worker just probes-and-reuses (never spawns, never registers a kill
 # hook), and tear them down in a trap. This mirrors the dotnet lifecycle in
 # MOCK_TEST_HARNESS.md.
-MOCK_SIGNALWIRE_PORT="${MOCK_SIGNALWIRE_PORT:-8768}"
-MOCK_RELAY_PORT="${MOCK_RELAY_PORT:-8778}"
-MOCK_RELAY_HTTP_PORT="${MOCK_RELAY_HTTP_PORT:-9778}"
-export MOCK_SIGNALWIRE_PORT MOCK_RELAY_PORT MOCK_RELAY_HTTP_PORT
-
 PARALLEL_PROCS="${PARATEST_PROCS:-8}"
 MOCK_PIDS=""
 PYTHON_BIN="${MOCK_SIGNALWIRE_PYTHON:-$(command -v python3 || command -v python || echo python3)}"
+
+# pick_free_port — ask the OS for an unused TCP port by binding :0 and reading
+# back the assigned port, then closing the socket. There is an inherent (small)
+# TOCTOU window between close and the mock's own bind, but the mock spawns
+# immediately after and its health-poll fails loud if the bind lost a race, so a
+# transient collision surfaces as a clear "did not become ready" rather than a
+# silent hang on a wrong/occupied port. Replaces the old hardcoded
+# 8768/8778/9778/8788 defaults so parallel runs (CI matrix, multiple local
+# checkouts) never collide on a fixed port.
+pick_free_port() {
+    "$PYTHON_BIN" -c 'import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()'
+}
+
+# Mock ports for the TEST gate: honor an explicit env override, else pick a free
+# port dynamically. Exported so every paratest worker probes-and-reuses the one
+# server this script spawns (see spawn_mocks) rather than spawning its own. A
+# failed pick aborts the run loudly instead of silently falling back to a fixed
+# port that might be occupied.
+MOCK_SIGNALWIRE_PORT="${MOCK_SIGNALWIRE_PORT:-$(pick_free_port)}"
+MOCK_RELAY_PORT="${MOCK_RELAY_PORT:-$(pick_free_port)}"
+MOCK_RELAY_HTTP_PORT="${MOCK_RELAY_HTTP_PORT:-$(pick_free_port)}"
+if [ -z "$MOCK_SIGNALWIRE_PORT" ] || [ -z "$MOCK_RELAY_PORT" ] || [ -z "$MOCK_RELAY_HTTP_PORT" ]; then
+    echo "FATAL: could not allocate a free port for the mock servers" >&2
+    exit 2
+fi
+export MOCK_SIGNALWIRE_PORT MOCK_RELAY_PORT MOCK_RELAY_HTTP_PORT
 
 probe_mock() {  # $1 = url, $2 = needle
     curl -fsS --max-time 2 "$1" 2>/dev/null | grep -q "$2"
@@ -218,7 +243,9 @@ run_gate "NO-CHEAT" "audit_no_cheat_tests" \
 # tests/Rest suite SERIALLY (phpunit, one process) so all traffic lands in one
 # journal, then checks that journal. Same shape as python's/go's/java's gate.
 rest_coverage_gate() {
-    local port=8788
+    local port
+    port="$(pick_free_port)" || return 1
+    [ -n "$port" ] || { echo "FATAL: could not allocate a free port for the REST-coverage mock" >&2; return 1; }
     local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
     PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}" \
         "$PYTHON_BIN" -m mock_signalwire --host 127.0.0.1 --port "$port" \

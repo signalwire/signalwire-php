@@ -34,6 +34,10 @@ class MockTest extends TestCase
     public const DEFAULT_HTTP_PORT = 9778;
     private const STARTUP_TIMEOUT_SEC = 30;
 
+    /** Process-cached dynamically picked ws/http ports (null until resolved). */
+    private static ?int $dynamicWsPort = null;
+    private static ?int $dynamicHttpPort = null;
+
     private static ?RelayHarness $sharedHarness = null;
     private static ?\Throwable $startupFailure = null;
     /** @var resource|null cached subprocess handle; null if we're reusing an external server. */
@@ -295,7 +299,13 @@ class MockTest extends TestCase
                 return $p;
             }
         }
-        return self::DEFAULT_WS_PORT;
+        // No env override: pick a free port dynamically. Cached for the life of
+        // the process so every harness() call agrees on one ws port (and the
+        // per-port lock file, keyed on the http port, stays consistent).
+        if (self::$dynamicWsPort === null) {
+            self::$dynamicWsPort = self::pickFreePort(self::DEFAULT_WS_PORT);
+        }
+        return self::$dynamicWsPort;
     }
 
     private static function resolveHttpPort(): int
@@ -307,7 +317,35 @@ class MockTest extends TestCase
                 return $p;
             }
         }
-        return self::DEFAULT_HTTP_PORT;
+        if (self::$dynamicHttpPort === null) {
+            self::$dynamicHttpPort = self::pickFreePort(self::DEFAULT_HTTP_PORT);
+        }
+        return self::$dynamicHttpPort;
+    }
+
+    /**
+     * Ask the OS for a free TCP port by binding to :0 on loopback, reading
+     * back the assigned port, then closing the socket. Falls back to the
+     * supplied default if the bind fails (the subsequent spawn + health-poll
+     * then fails loud rather than hanging silently).
+     */
+    private static function pickFreePort(int $fallback): int
+    {
+        $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        if ($sock === false) {
+            return $fallback;
+        }
+        $name = stream_socket_get_name($sock, false);
+        fclose($sock);
+        if (!is_string($name)) {
+            return $fallback;
+        }
+        $pos = strrpos($name, ':');
+        if ($pos === false) {
+            return $fallback;
+        }
+        $port = (int) substr($name, $pos + 1);
+        return $port > 0 ? $port : $fallback;
     }
 
     /**
