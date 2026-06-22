@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SignalWire\REST\Namespaces;
 
-use SignalWire\REST\CrudResource;
 use SignalWire\REST\CrudWithAddresses;
 use SignalWire\REST\HttpClient;
 
@@ -51,14 +50,6 @@ class Fabric
     private ?CrudWithAddresses $aiAgents = null;
     private ?CrudWithAddresses $sipGateways = null;
     private ?CrudWithAddresses $cxmlWebhooks = null;
-
-    // Legacy/back-compat aliases
-    private ?CrudResource $conversations = null;
-    private ?CrudResource $dialPlans = null;
-    private ?CrudResource $freeclimbApps = null;
-    private ?CrudResource $callQueues = null;
-    private ?CrudResource $sipProfiles = null;
-    private ?CrudResource $phoneNumbers = null;
 
     // Special resources
     private ?FabricGenericResources $resources = null;
@@ -181,56 +172,6 @@ class Fabric
             $this->cxmlWebhooks = new CrudWithAddresses($this->client, self::BASE . '/cxml_webhooks');
         }
         return $this->cxmlWebhooks;
-    }
-
-    // ---- Legacy/back-compat aliases ---------------------------------
-
-    public function conversations(): CrudResource
-    {
-        if ($this->conversations === null) {
-            $this->conversations = new CrudResource($this->client, self::BASE . '/conversations');
-        }
-        return $this->conversations;
-    }
-
-    public function dialPlans(): CrudResource
-    {
-        if ($this->dialPlans === null) {
-            $this->dialPlans = new CrudResource($this->client, self::BASE . '/dial_plans');
-        }
-        return $this->dialPlans;
-    }
-
-    public function freeclimbApps(): CrudResource
-    {
-        if ($this->freeclimbApps === null) {
-            $this->freeclimbApps = new CrudResource($this->client, self::BASE . '/freeclimb_apps');
-        }
-        return $this->freeclimbApps;
-    }
-
-    public function callQueues(): CrudResource
-    {
-        if ($this->callQueues === null) {
-            $this->callQueues = new CrudResource($this->client, self::BASE . '/call_queues');
-        }
-        return $this->callQueues;
-    }
-
-    public function sipProfiles(): CrudResource
-    {
-        if ($this->sipProfiles === null) {
-            $this->sipProfiles = new CrudResource($this->client, self::BASE . '/sip_profiles');
-        }
-        return $this->sipProfiles;
-    }
-
-    public function phoneNumbers(): CrudResource
-    {
-        if ($this->phoneNumbers === null) {
-            $this->phoneNumbers = new CrudResource($this->client, self::BASE . '/phone_numbers');
-        }
-        return $this->phoneNumbers;
     }
 
     // ---- Special resources ------------------------------------------

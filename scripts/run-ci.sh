@@ -250,6 +250,35 @@ rest_coverage_gate() {
 run_gate "REST-COVERAGE" "every implemented REST route covered success+error (parity + allowlist)" \
     rest_coverage_gate
 
+# Gate 5c: SPEC-PARITY — the routes the SDK actually IMPLEMENTS must equal the
+# canonical spec route set, modulo porting-sdk/SPEC_IMPLEMENTATION_GAPS.md. This
+# is the spec-first guard REST-COVERAGE can't give: REST-COVERAGE only proves
+# *tested* routes match the spec, so a route the SDK implements that the spec
+# doesn't define (or a canonical route never implemented) slips past it. Set B is
+# built by scripts/route_registry.php — it drives the live RestClient through a
+# recording HttpClient (records (method, path), returns []) and reflects over
+# every namespace/sub-resource public method, invoking each with sentinel args,
+# so it sees every dispatched route whether or not it's tested. The shared
+# porting-sdk diff consumes that JSON via --registry-json.
+spec_parity_gate() {
+    local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
+    export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
+    local registry
+    registry="$(mktemp)"
+    # SIGNALWIRE_LOG_MODE=off so the SDK logger doesn't pollute stdout JSON.
+    SIGNALWIRE_LOG_MODE=off php "$PORT_ROOT/scripts/route_registry.php" >"$registry" 2>/dev/null || {
+        rm -f "$registry"; return 1
+    }
+    "$PYTHON_BIN" "$PORTING_SDK_DIR/scripts/diff_spec_implementation.py" \
+        --registry-json "$registry" \
+        --gaps "$PORTING_SDK_DIR/SPEC_IMPLEMENTATION_GAPS.md"
+    local rc=$?
+    rm -f "$registry"
+    return $rc
+}
+run_gate "SPEC-PARITY" "implemented routes == canonical spec (modulo SPEC_IMPLEMENTATION_GAPS.md)" \
+    spec_parity_gate
+
 # Gate 6: emission — byte-compare the native FunctionResult serialisation against
 # Python's to_dict() across the shared corpus. Pure serialisation: no mock
 # servers, no network. The dump command runs with cwd = the port root.

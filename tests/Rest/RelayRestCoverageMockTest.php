@@ -1486,7 +1486,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function lookupPhoneNumberSuccess(): void
     {
-        $body = $this->client->lookup()->get('+15551230000');
+        $body = $this->client->lookup()->phoneNumber('+15551230000');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('GET', self::LOOKUP . '/+15551230000', 'relay-rest.lookup_phone_number');
         $this->assertSame('GET', $j->method);
@@ -1497,7 +1497,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.lookup_phone_number', 404, ['error' => 'nope']);
         try {
-            $this->client->lookup()->get('+19999999999');
+            $this->client->lookup()->phoneNumber('+19999999999');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());

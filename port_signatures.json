@@ -10699,7 +10699,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "class:signalwire.rest._base.CrudResource"
+              "returns": "class:signalwire.rest.namespaces.lookup.LookupResource"
             },
             "mfa": {
               "params": [
@@ -13656,15 +13656,6 @@
               ],
               "returns": "class:signalwire.rest.namespaces.fabric.CallFlowsResource"
             },
-            "call_queues": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "class:signalwire.rest._base.CrudResource"
-            },
             "conference_rooms": {
               "params": [
                 {
@@ -13673,15 +13664,6 @@
                 }
               ],
               "returns": "class:signalwire.rest.namespaces.fabric.ConferenceRoomsResource"
-            },
-            "conversations": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "class:signalwire.rest._base.CrudResource"
             },
             "cxml_applications": {
               "params": [
@@ -13710,24 +13692,6 @@
               ],
               "returns": "class:signalwire.rest._base.CrudWithAddresses"
             },
-            "dial_plans": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "class:signalwire.rest._base.CrudResource"
-            },
-            "freeclimb_apps": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "class:signalwire.rest._base.CrudResource"
-            },
             "freeswitch_connectors": {
               "params": [
                 {
@@ -13745,15 +13709,6 @@
                 }
               ],
               "returns": "class:signalwire.rest._base.HttpClient"
-            },
-            "phone_numbers": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "class:signalwire.rest._base.CrudResource"
             },
             "relay_applications": {
               "params": [
@@ -13790,15 +13745,6 @@
                 }
               ],
               "returns": "class:signalwire.rest._base.CrudWithAddresses"
-            },
-            "sip_profiles": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "class:signalwire.rest._base.CrudResource"
             },
             "subscribers": {
               "params": [
@@ -14551,6 +14497,48 @@
                 },
                 {
                   "name": "log_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "params",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.rest.namespaces.lookup": {
+      "classes": {
+        "LookupResource": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "http",
+                  "type": "class:signalwire.rest._base.HttpClient",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "phone_number": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "e164",
                   "type": "string",
                   "required": true
                 },
