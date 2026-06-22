@@ -279,6 +279,9 @@ class AgentBase extends Service
      */
     public function promptAddSubsection(string $parentTitle, string $title, string $body): self
     {
+        $this->usePom = true;
+
+        $found = false;
         foreach ($this->pomSections as &$section) {
             if ($section['title'] === $parentTitle) {
                 if (!isset($section['subsections'])) {
@@ -288,10 +291,26 @@ class AgentBase extends Service
                     'title' => $title,
                     'body'  => $body,
                 ];
+                $found = true;
                 break;
             }
         }
         unset($section);
+
+        // Auto-create the parent section when missing (matching the
+        // TypeScript reference, which calls addSection(parentTitle)).
+        if (!$found) {
+            $this->pomSections[] = [
+                'title'       => $parentTitle,
+                'subsections' => [
+                    [
+                        'title' => $title,
+                        'body'  => $body,
+                    ],
+                ],
+            ];
+        }
+
         return $this;
     }
 
@@ -300,6 +319,9 @@ class AgentBase extends Service
      */
     public function promptAddToSection(string $title, ?string $body = null, array $bullets = []): self
     {
+        $this->usePom = true;
+
+        $found = false;
         foreach ($this->pomSections as &$section) {
             if ($section['title'] === $title) {
                 if ($body !== null) {
@@ -311,10 +333,25 @@ class AgentBase extends Service
                     }
                     $section['bullets'] = array_merge($section['bullets'], $bullets);
                 }
+                $found = true;
                 break;
             }
         }
         unset($section);
+
+        // Auto-create the section when missing (matching the TypeScript
+        // reference, which calls addSection(title) before appending).
+        if (!$found) {
+            $section = ['title' => $title];
+            if ($body !== null) {
+                $section['body'] = $body;
+            }
+            if (!empty($bullets)) {
+                $section['bullets'] = $bullets;
+            }
+            $this->pomSections[] = $section;
+        }
+
         return $this;
     }
 
@@ -602,9 +639,17 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * Merge $data into global_data. Despite the name this does NOT replace
+     * the existing object: existing keys are preserved and incoming keys
+     * overwrite only on collision. This mirrors updateGlobalData() and the
+     * TypeScript reference (safeAssign) — skills and other callers each
+     * contribute keys, so a replacing setGlobalData would silently clobber
+     * their contributions.
+     */
     public function setGlobalData(array $data): self
     {
-        $this->globalData = $data;
+        $this->globalData = array_merge($this->globalData, $data);
         return $this;
     }
 
@@ -743,9 +788,37 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * Replace the entire list of function includes.
+     *
+     * Each include must have a truthy ``url`` and an array ``functions``
+     * field; entries missing either are dropped (matching the TypeScript
+     * reference's filter), and each dropped entry is warned so a malformed
+     * include is caught at registration time rather than silently vanishing.
+     */
     public function setFunctionIncludes(array $includes): self
     {
-        $this->functionIncludes = $includes;
+        $valid = [];
+        foreach ($includes as $include) {
+            if (
+                is_array($include)
+                && !empty($include['url'])
+                && isset($include['functions'])
+                && is_array($include['functions'])
+            ) {
+                $valid[] = $include;
+                continue;
+            }
+            $urlLabel = (is_array($include) && isset($include['url']) && is_string($include['url']))
+                ? $include['url']
+                : '(no url)';
+            $this->logger->warn(
+                "invalid_function_include: '{$urlLabel}'. setFunctionIncludes "
+                . 'requires each entry to have a non-empty url and an array '
+                . 'functions field; this entry was dropped.'
+            );
+        }
+        $this->functionIncludes = $valid;
         return $this;
     }
 
@@ -1068,7 +1141,15 @@ class AgentBase extends Service
         if ($this->usePom && !empty($this->pomSections)) {
             $prompt['pom'] = $this->pomSections;
         } else {
-            $prompt['text'] = $this->promptText;
+            $text = $this->promptText;
+            // When contexts are active and no prompt text was set, fall back to
+            // the default prompt (matching the TypeScript reference, which uses
+            // `prompt || \`You are ${this.name}, a helpful AI assistant.\``
+            // in its contexts branch) rather than emitting an empty text.
+            if ($text === '' && $this->contextBuilder !== null) {
+                $text = "You are {$this->name}, a helpful AI assistant.";
+            }
+            $prompt['text'] = $text;
         }
         if (!empty($this->promptLlmParams)) {
             $prompt = array_merge($prompt, $this->promptLlmParams);
