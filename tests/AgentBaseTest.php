@@ -565,9 +565,9 @@ class AgentBaseTest extends TestCase
     public function testSetFunctionIncludes(): void
     {
         $agent = $this->makeAgent();
-        $agent->addFunctionInclude(['url' => 'https://first.com']);
+        $agent->addFunctionInclude(['url' => 'https://first.com', 'functions' => ['x']]);
         $agent->setFunctionIncludes([
-            ['url' => 'https://replaced.com'],
+            ['url' => 'https://replaced.com', 'functions' => ['y']],
         ]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
@@ -1244,6 +1244,175 @@ class AgentBaseTest extends TestCase
         $found = $pom->findSection('Inner');
         $this->assertNotNull($found, 'getPom() must return a usable PromptObjectModel');
         $this->assertSame('ib', $found->body);
+    }
+
+    // ------------------------------------------------------------------
+    // Behavior-parity bundle (#190 / #191 / #185 / #182)
+    // ------------------------------------------------------------------
+
+    // #190 — setGlobalData must MERGE (matching the TS reference, which calls
+    // safeAssign), not replace. Skills and other callers each contribute keys,
+    // so a replacing setGlobalData would silently clobber their contributions.
+    public function testSetGlobalDataMerges(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setGlobalData(['a' => 1]);
+        $agent->setGlobalData(['b' => 2]);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(['a' => 1, 'b' => 2], $ai['global_data']);
+    }
+
+    public function testSetGlobalDataOverwritesOnCollision(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setGlobalData(['k' => 'first', 'keep' => 'x']);
+        $agent->setGlobalData(['k' => 'second']);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(['k' => 'second', 'keep' => 'x'], $ai['global_data']);
+    }
+
+    // #191 — setFunctionIncludes must DROP entries that lack a truthy url or an
+    // array functions field (matching the TS reference's filter), and warn for
+    // each dropped entry so the typo is caught at registration time.
+    public function testSetFunctionIncludesDropsInvalidEntries(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setFunctionIncludes([
+            ['url' => 'https://valid.com', 'functions' => ['a']],
+            ['url' => 'https://no-functions.com'],          // missing functions -> drop
+            ['functions' => ['b']],                          // missing url -> drop
+            ['url' => 'https://bad-functions.com', 'functions' => 'notarray'], // functions not array -> drop
+        ]);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertCount(1, $ai['SWAIG']['includes']);
+        $this->assertSame('https://valid.com', $ai['SWAIG']['includes'][0]['url']);
+    }
+
+    public function testSetFunctionIncludesKeepsAllValidEntries(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setFunctionIncludes([
+            ['url' => 'https://a.com', 'functions' => ['a']],
+            ['url' => 'https://b.com', 'functions' => []],
+        ]);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertCount(2, $ai['SWAIG']['includes']);
+    }
+
+    public function testSetFunctionIncludesWarnsPerDroppedEntry(): void
+    {
+        // The Logger writes to stderr, which cannot be intercepted from inside
+        // the PHPUnit process — spawn a child PHP process to inspect what
+        // setFunctionIncludes() logged (same pattern as LoggerTest).
+        $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+        $script = <<<PHP
+            <?php
+            require '{$autoload}';
+            \$agent = new \\SignalWire\\Agent\\AgentBase(
+                name: 'child',
+                basicAuthUser: 'u',
+                basicAuthPassword: 'p',
+            );
+            \$agent->setFunctionIncludes([
+                ['url' => 'https://valid.com', 'functions' => ['a']],
+                ['url' => 'https://no-functions.com'],
+                ['functions' => ['b']],
+            ]);
+            PHP;
+        $tmp = \tempnam(\sys_get_temp_dir(), 'sw_fi_test_') . '.php';
+        \file_put_contents($tmp, $script);
+        try {
+            $cmd = \escapeshellcmd(PHP_BINARY) . ' ' . \escapeshellarg($tmp);
+            $descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+            $proc = \proc_open($cmd, $descriptors, $pipes, dirname(__DIR__));
+            $this->assertIsResource($proc);
+            \fclose($pipes[0]);
+            $stdout = \stream_get_contents($pipes[1]);
+            $stderr = \stream_get_contents($pipes[2]);
+            \fclose($pipes[1]);
+            \fclose($pipes[2]);
+            \proc_close($proc);
+
+            // Two invalid entries -> two WARN lines, naming the dropped url.
+            $this->assertSame(2, \substr_count($stderr, 'invalid_function_include'), 'stderr was: ' . $stderr);
+            $this->assertStringContainsString('https://no-functions.com', $stderr);
+            $this->assertSame('', $stdout, 'Logger leaked into stdout');
+        } finally {
+            @\unlink($tmp);
+        }
+    }
+
+    // #185 — when contexts are active and the prompt text is empty, the AI verb
+    // must fall back to the default prompt (matching the TS reference's exact
+    // string), never an empty text.
+    public function testEmptyPromptWithContextsFallsBack(): void
+    {
+        $agent = $this->makeAgent(['use_pom' => false, 'name' => 'Aria']);
+        $agent->defineContexts()
+            ->addContext('default')
+            ->addStep('start')
+            ->setText('Begin.');
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame('You are Aria, a helpful AI assistant.', $ai['prompt']['text']);
+    }
+
+    public function testEmptyPromptWithoutContextsStaysEmpty(): void
+    {
+        // Without contexts the TS reference emits the prompt text as-is (no
+        // fallback), so an unset prompt remains an empty string.
+        $agent = $this->makeAgent(['use_pom' => false]);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame('', $ai['prompt']['text']);
+    }
+
+    public function testNonEmptyPromptWithContextsIsUnchanged(): void
+    {
+        $agent = $this->makeAgent(['use_pom' => false, 'name' => 'Aria']);
+        $agent->setPromptText('Custom prompt.');
+        $agent->defineContexts()
+            ->addContext('default')
+            ->addStep('start')
+            ->setText('Begin.');
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame('Custom prompt.', $ai['prompt']['text']);
+    }
+
+    // #182 — promptAddToSection / promptAddSubsection must AUTO-CREATE the
+    // (parent) section when it is missing, matching the TS reference, instead
+    // of silently no-op'ing.
+    public function testPromptAddToSectionAutoCreatesMissingSection(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->promptAddToSection('Rules', 'Body text.', ['bullet one']);
+
+        $prompt = $agent->getPrompt();
+        $this->assertIsArray($prompt);
+        $this->assertCount(1, $prompt);
+        $this->assertSame('Rules', $prompt[0]['title']);
+        $this->assertSame('Body text.', $prompt[0]['body']);
+        $this->assertSame(['bullet one'], $prompt[0]['bullets']);
+    }
+
+    public function testPromptAddSubsectionAutoCreatesMissingParent(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->promptAddSubsection('Main', 'Detail', 'Detail body.');
+
+        $prompt = $agent->getPrompt();
+        $this->assertIsArray($prompt);
+        $this->assertCount(1, $prompt);
+        $this->assertSame('Main', $prompt[0]['title']);
+        $this->assertArrayHasKey('subsections', $prompt[0]);
+        $this->assertCount(1, $prompt[0]['subsections']);
+        $this->assertSame('Detail', $prompt[0]['subsections'][0]['title']);
+        $this->assertSame('Detail body.', $prompt[0]['subsections'][0]['body']);
     }
 
     // ------------------------------------------------------------------
