@@ -413,22 +413,16 @@ signalwire.rest.namespaces.fabric.FabricAddresses.get_base_path: PHP-idiom-gette
 signalwire.rest.namespaces.fabric.FabricNamespace.addresses: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.ai_agents: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.call_flows: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
-signalwire.rest.namespaces.fabric.FabricNamespace.call_queues: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.conference_rooms: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
-signalwire.rest.namespaces.fabric.FabricNamespace.conversations: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.cxml_applications: PHP-namespace-accessor: explicit 'cxml_applications()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.cxml_scripts: PHP-namespace-accessor: explicit 'cxml_scripts()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.cxml_webhooks: PHP-namespace-accessor: explicit 'cxml_webhooks()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
-signalwire.rest.namespaces.fabric.FabricNamespace.dial_plans: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
-signalwire.rest.namespaces.fabric.FabricNamespace.freeclimb_apps: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.freeswitch_connectors: PHP-namespace-accessor: explicit 'freeswitch_connectors()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.get_client: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
-signalwire.rest.namespaces.fabric.FabricNamespace.phone_numbers: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.relay_applications: PHP-namespace-accessor: explicit 'relay_applications()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.resources: PHP-namespace-accessor: explicit 'resources()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
 signalwire.rest.namespaces.fabric.FabricNamespace.sip_endpoints: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.sip_gateways: PHP-namespace-accessor: explicit 'sip_gateways()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access
-signalwire.rest.namespaces.fabric.FabricNamespace.sip_profiles: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.subscribers: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.swml_scripts: PHP exposes a single FabricNamespace class with sub-resource accessors; Python splits into per-resource classes.
 signalwire.rest.namespaces.fabric.FabricNamespace.swml_webhooks: PHP-namespace-accessor: explicit 'swml_webhooks()' method on FabricNamespace returning the corresponding sub-resource; Python uses snake_case attribute access

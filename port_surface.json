@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 18d8ffe52f288c8b68da9de608bf0076827171cf",
+  "generated_from": "signalwire-php @ cc535eb6a93671ef725c7aaddac9fdfa26353fc4",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1261,22 +1261,16 @@
           "addresses",
           "ai_agents",
           "call_flows",
-          "call_queues",
           "conference_rooms",
-          "conversations",
           "cxml_applications",
           "cxml_scripts",
           "cxml_webhooks",
-          "dial_plans",
-          "freeclimb_apps",
           "freeswitch_connectors",
           "get_client",
-          "phone_numbers",
           "relay_applications",
           "resources",
           "sip_endpoints",
           "sip_gateways",
-          "sip_profiles",
           "subscribers",
           "swml_scripts",
           "swml_webhooks",
@@ -1354,6 +1348,15 @@
           "get_base_path",
           "list",
           "list_events"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.rest.namespaces.lookup": {
+      "classes": {
+        "LookupResource": [
+          "__init__",
+          "phone_number"
         ]
       },
       "functions": []

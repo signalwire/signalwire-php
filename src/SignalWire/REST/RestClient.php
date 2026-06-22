@@ -12,6 +12,7 @@ use SignalWire\REST\Namespaces\Datasphere;
 use SignalWire\REST\Namespaces\Fabric;
 use SignalWire\REST\Namespaces\ImportedNumbers;
 use SignalWire\REST\Namespaces\Logs;
+use SignalWire\REST\Namespaces\LookupResource;
 use SignalWire\REST\Namespaces\Mfa;
 use SignalWire\REST\Namespaces\NumberGroups;
 use SignalWire\REST\Namespaces\PhoneNumbersResource;
@@ -55,7 +56,7 @@ class RestClient
     private ?NumberGroups $numberGroups = null;
     private ?VerifiedCallersResource $verifiedCallers = null;
     private ?SipProfile $sipProfile = null;
-    private ?CrudResource $lookup = null;
+    private ?LookupResource $lookup = null;
     private ?ShortCodes $shortCodes = null;
     private ?ImportedNumbers $importedNumbers = null;
     private ?Mfa $mfa = null;
@@ -254,11 +255,11 @@ class RestClient
         return $this->sipProfile;
     }
 
-    /** Phone number lookup. */
-    public function lookup(): CrudResource
+    /** Phone number lookup (single lookup operation; mirrors Python's LookupResource). */
+    public function lookup(): LookupResource
     {
         if ($this->lookup === null) {
-            $this->lookup = new CrudResource($this->http, '/api/relay/rest/lookup/phone_number');
+            $this->lookup = new LookupResource($this->http);
         }
         return $this->lookup;
     }

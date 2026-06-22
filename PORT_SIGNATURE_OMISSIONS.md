@@ -297,6 +297,7 @@ signalwire.rest.namespaces.logs.FaxLogs.list: PHP-idiom-kwargs: PHP has no **kwa
 signalwire.rest.namespaces.logs.MessageLogs.list: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument
 signalwire.rest.namespaces.logs.VoiceLogs.list: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument
 signalwire.rest.namespaces.logs.VoiceLogs.list_events: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument
+signalwire.rest.namespaces.lookup.LookupResource.phone_number: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument
 signalwire.rest.namespaces.mfa.MfaResource.call: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument
 signalwire.rest.namespaces.mfa.MfaResource.sms: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument
 signalwire.rest.namespaces.mfa.MfaResource.verify: PHP-idiom-kwargs: PHP has no **kwargs syntax — Python's variadic kwargs translate to PHP's 'array $params' / 'array $kwargs' positional argument

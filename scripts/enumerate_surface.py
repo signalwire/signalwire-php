@@ -205,6 +205,7 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "AddressesResource": "signalwire.rest.namespaces.addresses",
     "Recordings": "signalwire.rest.namespaces.recordings",
     "RecordingsResource": "signalwire.rest.namespaces.recordings",
+    "LookupResource": "signalwire.rest.namespaces.lookup",
 
     # Fabric helper classes — all collapse onto signalwire.rest.namespaces.fabric
     "FabricSubscribers": "signalwire.rest.namespaces.fabric",

@@ -297,7 +297,7 @@ class RestClientTest extends TestCase
         $this->assertSame('/api/relay/rest/number_groups', $client->numberGroups()->getBasePath());
         $this->assertSame('/api/relay/rest/verified_caller_ids', $client->verifiedCallers()->getBasePath());
         $this->assertSame('/api/relay/rest/sip_profile', $client->sipProfile()->getBasePath());
-        $this->assertSame('/api/relay/rest/lookup/phone_number', $client->lookup()->getBasePath());
+        $this->assertSame('/api/relay/rest/lookup', $client->lookup()->getBasePath());
         $this->assertSame('/api/relay/rest/short_codes', $client->shortCodes()->getBasePath());
         $this->assertSame('/api/relay/rest/imported_phone_numbers', $client->importedNumbers()->getBasePath());
         $this->assertSame('/api/relay/rest/mfa', $client->mfa()->getBasePath());
@@ -351,14 +351,8 @@ class RestClientTest extends TestCase
         $this->assertInstanceOf(CrudResource::class, $fabric->sipEndpoints());
         $this->assertInstanceOf(CrudResource::class, $fabric->callFlows());
         $this->assertInstanceOf(CrudResource::class, $fabric->swmlScripts());
-        $this->assertInstanceOf(CrudResource::class, $fabric->conversations());
         $this->assertInstanceOf(CrudResource::class, $fabric->conferenceRooms());
-        $this->assertInstanceOf(CrudResource::class, $fabric->dialPlans());
-        $this->assertInstanceOf(CrudResource::class, $fabric->freeclimbApps());
-        $this->assertInstanceOf(CrudResource::class, $fabric->callQueues());
         $this->assertInstanceOf(CrudResource::class, $fabric->aiAgents());
-        $this->assertInstanceOf(CrudResource::class, $fabric->sipProfiles());
-        $this->assertInstanceOf(CrudResource::class, $fabric->phoneNumbers());
 
         // The special resources have their own classes (read-only fabric
         // addresses, generic resources, token endpoints).
@@ -380,14 +374,8 @@ class RestClientTest extends TestCase
         $this->assertSame('/api/fabric/addresses', $fabric->addresses()->getBasePath());
         $this->assertSame('/api/fabric/resources/call_flows', $fabric->callFlows()->getBasePath());
         $this->assertSame('/api/fabric/resources/swml_scripts', $fabric->swmlScripts()->getBasePath());
-        $this->assertSame('/api/fabric/resources/conversations', $fabric->conversations()->getBasePath());
         $this->assertSame('/api/fabric/resources/conference_rooms', $fabric->conferenceRooms()->getBasePath());
-        $this->assertSame('/api/fabric/resources/dial_plans', $fabric->dialPlans()->getBasePath());
-        $this->assertSame('/api/fabric/resources/freeclimb_apps', $fabric->freeclimbApps()->getBasePath());
-        $this->assertSame('/api/fabric/resources/call_queues', $fabric->callQueues()->getBasePath());
         $this->assertSame('/api/fabric/resources/ai_agents', $fabric->aiAgents()->getBasePath());
-        $this->assertSame('/api/fabric/resources/sip_profiles', $fabric->sipProfiles()->getBasePath());
-        $this->assertSame('/api/fabric/resources/phone_numbers', $fabric->phoneNumbers()->getBasePath());
         // Generic resources collection.
         $this->assertSame('/api/fabric/resources', $fabric->resources()->getBasePath());
         // Tokens namespace (sits under /api/fabric, not /api/fabric/resources).
