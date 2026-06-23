@@ -8,45 +8,47 @@ The RELAY client supports SMS and MMS messaging. You can send outbound messages,
 
 ### Basic SMS
 
+`sendMessage()` takes a single params array and returns a `Message` tracking
+object.
+
 ```php
 <?php
 require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
 
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:    $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:     $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 
-$client->connectWs() or die("Connection failed\n");
-$client->authenticate();
+$client->connect();
 
-$result = $client->sendMessage(
-    from:    '+15559876543',
-    to:      '+15551234567',
-    context: 'default',
-    body:    'Hello from SignalWire PHP!',
-);
+$message = $client->sendMessage([
+    'from_number' => '+15559876543',
+    'to_number'   => '+15551234567',
+    'context'     => 'default',
+    'body'        => 'Hello from SignalWire PHP!',
+]);
 
-echo "Message ID: " . $result->messageId() . "\n";
-echo "State: " . $result->state() . "\n";
+echo "Message ID: " . $message->getMessageId() . "\n";
+echo "State: "      . $message->getState()     . "\n";
 
-$client->disconnectWs();
+$client->disconnect();
 ```
 
 ### MMS with Media
 
 ```php
-$result = $client->sendMessage(
-    from:    '+15559876543',
-    to:      '+15551234567',
-    context: 'default',
-    body:    'Check out this photo!',
-    media:   ['https://example.com/photo.jpg'],
-);
+$message = $client->sendMessage([
+    'from_number' => '+15559876543',
+    'to_number'   => '+15551234567',
+    'context'     => 'default',
+    'body'        => 'Check out this photo!',
+    'media'       => ['https://example.com/photo.jpg'],
+]);
 ```
 
 ## Receiving Messages
@@ -55,20 +57,18 @@ Register a message handler to process inbound SMS/MMS:
 
 ```php
 $client->onMessage(function ($message) {
-    echo "From: " . $message->from() . "\n";
-    echo "To: " . $message->to() . "\n";
-    echo "Body: " . $message->body() . "\n";
-    echo "State: " . $message->state() . "\n";
+    echo "From: " . $message->getFromNumber() . "\n";
+    echo "To: "   . $message->getToNumber()   . "\n";
+    echo "Body: " . $message->getBody()       . "\n";
+    echo "State: ". $message->getState()      . "\n";
 
     // Access media attachments
-    $media = $message->media();
-    foreach ($media as $url) {
+    foreach ($message->getMedia() as $url) {
         echo "Media: {$url}\n";
     }
 });
 
-$client->connectWs() or die("Connection failed\n");
-$client->authenticate();
+$client->connect();
 echo "Waiting for inbound messages...\n";
 $client->run();
 ```
@@ -79,14 +79,15 @@ $client->run();
 
 | Method | Description |
 |--------|-------------|
-| `$msg->messageId()` | Unique message identifier |
-| `$msg->from()` | Sender number |
-| `$msg->to()` | Recipient number |
-| `$msg->body()` | Message text |
-| `$msg->media()` | Array of media URLs |
-| `$msg->state()` | Current delivery state |
-| `$msg->direction()` | `inbound` or `outbound` |
-| `$msg->context()` | Context the message was received on |
+| `$msg->getMessageId()` | Unique message identifier |
+| `$msg->getFromNumber()` | Sender number |
+| `$msg->getToNumber()` | Recipient number |
+| `$msg->getBody()` | Message text |
+| `$msg->getMedia()` | Array of media URLs |
+| `$msg->getState()` | Current delivery state |
+| `$msg->getDirection()` | `inbound` or `outbound` |
+| `$msg->getContext()` | Context the message was received on |
+| `$msg->getTags()` | Message tags |
 
 ## Delivery States
 
@@ -94,7 +95,6 @@ $client->run();
 |-------|-------------|
 | `received` | Inbound message received |
 | `queued` | Outbound message queued for delivery |
-| `initiated` | Outbound message initiated |
 | `sent` | Outbound message sent to carrier |
 | `delivered` | Outbound message confirmed delivered |
 | `undelivered` | Outbound message could not be delivered |
@@ -105,14 +105,14 @@ $client->run();
 Outbound messages progress through states. The `sendMessage()` result reflects the initial state:
 
 ```php
-$result = $client->sendMessage(
-    from:    '+15559876543',
-    to:      '+15551234567',
-    context: 'default',
-    body:    'Order confirmed.',
-);
+$message = $client->sendMessage([
+    'from_number' => '+15559876543',
+    'to_number'   => '+15551234567',
+    'context'     => 'default',
+    'body'        => 'Order confirmed.',
+]);
 
-echo "Initial state: " . $result->state() . "\n";
+echo "Initial state: " . $message->getState() . "\n";
 // Typically "queued" immediately after send
 ```
 
@@ -121,11 +121,11 @@ echo "Initial state: " . $result->state() . "\n";
 Messages are routed to your handler based on context, similar to calls:
 
 ```php
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:    $_ENV['SIGNALWIRE_API_TOKEN'],
-    contexts: ['default', 'notifications'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'contexts' => ['default', 'notifications'],
+]);
 ```
 
 ## Best Practices

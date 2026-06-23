@@ -103,14 +103,14 @@ The REST client (`SignalWire\REST\RestClient`) provides synchronous HTTP access 
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'],
+    $_ENV['SIGNALWIRE_PROJECT_ID'],
+    $_ENV['SIGNALWIRE_API_TOKEN'],
+    $_ENV['SIGNALWIRE_SPACE'],
 );
 
-$client->fabric->aiAgents->create(name: 'Bot', prompt: ['text' => 'You are helpful.']);
-$client->phoneNumbers->search(areaCode: '512');
-$client->calling->dial(from: '+15559876543', to: '+15551234567', url: 'https://example.com/handler');
+$client->fabric()->aiAgents()->create(['name' => 'Bot', 'prompt' => ['text' => 'You are helpful.']]);
+$client->phoneNumbers()->search(['area_code' => '512']);
+$client->calling()->dial(['from' => '+15559876543', 'to' => '+15551234567', 'url' => 'https://example.com/handler']);
 ```
 
 ## RELAY Client
@@ -120,19 +120,20 @@ The RELAY client (`SignalWire\Relay\Client`) provides real-time call control ove
 ```php
 use SignalWire\Relay\Client;
 
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:    $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:     $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 
 $client->onCall(function ($call) {
     $call->answer();
-    $call->play(media: [['type' => 'tts', 'params' => ['text' => 'Hello!']]]);
+    $call->play([['type' => 'tts', 'params' => ['text' => 'Hello!']]]);
     $call->hangup();
 });
 
+$client->connect();
 $client->run();
 ```
 

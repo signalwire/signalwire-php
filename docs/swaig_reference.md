@@ -164,7 +164,7 @@ $result = (new FunctionResult('Transferring you to billing.'))
 ### Low-Level
 
 ```php
-$result->addAction('custom_action', ['param' => 'value']);
+$result->addAction(['custom_action' => ['param' => 'value']]);
 $result->addActions([['say' => 'Hello'], ['hold' => 300]]);
 $resultArray = $result->toArray();
 ```

@@ -118,7 +118,7 @@ $agent->defineTool(
     handler: function (array $args, array $rawData): FunctionResult {
         $location = $args['location'] ?? 'Unknown';
         $result = new FunctionResult("It's sunny and 72F in {$location}.");
-        $result->addAction('set_global_data', ['weather_location' => $location]);
+        $result->updateGlobalData(['weather_location' => $location]);
         return $result;
     },
 );
