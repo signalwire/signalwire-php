@@ -18,6 +18,9 @@ export SIGNALWIRE_SPACE=example.signalwire.com
 
 ## Creating the Client
 
+The `RestClient` constructor takes positional `projectId`, `token`, and `space`
+arguments (each falls back to the matching environment variable when empty).
+
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -25,23 +28,26 @@ require 'vendor/autoload.php';
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:   $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:    $_ENV['SIGNALWIRE_SPACE']      ?? die("Set SIGNALWIRE_SPACE\n"),
+    $_ENV['SIGNALWIRE_PROJECT_ID'] ?? '',
+    $_ENV['SIGNALWIRE_API_TOKEN']  ?? '',
+    $_ENV['SIGNALWIRE_SPACE']      ?? '',
 );
 ```
 
 ## First API Call
 
+Namespaces are accessed via method calls (`$client->phoneNumbers()`), and
+`create`/`search`/`update` take a single associative array.
+
 ```php
 // List phone numbers
-$numbers = $client->phoneNumbers->list();
+$numbers = $client->phoneNumbers()->list();
 foreach (($numbers['data'] ?? []) as $num) {
     echo "- " . ($num['number'] ?? 'unknown') . "\n";
 }
 
 // Search available numbers
-$available = $client->phoneNumbers->search(areaCode: '512', maxResults: 3);
+$available = $client->phoneNumbers()->search(['area_code' => '512', 'max_results' => 3]);
 foreach (($available['data'] ?? []) as $num) {
     echo "- " . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
 }
@@ -55,10 +61,10 @@ All REST methods throw `SignalWireRestError` on failure:
 use SignalWire\REST\SignalWireRestError;
 
 try {
-    $agent = $client->fabric->aiAgents->create(
-        name:   'Test Bot',
-        prompt: ['text' => 'You are helpful.'],
-    );
+    $agent = $client->fabric()->aiAgents()->create([
+        'name'   => 'Test Bot',
+        'prompt' => ['text' => 'You are helpful.'],
+    ]);
     echo "Created agent: " . $agent['id'] . "\n";
 } catch (SignalWireRestError $e) {
     echo "API error: " . $e->getMessage() . "\n";
@@ -82,8 +88,8 @@ function safe(string $label, callable $fn): mixed
     }
 }
 
-safe('List agents', fn() => $client->fabric->aiAgents->list());
-safe('List numbers', fn() => $client->phoneNumbers->list());
+safe('List agents', fn() => $client->fabric()->aiAgents()->list());
+safe('List numbers', fn() => $client->phoneNumbers()->list());
 ```
 
 ## Next Steps

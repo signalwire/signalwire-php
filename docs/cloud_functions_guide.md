@@ -27,6 +27,7 @@ The agent automatically detects Google Cloud Functions environment using these v
 require 'vendor/autoload.php';
 
 use SignalWire\Agent\AgentBase;
+use SignalWire\Serverless\Adapter;
 
 // Create agent instance
 $agent = new AgentBase(
@@ -36,9 +37,14 @@ $agent = new AgentBase(
 
 $agent->promptAddSection('Role', 'You are a helpful assistant running in Google Cloud Functions.');
 
-// Handle the serverless request
-return $agent->handleServerlessRequest($_SERVER, file_get_contents('php://input'));
+// Handle the request. Adapter::handleGcf() reads the request from the PHP
+// superglobals, calls $agent->handleRequest(), and emits the response.
+Adapter::handleGcf($agent);
 ```
+
+> `Adapter::serve($agent)` auto-detects the execution mode (`gcf`, `azure`,
+> `lambda`, `cgi`, or `server`) and dispatches to the right handler, so a single
+> entry point can run unchanged across platforms.
 
 2. **Create `composer.json`**:
 ```json
@@ -65,11 +71,11 @@ Set these environment variables for your function:
 ```bash
 # SignalWire credentials
 export SIGNALWIRE_PROJECT_ID="your-project-id"
-export SIGNALWIRE_TOKEN="your-token"
+export SIGNALWIRE_API_TOKEN="your-token"
 
-# Agent configuration
-export AGENT_USERNAME="your-username"
-export AGENT_PASSWORD="your-password"
+# Agent HTTP Basic Auth
+export SWML_BASIC_AUTH_USER="your-username"
+export SWML_BASIC_AUTH_PASSWORD="your-password"
 
 # Optional: Custom region/project settings
 export FUNCTION_REGION="us-central1"
@@ -115,13 +121,15 @@ my-agent-function/
 require __DIR__ . '/../vendor/autoload.php';
 
 use SignalWire\Agent\AgentBase;
+use SignalWire\Serverless\Adapter;
 
 $agent = new AgentBase(
     name: 'my-agent',
 );
 
-// Handle the Azure Functions request
-return $agent->handleServerlessRequest($_SERVER, file_get_contents('php://input'));
+// $request is the Azure Functions HTTP request array (method, url, headers, body).
+// handleAzure() returns an Azure-compatible {status, headers, body} response.
+return Adapter::handleAzure($agent, $request);
 ```
 
 3. **Create `agent/function.json`**:
@@ -165,9 +173,9 @@ Set these in your Azure Function App settings:
 
 ```bash
 SIGNALWIRE_PROJECT_ID="your-project-id"
-SIGNALWIRE_TOKEN="your-token"
-AGENT_USERNAME="your-username"
-AGENT_PASSWORD="your-password"
+SIGNALWIRE_API_TOKEN="your-token"
+SWML_BASIC_AUTH_USER="your-username"
+SWML_BASIC_AUTH_PASSWORD="your-password"
 ```
 
 ### URL Format
@@ -184,9 +192,9 @@ Both platforms support HTTP Basic Authentication:
 ### Automatic Authentication
 ```php
 $agent = new AgentBase(
-    name:     'my-agent',
-    username: 'your-username',
-    password: 'your-password',
+    name:              'my-agent',
+    basicAuthUser:     'your-username',
+    basicAuthPassword: 'your-password',
 );
 ```
 

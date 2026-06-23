@@ -10,12 +10,14 @@ The RELAY client dispatches typed events for call state changes, media events, a
 
 ```php
 $client->onCall(function ($call) {
-    echo "New call: " . $call->callId() . "\n";
+    echo "New call: " . $call->callId . "\n";
     // Handle the call...
 });
 ```
 
 ### Call State Events
+
+The current state is the public `$call->state` property.
 
 | State | Description |
 |-------|-------------|
@@ -32,7 +34,7 @@ $client->onCall(function ($call) use ($client) {
     $call->answer();
 
     // Play audio
-    $action = $call->play(media: [
+    $action = $call->play([
         ['type' => 'tts', 'params' => ['text' => 'Hello!']],
     ]);
     $action->wait();
@@ -40,7 +42,7 @@ $client->onCall(function ($call) use ($client) {
     $call->hangup();
 
     // Wait for ended state
-    while ($call->state() !== 'ended') {
+    while ($call->state !== 'ended') {
         $client->readOnce();
     }
     echo "Call fully ended.\n";
@@ -53,21 +55,24 @@ $client->onCall(function ($call) use ($client) {
 
 | Method | Description |
 |--------|-------------|
-| `$event->type()` | Event type string |
-| `$event->params()` | Event parameters as array |
-| `$event->callId()` | Call ID associated with event |
+| `$event->getEventType()` | Event type string |
+| `$event->getParams()` | Event parameters as array |
+| `$event->getCallId()` | Call ID associated with event |
+| `$event->getControlId()` | Control ID of the originating action |
+| `$event->getState()` | State carried by the event (if any) |
 
 ## Action Events
 
-Actions from `play()`, `record()`, `playAndCollect()`, etc. produce completion events:
+Actions from `play()`, `record()`, `playAndCollect()`, etc. produce completion
+events. `$action->wait()` returns the completion `Event` (or `null` on timeout).
 
 ```php
-$action = $call->play(media: [
+$action = $call->play([
     ['type' => 'tts', 'params' => ['text' => 'Testing']],
 ]);
 
 $event = $action->wait();
-$resultType = $event->params()['result']['type'] ?? '';
+$resultType = $event->getParams()['result']['type'] ?? '';
 echo "Play result: {$resultType}\n";
 ```
 
@@ -75,12 +80,11 @@ echo "Play result: {$resultType}\n";
 
 ```php
 $action = $call->playAndCollect(
-    media: [['type' => 'tts', 'params' => ['text' => 'Enter your PIN.']]],
-    collect: ['digits' => ['max' => 4, 'digit_timeout' => 5.0]],
+    [['type' => 'tts', 'params' => ['text' => 'Enter your PIN.']]],
+    ['digits' => ['max' => 4, 'digit_timeout' => 5.0]],
 );
 
-$event = $action->wait();
-$result = $event->params()['result'] ?? [];
+$result = $action->getCollectResult() ?? [];
 $type   = $result['type'] ?? '';
 $digits = ($result['params'] ?? [])['digits'] ?? '';
 echo "Collected: type={$type} digits={$digits}\n";
@@ -89,18 +93,18 @@ echo "Collected: type={$type} digits={$digits}\n";
 ### Record Events
 
 ```php
-$action = $call->record(beep: true, format: 'mp3');
-$event = $action->wait();
-$url = $action->url();
+$action = $call->record(['beep' => true, 'format' => 'mp3']);
+$action->wait();
+$url = $action->getUrl();
 echo "Recording saved at: {$url}\n";
 ```
 
 ### Detect Events
 
 ```php
-$action = $call->detect(type: 'machine', timeout: 30);
-$event = $action->wait();
-$detected = $event->params()['detect']['type'] ?? '';
+$action = $call->detect(['type' => 'machine'], ['timeout' => 30]);
+$action->wait();
+$detected = $action->getDetectResult()['type'] ?? '';
 echo "Detected: {$detected}\n";
 ```
 
@@ -110,9 +114,9 @@ For inbound messaging:
 
 ```php
 $client->onMessage(function ($message) {
-    echo "From: " . $message->from() . "\n";
-    echo "Body: " . $message->body() . "\n";
-    echo "State: " . $message->state() . "\n";
+    echo "From: " . $message->getFromNumber() . "\n";
+    echo "Body: " . $message->getBody()       . "\n";
+    echo "State: ". $message->getState()      . "\n";
 });
 ```
 
@@ -122,37 +126,32 @@ $client->onMessage(function ($message) {
 |-------|-------------|
 | `received` | Inbound message received |
 | `queued` | Outbound message queued |
-| `initiated` | Outbound message initiated |
 | `sent` | Outbound message sent |
 | `delivered` | Outbound message delivered |
-| `undelivered` | Outbound message failed |
+| `undelivered` | Outbound message could not be delivered |
 | `failed` | Message failed |
 
 ## Event Constants
 
-Event type constants are defined in `SignalWire\Relay\Constants`:
+Call and message state constants are defined in `SignalWire\Relay\Constants`:
 
 ```php
 use SignalWire\Relay\Constants;
 
-// Constants::CALL_STATE_ANSWERED
-// Constants::CALL_STATE_ENDED
-// Constants::EVENT_CALL_RECEIVED
-// Constants::EVENT_MESSAGE_RECEIVED
+// Constants::CALL_STATE_ANSWERED    === 'answered'
+// Constants::CALL_STATE_ENDED       === 'ended'
+// Constants::MESSAGE_STATE_RECEIVED === 'received'
+// Constants::MESSAGE_STATE_DELIVERED === 'delivered'
 ```
 
 ## Error Events
 
-Connection and protocol errors are logged and trigger reconnection:
-
-```php
-// Set debug logging to see all events
-// export SIGNALWIRE_LOG_LEVEL=debug
-```
+Connection and protocol errors are logged and trigger reconnection. Set
+`SIGNALWIRE_LOG_LEVEL=debug` to see all WebSocket traffic.
 
 ## Best Practices
 
-1. Always check `$call->state()` before performing operations
+1. Always check `$call->state` before performing operations
 2. Use `$action->wait()` to synchronize with async operations
 3. Handle the `ended` state to clean up resources
 4. Register message handlers before calling `$client->run()`

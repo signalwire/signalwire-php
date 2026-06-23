@@ -86,7 +86,7 @@ vendor/bin/swaig-test examples/simple_agent.php --exec get_time
 - **SIP routing** -- route SIP calls to agents based on usernames
 - **Session state** -- persistent conversation state with global data and post-prompt summaries
 - **Security** -- auto-generated basic auth, function-specific HMAC tokens, SSL support
-- **Serverless** -- native PHP/CGI support, plus Lambda and Cloud Functions adapters
+- **Serverless** -- auto-detects CGI/FastCGI, AWS Lambda, Google Cloud Functions, and Azure Functions
 
 ### Agent Examples
 
@@ -117,12 +117,12 @@ require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
 
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:    $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:     $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 
 $client->onCall(function ($call) {
     $call->answer();
@@ -133,8 +133,7 @@ $client->onCall(function ($call) {
     $call->hangup();
 });
 
-$client->connectWs();
-$client->authenticate();
+$client->connect();  // opens the WebSocket and authenticates
 $client->run();
 ```
 
@@ -158,18 +157,18 @@ require 'vendor/autoload.php';
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'],
+    projectId: $_ENV['SIGNALWIRE_PROJECT_ID'],
+    token:     $_ENV['SIGNALWIRE_API_TOKEN'],
+    space:     $_ENV['SIGNALWIRE_SPACE'],
 );
 
-$client->fabric->aiAgents->create(name: 'Support Bot', prompt: ['text' => 'You are helpful.']);
-$client->calling->play($callId, play: [['type' => 'tts', 'text' => 'Hello!']]);
-$client->phoneNumbers->search(areaCode: '512');
-$client->datasphere->documents->search(queryString: 'billing policy');
+$client->fabric()->aiAgents()->create(['name' => 'Support Bot', 'prompt' => ['text' => 'You are helpful.']]);
+$client->calling()->play($callId, params: ['play' => [['type' => 'tts', 'text' => 'Hello!']]]);
+$client->phoneNumbers()->search(['areaCode' => '512']);
+$client->datasphere()->documents()->search(['queryString' => 'billing policy']);
 ```
 
-- 21 namespaced API surfaces: Fabric (13 resource types), Calling (37 commands), Video, Datasphere, Compat (Twilio-compatible), Phone Numbers, SIP, Queues, Recordings, and more
+- 21 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Compat (Twilio-compatible), Phone Numbers, SIP, Queues, Recordings, and more
 - Lightweight HTTP via cURL with connection reuse
 - Array returns -- raw data, no wrapper objects
 
@@ -183,7 +182,7 @@ See the **[REST documentation](rest/README.md)** for the full guide, API referen
 composer require signalwire/sdk
 ```
 
-Requires PHP 8.1+ with the `json`, `openssl`, and `mbstring` extensions.
+Requires PHP 8.2+ with the `json`, `mbstring`, and `openssl` extensions.
 
 ## Documentation
 
@@ -209,16 +208,19 @@ Guides are also available in the [`docs/`](docs/) directory:
 
 - [Skills System](docs/skills_system.md) -- built-in skills and the modular framework
 - [Third-Party Skills](docs/third_party_skills.md) -- creating and publishing custom skills
+- [MCP Gateway](docs/mcp_gateway_reference.md) -- Model Context Protocol integration
 
 ### Deployment
 
 - [CLI Guide](docs/cli_guide.md) -- `swaig-test` command reference
+- [Cloud Functions](docs/cloud_functions_guide.md) -- Lambda, Google Cloud Functions, Azure deployment
 - [Configuration](docs/configuration.md) -- environment variables, SSL, proxy setup
 - [Security](docs/security.md) -- authentication and security model
 
 ### Reference
 
 - [API Reference](docs/api_reference.md) -- complete class and method reference
+- [Web Service](docs/web_service.md) -- HTTP server and endpoint details
 - [Skills Parameter Schema](docs/skills_parameter_schema.md) -- skill parameter definitions
 
 ## Environment Variables

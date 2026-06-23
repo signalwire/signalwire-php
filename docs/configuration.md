@@ -104,20 +104,20 @@ $agent = new AgentBase(
     recordCall: true,
 );
 
-// REST client
+// REST client (positional: projectId, token, space)
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'],
+    $_ENV['SIGNALWIRE_PROJECT_ID'],
+    $_ENV['SIGNALWIRE_API_TOKEN'],
+    $_ENV['SIGNALWIRE_SPACE'],
 );
 
-// RELAY client
-$relay = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:    $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:     $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+// RELAY client (single options array)
+$relay = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 ```
 
 ## AI Model Configuration

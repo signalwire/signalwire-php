@@ -40,7 +40,7 @@ new AgentBase(
 
 | Method | Description |
 |--------|-------------|
-| `defineTool(string $name, string $description, array $parameters, callable $handler)` | Define a SWAIG function with handler |
+| `defineTool(string $name, string $description, array $parameters, callable $handler, bool $secure = false)` | Define a SWAIG function with handler |
 | `registerSwaigFunction(array $def)` | Register a raw SWAIG function definition |
 | `setNativeFunctions(array $names)` | Enable built-in SWML functions |
 
@@ -105,8 +105,8 @@ new FunctionResult(string $response = null, bool $postProcess = false)
 
 | Method | Description |
 |--------|-------------|
-| `connect(string $destination, bool $final = true, string $fromAddr = null)` | Transfer call |
-| `sendSms(string $toNumber, string $fromNumber, string $body, array $media = [])` | Send SMS |
+| `connect(string $destination, bool $final = true, string $from = '')` | Transfer call |
+| `sendSms(string $toNumber, string $fromNumber, ?string $body = null, array $media = [], array $tags = [], ?string $region = null)` | Send SMS |
 | `hangup()` | Terminate call |
 | `hold(int $timeout = 300)` | Put call on hold |
 | `stop()` | Stop agent execution |
@@ -154,7 +154,7 @@ new FunctionResult(string $response = null, bool $postProcess = false)
 
 | Method | Description |
 |--------|-------------|
-| `addAction(string $name, mixed $data)` | Add a raw action |
+| `addAction(array $action)` | Add a raw action (single `['name' => $data]` pair) |
 | `addActions(array $actions)` | Add multiple raw actions |
 
 All action methods return `$this` for method chaining.

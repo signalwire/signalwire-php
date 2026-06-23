@@ -130,9 +130,9 @@ The REST client authenticates with project credentials:
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'],
+    $_ENV['SIGNALWIRE_PROJECT_ID'],
+    $_ENV['SIGNALWIRE_API_TOKEN'],
+    $_ENV['SIGNALWIRE_SPACE'],
 );
 ```
 
@@ -145,14 +145,14 @@ The RELAY client authenticates over WebSocket:
 ```php
 use SignalWire\Relay\Client;
 
-$client = new Client(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
-);
+$client = new Client([
+    'project' => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'   => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'host'    => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+]);
 ```
 
-The WebSocket connection uses TLS by default. Authentication happens via the Blade protocol after connection.
+The WebSocket connection uses TLS by default. Authentication runs as part of `connect()`.
 
 ## Best Practices
 
