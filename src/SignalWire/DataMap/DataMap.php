@@ -373,7 +373,7 @@ class DataMap
      * Build a complete SWAIG function definition with expressions only.
      *
      * @param array<array{name: string, type: string, description: string, required?: bool, enum?: array<string>}> $parameters
-     * @param list<array<string, mixed>> $expressions
+     * @param list<array{string: string, pattern: string, output: mixed, nomatch_output?: mixed}> $expressions
      * @return array<string, mixed>
      */
     public static function createExpressionTool(

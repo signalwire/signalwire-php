@@ -148,7 +148,13 @@ class PromptObjectModel
             if (!is_array($sub)) {
                 throw new \InvalidArgumentException('Each subsection must be a dictionary.');
             }
-            $section->subsections[] = self::buildSection($sub, true);
+            $subData = [];
+            foreach ($sub as $k => $v) {
+                if (is_string($k)) {
+                    $subData[$k] = $v;
+                }
+            }
+            $section->subsections[] = self::buildSection($subData, true);
         }
 
         return $section;
@@ -453,7 +459,16 @@ class PromptObjectModel
         if (is_int($val) || is_float($val)) {
             return (string) $val;
         }
-        $s = (string) $val;
+        if (is_string($val)) {
+            $s = $val;
+        } elseif (is_object($val) && method_exists($val, '__toString')) {
+            $s = (string) $val;
+        } else {
+            // Arrays/objects are not scalars; emit a JSON representation so the
+            // YAML stays well-formed rather than fataling on a cast.
+            $encoded = json_encode($val);
+            $s = $encoded === false ? '' : $encoded;
+        }
         // Quote if contains characters that would confuse the parser, OR
         // looks like a YAML special token (true/false/null/numeric/etc).
         if (self::needsYamlQuote($s)) {

@@ -41,11 +41,25 @@ use SignalWire\SWAIG\FunctionResult;
  *     strings on continuation lines). Skill files using deeply
  *     nested YAML constructs aren't supported and will hit a
  *     graceful "frontmatter parse failed" warning at load.
+ *
+ * @phpstan-type DiscoveredSkill array{
+ *     name: string|null,
+ *     description: string|null,
+ *     argument_hint: string|null,
+ *     disable_model_invocation: bool,
+ *     user_invocable: bool,
+ *     body: string,
+ *     path?: string,
+ *     skill_dir?: string,
+ *     sections?: array<string,string>,
+ *     _skip_tool?: bool,
+ *     _skip_prompt?: bool
+ * }
  */
 class ClaudeSkills extends SkillBase
 {
     /**
-     * @var list<array<string,mixed>> Discovered skills.
+     * @var list<DiscoveredSkill> Discovered skills.
      */
     private array $skills = [];
 
@@ -107,32 +121,39 @@ class ClaudeSkills extends SkillBase
 
     public function registerTools(): void
     {
-        $prefix = (string) ($this->params['tool_prefix'] ?? 'claude_');
-        $skillDescriptions = is_array($this->params['skill_descriptions'] ?? null)
-            ? $this->params['skill_descriptions']
-            : [];
-        $responsePrefix = (string) ($this->params['response_prefix'] ?? '');
-        $responsePostfix = (string) ($this->params['response_postfix'] ?? '');
+        $prefixParam = $this->params['tool_prefix'] ?? 'claude_';
+        $prefix = is_string($prefixParam) ? $prefixParam : 'claude_';
+
+        $skillDescriptionsParam = $this->params['skill_descriptions'] ?? null;
+        $skillDescriptions = [];
+        if (is_array($skillDescriptionsParam)) {
+            foreach ($skillDescriptionsParam as $descKey => $descValue) {
+                if (is_string($descKey) && is_string($descValue)) {
+                    $skillDescriptions[$descKey] = $descValue;
+                }
+            }
+        }
+
+        $responsePrefixParam = $this->params['response_prefix'] ?? '';
+        $responsePrefix = is_string($responsePrefixParam) ? $responsePrefixParam : '';
+        $responsePostfixParam = $this->params['response_postfix'] ?? '';
+        $responsePostfix = is_string($responsePostfixParam) ? $responsePostfixParam : '';
 
         foreach ($this->skills as $skill) {
             if (!empty($skill['_skip_tool'])) {
                 continue;
             }
-            $name = (string) $skill['name'];
+            $name = $skill['name'] ?? '';
             $toolName = $prefix . $this->sanitizeToolName($name);
-            $description = (string) (
-                $skillDescriptions[$name]
+            $description = $skillDescriptions[$name]
                 ?? $skill['description']
-                ?? "Use the {$name} skill"
-            );
+                ?? "Use the {$name} skill";
 
             $parameters = [
                 'arguments' => [
                     'type' => 'string',
-                    'description' => (string) (
-                        $skill['argument_hint']
-                        ?? 'Arguments or context to pass to the skill'
-                    ),
+                    'description' => $skill['argument_hint']
+                        ?? 'Arguments or context to pass to the skill',
                 ],
             ];
             $sections = is_array($skill['sections'] ?? null) ? $skill['sections'] : [];
@@ -156,24 +177,26 @@ class ClaudeSkills extends SkillBase
                     $responsePrefix,
                     $responsePostfix,
                 ): FunctionResult {
-                    $section = (string) ($args['section'] ?? '');
-                    $arguments = (string) ($args['arguments'] ?? '');
-                    $skillSections = is_array($skillCopy['sections'] ?? null)
-                        ? $skillCopy['sections']
-                        : [];
+                    $sectionArg = $args['section'] ?? '';
+                    $section = is_string($sectionArg) ? $sectionArg : '';
+                    $argumentsArg = $args['arguments'] ?? '';
+                    $arguments = is_string($argumentsArg) ? $argumentsArg : '';
+                    $skillSections = $skillCopy['sections'] ?? [];
 
                     $content = '';
                     if ($section !== '' && isset($skillSections[$section])) {
-                        $content = (string) @file_get_contents($skillSections[$section]);
+                        $loaded = @file_get_contents($skillSections[$section]);
+                        $content = is_string($loaded) ? $loaded : '';
                         if ($content === '') {
                             $content = "Error loading section '{$section}'";
                         }
                     } else {
-                        $content = (string) ($skillCopy['body'] ?? '');
+                        $content = $skillCopy['body'];
                     }
 
-                    $skillDir = (string) ($skillCopy['skill_dir'] ?? '');
-                    $sessionId = (string) ($rawData['call_id'] ?? '');
+                    $skillDir = $skillCopy['skill_dir'] ?? '';
+                    $sessionIdRaw = $rawData['call_id'] ?? '';
+                    $sessionId = is_string($sessionIdRaw) ? $sessionIdRaw : '';
                     $content = str_replace(
                         ['${CLAUDE_SKILL_DIR}', '${CLAUDE_SESSION_ID}'],
                         [$skillDir, $sessionId],
@@ -199,7 +222,7 @@ class ClaudeSkills extends SkillBase
     }
 
     /**
-     * @return list<array<string,mixed>>
+     * @return list<DiscoveredSkill>
      */
     private function discoverSkills(string $skillsPath): array
     {
@@ -289,7 +312,7 @@ class ClaudeSkills extends SkillBase
     /**
      * Parse a SKILL.md file with YAML frontmatter and markdown body.
      *
-     * @return array<string,mixed>|null
+     * @return DiscoveredSkill|null
      */
     private function parseSkillMd(string $path): ?array
     {
@@ -326,13 +349,30 @@ class ClaudeSkills extends SkillBase
 
         $fields = $this->parseYamlSubset($frontmatter);
         return [
-            'name' => isset($fields['name']) ? (string) $fields['name'] : null,
-            'description' => isset($fields['description']) ? (string) $fields['description'] : null,
-            'argument_hint' => isset($fields['argument-hint']) ? (string) $fields['argument-hint'] : null,
+            'name' => $this->stringField($fields['name'] ?? null),
+            'description' => $this->stringField($fields['description'] ?? null),
+            'argument_hint' => $this->stringField($fields['argument-hint'] ?? null),
             'disable_model_invocation' => $this->boolish($fields['disable-model-invocation'] ?? false),
             'user_invocable' => $this->boolish($fields['user-invocable'] ?? true),
             'body' => trim($body),
         ];
+    }
+
+    /**
+     * Coerce a parsed YAML scalar to a string (or null when absent / non-scalar).
+     */
+    private function stringField(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+        return null;
     }
 
     /**
@@ -470,7 +510,7 @@ class ClaudeSkills extends SkillBase
     /**
      * Apply disable-model-invocation / user-invocable flags.
      *
-     * @param array<string,mixed> $parsed
+     * @param DiscoveredSkill $parsed
      */
     private function applyInvocationControl(array &$parsed): void
     {
@@ -482,7 +522,7 @@ class ClaudeSkills extends SkillBase
         if (!empty($parsed['disable_model_invocation'])) {
             $parsed['_skip_tool'] = true;
             $parsed['_skip_prompt'] = true;
-        } elseif (!($parsed['user_invocable'] ?? true)) {
+        } elseif (!$parsed['user_invocable']) {
             $parsed['_skip_tool'] = true;
             $parsed['_skip_prompt'] = false;
         } else {
@@ -534,15 +574,16 @@ class ClaudeSkills extends SkillBase
             return [];
         }
 
-        $prefix = (string) ($this->params['tool_prefix'] ?? 'claude_');
+        $prefixParam = $this->params['tool_prefix'] ?? 'claude_';
+        $prefix = is_string($prefixParam) ? $prefixParam : 'claude_';
         $sections = [];
         foreach ($this->skills as $skill) {
             if (!empty($skill['_skip_prompt'])) {
                 continue;
             }
-            $name = (string) ($skill['name'] ?? 'unnamed');
-            $body = (string) ($skill['body'] ?? '');
-            $skillSections = is_array($skill['sections'] ?? null) ? $skill['sections'] : [];
+            $name = $skill['name'] ?? 'unnamed';
+            $body = $skill['body'];
+            $skillSections = $skill['sections'] ?? [];
             $hasTool = empty($skill['_skip_tool']);
             if (count($skillSections) > 0 && $hasTool) {
                 $sectionNames = array_keys($skillSections);

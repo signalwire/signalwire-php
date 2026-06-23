@@ -130,7 +130,14 @@ class PaginatedIterator implements \Iterator
         $data = $resp[$this->dataKey] ?? [];
         if (is_array($data)) {
             foreach ($data as $row) {
-                $this->items[] = $row;
+                if (!is_array($row)) {
+                    continue;
+                }
+                $item = [];
+                foreach ($row as $key => $value) {
+                    $item[(string) $key] = $value;
+                }
+                $this->items[] = $item;
             }
         }
 

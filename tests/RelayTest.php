@@ -17,6 +17,7 @@ use SignalWire\Relay\FaxAction;
 use SignalWire\Relay\Message;
 use SignalWire\Relay\PlayAction;
 use SignalWire\Relay\RecordAction;
+use SignalWire\Relay\RelayClientLike;
 
 class RelayTest extends TestCase
 {
@@ -26,13 +27,20 @@ class RelayTest extends TestCase
 
     private function makeMockClient(): object
     {
-        return new class () {
+        return new class () implements RelayClientLike {
+            /** @var list<array{method: string, params: array<string,mixed>}> */
             public array $executed = [];
+
+            /**
+             * @param array<string,mixed> $params
+             * @return array<string,mixed>
+             */
             public function execute(string $method, array $params = []): array
             {
                 $this->executed[] = ['method' => $method, 'params' => $params];
                 return [];
             }
+
             public function readOnce(): void
             {
             }

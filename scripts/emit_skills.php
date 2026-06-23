@@ -54,17 +54,31 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
+use SignalWire\Agent\AgentInterface;
+use SignalWire\Skills\SkillName;
 use SignalWire\Skills\SkillRegistry;
 
 /**
  * CapturingAgent — a minimal fake agent that records the tool contracts a skill
- * registers, via either of the two registration paths skills use. It implements
- * only the surface SkillBase + the DataMap skills touch during registerTools().
+ * registers, via either of the two registration paths skills use. It satisfies
+ * the INTERNAL AgentInterface (the same contract production AgentBase satisfies)
+ * so the duck-typed SkillBase::$agent receiver can be precisely typed without
+ * narrowing to AgentBase. The two tool-registration methods record contracts;
+ * the remaining interface methods (addSkill/addHints/promptAddSection/
+ * updateGlobalData) are captured as no-ops since they don't contribute tool
+ * contracts — but implementing them keeps the harness hardened against the
+ * addHints-fatal class of bug.
  */
-final class CapturingAgent
+final class CapturingAgent implements AgentInterface
 {
     /** @var list<array{name: string, parameters: array<string, mixed>, required?: list<string>}> */
     public array $tools = [];
+
+    /** @var list<string> */
+    public array $hints = [];
+
+    /** @var array<string, mixed> */
+    public array $globalData = [];
 
     /**
      * Mirror of SWMLService::defineTool — handler tools. `$parameters` is the
@@ -81,7 +95,7 @@ final class CapturingAgent
         array $parameters,
         callable $handler,
         bool $secure = false,
-    ): self {
+    ): static {
         $props = [];
         $required = [];
         foreach ($parameters as $param => $def) {
@@ -109,14 +123,66 @@ final class CapturingAgent
      *
      * @param array<string, mixed> $funcDef
      */
-    public function registerSwaigFunction(array $funcDef): self
+    public function registerSwaigFunction(array $funcDef): static
     {
         $name = $funcDef['function'] ?? '';
-        if ($name === '') {
+        if (!is_string($name) || $name === '') {
             return $this;
         }
         $argument = $funcDef['argument'] ?? [];
-        $this->tools[] = ['name' => $name, 'parameters' => $argument];
+        $parameters = [];
+        if (is_array($argument)) {
+            foreach ($argument as $argKey => $argValue) {
+                $parameters[(string) $argKey] = $argValue;
+            }
+        }
+        $this->tools[] = ['name' => $name, 'parameters' => $parameters];
+        return $this;
+    }
+
+    /**
+     * Captured no-op — skills may add nested skills; not part of the tool
+     * contract the differ compares.
+     *
+     * @param array<string, mixed> $params
+     */
+    public function addSkill(SkillName|string $name, array $params = []): static
+    {
+        return $this;
+    }
+
+    /**
+     * Captured — records hints so registerTools() that calls addHints does not
+     * fatal (the addHints-fatal class of bug this harness must survive).
+     *
+     * @param list<string> $hints
+     */
+    public function addHints(array $hints): static
+    {
+        foreach ($hints as $hint) {
+            $this->hints[] = (string) $hint;
+        }
+        return $this;
+    }
+
+    /**
+     * Captured no-op — prompt sections are not part of the tool contract.
+     *
+     * @param list<string> $bullets
+     */
+    public function promptAddSection(string $title, string $body, array $bullets = []): static
+    {
+        return $this;
+    }
+
+    /**
+     * Captured — records merged global data; not part of the tool contract.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function updateGlobalData(array $data): static
+    {
+        $this->globalData = array_merge($this->globalData, $data);
         return $this;
     }
 }

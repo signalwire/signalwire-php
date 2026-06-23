@@ -15,7 +15,7 @@ use SignalWire\Logging\Logger;
  * thin methods so that unit tests can subclass or mock without needing
  * a real WebSocket extension.
  */
-class Client
+class Client implements RelayClientLike
 {
     // ── identity / auth ───────────────────────────────────────────────
     public string  $project;
@@ -97,9 +97,11 @@ class Client
      */
     public function __construct(array $options)
     {
-        $this->project  = $options['project']  ?? '';
-        $this->token    = $options['token']    ?? '';
-        $this->contexts = $options['contexts'] ?? [];
+        $project = $options['project'] ?? null;
+        $this->project  = is_string($project) ? $project : '';
+        $token = $options['token'] ?? null;
+        $this->token    = is_string($token) ? $token : '';
+        $this->contexts = self::asStringList($options['contexts'] ?? null);
 
         // JWT-only mode: clients can authenticate with a fresh JWT instead
         // of project/token. Both code paths flow through ``connect()``.
@@ -111,11 +113,13 @@ class Client
         // to point at a local fixture; production uses SIGNALWIRE_SPACE.
         $relayHost = getenv('SIGNALWIRE_RELAY_HOST');
         $space = getenv('SIGNALWIRE_SPACE');
-        $this->host = $options['host']
+        $hostOpt = $options['host'] ?? null;
+        $this->host = (is_string($hostOpt) ? $hostOpt : null)
             ?? ($relayHost !== false && $relayHost !== '' ? $relayHost : '')
             ?: (is_string($space) ? $space : '');
 
-        $scheme = $options['scheme'] ?? null;
+        $schemeOpt = $options['scheme'] ?? null;
+        $scheme = is_string($schemeOpt) ? $schemeOpt : null;
         if ($scheme === null) {
             $envScheme = getenv('SIGNALWIRE_RELAY_SCHEME');
             $scheme = (is_string($envScheme) && $envScheme !== '')
@@ -252,8 +256,14 @@ class Client
         // mirrors it). Read that key — the journal records this connection's
         // frames under the same value, which lets a test scope its journal
         // reads/resets to its own session for concurrency-safe testing.
-        $this->sessionId = $result['sessionid'] ?? $this->sessionId;
-        $this->protocol  = $result['protocol']   ?? $this->protocol;
+        $sessionId = $result['sessionid'] ?? null;
+        if (is_string($sessionId)) {
+            $this->sessionId = $sessionId;
+        }
+        $protocol = $result['protocol'] ?? null;
+        if (is_string($protocol)) {
+            $this->protocol = $protocol;
+        }
         // Capture authorization blob if RELAY/audit fixture sent one.
         $authBlob = $result['authorization'] ?? null;
         if (is_array($authBlob)) {
@@ -484,43 +494,50 @@ class Client
         $this->logger->debug("<< {$raw}");
 
         $data = json_decode($raw, true);
-        if ($data === null) {
+        // A JSON-RPC frame is always an object — decode to a string-keyed
+        // array. Anything else (null from a parse error, a bare scalar, a
+        // top-level JSON array) is not a frame we can route.
+        if (!is_array($data)) {
             $this->logger->warn('Received unparseable message');
             return;
         }
 
         // ── response to a pending request ────────────────────────────
         $id = $data['id'] ?? null;
-        if ($id !== null && isset($this->pending[$id])) {
+        if (is_string($id) && isset($this->pending[$id])) {
             if (isset($data['error'])) {
-                ($this->pending[$id]['reject'])($data['error']);
+                ($this->pending[$id]['reject'])(is_array($data['error']) ? $data['error'] : []);
             } else {
-                ($this->pending[$id]['resolve'])($data['result'] ?? []);
+                $result = $data['result'] ?? [];
+                ($this->pending[$id]['resolve'])(is_array($result) ? $result : []);
             }
             return;
         }
 
         // ── server-initiated request (event / ping / disconnect) ─────
         $method = $data['method'] ?? null;
+        $ackId  = is_string($id) ? $id : '';
 
         if ($method === 'signalwire.ping') {
-            $this->sendAck($id ?? '');
+            $this->sendAck($ackId);
             return;
         }
 
         if ($method === 'signalwire.disconnect') {
-            $this->handleDisconnect($data['params'] ?? []);
+            $disconnectParams = $data['params'] ?? [];
+            $this->handleDisconnect(is_array($disconnectParams) ? $disconnectParams : []);
             return;
         }
 
         if ($method === 'signalwire.event') {
-            $this->sendAck($id ?? '');
+            $this->sendAck($ackId);
             $outerParams = $data['params'] ?? [];
-            $this->handleEvent($outerParams);
+            $this->handleEvent(is_array($outerParams) ? $outerParams : []);
             return;
         }
 
-        $this->logger->debug("Unhandled method: {$method}");
+        $methodLabel = is_string($method) ? $method : '(none)';
+        $this->logger->debug("Unhandled method: {$methodLabel}");
     }
 
     /**
@@ -530,14 +547,16 @@ class Client
      */
     public function handleEvent(array $outerParams): void
     {
-        $eventType = $outerParams['event_type'] ?? '';
-        $params    = $outerParams['params']     ?? [];
+        $eventTypeRaw = $outerParams['event_type'] ?? '';
+        $eventType    = is_string($eventTypeRaw) ? $eventTypeRaw : '';
+        $params       = self::asStringKeyedArray($outerParams['params'] ?? null);
 
         $event = new Event($eventType, $params);
 
         // ── authorization state ──────────────────────────────────────
         if ($eventType === 'signalwire.authorization.state') {
-            $this->authorizationState = $params['authorization_state'] ?? null;
+            $authState = $params['authorization_state'] ?? null;
+            $this->authorizationState = is_string($authState) ? $authState : null;
             $this->logger->info("Authorization state: {$this->authorizationState}");
             return;
         }
@@ -553,9 +572,11 @@ class Client
             // Materialize a Message from the event params (mirrors the
             // Python ``messaging.receive`` flow that hands a Message into
             // the handler, not a bare params dict).
+            $direction = $params['direction'] ?? null;
+            $state     = $params['message_state'] ?? $params['state'] ?? null;
             $msg = new Message(array_merge($params, [
-                'direction' => $params['direction'] ?? 'inbound',
-                'state'     => $params['message_state'] ?? $params['state'] ?? Constants::MESSAGE_STATE_RECEIVED,
+                'direction' => is_string($direction) ? $direction : 'inbound',
+                'state'     => is_string($state) ? $state : Constants::MESSAGE_STATE_RECEIVED,
             ]));
             $msgId = $msg->getMessageId();
             if ($msgId !== null) {
@@ -570,10 +591,10 @@ class Client
         // ── message state updates ────────────────────────────────────
         if ($eventType === 'messaging.state') {
             $msgId = $params['message_id'] ?? null;
-            if ($msgId !== null && isset($this->messages[$msgId])) {
+            if (is_string($msgId) && isset($this->messages[$msgId])) {
                 $this->messages[$msgId]->handleEvent($event);
                 $msgState = $params['state'] ?? $params['message_state'] ?? '';
-                if (isset(Constants::MESSAGE_TERMINAL_STATES[$msgState])) {
+                if (is_string($msgState) && isset(Constants::MESSAGE_TERMINAL_STATES[$msgState])) {
                     unset($this->messages[$msgId]);
                 }
             }
@@ -585,9 +606,9 @@ class Client
             $tag = $params['tag'] ?? null;
 
             // If this tag matches a pending dial, create/track the call
-            if ($tag !== null && isset($this->pendingDials[$tag])) {
+            if (is_string($tag) && isset($this->pendingDials[$tag])) {
                 $callId = $params['call_id'] ?? null;
-                if ($callId !== null && !isset($this->calls[$callId])) {
+                if (is_string($callId) && !isset($this->calls[$callId])) {
                     $call = new Call($params, $this);
                     $this->calls[$callId] = $call;
                 }
@@ -601,7 +622,8 @@ class Client
         }
 
         // ── default: route to the Call by call_id ────────────────────
-        $callId = $params['call_id'] ?? $event->getCallId();
+        $callIdRaw = $params['call_id'] ?? null;
+        $callId = is_string($callIdRaw) ? $callIdRaw : $event->getCallId();
         if ($callId !== null && isset($this->calls[$callId])) {
             $call = $this->calls[$callId];
             $call->dispatchEvent($event);
@@ -642,8 +664,10 @@ class Client
      */
     public function dial(array $devices, array $opts = []): Call
     {
-        $tag = $opts['tag'] ?? $this->generateUuid();
-        $dialTimeout = (float) ($opts['dial_timeout'] ?? 30.0);
+        $tagOpt = $opts['tag'] ?? null;
+        $tag = is_string($tagOpt) ? $tagOpt : $this->generateUuid();
+        $timeoutOpt = $opts['dial_timeout'] ?? 30.0;
+        $dialTimeout = is_int($timeoutOpt) || is_float($timeoutOpt) ? (float) $timeoutOpt : 30.0;
 
         // Strip control keys from opts before passing the rest as wire
         // params alongside ``devices`` and ``tag``.
@@ -725,7 +749,8 @@ class Client
 
         $result = $this->execute('messaging.send', $params);
 
-        $messageId = $result['message_id'] ?? $this->generateUuid();
+        $messageIdRaw = $result['message_id'] ?? null;
+        $messageId = is_string($messageIdRaw) ? $messageIdRaw : $this->generateUuid();
 
         // Materialize the Message with the request params *and* the
         // server-issued message_id, in the ``queued`` initial state. The
@@ -828,6 +853,47 @@ class Client
     // ══════════════════════════════════════════════════════════════════
 
     /**
+     * Narrow a JSON-decoded value to an ``array<string,mixed>`` (a JSON
+     * object). RELAY event/params payloads are always objects on the wire;
+     * a missing or non-object value yields an empty array. Re-keys to
+     * guarantee string keys for the strict ``array<string,mixed>`` shape.
+     *
+     * @return array<string,mixed>
+     */
+    private static function asStringKeyedArray(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $key => $item) {
+            $out[(string) $key] = $item;
+        }
+        return $out;
+    }
+
+    /**
+     * Narrow a value to a ``list<string>`` — keeping only the string
+     * entries (RELAY ``contexts`` are an array of strings). A missing or
+     * non-array value yields an empty list.
+     *
+     * @return list<string>
+     */
+    private static function asStringList(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $item) {
+            if (is_string($item)) {
+                $out[] = $item;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Generate a UUID v4.
      */
     private function generateUuid(): string
@@ -854,7 +920,7 @@ class Client
     private function handleInboundCall(Event $event, array $params): void
     {
         $callId = $params['call_id'] ?? null;
-        if ($callId === null) {
+        if (!is_string($callId)) {
             $this->logger->warn('Inbound call event missing call_id');
             return;
         }
@@ -892,10 +958,12 @@ class Client
     {
         $tag       = $params['tag']        ?? null;
         $dialState = $params['dial_state'] ?? $params['state'] ?? null;
-        $callBlob  = $params['call']       ?? null;
-        $callId    = $params['call_id']    ?? (is_array($callBlob) ? ($callBlob['call_id'] ?? null) : null);
+        $callBlobRaw = $params['call']     ?? null;
+        $callBlob  = is_array($callBlobRaw) ? self::asStringKeyedArray($callBlobRaw) : null;
+        $callIdRaw = $params['call_id'] ?? ($callBlob !== null ? ($callBlob['call_id'] ?? null) : null);
+        $callId    = is_string($callIdRaw) ? $callIdRaw : null;
 
-        if ($tag === null) {
+        if (!is_string($tag)) {
             return;
         }
 
@@ -911,7 +979,7 @@ class Client
         $call = null;
         if ($callId !== null && isset($this->calls[$callId])) {
             $call = $this->calls[$callId];
-        } elseif (is_array($callBlob)) {
+        } elseif ($callBlob !== null) {
             // Production shape: nested params.call has call_id/node_id/tag/device.
             $call = new Call($callBlob, $this);
             if ($call->callId !== null) {

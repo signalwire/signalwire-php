@@ -36,6 +36,22 @@ class McpGateway extends SkillBase
         return 'mcp_gateway';
     }
 
+    /**
+     * Narrow a genuinely-mixed value (nested user config / SWAIG args /
+     * gateway JSON) to a string. Non-string scalars are stringified to
+     * match the loose typing the platform sends; anything else → $default.
+     */
+    private static function asString(mixed $value, string $default = ''): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value) || is_bool($value)) {
+            return (string) $value;
+        }
+        return $default;
+    }
+
     public function getDescription(): string
     {
         return 'Bridge MCP servers with SWAIG functions';
@@ -55,17 +71,17 @@ class McpGateway extends SkillBase
 
     public function registerTools(): void
     {
-        $gatewayUrl = rtrim((string) ($this->params['gateway_url'] ?? ''), '/');
-        $services = $this->params['services'] ?? [];
-        $authToken = (string) ($this->params['auth_token'] ?? '');
-        $authUser = (string) ($this->params['auth_user'] ?? '');
-        $authPassword = (string) ($this->params['auth_password'] ?? '');
-        $toolPrefix = (string) ($this->params['tool_prefix'] ?? 'mcp_');
-        $retryAttempts = max(1, (int) ($this->params['retry_attempts'] ?? 3));
-        $requestTimeout = max(2, (int) ($this->params['request_timeout'] ?? 30));
-        $sessionTimeout = (int) ($this->params['session_timeout'] ?? 300);
+        $gatewayUrl = rtrim($this->paramString('gateway_url'), '/');
+        $services = $this->paramArray('services');
+        $authToken = $this->paramString('auth_token');
+        $authUser = $this->paramString('auth_user');
+        $authPassword = $this->paramString('auth_password');
+        $toolPrefix = $this->paramString('tool_prefix', 'mcp_');
+        $retryAttempts = max(1, $this->paramInt('retry_attempts', 3));
+        $requestTimeout = max(2, $this->paramInt('request_timeout', 30));
+        $sessionTimeout = $this->paramInt('session_timeout', 300);
 
-        if (!is_array($services) || count($services) === 0) {
+        if (count($services) === 0) {
             $this->registerGatewayTool(
                 $toolPrefix . 'call',
                 'Call an MCP service through the gateway',
@@ -86,7 +102,7 @@ class McpGateway extends SkillBase
             if (!is_array($service)) {
                 continue;
             }
-            $serviceName = (string) ($service['name'] ?? '');
+            $serviceName = self::asString($service['name'] ?? null);
             $serviceTools = $service['tools'] ?? [];
             if ($serviceName === '' || !is_array($serviceTools)) {
                 continue;
@@ -95,8 +111,8 @@ class McpGateway extends SkillBase
                 if (!is_array($tool)) {
                     continue;
                 }
-                $toolName = (string) ($tool['name'] ?? '');
-                $toolDescription = (string) ($tool['description'] ?? '');
+                $toolName = self::asString($tool['name'] ?? null);
+                $toolDescription = self::asString($tool['description'] ?? null);
                 $toolParams = $tool['parameters'] ?? [];
                 if ($toolName === '') {
                     continue;
@@ -111,7 +127,7 @@ class McpGateway extends SkillBase
                         if (!is_array($param)) {
                             continue;
                         }
-                        $paramName = (string) ($param['name'] ?? '');
+                        $paramName = self::asString($param['name'] ?? null);
                         if ($paramName === '') {
                             continue;
                         }
@@ -218,10 +234,10 @@ class McpGateway extends SkillBase
             // (serviceName/mcpToolName captured at register time).
             $effectiveService = $serviceName !== ''
                 ? $serviceName
-                : (string) ($args['service'] ?? '');
+                : self::asString($args['service'] ?? null);
             $effectiveTool = $mcpToolName !== ''
                 ? $mcpToolName
-                : (string) ($args['tool'] ?? '');
+                : self::asString($args['tool'] ?? null);
             if ($effectiveService === '' || $effectiveTool === '') {
                 return new FunctionResult(
                     'MCP gateway: service and tool are required.'
@@ -231,8 +247,8 @@ class McpGateway extends SkillBase
             // Per Python: prefer global_data.mcp_call_id, else call_id.
             $globalData = $rawData['global_data'] ?? [];
             $sessionId = is_array($globalData) && isset($globalData['mcp_call_id'])
-                ? (string) $globalData['mcp_call_id']
-                : (string) ($rawData['call_id'] ?? 'unknown');
+                ? self::asString($globalData['mcp_call_id'])
+                : self::asString($rawData['call_id'] ?? null, 'unknown');
 
             $payload = [
                 'tool' => $effectiveTool,
@@ -281,7 +297,7 @@ class McpGateway extends SkillBase
                     continue;
                 }
                 $errMsg = is_array($parsed) && isset($parsed['error'])
-                    ? (string) $parsed['error']
+                    ? self::asString($parsed['error'])
                     : "HTTP {$status}: " . substr($body, 0, 200);
                 return new FunctionResult(
                     "Failed to call {$effectiveService}.{$effectiveTool}: {$errMsg}"
@@ -300,14 +316,11 @@ class McpGateway extends SkillBase
     public function getHints(): array
     {
         $hints = ['MCP', 'gateway'];
-        $services = $this->params['services'] ?? [];
-        if (is_array($services)) {
-            foreach ($services as $service) {
-                if (is_array($service)) {
-                    $name = (string) ($service['name'] ?? '');
-                    if ($name !== '' && !in_array($name, $hints, true)) {
-                        $hints[] = $name;
-                    }
+        foreach ($this->paramArray('services') as $service) {
+            if (is_array($service)) {
+                $name = self::asString($service['name'] ?? null);
+                if ($name !== '' && !in_array($name, $hints, true)) {
+                    $hints[] = $name;
                 }
             }
         }
@@ -319,20 +332,17 @@ class McpGateway extends SkillBase
      */
     public function getGlobalData(): array
     {
-        $services = $this->params['services'] ?? [];
         $serviceNames = [];
-        if (is_array($services)) {
-            foreach ($services as $service) {
-                if (is_array($service)) {
-                    $name = (string) ($service['name'] ?? '');
-                    if ($name !== '') {
-                        $serviceNames[] = $name;
-                    }
+        foreach ($this->paramArray('services') as $service) {
+            if (is_array($service)) {
+                $name = self::asString($service['name'] ?? null);
+                if ($name !== '') {
+                    $serviceNames[] = $name;
                 }
             }
         }
         return [
-            'mcp_gateway_url' => $this->params['gateway_url'] ?? '',
+            'mcp_gateway_url' => $this->paramString('gateway_url'),
             'mcp_session_id' => null,
             'mcp_services' => $serviceNames,
         ];
@@ -347,18 +357,15 @@ class McpGateway extends SkillBase
             return [];
         }
 
-        $services = $this->params['services'] ?? [];
         $bullets = [];
-        if (is_array($services)) {
-            foreach ($services as $service) {
-                if (is_array($service)) {
-                    $name = (string) ($service['name'] ?? '');
-                    $description = (string) ($service['description'] ?? '');
-                    if ($name !== '') {
-                        $bullets[] = $description !== ''
-                            ? "Service: {$name} - {$description}"
-                            : "Service: {$name}";
-                    }
+        foreach ($this->paramArray('services') as $service) {
+            if (is_array($service)) {
+                $name = self::asString($service['name'] ?? null);
+                $description = self::asString($service['description'] ?? null);
+                if ($name !== '') {
+                    $bullets[] = $description !== ''
+                        ? "Service: {$name} - {$description}"
+                        : "Service: {$name}";
                 }
             }
         }

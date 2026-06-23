@@ -242,6 +242,27 @@ class Action
         $this->callbackFired = true;
         ($this->onCompletedCallback)($this);
     }
+
+    /**
+     * Narrow a JSON-decoded payload value to an ``array<string,mixed>`` (a
+     * JSON object), or null when it is absent or not an object. RELAY
+     * ``result`` / ``detect`` payloads are objects on the wire (the Python
+     * reference reads ``event.params.get("result", {})`` /
+     * ``...get("detect", {})`` as dicts). Re-keys to guarantee string keys.
+     *
+     * @return array<string,mixed>|null
+     */
+    protected static function asStringKeyedArrayOrNull(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+        $out = [];
+        foreach ($value as $key => $item) {
+            $out[(string) $key] = $item;
+        }
+        return $out;
+    }
 }
 
 // ======================================================================
@@ -307,19 +328,20 @@ class RecordAction extends Action
 
     public function getUrl(): ?string
     {
-        return $this->payload['url'] ?? null;
+        $val = $this->payload['url'] ?? null;
+        return is_string($val) ? $val : null;
     }
 
     public function getDuration(): ?float
     {
         $val = $this->payload['duration'] ?? null;
-        return $val !== null ? (float) $val : null;
+        return is_int($val) || is_float($val) ? (float) $val : null;
     }
 
     public function getSize(): ?int
     {
         $val = $this->payload['size'] ?? null;
-        return $val !== null ? (int) $val : null;
+        return is_int($val) || is_float($val) ? (int) $val : null;
     }
 }
 
@@ -366,7 +388,7 @@ class CollectAction extends Action
      */
     public function getCollectResult(): ?array
     {
-        return $this->payload['result'] ?? null;
+        return self::asStringKeyedArrayOrNull($this->payload['result'] ?? null);
     }
 
     /**
@@ -396,7 +418,11 @@ class DetectAction extends Action
     /** @return array<string,mixed>|null */
     public function getDetectResult(): ?array
     {
-        return $this->payload['detect'] ?? $this->payload['result'] ?? null;
+        $detect = self::asStringKeyedArrayOrNull($this->payload['detect'] ?? null);
+        if ($detect !== null) {
+            return $detect;
+        }
+        return self::asStringKeyedArrayOrNull($this->payload['result'] ?? null);
     }
 }
 

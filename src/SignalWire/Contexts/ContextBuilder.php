@@ -187,7 +187,7 @@ class Step
     /** @var list<string>|null */
     private ?array $validContexts = null;
 
-    /** @var array<int, array<string, mixed>> */
+    /** @var list<array{title: string, body: string}|array{title: string, bullets: list<string>}> */
     private array $sections = [];
 
     private ?GatherInfo $gatherInfo = null;
@@ -600,11 +600,11 @@ class Context
     // Context prompt (plain text or POM)
     private ?string $promptText = null;
 
-    /** @var array<int, array<string, mixed>> */
+    /** @var list<array{title: string, body: string}|array{title: string, bullets: list<string>}> */
     private array $promptSections = [];
 
     // System prompt (plain text or POM)
-    /** @var array<int, array<string, mixed>> */
+    /** @var list<array{title: string, body: string}|array{title: string, bullets: list<string>}> */
     private array $systemPromptSections = [];
 
     // Fillers
@@ -984,7 +984,7 @@ class Context
     /**
      * Render POM sections to markdown text.
      *
-     * @param array<int, array<string, mixed>> $sections
+     * @param list<array{title: string, body: string}|array{title: string, bullets: list<string>}> $sections
      */
     private function renderSections(array $sections): string
     {
@@ -1341,8 +1341,9 @@ class ContextBuilder
         if ($this->toolNameSupplier !== null) {
             $registered = ($this->toolNameSupplier)();
             if (is_array($registered)) {
+                $registeredNames = array_values(array_filter($registered, 'is_string'));
                 $colliding = array_values(array_unique(array_intersect(
-                    $registered,
+                    $registeredNames,
                     RESERVED_NATIVE_TOOL_NAMES
                 )));
                 sort($colliding);

@@ -14,6 +14,7 @@ class HttpClient
 {
     private string $projectId;
     private string $token;
+    /** @var non-empty-string */
     private string $baseUrl;
     private string $authHeader;
 
@@ -33,6 +34,8 @@ class HttpClient
     private ?string $caBundle;
 
     /**
+     * @param non-empty-string $baseUrl Fully-qualified API base URL (the caller,
+     *   RestClient, guarantees this is non-empty at its source).
      * @param string|null $caBundle Optional CA bundle (PEM) for HTTPS peer
      *   verification. Falls back to the SIGNALWIRE_CA_FILE / SSL_CERT_FILE
      *   env vars (PHP's cURL does not honor those env vars on its own).
@@ -41,7 +44,12 @@ class HttpClient
     {
         $this->projectId = $projectId;
         $this->token = $token;
-        $this->baseUrl = rtrim($baseUrl, '/');
+        $trimmedBaseUrl = rtrim($baseUrl, '/');
+        // rtrim only strips trailing '/', and $baseUrl is non-empty by the
+        // caller's contract; PHPStan cannot infer non-empty through rtrim, so
+        // carry the true invariant forward.
+        assert($trimmedBaseUrl !== '');
+        $this->baseUrl = $trimmedBaseUrl;
         $this->authHeader = 'Basic ' . base64_encode($projectId . ':' . $token);
         $this->caBundle = self::resolveCaBundle($caBundle);
     }
@@ -162,20 +170,25 @@ class HttpClient
             // Yield the items from the current page.
             $data = $response['data'] ?? $response;
             if (is_array($data)) {
-                yield $data;
+                $page = [];
+                foreach ($data as $key => $value) {
+                    $page[(string) $key] = $value;
+                }
+                yield $page;
             }
 
             // Determine if there is a next page.
-            $nextUrl = $response['links']['next'] ?? null;
-            if ($nextUrl === null) {
+            $links = $response['links'] ?? null;
+            $nextUrl = is_array($links) ? ($links['next'] ?? null) : null;
+            if (!is_string($nextUrl)) {
                 break;
             }
 
             // The next URL may be absolute or path-only. Strip the base if absolute.
             if (str_starts_with($nextUrl, 'http')) {
                 $parsed = parse_url($nextUrl);
-                $currentPath = $parsed['path'] ?? '';
-                $currentParams = self::parseQuery($parsed['query'] ?? '');
+                $currentPath = is_array($parsed) ? ($parsed['path'] ?? '') : '';
+                $currentParams = self::parseQuery(is_array($parsed) ? ($parsed['query'] ?? '') : '');
             } else {
                 $parts = explode('?', $nextUrl, 2);
                 $currentPath = $parts[0];
@@ -207,6 +220,7 @@ class HttpClient
     // -----------------------------------------------------------------
 
     /**
+     * @param non-empty-string $method HTTP verb (GET/POST/PUT/PATCH/DELETE).
      * @param array<string,mixed> $params  Query-string parameters.
      * @param array<string,mixed>|null $body JSON body (for POST/PUT/PATCH).
      * @return array<string,mixed>
@@ -289,6 +303,13 @@ class HttpClient
             return ['raw' => (string) $responseBody];
         }
 
-        return $decoded;
+        // A decoded JSON object has string keys; a top-level JSON array has
+        // integer keys. Normalise to string keys to honour the contract.
+        $result = [];
+        foreach ($decoded as $key => $value) {
+            $result[(string) $key] = $value;
+        }
+
+        return $result;
     }
 }

@@ -39,12 +39,12 @@ class DatasphereServerless extends SkillBase
     public function registerTools(): void
     {
         $toolName = $this->getToolName('search_knowledge');
-        $spaceName = $this->params['space_name'] ?? '';
-        $projectId = $this->params['project_id'] ?? '';
-        $token = $this->params['token'] ?? '';
-        $documentId = $this->params['document_id'] ?? '';
-        $count = max(1, min(10, (int) ($this->params['count'] ?? 1)));
-        $distance = (float) ($this->params['distance'] ?? 3.0);
+        $spaceName = $this->paramString('space_name');
+        $projectId = $this->paramString('project_id');
+        $token = $this->paramString('token');
+        $documentId = $this->paramString('document_id');
+        $count = max(1, min(10, $this->paramInt('count', 1)));
+        $distance = $this->paramFloat('distance', 3.0);
 
         $authString = base64_encode($projectId . ':' . $token);
 

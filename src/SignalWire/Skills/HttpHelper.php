@@ -112,6 +112,17 @@ class HttpHelper
         ?array $basicAuth = null,
         int $timeout = self::DEFAULT_TIMEOUT,
     ): array {
+        // Public entry boundary: $method/$url arrive directly from skill
+        // callers with no upstream contract. Fail fast on empty input (and
+        // carry the non-empty-string guarantee down to CURLOPT_CUSTOMREQUEST /
+        // CURLOPT_URL).
+        if ($method === '') {
+            throw new \InvalidArgumentException('HTTP request method must not be empty');
+        }
+        if ($url === '') {
+            throw new \InvalidArgumentException('HTTP request URL must not be empty');
+        }
+
         $ch = \curl_init();
         if ($ch === false) {
             throw new \RuntimeException('curl_init() failed');

@@ -58,20 +58,22 @@ class Datasphere extends SkillBase
     public function registerTools(): void
     {
         $toolName = $this->getToolName('search_knowledge');
-        $spaceName = (string) ($this->params['space_name'] ?? '');
-        $projectId = (string) ($this->params['project_id'] ?? '');
-        $token = (string) ($this->params['token'] ?? '');
-        $documentId = (string) ($this->params['document_id'] ?? '');
-        $count = max(1, min(10, (int) ($this->params['count'] ?? 1)));
-        $distance = (float) ($this->params['distance'] ?? 3.0);
-        $timeout = max(2, (int) ($this->params['timeout'] ?? 30));
+        $spaceName = $this->paramString('space_name');
+        $projectId = $this->paramString('project_id');
+        $token = $this->paramString('token');
+        $documentId = $this->paramString('document_id');
+        $count = max(1, min(10, $this->paramInt('count', 1)));
+        $distance = $this->paramFloat('distance', 3.0);
+        $timeout = max(2, $this->paramInt('timeout', 30));
         $tags = $this->params['tags'] ?? null;
         $language = $this->params['language'] ?? null;
         $posToExpand = $this->params['pos_to_expand'] ?? null;
         $maxSynonyms = $this->params['max_synonyms'] ?? null;
-        $noResultsMessage = (string) ($this->params['no_results_message']
-            ?? "I couldn't find any relevant information for '{query}' in the knowledge base. "
-                . 'Try rephrasing your question or asking about a different topic.');
+        $noResultsMessageRaw = $this->params['no_results_message'] ?? null;
+        $noResultsMessage = is_string($noResultsMessageRaw)
+            ? $noResultsMessageRaw
+            : "I couldn't find any relevant information for '{query}' in the knowledge base. "
+                . 'Try rephrasing your question or asking about a different topic.';
 
         $this->defineTool(
             $toolName,
@@ -168,7 +170,7 @@ class Datasphere extends SkillBase
     }
 
     /**
-     * @param array<int,mixed> $chunks
+     * @param array<mixed> $chunks
      */
     private function formatChunks(string $query, array $chunks): string
     {

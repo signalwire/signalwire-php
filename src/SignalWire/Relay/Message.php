@@ -47,16 +47,48 @@ class Message
      */
     public function __construct(array $params = [])
     {
-        $this->messageId = $params['message_id'] ?? $params['id'] ?? null;
-        $this->context = $params['context'] ?? null;
-        $this->direction = $params['direction'] ?? null;
-        $this->fromNumber = $params['from_number'] ?? $params['from'] ?? null;
-        $this->toNumber = $params['to_number'] ?? $params['to'] ?? null;
-        $this->body = $params['body'] ?? null;
-        $this->media = $params['media'] ?? [];
-        $this->tags = $params['tags'] ?? [];
-        $this->state = $params['state'] ?? null;
-        $this->reason = $params['reason'] ?? null;
+        $this->messageId = self::asNullableString($params['message_id'] ?? $params['id'] ?? null);
+        $this->context = self::asNullableString($params['context'] ?? null);
+        $this->direction = self::asNullableString($params['direction'] ?? null);
+        $this->fromNumber = self::asNullableString($params['from_number'] ?? $params['from'] ?? null);
+        $this->toNumber = self::asNullableString($params['to_number'] ?? $params['to'] ?? null);
+        $this->body = self::asNullableString($params['body'] ?? null);
+        $this->media = self::asStringList($params['media'] ?? null);
+        $this->tags = self::asStringList($params['tags'] ?? null);
+        $this->state = self::asNullableString($params['state'] ?? null);
+        $this->reason = self::asNullableString($params['reason'] ?? null);
+    }
+
+    /**
+     * Narrow a JSON-decoded value to a string, or null when it is absent or
+     * a non-string (the RELAY messaging fields below are all strings on the
+     * wire — see the Python reference's ``str`` typing in relay/message.py).
+     */
+    private static function asNullableString(mixed $value): ?string
+    {
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Narrow a JSON-decoded value to a ``list<string>`` — keeping only the
+     * string entries (RELAY ``media``/``tags`` are arrays of strings; the
+     * Python reference types them as ``list[str]``). A missing or non-array
+     * value yields an empty list.
+     *
+     * @return list<string>
+     */
+    private static function asStringList(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $item) {
+            if (is_string($item)) {
+                $out[] = $item;
+            }
+        }
+        return $out;
     }
 
     // ------------------------------------------------------------------
@@ -79,20 +111,20 @@ class Message
 
         // Update mutable fields from the event payload.
         $newState = $params['state'] ?? $params['message_state'] ?? null;
-        if ($newState !== null) {
+        if (is_string($newState)) {
             $this->state = $newState;
         }
-        if (isset($params['reason'])) {
+        if (is_string($params['reason'] ?? null)) {
             $this->reason = $params['reason'];
         }
-        if (isset($params['body'])) {
+        if (is_string($params['body'] ?? null)) {
             $this->body = $params['body'];
         }
         if (isset($params['media'])) {
-            $this->media = $params['media'];
+            $this->media = self::asStringList($params['media']);
         }
         if (isset($params['tags'])) {
-            $this->tags = $params['tags'];
+            $this->tags = self::asStringList($params['tags']);
         }
 
         // Notify all registered event listeners.

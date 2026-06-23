@@ -56,27 +56,32 @@ class Event
 
     public function getCallId(): ?string
     {
-        return $this->params['call_id'] ?? null;
+        $value = $this->params['call_id'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getNodeId(): ?string
     {
-        return $this->params['node_id'] ?? null;
+        $value = $this->params['node_id'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getControlId(): ?string
     {
-        return $this->params['control_id'] ?? null;
+        $value = $this->params['control_id'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getTag(): ?string
     {
-        return $this->params['tag'] ?? null;
+        $value = $this->params['tag'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getState(): ?string
     {
-        return $this->params['state'] ?? null;
+        $value = $this->params['state'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     /**

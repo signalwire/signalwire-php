@@ -375,6 +375,16 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
 CLASS_RENAME_MAP: dict[str, str] = {
     "Service": "SWMLService",
     "Client": "RelayClient",
+    # Internal duck-type contracts (the TS RelayClientLike pattern) fold onto
+    # the canonical concrete class they abstract, so any signature that
+    # references one as a param/return type compares against the Python-
+    # equivalent class instead of a PHP-only interface name. The interfaces
+    # themselves are @internal and excluded from the dumps (see
+    # signature_dump.php / _parse_file's @internal handling) — this is a
+    # rename, not an omission.
+    "AgentInterface": "AgentBase",
+    "RelayClientLike": "RelayClient",
+    "RequestHandlerLike": "SWMLService",
     # REST namespace classes (Python uses descriptive *Resource / *Namespace names)
     "Calling": "CallingNamespace",
     "Fabric": "FabricNamespace",  # not in Python; emitted into fabric.py module
@@ -446,6 +456,17 @@ RE_NAMESPACE = re.compile(r"^\s*namespace\s+([\\\w]+)\s*;")
 # excluded — only hand-written public methods on the enum are captured.
 RE_CLASS = re.compile(
     r"^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+([A-Za-z_]\w*)"
+)
+# Interfaces are class-like scopes too. They were absent from this SDK until
+# the internal duck-type contracts (AgentInterface, RelayClientLike,
+# RequestHandlerLike — the TS RelayClientLike pattern) were added. We must
+# recognise them as a scope so their `public function` declarations are NOT
+# mistaken for `__module__` free functions; whether a given interface lands on
+# the public surface is decided separately via its `@internal` marker (see
+# _parse_file). A method declaration in an interface body has no `{ ... }`, so
+# it does not perturb brace tracking.
+RE_INTERFACE = re.compile(
+    r"^\s*interface\s+([A-Za-z_]\w*)"
 )
 RE_PUBLIC_METHOD = re.compile(
     r"^\s*public\s+(?:static\s+)?function\s+(\w+)\s*\("
@@ -563,13 +584,23 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
     lines = text.splitlines()
     cur_class: str | None = None
     cur_class_brace: int = 0
+    # When the current scope is an `@internal` interface, its methods are
+    # excluded from the surface entirely (they are an internal duck-type
+    # contract, not exported API) — but the scope is still tracked so its
+    # methods do not leak as `__module__` free functions.
+    cur_excluded: bool = False
     brace_depth = 0
     in_block_comment = False
+    # True when the immediately-preceding docblock carried an `@internal` tag;
+    # consumed by the next class/interface declaration.
+    internal_pending = False
 
     for raw_line in lines:
         # Strip block comments naively (sufficient for this SDK)
         line = raw_line
         if in_block_comment:
+            if "@internal" in raw_line:
+                internal_pending = True
             end = line.find("*/")
             if end != -1:
                 line = line[end + 2:]
@@ -583,9 +614,13 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
                 break
             end = line.find("*/", start + 2)
             if end == -1:
+                if "@internal" in line[start:]:
+                    internal_pending = True
                 line = line[:start]
                 in_block_comment = True
                 break
+            if "@internal" in line[start:end]:
+                internal_pending = True
             line = line[:start] + line[end + 2:]
         # Strip line comments
         ls_idx = line.find("//")
@@ -602,11 +637,25 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
         m_class = RE_CLASS.match(line)
         if m_class:
             cur_class = m_class.group(1)
+            cur_excluded = False
             classes.add(cur_class)
+            internal_pending = False
             # Brace might appear later on the same or following line; we'll
             # enter the class scope as soon as `{` is seen.
             cur_class_brace = -1
             # Continue to count braces on this line below.
+
+        # Interface declaration — a class-like scope. If marked `@internal`,
+        # exclude it (and its methods) from the surface; it is consumed only
+        # internally and must not appear as exported API.
+        m_iface = RE_INTERFACE.match(line)
+        if m_iface:
+            cur_class = m_iface.group(1)
+            cur_excluded = internal_pending
+            if not cur_excluded:
+                classes.add(cur_class)
+            internal_pending = False
+            cur_class_brace = -1
 
         # Public method
         m_method = RE_PUBLIC_METHOD.match(line)
@@ -623,7 +672,11 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
                 py_name = camel_to_snake(method_name)
             # Apply Python-canonical aliasing where PHP idiom differs.
             py_name = METHOD_ALIASES.get(py_name, py_name)
-            if cur_class is not None:
+            if cur_excluded:
+                # Internal interface body — neither surface method nor a
+                # leaked free function.
+                pass
+            elif cur_class is not None:
                 methods[cur_class].add(py_name)
             else:
                 free_fns.add(py_name)
@@ -642,6 +695,7 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
             if cur_class is not None and brace_depth < cur_class_brace:
                 cur_class = None
                 cur_class_brace = 0
+                cur_excluded = False
 
     return free_fns, dict(methods), classes
 

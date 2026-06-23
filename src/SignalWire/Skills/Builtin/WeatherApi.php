@@ -30,7 +30,7 @@ class WeatherApi extends SkillBase
     public function registerTools(): void
     {
         $toolName = $this->getToolName('get_weather');
-        $apiKey = $this->params['api_key'] ?? '';
+        $apiKey = $this->paramString('api_key');
         $unit = $this->params['temperature_unit'] ?? 'fahrenheit';
 
         if ($unit === 'celsius') {

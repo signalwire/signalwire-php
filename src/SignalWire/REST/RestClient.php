@@ -38,6 +38,7 @@ class RestClient
     private string $projectId;
     private string $token;
     private string $space;
+    /** @var non-empty-string */
     private string $baseUrl;
     private HttpClient $http;
 
@@ -100,9 +101,16 @@ class RestClient
         // Accept a bare host ("space.signalwire.com") or a fully-qualified
         // URL. The latter is used by tests and audit harnesses to point
         // the client at a loopback fixture without forcing https://.
-        $this->baseUrl = preg_match('#^https?://#i', $this->space)
+        $baseUrl = preg_match('#^https?://#i', $this->space)
             ? rtrim($this->space, '/')
             : 'https://' . $this->space;
+        // Genuine invariant: $space is non-empty (thrown above), so the
+        // https:// branch is non-empty by construction, and the rtrim branch
+        // strips only trailing '/' from a URL that already begins with a
+        // scheme (so it cannot reduce to ''). PHPStan can't infer this through
+        // rtrim/preg_match, so establish the true type at the source.
+        assert($baseUrl !== '');
+        $this->baseUrl = $baseUrl;
         $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl, $caBundle);
     }
 

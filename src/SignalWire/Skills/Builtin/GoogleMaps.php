@@ -29,7 +29,7 @@ class GoogleMaps extends SkillBase
 
     public function registerTools(): void
     {
-        $apiKey = $this->params['api_key'] ?? '';
+        $apiKey = $this->paramString('api_key');
         $lookupToolName = $this->params['lookup_tool_name'] ?? 'lookup_address';
         $routeToolName = $this->params['route_tool_name'] ?? 'compute_route';
 

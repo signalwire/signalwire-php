@@ -50,12 +50,59 @@ class ConciergeAgent extends AgentBase
         bool $recordCall = false,
         bool $usePom = true,
     ) {
-        $this->venueName           = $venueInfo['venue_name'];
-        $this->services            = $venueInfo['services'] ?? [];
-        $this->amenities           = $venueInfo['amenities'] ?? [];
-        $this->hoursOfOperation    = $venueInfo['hours_of_operation'] ?? [];
-        $this->specialInstructions = $venueInfo['special_instructions'] ?? [];
-        $this->welcomeMessage      = $venueInfo['welcome_message'] ?? null;
+        $venueName = $venueInfo['venue_name'] ?? '';
+        $this->venueName = is_string($venueName) ? $venueName : '';
+
+        $services = $venueInfo['services'] ?? [];
+        $this->services = [];
+        if (is_array($services)) {
+            foreach ($services as $service) {
+                if (is_string($service)) {
+                    $this->services[] = $service;
+                }
+            }
+        }
+
+        $amenities = $venueInfo['amenities'] ?? [];
+        $this->amenities = [];
+        if (is_array($amenities)) {
+            foreach ($amenities as $amenityName => $info) {
+                if (!is_string($amenityName) || !is_array($info)) {
+                    continue;
+                }
+                $entry = [];
+                if (isset($info['hours']) && is_string($info['hours'])) {
+                    $entry['hours'] = $info['hours'];
+                }
+                if (isset($info['location']) && is_string($info['location'])) {
+                    $entry['location'] = $info['location'];
+                }
+                $this->amenities[$amenityName] = $entry;
+            }
+        }
+
+        $hours = $venueInfo['hours_of_operation'] ?? [];
+        $this->hoursOfOperation = [];
+        if (is_array($hours)) {
+            foreach ($hours as $day => $value) {
+                if (is_string($day) && is_string($value)) {
+                    $this->hoursOfOperation[$day] = $value;
+                }
+            }
+        }
+
+        $instructions = $venueInfo['special_instructions'] ?? [];
+        $this->specialInstructions = [];
+        if (is_array($instructions)) {
+            foreach ($instructions as $instruction) {
+                if (is_string($instruction)) {
+                    $this->specialInstructions[] = $instruction;
+                }
+            }
+        }
+
+        $welcomeMessage = $venueInfo['welcome_message'] ?? null;
+        $this->welcomeMessage = is_string($welcomeMessage) ? $welcomeMessage : null;
 
         $name = $name !== '' ? $name : 'concierge';
 

@@ -12,7 +12,17 @@ use SignalWire\Skills\SkillName;
 use SignalWire\SWML\Schema;
 use SignalWire\SWML\Service;
 
-class AgentBase extends Service
+/**
+ * @phpstan-type PomSection array{
+ *   title: string,
+ *   body?: string,
+ *   bullets?: list<string>,
+ *   numbered?: bool,
+ *   numberedBullets?: bool,
+ *   subsections?: list<array<string, mixed>>
+ * }
+ */
+class AgentBase extends Service implements AgentInterface
 {
     // ── Call handling ────────────────────────────────────────────────────
     protected bool $autoAnswer;
@@ -22,7 +32,7 @@ class AgentBase extends Service
 
     // ── Prompt / POM ────────────────────────────────────────────────────
     protected bool $usePom;
-    /** @var list<array<string,mixed>> */
+    /** @var list<PomSection> */
     protected array $pomSections;
     protected string $promptText;
     protected string $postPrompt;
@@ -105,7 +115,7 @@ class AgentBase extends Service
     // ── Session / context / skills ──────────────────────────────────────
     protected SessionManager $sessionManager;
     protected ?ContextBuilder $contextBuilder;
-    protected mixed $skillManager;
+    protected ?SkillManager $skillManager;
 
     // ── Proxy override ──────────────────────────────────────────────────
     protected ?string $manualProxyUrl = null;
@@ -266,7 +276,7 @@ class AgentBase extends Service
      *
      * @param list<string> $bullets
      */
-    public function promptAddSection(string $title, string $body, array $bullets = []): self
+    public function promptAddSection(string $title, string $body, array $bullets = []): static
     {
         $this->usePom = true;
 
@@ -434,11 +444,72 @@ class AgentBase extends Service
         $this->usePom      = true;
         $this->pomSections = [];
         foreach ($pom as $section) {
-            if (is_array($section)) {
-                $this->pomSections[] = $section;
+            if (!is_array($section)) {
+                continue;
+            }
+            $built = $this->normalizePomSection($section);
+            if ($built !== null) {
+                $this->pomSections[] = $built;
             }
         }
         return $this;
+    }
+
+    /**
+     * Coerce an externally-supplied section array into the internal
+     * PomSection shape, validating each recognised key at runtime. Sections
+     * without a string title are skipped (Python's renderer requires one).
+     *
+     * @param array<mixed, mixed> $section
+     * @return PomSection|null
+     */
+    private function normalizePomSection(array $section): ?array
+    {
+        $title = $section['title'] ?? null;
+        if (!is_string($title)) {
+            return null;
+        }
+        $out = ['title' => $title];
+
+        $body = $section['body'] ?? null;
+        if (is_string($body)) {
+            $out['body'] = $body;
+        }
+
+        $bullets = $section['bullets'] ?? null;
+        if (is_array($bullets)) {
+            $out['bullets'] = array_values(array_filter($bullets, 'is_string'));
+        }
+
+        $numbered = $section['numbered'] ?? null;
+        if (is_bool($numbered)) {
+            $out['numbered'] = $numbered;
+        }
+
+        $numberedBullets = $section['numberedBullets'] ?? ($section['numbered_bullets'] ?? null);
+        if (is_bool($numberedBullets)) {
+            $out['numberedBullets'] = $numberedBullets;
+        }
+
+        $subsections = $section['subsections'] ?? null;
+        if (is_array($subsections)) {
+            $subs = [];
+            foreach ($subsections as $sub) {
+                if (!is_array($sub)) {
+                    continue;
+                }
+                $subData = [];
+                foreach ($sub as $k => $v) {
+                    if (is_string($k)) {
+                        $subData[$k] = $v;
+                    }
+                }
+                $subs[] = $subData;
+            }
+            $out['subsections'] = $subs;
+        }
+
+        return $out;
     }
 
     /**
@@ -536,7 +607,7 @@ class AgentBase extends Service
     /**
      * @param list<string> $hints
      */
-    public function addHints(array $hints): self
+    public function addHints(array $hints): static
     {
         foreach ($hints as $hint) {
             $this->hints[] = (string) $hint;
@@ -615,7 +686,17 @@ class AgentBase extends Service
     {
         foreach ($this->languages as $language) {
             if (($language['code'] ?? null) === $code) {
-                return $language['params'] ?? null;
+                $params = $language['params'] ?? null;
+                if (!is_array($params)) {
+                    return null;
+                }
+                $out = [];
+                foreach ($params as $k => $v) {
+                    if (is_string($k)) {
+                        $out[$k] = $v;
+                    }
+                }
+                return $out;
             }
         }
         return null;
@@ -686,7 +767,7 @@ class AgentBase extends Service
     /**
      * @param array<string,mixed> $data
      */
-    public function updateGlobalData(array $data): self
+    public function updateGlobalData(array $data): static
     {
         $this->globalData = array_merge($this->globalData, $data);
         return $this;
@@ -1010,7 +1091,7 @@ class AgentBase extends Service
      *
      * @param array<string, mixed> $params
      */
-    public function addSkill(SkillName|string $name, array $params = []): self
+    public function addSkill(SkillName|string $name, array $params = []): static
     {
         $this->getSkillManager()->loadSkill($name instanceof SkillName ? $name->value : $name, $params);
         return $this;
@@ -1337,7 +1418,9 @@ class AgentBase extends Service
     protected function handlePostPrompt(?array $requestData, array $headers): array
     {
         if ($this->summaryCallback !== null && $requestData !== null) {
-            $summary = $requestData['post_prompt_data']['raw'] ?? $requestData['summary'] ?? '';
+            $postPromptData = $requestData['post_prompt_data'] ?? null;
+            $raw = is_array($postPromptData) ? ($postPromptData['raw'] ?? null) : null;
+            $summary = $raw ?? $requestData['summary'] ?? '';
 
             ($this->summaryCallback)($summary, $requestData, $headers);
         }

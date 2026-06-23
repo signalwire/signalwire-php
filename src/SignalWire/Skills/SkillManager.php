@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace SignalWire\Skills;
 
-use SignalWire\Agent\AgentBase;
+use SignalWire\Agent\AgentInterface;
 
 class SkillManager
 {
-    protected AgentBase $agent;
+    protected AgentInterface $agent;
     /** @var array<string, SkillBase> */
     protected array $loadedSkills = [];
     protected SkillRegistry $registry;
 
-    public function __construct(AgentBase $agent)
+    public function __construct(AgentInterface $agent)
     {
         $this->agent = $agent;
         $this->registry = SkillRegistry::instance();

@@ -84,15 +84,38 @@ class Schema
         if ($raw === false) {
             throw new \RuntimeException("Failed to read SWML schema.json at {$schemaPath}");
         }
-        $this->schemaData = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($decoded)) {
+            throw new \RuntimeException("SWML schema.json did not decode to an object at {$schemaPath}");
+        }
+        // The top-level schema is a JSON object, so all keys are strings.
+        $schemaData = [];
+        foreach ($decoded as $k => $v) {
+            if (is_string($k)) {
+                $schemaData[$k] = $v;
+            }
+        }
+        $this->schemaData = $schemaData;
 
-        $defs = $this->schemaData['$defs'] ?? [];
-        $swmlMethod = $defs['SWMLMethod'] ?? [];
-        $anyOf = $swmlMethod['anyOf'] ?? [];
+        $defs = $this->schemaData['$defs'] ?? null;
+        if (!is_array($defs)) {
+            return;
+        }
+        $swmlMethod = $defs['SWMLMethod'] ?? null;
+        if (!is_array($swmlMethod)) {
+            return;
+        }
+        $anyOf = $swmlMethod['anyOf'] ?? null;
+        if (!is_array($anyOf)) {
+            return;
+        }
 
         foreach ($anyOf as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
             $ref = $entry['$ref'] ?? null;
-            if ($ref === null) {
+            if (!is_string($ref)) {
                 continue;
             }
 
@@ -101,21 +124,34 @@ class Schema
             $defName = end($parts);
 
             $defn = $defs[$defName] ?? null;
-            if ($defn === null) {
+            if (!is_array($defn)) {
                 continue;
             }
 
-            $props = $defn['properties'] ?? [];
-            if (empty($props)) {
+            $props = $defn['properties'] ?? null;
+            if (!is_array($props) || empty($props)) {
                 continue;
             }
 
             // The first property key is the actual verb name
             $actualVerb = array_key_first($props);
+            if (!is_string($actualVerb)) {
+                continue;
+            }
+
+            // JSON objects decode to string keys; keep only those so the
+            // definition matches the declared array<string, mixed> shape.
+            $definition = [];
+            foreach ($defn as $k => $v) {
+                if (is_string($k)) {
+                    $definition[$k] = $v;
+                }
+            }
+
             $this->verbs[$actualVerb] = [
                 'name' => $actualVerb,
                 'schema_name' => $defName,
-                'definition' => $defn,
+                'definition' => $definition,
             ];
         }
     }

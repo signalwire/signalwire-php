@@ -55,6 +55,21 @@ class WebSearch extends SkillBase
         return 'web_search';
     }
 
+    /**
+     * Narrow a genuinely-mixed value (Google CSE JSON item field) to a
+     * string. Numeric scalars are stringified; anything else → ''.
+     */
+    private static function asString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+        return '';
+    }
+
     public function getDescription(): string
     {
         return 'Search the web for information using Google Custom Search API';
@@ -89,7 +104,8 @@ class WebSearch extends SkillBase
         // "added a self.params read but forgot the schema entry" drift
         // (Python test_every_setup_param_is_advertised, commit 295745b).
         $schema = parent::getParameterSchema();
-        $schema['properties'] = array_merge($schema['properties'], [
+        $properties = $schema['properties'] ?? [];
+        $schema['properties'] = array_merge(is_array($properties) ? $properties : [], [
             'api_key' => [
                 'type' => 'string',
                 'description' => 'Google Custom Search API key.',
@@ -155,12 +171,11 @@ class WebSearch extends SkillBase
     public function registerTools(): void
     {
         $toolName = $this->getToolName('web_search');
-        $apiKey = (string) ($this->params['api_key'] ?? '');
-        $searchEngineId = (string) ($this->params['search_engine_id'] ?? '');
-        $numResults = max(1, min(10, (int) ($this->params['num_results'] ?? 3)));
-        $timeout = max(2, (int) ($this->params['timeout'] ?? 15));
-        $noResultsMessage = (string) ($this->params['no_results_message']
-            ?? 'No results found for the given query.');
+        $apiKey = $this->paramString('api_key');
+        $searchEngineId = $this->paramString('search_engine_id');
+        $numResults = max(1, min(10, $this->paramInt('num_results', 3)));
+        $timeout = max(2, $this->paramInt('timeout', 15));
+        $noResultsMessage = $this->paramString('no_results_message', 'No results found for the given query.');
 
         // Optional prefix/postfix wrapped around every non-empty search
         // result. Use these to give the calling agent a mechanical cue
@@ -168,8 +183,8 @@ class WebSearch extends SkillBase
         // without needing prompt-side rules. Mirrors the
         // native_vector_search wrapping pattern (response_format_callback
         // in the Python reference).
-        $responsePrefix = (string) ($this->params['response_prefix'] ?? '');
-        $responsePostfix = (string) ($this->params['response_postfix'] ?? '');
+        $responsePrefix = $this->paramString('response_prefix');
+        $responsePostfix = $this->paramString('response_postfix');
 
         // Latency-control params (Python skill.py:660-674, commit 51101da).
         //   perPageTimeout: max seconds to wait on a single page scrape;
@@ -181,11 +196,11 @@ class WebSearch extends SkillBase
         //   parallelScrape: accepted for parity only — PHP scrapes
         //     sequentially (see class docblock).
         //   snippetsOnly: skip scraping; format CSE snippets directly.
-        $perPageTimeout = max(0.1, (float) ($this->params['per_page_timeout'] ?? 2.0));
-        $overallDeadline = max(0.0, (float) ($this->params['overall_deadline'] ?? 10.0));
-        $parallelScrape = (bool) ($this->params['parallel_scrape'] ?? true);
-        $snippetsOnly = (bool) ($this->params['snippets_only'] ?? false);
-        $minQualityScore = (float) ($this->params['min_quality_score'] ?? 0.2);
+        $perPageTimeout = max(0.1, $this->paramFloat('per_page_timeout', 2.0));
+        $overallDeadline = max(0.0, $this->paramFloat('overall_deadline', 10.0));
+        $parallelScrape = $this->paramBool('parallel_scrape', true);
+        $snippetsOnly = $this->paramBool('snippets_only', false);
+        $minQualityScore = $this->paramFloat('min_quality_score', 0.2);
 
         $this->defineTool(
             $toolName,
@@ -215,7 +230,8 @@ class WebSearch extends SkillBase
                 // like Python's `deadline_at = time.monotonic() + deadline`.
                 $deadlineAt = microtime(true) + $overallDeadline;
 
-                $query = trim((string) ($args['query'] ?? ''));
+                $queryArg = $args['query'] ?? '';
+                $query = trim(is_string($queryArg) ? $queryArg : '');
                 if ($query === '') {
                     return new FunctionResult('Error: No search query provided.');
                 }
@@ -337,7 +353,7 @@ class WebSearch extends SkillBase
      * on parse failure / unreachable page / below-threshold quality.
      * Mirrors Python's `_scrape_one` (skill.py:458-481).
      *
-     * @param array<string,mixed> $item Raw CSE item (title/link/snippet).
+     * @param array<mixed> $item Raw CSE item (title/link/snippet).
      * @return array{title:string,url:string,snippet:string,content:string,score:float}|null
      */
     private function scrapeOne(
@@ -346,7 +362,7 @@ class WebSearch extends SkillBase
         int $perPageTimeout,
         float $minQualityScore,
     ): ?array {
-        $link = (string) ($item['link'] ?? '');
+        $link = self::asString($item['link'] ?? null);
         if ($link === '') {
             return null;
         }
@@ -377,9 +393,9 @@ class WebSearch extends SkillBase
         }
 
         return [
-            'title'   => (string) ($item['title'] ?? ''),
+            'title'   => self::asString($item['title'] ?? null),
             'url'     => $link,
-            'snippet' => (string) ($item['snippet'] ?? ''),
+            'snippet' => self::asString($item['snippet'] ?? null),
             'content' => $pageText,
             'score'   => $score,
         ];
@@ -394,7 +410,7 @@ class WebSearch extends SkillBase
      * returned anything, so the kernel never sees a webhook timeout.
      * Python parity: `_format_snippet_results` (skill.py:416-437).
      *
-     * @param list<array<string,mixed>> $items
+     * @param list<array<mixed>> $items
      */
     private static function formatSnippetResults(string $query, array $items, int $numResults): string
     {
@@ -409,9 +425,9 @@ class WebSearch extends SkillBase
         $i = 0;
         foreach ($top as $item) {
             $i++;
-            $title = (string) ($item['title'] ?? '');
-            $link = (string) ($item['link'] ?? '');
-            $snippet = trim((string) ($item['snippet'] ?? ''));
+            $title = self::asString($item['title'] ?? null);
+            $link = self::asString($item['link'] ?? null);
+            $snippet = trim(self::asString($item['snippet'] ?? null));
             $lines[] = "=== RESULT {$i} ===";
             $lines[] = "Title: {$title}";
             $lines[] = "URL: {$link}";

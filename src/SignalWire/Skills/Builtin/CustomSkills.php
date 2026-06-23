@@ -53,8 +53,18 @@ class CustomSkills extends SkillBase
             } elseif (isset($toolDef['name'])) {
                 // Standard tool definition — register with defineTool
                 $name = $toolDef['name'];
-                $description = $toolDef['description'] ?? $toolDef['purpose'] ?? '';
-                $parameters = $toolDef['parameters'] ?? $toolDef['properties'] ?? [];
+                if (!is_string($name)) {
+                    continue;
+                }
+                $rawDescription = $toolDef['description'] ?? $toolDef['purpose'] ?? '';
+                $description = is_string($rawDescription) ? $rawDescription : '';
+                $rawParameters = $toolDef['parameters'] ?? $toolDef['properties'] ?? [];
+                $parameters = [];
+                if (is_array($rawParameters)) {
+                    foreach ($rawParameters as $paramKey => $paramValue) {
+                        $parameters[(string) $paramKey] = $paramValue;
+                    }
+                }
                 $handler = $toolDef['handler'] ?? null;
 
                 if ($handler !== null && is_callable($handler)) {

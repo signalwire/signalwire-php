@@ -8,7 +8,7 @@ use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Utils\SchemaUtils;
 
-class Service
+class Service implements RequestHandlerLike
 {
     protected string $name;
     protected string $route;
@@ -58,7 +58,14 @@ class Service
         $this->name = $name;
         $this->route = rtrim($route, '/') ?: '/';
         $this->host = $host ?? '0.0.0.0';
-        $this->port = $port ?? (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 3000);
+        if ($port !== null) {
+            $this->port = $port;
+        } else {
+            $envPort = $_ENV['PORT'] ?? getenv('PORT');
+            $this->port = (is_string($envPort) || is_int($envPort)) && (int) $envPort !== 0
+                ? (int) $envPort
+                : 3000;
+        }
         $this->document = new Document();
         $this->logger = Logger::getLogger('swml_service');
 
@@ -127,9 +134,9 @@ class Service
             // sleep(2000) or sleep('main', 2000)
             if (count($args) === 1 && is_int($args[0])) {
                 $config = $args[0];
-            } elseif (count($args) === 2) {
-                $section = (string) $args[0];
-                $config = (int) $args[1];
+            } elseif (count($args) === 2 && is_string($args[0]) && is_int($args[1])) {
+                $section = $args[0];
+                $config = $args[1];
             } else {
                 throw new \InvalidArgumentException('sleep requires an integer duration');
             }
@@ -144,7 +151,7 @@ class Service
                     $config = $args[0];
                 }
             } elseif (count($args) === 2) {
-                $section = (string) $args[0];
+                $section = is_string($args[0]) ? $args[0] : 'main';
                 $config = is_array($args[1]) ? $args[1] : [];
             }
         }
@@ -261,7 +268,7 @@ class Service
     public function registerSwaigFunction(array $funcDef): static
     {
         $name = $funcDef['function'] ?? '';
-        if ($name === '') {
+        if (!is_string($name) || $name === '') {
             return $this;
         }
         $this->tools[$name] = $funcDef;
@@ -566,7 +573,15 @@ class Service
             if (strlen($body) > 1_048_576) {
                 return $this->jsonResponse(413, ['error' => 'Request body too large']);
             }
-            $requestData = json_decode($body, true);
+            $decoded = json_decode($body, true);
+            if (is_array($decoded)) {
+                $requestData = [];
+                foreach ($decoded as $k => $v) {
+                    if (is_string($k)) {
+                        $requestData[$k] = $v;
+                    }
+                }
+            }
         }
 
         // Webhook signature validation (when signing_key is configured) —
@@ -646,14 +661,22 @@ class Service
         }
 
         $functionName = $requestData['function'] ?? '';
-        if ($functionName === '') {
+        if (!is_string($functionName) || $functionName === '') {
             return $this->jsonResponse(400, ['error' => 'Missing function name']);
         }
         if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $functionName)) {
             return $this->jsonResponse(400, ['error' => "Invalid function name format: '{$functionName}'"]);
         }
 
-        $args = $requestData['argument']['parsed'][0]
+        $argument = $requestData['argument'] ?? null;
+        $parsedFirst = null;
+        if (is_array($argument)) {
+            $parsed = $argument['parsed'] ?? null;
+            if (is_array($parsed)) {
+                $parsedFirst = $parsed[0] ?? null;
+            }
+        }
+        $args = $parsedFirst
             ?? (is_array($requestData['arguments'] ?? null) ? $requestData['arguments'] : []);
         if (!is_array($args)) {
             $args = [];
@@ -700,7 +723,8 @@ class Service
         }
 
         // Look for SIP URI in common locations
-        $sipUri = $requestBody['call']['to'] ?? $requestBody['to'] ?? null;
+        $call = $requestBody['call'] ?? null;
+        $sipUri = (is_array($call) ? ($call['to'] ?? null) : null) ?? $requestBody['to'] ?? null;
         if ($sipUri === null || !is_string($sipUri)) {
             return null;
         }
@@ -735,7 +759,8 @@ class Service
         //    AgentBase). Subclasses that override the proxy URL set
         //    $this->manualProxyUrl; check via property_exists for safety.
         if (property_exists($this, 'manualProxyUrl')
-            && !empty($this->manualProxyUrl)
+            && is_string($this->manualProxyUrl ?? null)
+            && $this->manualProxyUrl !== ''
         ) {
             return $this->manualProxyUrl;
         }
@@ -749,13 +774,13 @@ class Service
         // 2. X-Forwarded-Proto + X-Forwarded-Host
         $proto = $headers['X-Forwarded-Proto'] ?? $headers['x-forwarded-proto'] ?? null;
         $fwdHost = $headers['X-Forwarded-Host'] ?? $headers['x-forwarded-host'] ?? null;
-        if ($proto !== null && $fwdHost !== null) {
+        if (is_string($proto) && is_string($fwdHost)) {
             return "{$proto}://{$fwdHost}";
         }
 
         // 3. X-Original-URL
         $origUrl = $headers['X-Original-URL'] ?? $headers['x-original-url'] ?? null;
-        if ($origUrl !== null) {
+        if (is_string($origUrl)) {
             return rtrim($origUrl, '/');
         }
 
@@ -823,24 +848,28 @@ class Service
     public function dispatchFromGlobals(): void
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $method = is_string($method) ? $method : 'GET';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
 
         // Reconstruct headers from $_SERVER (cli-server doesn't populate
         // getallheaders() reliably; this works in every SAPI).
         $headers = [];
         foreach ($_SERVER as $k => $v) {
-            if (str_starts_with($k, 'HTTP_')) {
+            if (is_string($k) && str_starts_with($k, 'HTTP_') && is_string($v)) {
                 $name = str_replace('_', '-', substr($k, 5));
                 // Title-case for Authorization, Content-Type compatibility
                 $name = ucwords(strtolower($name), '-');
                 $headers[$name] = $v;
             }
         }
-        if (isset($_SERVER['CONTENT_TYPE'])) {
-            $headers['Content-Type'] = $_SERVER['CONTENT_TYPE'];
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? null;
+        if (is_string($contentType)) {
+            $headers['Content-Type'] = $contentType;
         }
-        if (isset($_SERVER['CONTENT_LENGTH'])) {
-            $headers['Content-Length'] = $_SERVER['CONTENT_LENGTH'];
+        $contentLength = $_SERVER['CONTENT_LENGTH'] ?? null;
+        if (is_string($contentLength)) {
+            $headers['Content-Length'] = $contentLength;
         }
         // PHP's cli-server eats the Authorization header for CGI safety;
         // recover it from REDIRECT_HTTP_AUTHORIZATION / PHP_AUTH_USER if set.
@@ -850,11 +879,12 @@ class Service
                 ?? null;
             if (is_string($authVal) && $authVal !== '') {
                 $headers['Authorization'] = $authVal;
-            } elseif (isset($_SERVER['PHP_AUTH_USER'])) {
+            } elseif (is_string($_SERVER['PHP_AUTH_USER'] ?? null)) {
                 // Reconstruct Basic auth from PHP_AUTH_USER/PW which are
                 // always present when the front-end has parsed the header.
-                $user = (string) $_SERVER['PHP_AUTH_USER'];
-                $pw = (string) ($_SERVER['PHP_AUTH_PW'] ?? '');
+                $user = $_SERVER['PHP_AUTH_USER'];
+                $pwRaw = $_SERVER['PHP_AUTH_PW'] ?? '';
+                $pw = is_string($pwRaw) ? $pwRaw : '';
                 $headers['Authorization'] = 'Basic ' . base64_encode($user . ':' . $pw);
             }
         }
@@ -896,7 +926,8 @@ class Service
         if (is_string($script) && $script !== '' && file_exists($script)) {
             return realpath($script) ?: $script;
         }
-        $argv0 = $_SERVER['argv'][0] ?? null;
+        $argv = $_SERVER['argv'] ?? null;
+        $argv0 = is_array($argv) ? ($argv[0] ?? null) : null;
         if (is_string($argv0) && $argv0 !== '') {
             $abs = realpath($argv0);
             if ($abs !== false && file_exists($abs)) {

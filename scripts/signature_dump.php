@@ -23,6 +23,9 @@ $classes = [];
 $sourceFiles = [];
 $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
 foreach ($rii as $f) {
+    if (!$f instanceof SplFileInfo) {
+        continue;
+    }
     if ($f->isDir()) {
         continue;
     }
@@ -54,6 +57,17 @@ foreach ($classes as $fqcn) {
     // Existence is verified above, so ReflectionClass cannot throw here.
     $r = new ReflectionClass($fqcn);
     if ($r->isInternal()) {
+        continue;
+    }
+    // Skip @internal duck-type contracts (AgentInterface, RelayClientLike,
+    // RequestHandlerLike — the TS RelayClientLike pattern). They are consumed
+    // only internally and are NOT exported API, so they must not enter the
+    // cross-language signature comparison. References to them in other
+    // signatures are folded onto their canonical concrete class via the
+    // CLASS_RENAME_MAP in enumerate_surface.py (e.g. AgentInterface ->
+    // AgentBase) — a rename, not an omission.
+    $docComment = $r->getDocComment();
+    if ($docComment !== false && strpos($docComment, '@internal') !== false) {
         continue;
     }
 

@@ -204,7 +204,26 @@ final class SchemaUtils
         if (!is_array($inner)) {
             return [];
         }
-        return $inner;
+        return self::onlyStringKeys($inner);
+    }
+
+    /**
+     * Keep only string-keyed entries. JSON objects always decode to string
+     * keys, so this narrows array<mixed,mixed> to array<string,mixed> without
+     * discarding any real schema data.
+     *
+     * @param array<mixed, mixed> $arr
+     * @return array<string, mixed>
+     */
+    private static function onlyStringKeys(array $arr): array
+    {
+        $out = [];
+        foreach ($arr as $k => $v) {
+            if (is_string($k)) {
+                $out[$k] = $v;
+            }
+        }
+        return $out;
     }
 
     /**
@@ -236,7 +255,7 @@ final class SchemaUtils
         if (!is_array($props)) {
             return [];
         }
-        return $props;
+        return self::onlyStringKeys($props);
     }
 
     /**

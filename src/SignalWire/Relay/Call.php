@@ -32,8 +32,13 @@ class Call
     public ?string $direction = null;
 
     // ── back-references ───────────────────────────────────────────────
-    /** @var object  RELAY Client instance */
-    public object $client;
+    /**
+     * RELAY client handle, typed via the internal RelayClientLike contract.
+     * Mirrors the Python reference's PRIVATE ``self._client`` back-reference
+     * (not part of the public surface); kept non-public so it is not a
+     * port-only public extra.
+     */
+    protected RelayClientLike $client;
 
     /** @var array<string, Action> controlId => Action */
     public array $actions = [];
@@ -50,19 +55,51 @@ class Call
     /**
      * @param array<string,mixed> $params
      */
-    public function __construct(array $params, object $client)
+    public function __construct(array $params, RelayClientLike $client)
     {
         $this->client    = $client;
-        $this->callId    = $params['call_id']   ?? null;
-        $this->nodeId    = $params['node_id']   ?? null;
-        $this->tag       = $params['tag']       ?? null;
-        $this->device    = $params['device']    ?? [];
-        $this->peer      = $params['peer']      ?? [];
-        $this->context   = $params['context']   ?? null;
-        $this->state     = $params['state']     ?? $params['call_state'] ?? 'created';
-        $this->direction = $params['direction'] ?? null;
+        $this->callId    = self::asNullableString($params['call_id']   ?? null);
+        $this->nodeId    = self::asNullableString($params['node_id']   ?? null);
+        $this->tag       = self::asNullableString($params['tag']       ?? null);
+        $this->device    = self::asStringKeyedArray($params['device']  ?? null);
+        $this->peer      = self::asStringKeyedArray($params['peer']    ?? null);
+        $this->context   = self::asNullableString($params['context']   ?? null);
+        $state           = $params['state'] ?? $params['call_state'] ?? null;
+        $this->state     = is_string($state) ? $state : 'created';
+        $this->direction = self::asNullableString($params['direction'] ?? null);
 
         $this->logger = Logger::getLogger('relay.call');
+    }
+
+    /**
+     * Narrow a JSON-decoded value to a string, or null when absent / a
+     * non-string. The RELAY call identity fields (call_id, node_id, tag,
+     * context, direction) are strings on the wire — see the Python
+     * reference's ``str`` typing in relay/call.py.
+     */
+    private static function asNullableString(mixed $value): ?string
+    {
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * Narrow a JSON-decoded value to an ``array<string,mixed>`` (a JSON
+     * object) — RELAY ``device``/``peer`` are objects (Python types them as
+     * ``dict[str, Any]``). A missing or non-object value yields an empty
+     * array.
+     *
+     * @return array<string,mixed>
+     */
+    private static function asStringKeyedArray(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $key => $item) {
+            $out[(string) $key] = $item;
+        }
+        return $out;
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -84,16 +121,16 @@ class Call
         if ($eventType === 'calling.call.state') {
             // Production wire uses ``call_state``; older fixtures use ``state``.
             $newState = $params['state'] ?? $params['call_state'] ?? null;
-            if ($newState !== null) {
+            if (is_string($newState)) {
                 $this->state = $newState;
             }
-            if (isset($params['end_reason'])) {
+            if (is_string($params['end_reason'] ?? null)) {
                 $this->endReason = $params['end_reason'];
             }
             if (isset($params['peer'])) {
-                $this->peer = $params['peer'];
+                $this->peer = self::asStringKeyedArray($params['peer']);
             }
-            if (isset($params['direction'])) {
+            if (is_string($params['direction'] ?? null)) {
                 $this->direction = $params['direction'];
             }
 
@@ -106,7 +143,7 @@ class Call
         // ── connect events carry peer info ───────────────────────────
         if ($eventType === 'calling.call.connect') {
             if (isset($params['peer'])) {
-                $this->peer = $params['peer'];
+                $this->peer = self::asStringKeyedArray($params['peer']);
             }
         }
 
@@ -148,7 +185,7 @@ class Call
             } else {
                 $terminalMap = Constants::ACTION_TERMINAL_STATES[$eventType] ?? [];
                 $actionState = $params['state'] ?? null;
-                if ($actionState !== null && isset($terminalMap[$actionState])) {
+                if (is_string($actionState) && isset($terminalMap[$actionState])) {
                     $action->resolve($event);
                     unset($this->actions[$controlId]);
                 }
@@ -229,11 +266,8 @@ class Call
         while ($this->stateRank($this->state) < $targetRank
             && microtime(true) < $deadline
         ) {
-            if (method_exists($this->client, 'readOnce')) {
-                $this->client->readOnce();
-            } else {
-                break;
-            }
+            // readOnce() is part of the RelayClientLike contract.
+            $this->client->readOnce();
         }
 
         return $this->stateRank($this->state) >= $targetRank;
@@ -1030,14 +1064,16 @@ class Call
         class_exists(Action::class);
 
         // Caller may pre-supply control_id; otherwise we generate one.
-        $controlId = $opts['control_id'] ?? $wireParams['control_id'] ?? $this->generateUuid();
+        $controlIdRaw = $opts['control_id'] ?? $wireParams['control_id'] ?? null;
+        $controlId = is_string($controlIdRaw) ? $controlIdRaw : $this->generateUuid();
 
         $callId = $this->callId ?? '';
         $nodeId = $this->nodeId ?? '';
 
         // Construct the action with the right signature.
         if ($actionClass === FaxAction::class) {
-            $faxType = $opts['fax_type'] ?? 'send';
+            $faxTypeRaw = $opts['fax_type'] ?? 'send';
+            $faxType = is_string($faxTypeRaw) ? $faxTypeRaw : 'send';
             $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $faxType);
         } else {
             /** @psalm-suppress UnsafeInstantiation */
@@ -1083,6 +1119,12 @@ class Call
                 throw $e;
             }
         }
+
+        // Genuine invariant: the FaxAction branch only runs when $actionClass
+        // === FaxAction::class, and otherwise $action is `new $actionClass`.
+        // PHPStan cannot narrow the template T across the FaxAction branch, so
+        // assert the real guarantee here rather than hand-waving the type.
+        assert($action instanceof $actionClass);
 
         return $action;
     }

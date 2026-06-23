@@ -50,17 +50,25 @@ class Spider extends SkillBase
 
     public function registerTools(): void
     {
-        $prefix = (string) ($this->params['tool_prefix'] ?? '');
-        $maxLength = max(100, (int) ($this->params['max_text_length'] ?? 5000));
-        $timeout = max(2, (int) ($this->params['timeout'] ?? 15));
-        $maxPages = max(1, (int) ($this->params['max_pages'] ?? 5));
-        $maxDepth = max(0, (int) ($this->params['max_depth'] ?? 2));
+        $prefix = $this->paramString('tool_prefix');
+        $maxLength = max(100, $this->paramInt('max_text_length', 5000));
+        $timeout = max(2, $this->paramInt('timeout', 15));
+        $maxPages = max(1, $this->paramInt('max_pages', 5));
+        $maxDepth = max(0, $this->paramInt('max_depth', 2));
         $followPatterns = $this->params['follow_patterns'] ?? [];
-        $userAgent = (string) ($this->params['user_agent']
-            ?? 'Spider/1.0 (SignalWire AI Agent)');
-        $extraHeaders = is_array($this->params['headers'] ?? null)
-            ? $this->params['headers']
-            : [];
+        $userAgentRaw = $this->params['user_agent'] ?? null;
+        $userAgent = is_string($userAgentRaw)
+            ? $userAgentRaw
+            : 'Spider/1.0 (SignalWire AI Agent)';
+        $headersParam = $this->params['headers'] ?? null;
+        $extraHeaders = [];
+        if (is_array($headersParam)) {
+            foreach ($headersParam as $headerKey => $headerValue) {
+                if (is_string($headerKey) && is_string($headerValue)) {
+                    $extraHeaders[$headerKey] = $headerValue;
+                }
+            }
+        }
 
         // ── scrape_url ────────────────────────────────────────────────
         $this->defineTool(
