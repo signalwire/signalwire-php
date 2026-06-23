@@ -58,9 +58,9 @@ class Adapter
      * compatible response.
      *
      * @param object $agent   An AgentBase or Service instance with handleRequest().
-     * @param array  $event   The API Gateway event payload.
+     * @param array<string,mixed> $event   The API Gateway event payload.
      * @param object $context The Lambda context object.
-     * @return array API Gateway response format {statusCode, headers, body}.
+     * @return array{statusCode: int, headers: array<string,string>, body: string} API Gateway response format.
      */
     public static function handleLambda(object $agent, array $event, object $context): array
     {
@@ -133,8 +133,8 @@ class Adapter
      * response array.
      *
      * @param object $agent   An AgentBase or Service instance with handleRequest().
-     * @param array  $request The Azure Functions HTTP request array.
-     * @return array Azure response format {status, headers, body}.
+     * @param array<string,mixed> $request The Azure Functions HTTP request array.
+     * @return array{status: int, headers: array<string,string>, body: string} Azure response format.
      */
     public static function handleAzure(object $agent, array $request): array
     {

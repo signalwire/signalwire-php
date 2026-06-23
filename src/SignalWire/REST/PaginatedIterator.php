@@ -15,6 +15,8 @@ namespace SignalWire\REST;
  *   foreach (new PaginatedIterator($http, '/api/path', ['k' => 'v']) as $item) {
  *       // ...
  *   }
+ *
+ * @implements \Iterator<int,array<string,mixed>>
  */
 class PaginatedIterator implements \Iterator
 {
@@ -138,8 +140,14 @@ class PaginatedIterator implements \Iterator
             // Parse cursor/page token from next URL.
             $parsed = parse_url($nextUrl);
             $query = $parsed['query'] ?? '';
+            $parts = [];
             parse_str($query, $parts);
-            $this->params = $parts;
+            /** @var array<string,mixed> $normalized */
+            $normalized = [];
+            foreach ($parts as $k => $v) {
+                $normalized[(string) $k] = $v;
+            }
+            $this->params = $normalized;
         } else {
             $this->done = true;
         }

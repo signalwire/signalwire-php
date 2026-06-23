@@ -255,6 +255,9 @@ class NativeVectorSearch extends SkillBase
         return implode("\n\n", $lines);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         $hints = ['search', 'find', 'look up', 'documentation', 'knowledge base'];

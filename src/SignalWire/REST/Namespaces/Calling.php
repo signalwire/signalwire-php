@@ -71,7 +71,10 @@ class Calling
     // Call lifecycle (5)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function dial(array $params = []): array
     {
         return $this->execute('dial', null, $params);
@@ -83,25 +86,35 @@ class Calling
      * ``CallingNamespace.update(**params)``.
      *
      * @param array<string,mixed> $params
+     * @return array<string,mixed>
      */
     public function update(array $params = []): array
     {
         return $this->execute('update', null, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function end(string $callId, array $params = []): array
     {
         return $this->execute('calling.end', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function transfer(string $callId, array $params = []): array
     {
         return $this->execute('calling.transfer', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function disconnect(string $callId, array $params = []): array
     {
         return $this->execute('calling.disconnect', $callId, $params);
@@ -111,31 +124,46 @@ class Calling
     // Play (5)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function play(string $callId, array $params = []): array
     {
         return $this->execute('calling.play', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function playPause(string $callId, array $params = []): array
     {
         return $this->execute('calling.play.pause', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function playResume(string $callId, array $params = []): array
     {
         return $this->execute('calling.play.resume', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function playStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.play.stop', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function playVolume(string $callId, array $params = []): array
     {
         return $this->execute('calling.play.volume', $callId, $params);
@@ -145,25 +173,37 @@ class Calling
     // Record (4)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function record(string $callId, array $params = []): array
     {
         return $this->execute('calling.record', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function recordPause(string $callId, array $params = []): array
     {
         return $this->execute('calling.record.pause', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function recordResume(string $callId, array $params = []): array
     {
         return $this->execute('calling.record.resume', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function recordStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.record.stop', $callId, $params);
@@ -173,19 +213,28 @@ class Calling
     // Collect (3)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function collect(string $callId, array $params = []): array
     {
         return $this->execute('calling.collect', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function collectStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.collect.stop', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function collectStartInputTimers(string $callId, array $params = []): array
     {
         return $this->execute('calling.collect.start_input_timers', $callId, $params);
@@ -195,13 +244,19 @@ class Calling
     // Detect (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function detect(string $callId, array $params = []): array
     {
         return $this->execute('calling.detect', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function detectStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.detect.stop', $callId, $params);
@@ -211,13 +266,19 @@ class Calling
     // Tap (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function tap(string $callId, array $params = []): array
     {
         return $this->execute('calling.tap', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function tapStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.tap.stop', $callId, $params);
@@ -227,13 +288,19 @@ class Calling
     // Stream (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function stream(string $callId, array $params = []): array
     {
         return $this->execute('calling.stream', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function streamStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.stream.stop', $callId, $params);
@@ -243,13 +310,19 @@ class Calling
     // Denoise (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function denoise(string $callId, array $params = []): array
     {
         return $this->execute('calling.denoise', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function denoiseStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.denoise.stop', $callId, $params);
@@ -259,13 +332,19 @@ class Calling
     // Transcribe (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function transcribe(string $callId, array $params = []): array
     {
         return $this->execute('calling.transcribe', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function transcribeStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.transcribe.stop', $callId, $params);
@@ -275,25 +354,37 @@ class Calling
     // AI (4)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function aiMessage(string $callId, array $params = []): array
     {
         return $this->execute('calling.ai_message', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function aiHold(string $callId, array $params = []): array
     {
         return $this->execute('calling.ai_hold', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function aiUnhold(string $callId, array $params = []): array
     {
         return $this->execute('calling.ai_unhold', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function aiStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.ai.stop', $callId, $params);
@@ -303,13 +394,19 @@ class Calling
     // Live transcribe / translate (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function liveTranscribe(string $callId, array $params = []): array
     {
         return $this->execute('calling.live_transcribe', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function liveTranslate(string $callId, array $params = []): array
     {
         return $this->execute('calling.live_translate', $callId, $params);
@@ -319,13 +416,19 @@ class Calling
     // Fax (2)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function sendFaxStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.send_fax.stop', $callId, $params);
     }
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function receiveFaxStop(string $callId, array $params = []): array
     {
         return $this->execute('calling.receive_fax.stop', $callId, $params);
@@ -335,7 +438,10 @@ class Calling
     // SIP (1)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function refer(string $callId, array $params = []): array
     {
         return $this->execute('calling.refer', $callId, $params);
@@ -345,7 +451,10 @@ class Calling
     // Custom events (1)
     // -----------------------------------------------------------------
 
-    /** @param array<string,mixed> $params */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function userEvent(string $callId, array $params = []): array
     {
         return $this->execute('calling.user_event', $callId, $params);

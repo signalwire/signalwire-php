@@ -22,7 +22,9 @@ class Action
     protected bool $completed = false;
     /** @var mixed */
     protected $result = null;
+    /** @var list<Event> */
     protected array $events = [];
+    /** @var array<string,mixed> */
     protected array $payload = [];
     /** @var callable|null */
     protected $onCompletedCallback = null;
@@ -88,6 +90,7 @@ class Action
         return $this->state;
     }
 
+    /** @return array<string,mixed> */
     public function getPayload(): array
     {
         return $this->payload;
@@ -207,6 +210,8 @@ class Action
      *
      * The payload always includes control_id, call_id, and node_id so
      * the server knows which action instance to target.
+     *
+     * @param array<string,mixed> $extraParams
      */
     public function executeSubcommand(string $method, array $extraParams = []): void
     {
@@ -356,6 +361,8 @@ class CollectAction extends Action
 
     /**
      * Return the structured collect result from the payload.
+     *
+     * @return array<string,mixed>|null
      */
     public function getCollectResult(): ?array
     {
@@ -386,6 +393,7 @@ class DetectAction extends Action
         return 'calling.detect.stop';
     }
 
+    /** @return array<string,mixed>|null */
     public function getDetectResult(): ?array
     {
         return $this->payload['detect'] ?? $this->payload['result'] ?? null;

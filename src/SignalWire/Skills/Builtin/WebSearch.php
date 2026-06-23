@@ -78,6 +78,9 @@ class WebSearch extends SkillBase
         return true;
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getParameterSchema(): array
     {
         // Merge the base schema (swaig_fields / skip_prompt / tool_name)
@@ -540,6 +543,9 @@ class WebSearch extends SkillBase
         return new FunctionResult($response);
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getGlobalData(): array
     {
         return [
@@ -549,6 +555,9 @@ class WebSearch extends SkillBase
         ];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

@@ -32,7 +32,7 @@ class Service
      * SWAIG tool registry — lifted from AgentBase so any Service (sidecar,
      * non-agent verb host, etc.) can register and dispatch SWAIG functions.
      *
-     * @var array<string, array>
+     * @var array<string, array<string, mixed>>
      */
     protected array $tools = [];
 
@@ -110,6 +110,8 @@ class Service
      *   $service->answer('main', ['max_duration' => 3600]);
      *   $service->sleep('main', 2000);
      *   $service->hangup();
+     *
+     * @param list<mixed> $args
      */
     public function __call(string $method, array $args): static
     {
@@ -174,7 +176,10 @@ class Service
 
     /** Get (user, password, source) where source is "provided",
      * "environment", or "generated". Python parity:
-     * AuthMixin.get_basic_auth_credentials(include_source=True). */
+     * AuthMixin.get_basic_auth_credentials(include_source=True).
+     *
+     * @return array{string, string, string} [user, password, source]
+     */
     public function getBasicAuthCredentialsWithSource(): array
     {
         $envUser = getenv('SWML_BASIC_AUTH_USER');
@@ -222,6 +227,8 @@ class Service
      *
      * Tool descriptions and parameter descriptions are LLM-facing prompt
      * engineering, not internal documentation. See PORTING_GUIDE for guidance.
+     *
+     * @param array<string, mixed> $parameters JSON-Schema `properties` map for the tool argument.
      */
     public function defineTool(
         string $name,
@@ -248,6 +255,8 @@ class Service
 
     /**
      * Register a raw SWAIG function definition (e.g. DataMap tools).
+     *
+     * @param array<string, mixed> $funcDef
      */
     public function registerSwaigFunction(array $funcDef): static
     {
@@ -264,6 +273,8 @@ class Service
 
     /**
      * Register multiple tool definitions at once.
+     *
+     * @param list<array<string, mixed>> $toolDefs
      */
     public function defineTools(array $toolDefs): static
     {
@@ -280,7 +291,7 @@ class Service
      * harness, and any test that needs to inspect what's been
      * registered without going through a HTTP round trip).
      *
-     * @return array<string, array> name => tool definition
+     * @return array<string, array<string, mixed>> name => tool definition
      */
     public function getTools(): array
     {
@@ -295,14 +306,18 @@ class Service
     }
 
     /** Get a registered SWAIG function by name, or null when absent.
-     * Python parity: ``ToolRegistry.get_function``. */
+     * Python parity: ``ToolRegistry.get_function``.
+     *
+     * @return array<string, mixed>|null */
     public function getFunction(string $name): ?array
     {
         return $this->tools[$name] ?? null;
     }
 
     /** Snapshot of all registered SWAIG functions keyed by name.
-     * Python parity: ``ToolRegistry.get_all_functions``. */
+     * Python parity: ``ToolRegistry.get_all_functions``.
+     *
+     * @return array<string, array<string, mixed>> */
     public function getAllFunctions(): array
     {
         return $this->tools;  // copy on read in PHP arrays
@@ -333,6 +348,9 @@ class Service
 
     /**
      * Dispatch a function call to the registered handler.
+     *
+     * @param array<string, mixed> $args    parsed function arguments
+     * @param array<string, mixed> $rawData full SWAIG request payload
      */
     public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
     {
@@ -378,7 +396,9 @@ class Service
      * config. Returns [target, shortCircuit]: shortCircuit non-null replies
      * directly without dispatch.
      *
-     * @return array{0: object, 1: ?array}
+     * @param array<string, mixed> $requestData
+     * @param array<string, string> $headers
+     * @return array{0: self, 1: ?array<string, mixed>}
      */
     protected function swaigPreDispatch(array $requestData, array $headers, string $functionName): array
     {
@@ -400,6 +420,9 @@ class Service
      * Python parity: WebMixin.on_request(request_data, callback_path).
      * The Python third `request` arg is FastAPI-specific and is not
      * mirrored.
+     *
+     * @param array<string, mixed>|null $requestData
+     * @return array<string, mixed>|null
      */
     public function onRequest(?array $requestData = null, ?string $callbackPath = null): ?array
     {
@@ -413,6 +436,9 @@ class Service
      * callback path and return an associative array of overrides.
      *
      * Python parity: WebMixin.on_swml_request(request_data, callback_path).
+     *
+     * @param array<string, mixed>|null $requestData
+     * @return array<string, mixed>|null
      */
     public function onSwmlRequest(?array $requestData = null, ?string $callbackPath = null): ?array
     {
@@ -473,6 +499,10 @@ class Service
 
     /**
      * Render SWML for a request. Subclasses override this.
+     *
+     * @param array<string, mixed>|null $requestBody
+     * @param array<string, string> $headers
+     * @return array<string, mixed>
      */
     public function renderSwml(?array $requestBody = null, array $headers = []): array
     {
@@ -486,6 +516,7 @@ class Service
     /**
      * Handle an HTTP request. Returns [status, headers, body].
      *
+     * @param array<string, string> $headers
      * @return array{int, array<string, string>, string}
      */
     public function handleRequest(
@@ -578,6 +609,11 @@ class Service
     /**
      * Handle SWML document request.
      */
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed>|null $requestData
+     * @return array{int, array<string, string>, string}
+     */
     protected function handleSwmlRequest(string $method, ?array $requestData, array $headers): array
     {
         $swml = $this->renderSwml($requestData, $headers);
@@ -593,6 +629,10 @@ class Service
      *
      * Lifted from AgentBase so non-agent SWMLServices (e.g. ai_sidecar host)
      * can serve /swaig without subclassing AgentBase.
+     *
+     * @param array<string, string> $headers
+     * @param array<string, mixed>|null $requestData
+     * @return array{int, array<string, string>, string}
      */
     protected function handleSwaigRequest(string $method, ?array $requestData, array $headers): array
     {
@@ -633,6 +673,10 @@ class Service
 
     /**
      * Handle post-prompt callback. Override in AgentBase.
+     *
+     * @param array<string, mixed>|null $requestData
+     * @param array<string, string> $headers
+     * @return array{int, array<string, string>, string}
      */
     protected function handlePostPrompt(?array $requestData, array $headers): array
     {
@@ -646,6 +690,8 @@ class Service
     /**
      * Extract SIP username from a request body.
      * Validates format: only [a-zA-Z0-9._-], max 64 chars.
+     *
+     * @param array<string, mixed>|null $requestBody
      */
     public static function extractSipUsername(?array $requestBody): ?string
     {
@@ -680,6 +726,8 @@ class Service
 
     /**
      * Detect or construct the proxy URL base from request headers.
+     *
+     * @param array<string, mixed> $headers
      */
     public function getProxyUrlBase(array $headers = []): string
     {
@@ -966,6 +1014,8 @@ class Service
      *    proto + host. getProxyUrlBase already normalises this.
      *  - The query string MUST be preserved (Scheme A signs URL+body and
      *    cXML bodySHA256 lives in the query).
+     *
+     * @param array<string, mixed> $headers
      */
     protected function reconstructPublicUrl(array $headers, string $path): string
     {
@@ -994,6 +1044,8 @@ class Service
 
     /**
      * Check Basic Auth from request headers.
+     *
+     * @param array<string, string> $headers
      */
     protected function checkBasicAuth(array $headers): bool
     {
@@ -1048,6 +1100,9 @@ class Service
     protected function jsonResponse(int $status, mixed $data): array
     {
         $body = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($body === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
         $headers = array_merge(
             ['Content-Type' => 'application/json'],
             $this->securityHeaders(),
@@ -1057,6 +1112,8 @@ class Service
 
     /**
      * Generate cryptographically secure random hex string.
+     *
+     * @param int<1, max> $bytes Number of random bytes (must be positive).
      */
     protected function randomHex(int $bytes): string
     {

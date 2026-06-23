@@ -25,7 +25,10 @@ class CompatConferences
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
@@ -37,7 +40,10 @@ class CompatConferences
         return $this->http->get($this->basePath . '/' . $sid);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function update(string $sid, array $body): array
     {
         return $this->http->post($this->basePath . '/' . $sid, $body);
@@ -47,7 +53,10 @@ class CompatConferences
     // Participants
     // ------------------------------------------------------------------
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listParticipants(string $conferenceSid, array $params = []): array
     {
         return $this->http->get(
@@ -64,7 +73,10 @@ class CompatConferences
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function updateParticipant(string $conferenceSid, string $callSid, array $body): array
     {
         return $this->http->post(
@@ -85,7 +97,10 @@ class CompatConferences
     // Conference recordings
     // ------------------------------------------------------------------
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listRecordings(string $conferenceSid, array $params = []): array
     {
         return $this->http->get(
@@ -102,7 +117,10 @@ class CompatConferences
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function updateRecording(string $conferenceSid, string $recordingSid, array $body): array
     {
         return $this->http->post(
@@ -123,7 +141,10 @@ class CompatConferences
     // Conference streams
     // ------------------------------------------------------------------
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function startStream(string $conferenceSid, array $body): array
     {
         return $this->http->post(
@@ -132,7 +153,10 @@ class CompatConferences
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function stopStream(string $conferenceSid, string $streamSid, array $body): array
     {
         return $this->http->post(

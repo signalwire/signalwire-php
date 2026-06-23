@@ -294,6 +294,9 @@ class McpGateway extends SkillBase
         };
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         $hints = ['MCP', 'gateway'];
@@ -311,6 +314,9 @@ class McpGateway extends SkillBase
         return $hints;
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getGlobalData(): array
     {
         $services = $this->params['services'] ?? [];
@@ -332,6 +338,9 @@ class McpGateway extends SkillBase
         ];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

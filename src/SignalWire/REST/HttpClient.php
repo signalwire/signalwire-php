@@ -27,6 +27,8 @@ class HttpClient
      * Path to a CA bundle (PEM) used to verify the server certificate over
      * HTTPS, or null to use cURL's default trust store. TLS peer verification
      * is always on (cURL's default); this only selects which CA to trust.
+     *
+     * @var non-empty-string|null
      */
     private ?string $caBundle;
 
@@ -48,6 +50,9 @@ class HttpClient
      * Resolve the effective CA bundle: explicit arg wins, otherwise the
      * SIGNALWIRE_CA_FILE then SSL_CERT_FILE env vars (which cURL itself does
      * not consult), otherwise null (cURL's built-in default store).
+     */
+    /**
+     * @return non-empty-string|null
      */
     private static function resolveCaBundle(?string $explicit): ?string
     {
@@ -88,7 +93,8 @@ class HttpClient
     // -----------------------------------------------------------------
 
     /**
-     * @param array<string,string> $params Query-string parameters.
+     * @param array<string,mixed> $params Query-string parameters (scalars are
+     *   url-encoded; nested arrays use PHP's bracketed query syntax).
      * @return array<string,mixed>
      */
     public function get(string $path, array $params = []): array
@@ -141,7 +147,7 @@ class HttpClient
      * Expects the API to return `{ "data": [...], "links": { "next": "..." } }`
      * or similar paginated envelope.  Each yield is one page (array of items).
      *
-     * @param array<string,string> $params Initial query-string parameters.
+     * @param array<string,mixed> $params Initial query-string parameters.
      * @return \Generator<int,array<string,mixed>>
      */
     public function listAll(string $path, array $params = []): \Generator
@@ -169,13 +175,31 @@ class HttpClient
             if (str_starts_with($nextUrl, 'http')) {
                 $parsed = parse_url($nextUrl);
                 $currentPath = $parsed['path'] ?? '';
-                parse_str($parsed['query'] ?? '', $currentParams);
+                $currentParams = self::parseQuery($parsed['query'] ?? '');
             } else {
                 $parts = explode('?', $nextUrl, 2);
                 $currentPath = $parts[0];
-                parse_str($parts[1] ?? '', $currentParams);
+                $currentParams = self::parseQuery($parts[1] ?? '');
             }
         }
+    }
+
+    /**
+     * Parse a query string into a string-keyed parameter map. parse_str() can
+     * yield integer top-level keys (e.g. "0=x"); normalise them to strings so
+     * the result matches the query-param contract.
+     *
+     * @return array<string, mixed>
+     */
+    private static function parseQuery(string $query): array
+    {
+        $parsed = [];
+        parse_str($query, $parsed);
+        $out = [];
+        foreach ($parsed as $k => $v) {
+            $out[(string) $k] = $v;
+        }
+        return $out;
     }
 
     // -----------------------------------------------------------------
@@ -183,7 +207,7 @@ class HttpClient
     // -----------------------------------------------------------------
 
     /**
-     * @param array<string,string> $params  Query-string parameters.
+     * @param array<string,mixed> $params  Query-string parameters.
      * @param array<string,mixed>|null $body JSON body (for POST/PUT/PATCH).
      * @return array<string,mixed>
      * @throws SignalWireRestError on non-2xx responses.
@@ -224,7 +248,11 @@ class HttpClient
         }
 
         if ($body !== null && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+            $encodedBody = json_encode($body);
+            if ($encodedBody === false) {
+                throw new \RuntimeException('json_encode failed for request body');
+            }
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $encodedBody);
         }
 
         $responseBody = curl_exec($ch);

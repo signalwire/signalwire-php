@@ -41,7 +41,7 @@ final class SchemaUtils
     /** @var bool Whether validation is enabled (false when the env var disabled it). */
     private bool $validationEnabled;
 
-    /** @var array<string, array{name: string, schema_name: string, definition: array}> */
+    /** @var array<string, array{name: string, schema_name: string, definition: array<string,mixed>}> */
     private array $verbs = [];
 
     /** @var mixed|null Optional full JSON Schema validator (reserved). */

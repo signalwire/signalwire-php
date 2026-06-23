@@ -149,7 +149,9 @@ function load_corpus(): array
         if (!is_array($decoded) || !isset($decoded['corpus']) || !is_array($decoded['corpus'])) {
             throw new \RuntimeException("malformed corpus from {$script}");
         }
-        return $decoded['corpus'];
+        /** @var list<array{id: string, skill: string, config?: array<string, mixed>}> $corpus */
+        $corpus = $decoded['corpus'];
+        return $corpus;
     }
 
     throw new \RuntimeException(

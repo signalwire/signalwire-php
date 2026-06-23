@@ -151,11 +151,17 @@ class GoogleMaps extends SkillBase
         $this->agent->registerSwaigFunction($routeDef);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         return ['address', 'location', 'route', 'directions', 'miles', 'distance'];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

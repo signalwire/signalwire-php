@@ -43,19 +43,28 @@ class RegistryCampaigns
         return $this->http->put($this->basePath . '/' . $campaignId, $body);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listNumbers(string $campaignId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $campaignId . '/numbers', $params);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listOrders(string $campaignId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $campaignId . '/orders', $params);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createOrder(string $campaignId, array $body): array
     {
         return $this->http->post($this->basePath . '/' . $campaignId . '/orders', $body);

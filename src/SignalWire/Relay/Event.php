@@ -27,6 +27,9 @@ class Event
 {
     private readonly float $timestamp;
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function __construct(
         private readonly string $eventType,
         private readonly array $params,
@@ -45,6 +48,7 @@ class Event
         return $this->timestamp;
     }
 
+    /** @return array<string,mixed> */
     public function getParams(): array
     {
         return $this->params;
@@ -91,6 +95,7 @@ class Event
         return is_string($wire) ? DialState::tryFromWire($wire) : null;
     }
 
+    /** @return array{event_type: string, timestamp: float, params: array<string,mixed>} */
     public function toArray(): array
     {
         return [
@@ -100,6 +105,9 @@ class Event
         ];
     }
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public static function parse(string $eventType, array $params): self
     {
         return new self($eventType, $params);

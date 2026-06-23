@@ -27,7 +27,7 @@ class ConciergeAgent extends AgentBase
 
     /**
      * @param string $name Agent name
-     * @param array $venueInfo Venue information: venue_name (required), services, amenities,
+     * @param array<string,mixed> $venueInfo Venue information: venue_name (required), services, amenities,
      *                         hours_of_operation, special_instructions, welcome_message
      * @param string $route
      * @param string|null $host
@@ -192,7 +192,7 @@ class ConciergeAgent extends AgentBase
     }
 
     /**
-     * @return array<string, array>
+     * @return array<string, array{hours?: string, location?: string}>
      */
     public function getAmenities(): array
     {

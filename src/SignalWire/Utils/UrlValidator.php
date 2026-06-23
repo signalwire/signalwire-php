@@ -49,7 +49,7 @@ final class UrlValidator
      * Signature: function(string $hostname): ?array (array of IP
      * strings, or null on resolution failure).
      *
-     * @var (callable(string): ?array)|null
+     * @var (callable(string): (list<string>|null))|null
      */
     public static $resolver = null;
 

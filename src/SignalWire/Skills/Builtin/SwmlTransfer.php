@@ -124,6 +124,9 @@ class SwmlTransfer extends SkillBase
         $this->agent->registerSwaigFunction($funcDef);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         $hints = ['transfer', 'connect', 'speak to', 'talk to'];
@@ -131,7 +134,7 @@ class SwmlTransfer extends SkillBase
 
         foreach (array_keys($transfers) as $key) {
             // Split transfer keys into hint words
-            $words = preg_split('/[\s_\-]+/', (string) $key);
+            $words = preg_split('/[\s_\-]+/', (string) $key) ?: [];
             foreach ($words as $word) {
                 $word = trim($word);
                 if ($word !== '' && !in_array($word, $hints, true)) {
@@ -143,6 +146,9 @@ class SwmlTransfer extends SkillBase
         return $hints;
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

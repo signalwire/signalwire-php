@@ -22,6 +22,7 @@ class AgentBase extends Service
 
     // ── Prompt / POM ────────────────────────────────────────────────────
     protected bool $usePom;
+    /** @var list<array<string,mixed>> */
     protected array $pomSections;
     protected string $promptText;
     protected string $postPrompt;
@@ -49,7 +50,9 @@ class AgentBase extends Service
     protected array $pronunciations;
 
     // ── Params / data ───────────────────────────────────────────────────
+    /** @var array<string,mixed> */
     protected array $params;
+    /** @var array<string,mixed> */
     protected array $globalData;
 
     // ── Native functions / fillers / debug ───────────────────────────────
@@ -66,7 +69,9 @@ class AgentBase extends Service
     protected ?string $debugEventsLevel;
 
     // ── LLM params ──────────────────────────────────────────────────────
+    /** @var array<string,mixed> */
     protected array $promptLlmParams;
+    /** @var array<string,mixed> */
     protected array $postPromptLlmParams;
 
     // ── Verbs ───────────────────────────────────────────────────────────
@@ -76,6 +81,7 @@ class AgentBase extends Service
     protected array $postAnswerVerbs;
     /** @var list<array{string, mixed}> */
     protected array $postAiVerbs;
+    /** @var array<string,mixed> */
     protected array $answerConfig;
 
     // ── Callbacks ───────────────────────────────────────────────────────
@@ -89,10 +95,11 @@ class AgentBase extends Service
     // ── Web / URLs ──────────────────────────────────────────────────────
     protected ?string $webhookUrl;
     protected ?string $postPromptUrl;
+    /** @var array<string,string> */
     protected array $swaigQueryParams;
 
     // ── Function includes ───────────────────────────────────────────────
-    /** @var list<array> */
+    /** @var list<array<string, mixed>> */
     protected array $functionIncludes;
 
     // ── Session / context / skills ──────────────────────────────────────
@@ -256,6 +263,8 @@ class AgentBase extends Service
 
     /**
      * Add a top-level POM section with an optional body and bullets.
+     *
+     * @param list<string> $bullets
      */
     public function promptAddSection(string $title, string $body, array $bullets = []): self
     {
@@ -316,6 +325,8 @@ class AgentBase extends Service
 
     /**
      * Append body text and/or bullets to an existing section.
+     *
+     * @param list<string> $bullets
      */
     public function promptAddToSection(string $title, ?string $body = null, array $bullets = []): self
     {
@@ -371,7 +382,7 @@ class AgentBase extends Service
     /**
      * Return the prompt payload: POM array if enabled and populated, otherwise raw text.
      *
-     * @return array|string
+     * @return list<array<string,mixed>>|string
      */
     public function getPrompt(): array|string
     {
@@ -414,6 +425,9 @@ class AgentBase extends Service
      *
      * Mirrors Python's PromptManager::set_prompt_pom — accepts a list of
      * section dicts and stores them in pomSections.
+     *
+     * @param list<mixed> $pom List of POM section arrays; non-array entries are
+     *                         defensively skipped by the loop below.
      */
     public function setPromptPom(array $pom): self
     {
@@ -459,6 +473,8 @@ class AgentBase extends Service
      *
      * Mirrors Python's PromptManager::get_contexts which returns the
      * contexts dict or None.
+     *
+     * @return array<string, array<string,mixed>>|null
      */
     public function getContexts(): ?array
     {
@@ -517,6 +533,9 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param list<string> $hints
+     */
     public function addHints(array $hints): self
     {
         foreach ($hints as $hint) {
@@ -602,6 +621,9 @@ class AgentBase extends Service
         return null;
     }
 
+    /**
+     * @param list<array<string,mixed>> $languages
+     */
     public function setLanguages(array $languages): self
     {
         $this->languages = $languages;
@@ -621,6 +643,9 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param list<array{replace: string, with: string, ignore?: string}> $pronunciations
+     */
     public function setPronunciations(array $pronunciations): self
     {
         $this->pronunciations = $pronunciations;
@@ -633,6 +658,9 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function setParams(array $params): self
     {
         $this->params = $params;
@@ -646,6 +674,8 @@ class AgentBase extends Service
      * TypeScript reference (safeAssign) — skills and other callers each
      * contribute keys, so a replacing setGlobalData would silently clobber
      * their contributions.
+     *
+     * @param array<string,mixed> $data
      */
     public function setGlobalData(array $data): self
     {
@@ -653,12 +683,18 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function updateGlobalData(array $data): self
     {
         $this->globalData = array_merge($this->globalData, $data);
         return $this;
     }
 
+    /**
+     * @param list<string> $functions
+     */
     public function setNativeFunctions(array $functions): self
     {
         $this->nativeFunctions = $functions;
@@ -710,6 +746,8 @@ class AgentBase extends Service
      * typo early.
      *
      * Expected format: ['function_name' => ['language_code' => ['phrase', ...]]]
+     *
+     * @param array<string, array<string, list<string>>> $fillers
      */
     public function setInternalFillers(array $fillers): self
     {
@@ -746,6 +784,8 @@ class AgentBase extends Service
      * See setInternalFillers() for the complete list of supported
      * function names and what fillers do. Names outside the supported
      * set log a warning.
+     *
+     * @param list<string>|null $fillers
      */
     public function addInternalFiller(string $filler_or_function, ?string $languageCode = null, ?array $fillers = null): self
     {
@@ -782,6 +822,9 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param array<string, mixed> $include
+     */
     public function addFunctionInclude(array $include): self
     {
         $this->functionIncludes[] = $include;
@@ -795,6 +838,9 @@ class AgentBase extends Service
      * field; entries missing either are dropped (matching the TypeScript
      * reference's filter), and each dropped entry is warned so a malformed
      * include is caught at registration time rather than silently vanishing.
+     *
+     * @param list<mixed> $includes List of include arrays ({url, functions, ...});
+     *                              malformed / non-array entries are defensively dropped.
      */
     public function setFunctionIncludes(array $includes): self
     {
@@ -822,12 +868,18 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function setPromptLlmParams(array $params): self
     {
         $this->promptLlmParams = $params;
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function setPostPromptLlmParams(array $params): self
     {
         $this->postPromptLlmParams = $params;
@@ -955,6 +1007,8 @@ class AgentBase extends Service
 
     /**
      * Add a skill by name.
+     *
+     * @param array<string, mixed> $params
      */
     public function addSkill(SkillName|string $name, array $params = []): self
     {
@@ -968,6 +1022,9 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @return list<string>
+     */
     public function listSkills(): array
     {
         if ($this->skillManager === null) {
@@ -1025,6 +1082,9 @@ class AgentBase extends Service
         return $this;
     }
 
+    /**
+     * @param array<string,string> $params
+     */
     public function addSwaigQueryParams(array $params): self
     {
         $this->swaigQueryParams = array_merge($this->swaigQueryParams, $params);
@@ -1083,7 +1143,9 @@ class AgentBase extends Service
      *   5. AI verb
      *   6. Post-AI verbs
      *
-     * @return array The SWML document array.
+     * @param array<string, mixed>|null $requestBody
+     * @param array<string, string> $headers
+     * @return array<string, mixed> The SWML document array.
      */
     public function renderSwml(?array $requestBody = null, array $headers = []): array
     {
@@ -1131,6 +1193,9 @@ class AgentBase extends Service
 
     /**
      * Build the AI verb configuration block.
+     *
+     * @param array<string, string> $headers
+     * @return array<string, mixed>
      */
     public function buildAiVerb(array $headers = []): array
     {
@@ -1234,6 +1299,11 @@ class AgentBase extends Service
      * If a dynamic-config callback is registered, clone the agent, pass the
      * clone to the callback for customisation, and render from the clone.
      */
+    /**
+     * @param array<string, mixed>|null $requestData
+     * @param array<string, string> $headers
+     * @return array{int, array<string, string>, string}
+     */
     protected function handleSwmlRequest(string $method, ?array $requestData, array $headers): array
     {
         if ($this->dynamicConfigCallback !== null) {
@@ -1259,6 +1329,10 @@ class AgentBase extends Service
 
     /**
      * Handle the post-prompt callback.
+     *
+     * @param array<string, mixed>|null $requestData
+     * @param array<string, string> $headers
+     * @return array{int, array<string, string>, string}
      */
     protected function handlePostPrompt(?array $requestData, array $headers): array
     {
@@ -1325,6 +1399,9 @@ class AgentBase extends Service
 
     /**
      * Build the SWAIG block for the AI verb.
+     *
+     * @param array<string, string> $headers
+     * @return array<string, mixed>
      */
     private function buildSwaigBlock(array $headers): array
     {
@@ -1368,6 +1445,8 @@ class AgentBase extends Service
 
     /**
      * Build the authenticated SWAIG webhook URL with query params.
+     *
+     * @param array<string, string> $headers
      */
     private function buildSwaigWebhookUrl(array $headers): string
     {
@@ -1393,6 +1472,8 @@ class AgentBase extends Service
 
     /**
      * Resolve the proxy URL base, preferring manual override.
+     *
+     * @param array<string, string> $headers
      */
     private function resolveProxyBase(array $headers): string
     {
@@ -1404,6 +1485,10 @@ class AgentBase extends Service
 
     /**
      * Recursively deep-copy an array (handles nested arrays).
+     *
+     * @template T of array<array-key, mixed>
+     * @param T $array
+     * @return T
      */
     private function deepCopyArray(array $array): array
     {
@@ -1417,6 +1502,7 @@ class AgentBase extends Service
                 $copy[$key] = $value;
             }
         }
+        /** @var T $copy */
         return $copy;
     }
 }

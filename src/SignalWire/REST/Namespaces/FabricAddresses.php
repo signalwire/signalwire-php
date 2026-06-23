@@ -25,7 +25,10 @@ class FabricAddresses
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);

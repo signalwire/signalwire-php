@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace SignalWire\Skills;
 
+use SignalWire\Agent\AgentBase;
+
 class SkillManager
 {
-    protected object $agent;
+    protected AgentBase $agent;
+    /** @var array<string, SkillBase> */
     protected array $loadedSkills = [];
     protected SkillRegistry $registry;
 
-    public function __construct(object $agent)
+    public function __construct(AgentBase $agent)
     {
         $this->agent = $agent;
         $this->registry = SkillRegistry::instance();
     }
 
     /**
+     * @param array<string,mixed> $params
      * @return array{bool, string}
      */
     public function loadSkill(string $skillName, array $params = [], ?string $skillClass = null): array
@@ -53,17 +57,21 @@ class SkillManager
 
         $hints = $instance->getHints();
         if (!empty($hints)) {
-            $this->agent->mergeHints($hints);
+            $this->agent->addHints($hints);
         }
 
         $globalData = $instance->getGlobalData();
         if (!empty($globalData)) {
-            $this->agent->mergeGlobalData($globalData);
+            $this->agent->updateGlobalData($globalData);
         }
 
         $promptSections = $instance->getPromptSections();
-        if (!empty($promptSections)) {
-            $this->agent->mergePromptSections($promptSections);
+        foreach ($promptSections as $section) {
+            $this->agent->promptAddSection(
+                $section['title'],
+                $section['body'] ?? '',
+                $section['bullets'] ?? [],
+            );
         }
 
         $this->loadedSkills[$instanceKey] = $instance;
@@ -83,6 +91,9 @@ class SkillManager
         return true;
     }
 
+    /**
+     * @return list<string>
+     */
     public function listSkills(): array
     {
         return array_keys($this->loadedSkills);

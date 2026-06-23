@@ -80,7 +80,7 @@ class PromptObjectModel
      *   - subsequent (non-first) top-level sections without ``title`` are
      *     auto-titled "Untitled Section" (Python parity)
      *
-     * @param array<int, mixed> $data
+     * @param array<array-key, mixed> $data
      */
     private static function fromArray(array $data): PromptObjectModel
     {

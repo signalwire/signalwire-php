@@ -26,6 +26,8 @@ class HttpHelper
      * Issue a GET. Returns [status, body, parsed_json_or_null].
      *
      * @param array<string,string> $headers
+     * @param array<string,scalar>|null $query
+     * @param array{0:string,1:string}|null $basicAuth [user, password]
      * @return array{int, string, mixed}
      */
     public static function get(
@@ -46,6 +48,7 @@ class HttpHelper
      * Issue a POST with a JSON body. Returns [status, body, parsed].
      *
      * @param array<string,string> $headers
+     * @param array{0:string,1:string}|null $basicAuth [user, password]
      * @return array{int, string, mixed}
      */
     public static function postJson(

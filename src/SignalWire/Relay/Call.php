@@ -22,7 +22,9 @@ class Call
 
     // ── state ─────────────────────────────────────────────────────────
     public string $state = 'created';
+    /** @var array<string,mixed> */
     public array  $device = [];
+    /** @var array<string,mixed> */
     public array  $peer = [];
     public ?string $endReason = null;
     public ?string $context = null;
@@ -45,6 +47,9 @@ class Call
     //  Construction
     // ──────────────────────────────────────────────────────────────────
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function __construct(array $params, object $client)
     {
         $this->client    = $client;
@@ -300,6 +305,7 @@ class Call
     //  Simple RPC methods (fire-and-return)
     // ──────────────────────────────────────────────────────────────────
 
+    /** @return array<string,mixed> */
     public function answer(): array
     {
         return $this->execute('calling.answer');
@@ -312,6 +318,8 @@ class Call
      * The on-wire method is ``calling.end`` (production), which historically
      * was named ``calling.hangup`` — we send ``calling.end`` to match the
      * RELAY schema set extracted from switchblade.
+     *
+     * @return array<string,mixed>
      */
     public function hangup(?string $reason = null): array
     {
@@ -319,61 +327,85 @@ class Call
         return $this->execute('calling.end', $extra);
     }
 
+    /** @return array<string,mixed> */
     public function pass(): array
     {
         return $this->execute('calling.pass');
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function connect(array $params): array
     {
         return $this->execute('calling.connect', $params);
     }
 
+    /** @return array<string,mixed> */
     public function disconnect(): array
     {
         return $this->execute('calling.disconnect');
     }
 
+    /** @return array<string,mixed> */
     public function hold(): array
     {
         return $this->execute('calling.hold');
     }
 
+    /** @return array<string,mixed> */
     public function unhold(): array
     {
         return $this->execute('calling.unhold');
     }
 
+    /** @return array<string,mixed> */
     public function denoise(): array
     {
         return $this->execute('calling.denoise');
     }
 
+    /** @return array<string,mixed> */
     public function denoiseStop(): array
     {
         return $this->execute('calling.denoise.stop');
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function transfer(array $params): array
     {
         return $this->execute('calling.transfer', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function joinConference(array $params): array
     {
         return $this->execute('calling.conference.join', $params);
     }
 
+    /** @return array<string,mixed> */
     public function leaveConference(): array
     {
         return $this->execute('calling.conference.leave');
     }
 
+    /** @return array<string,mixed> */
     public function echo(): array
     {
         return $this->execute('calling.echo');
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function bindDigit(array $params): array
     {
         return $this->execute('calling.bind_digit', $params);
@@ -388,6 +420,7 @@ class Call
      *                         bindings registered under that realm.
      * @param array<string,mixed> $kwargs Additional params forwarded to the
      *                                     wire call.
+     * @return array<string,mixed>
      */
     public function clearDigitBindings(?string $realm = null, array $kwargs = []): array
     {
@@ -399,51 +432,82 @@ class Call
         return $this->execute('calling.clear_digit_bindings', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function liveTranscribe(array $params): array
     {
         return $this->execute('calling.live_transcribe', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function liveTranslate(array $params): array
     {
         return $this->execute('calling.live_translate', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function joinRoom(array $params): array
     {
         return $this->execute('calling.room.join', $params);
     }
 
+    /** @return array<string,mixed> */
     public function leaveRoom(): array
     {
         return $this->execute('calling.room.leave');
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function amazonBedrock(array $params): array
     {
         return $this->execute('calling.amazon_bedrock', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function aiMessage(array $params): array
     {
         return $this->execute('calling.ai.message', $params);
     }
 
+    /** @return array<string,mixed> */
     public function aiHold(): array
     {
         return $this->execute('calling.ai.hold');
     }
 
+    /** @return array<string,mixed> */
     public function aiUnhold(): array
     {
         return $this->execute('calling.ai.unhold');
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function userEvent(array $params): array
     {
         return $this->execute('calling.user_event', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function queueEnter(array $params): array
     {
         return $this->execute('calling.queue.enter', $params);
@@ -467,6 +531,7 @@ class Call
      * @param ?string $status_url  Optional status callback URL.
      * @param array<string,mixed> $kwargs  Extra params merged onto the
      *                                     wire call.
+     * @return array<string,mixed>
      */
     public function queueLeave(
         ?string $queue_name = null,
@@ -501,11 +566,19 @@ class Call
         return $this->execute('calling.queue.leave', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function refer(array $params): array
     {
         return $this->execute('calling.refer', $params);
     }
 
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function sendDigits(array $params): array
     {
         return $this->execute('calling.send_digits', $params);
@@ -621,6 +694,7 @@ class Call
 
     /**
      * @param array<string,mixed> $audio  Recording config (``format``, etc.)
+     * @param array<string,mixed> $opts   ``control_id`` / ``on_completed``.
      */
     public function record(array $audio, array $opts = []): RecordAction
     {
@@ -653,6 +727,7 @@ class Call
      *
      * @param array<int,array<string,mixed>> $media
      * @param array<string,mixed> $collect
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
      */
     public function playAndCollect(array $media, array $collect, array $opts = []): CollectAction
     {
@@ -721,6 +796,7 @@ class Call
     /**
      * @param array<string,mixed> $detect Detection request
      *   (``{type: 'machine'|'fax'|'digit', params: {...}}``).
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
      */
     public function detect(array $detect, array $opts = []): DetectAction
     {
@@ -826,6 +902,9 @@ class Call
         );
     }
 
+    /**
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     */
     public function sendFax(string $document, ?string $identity = null, array $opts = []): FaxAction
     {
         $extra = ['document' => $document];
@@ -841,6 +920,9 @@ class Call
         );
     }
 
+    /**
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     */
     public function receiveFax(array $opts = []): FaxAction
     {
         return $this->startAction(
@@ -854,6 +936,7 @@ class Call
     /**
      * @param array<string,mixed> $tap     Tap config.
      * @param array<string,mixed> $device  Tap delivery device.
+     * @param array<string,mixed> $opts    ``control_id`` / ``on_completed``.
      */
     public function tap(array $tap, array $device, array $opts = []): TapAction
     {
@@ -865,18 +948,27 @@ class Call
         );
     }
 
+    /**
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     */
     public function stream(string $url, array $opts = []): StreamAction
     {
         $extra = ['url' => $url] + $opts;
         return $this->startAction('calling.stream', StreamAction::class, $extra, $opts);
     }
 
+    /**
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     */
     public function pay(string $paymentConnectorUrl, array $opts = []): PayAction
     {
         $extra = ['payment_connector_url' => $paymentConnectorUrl] + $opts;
         return $this->startAction('calling.pay', PayAction::class, $extra, $opts);
     }
 
+    /**
+     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     */
     public function transcribe(array $opts = []): TranscribeAction
     {
         return $this->startAction('calling.transcribe', TranscribeAction::class, $opts, $opts);
@@ -884,6 +976,7 @@ class Call
 
     /**
      * @param array<string,mixed> $prompt AI prompt config.
+     * @param array<string,mixed> $opts   ``control_id`` / ``on_completed``.
      */
     public function ai(array $prompt, array $opts = []): AIAction
     {
@@ -901,6 +994,9 @@ class Call
 
     /**
      * Send a simple (non-action) RPC call and return the decoded result.
+     *
+     * @param array<string,mixed> $extra
+     * @return array<string,mixed>
      */
     private function execute(string $method, array $extra = []): array
     {
@@ -1043,6 +1139,8 @@ class Call
 
     /**
      * Common params present in every RPC call for this call.
+     *
+     * @return array{node_id: ?string, call_id: ?string}
      */
     private function baseParams(): array
     {

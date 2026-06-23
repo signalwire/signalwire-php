@@ -25,7 +25,10 @@ class ImportedNumbers
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function create(array $body): array
     {
         return $this->http->post($this->basePath, $body);

@@ -75,6 +75,9 @@ class Math extends SkillBase
         );
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

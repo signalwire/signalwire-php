@@ -30,7 +30,10 @@ class SipProfile
         return $this->http->get($this->basePath);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function update(array $body): array
     {
         return $this->http->put($this->basePath, $body);

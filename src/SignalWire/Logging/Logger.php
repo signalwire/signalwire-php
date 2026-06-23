@@ -13,6 +13,7 @@ class Logger
         'error' => 3,
     ];
 
+    /** @var array<string, self> */
     private static array $instances = [];
 
     private string $name;

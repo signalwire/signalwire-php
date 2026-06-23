@@ -198,6 +198,9 @@ class Datasphere extends SkillBase
         return $header . implode("\n", $sections);
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getGlobalData(): array
     {
         return [
@@ -207,6 +210,9 @@ class Datasphere extends SkillBase
         ];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

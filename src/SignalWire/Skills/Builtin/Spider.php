@@ -450,6 +450,9 @@ class Spider extends SkillBase
         return "{$scheme}://{$host}{$port}{$dir}/{$href}";
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         return ['scrape', 'crawl', 'extract', 'web page', 'website', 'spider'];

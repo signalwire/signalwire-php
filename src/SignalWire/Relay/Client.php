@@ -24,6 +24,7 @@ class Client
     public string  $host;
     public string  $scheme = 'wss';
     public string  $relayPath = '/api/relay/ws';
+    /** @var list<string> */
     public array   $contexts = [];
     public bool    $connected = false;
     public ?string $sessionId = null;
@@ -91,6 +92,9 @@ class Client
     //  Construction
     // ══════════════════════════════════════════════════════════════════
 
+    /**
+     * @param array<string,mixed> $options
+     */
     public function __construct(array $options)
     {
         $this->project  = $options['project']  ?? '';
@@ -345,6 +349,8 @@ class Client
      * Send a JSON-RPC request and synchronously wait for the matching
      * response.  Returns the "result" portion of the response.
      *
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
      * @throws \RuntimeException on error responses or transport timeout.
      */
     public function execute(string $method, array $params = []): array
@@ -408,6 +414,8 @@ class Client
     /**
      * Encode and send a JSON message over the WebSocket. Throws if the
      * socket is closed; the run loop catches and triggers reconnect.
+     *
+     * @param array<string,mixed> $msg
      */
     public function send(array $msg): void
     {
@@ -517,6 +525,8 @@ class Client
 
     /**
      * Route a signalwire.event payload to the appropriate handler.
+     *
+     * @param array<string,mixed> $outerParams
      */
     public function handleEvent(array $outerParams): void
     {
@@ -735,6 +745,8 @@ class Client
     /**
      * Subscribe to one or more inbound contexts so that events for those
      * contexts are delivered to this client.
+     *
+     * @param list<string> $contexts
      */
     public function receive(array $contexts): void
     {
@@ -753,6 +765,8 @@ class Client
 
     /**
      * Unsubscribe from one or more contexts.
+     *
+     * @param list<string> $contexts
      */
     public function unreceive(array $contexts): void
     {
@@ -834,6 +848,8 @@ class Client
 
     /**
      * Handle an inbound call event – create the Call and fire the user handler.
+     *
+     * @param array<string,mixed> $params
      */
     private function handleInboundCall(Event $event, array $params): void
     {
@@ -869,6 +885,8 @@ class Client
      * Production wire shape: the dial event carries no top-level call_id;
      * the winner's call info lives inside ``params.call``. ``dial_state``
      * determines outcome (``answered``, ``failed``, ``no_answer``...).
+     *
+     * @param array<string,mixed> $params
      */
     private function handleDialEvent(Event $event, array $params): void
     {
@@ -923,6 +941,8 @@ class Client
 
     /**
      * Handle a server-initiated disconnect.
+     *
+     * @param array<string,mixed> $params
      */
     private function handleDisconnect(array $params): void
     {

@@ -237,6 +237,7 @@ class AgentServer
     /**
      * Handle an HTTP request and return [status, headers, body].
      *
+     * @param array<string, string> $headers
      * @return array{int, array<string, string>, string}
      */
     public function handleRequest(
@@ -619,6 +620,9 @@ class AgentServer
     private function jsonResponse(int $status, mixed $data): array
     {
         $body = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($body === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
         return [
             $status,
             array_merge(

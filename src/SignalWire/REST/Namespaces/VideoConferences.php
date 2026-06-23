@@ -13,7 +13,10 @@ use SignalWire\REST\CrudResource;
  */
 class VideoConferences extends CrudResource
 {
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listConferenceTokens(string $conferenceId, array $params = []): array
     {
         return $this->client->get(
@@ -22,7 +25,10 @@ class VideoConferences extends CrudResource
         );
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listStreams(string $conferenceId, array $params = []): array
     {
         return $this->client->get(
@@ -31,7 +37,10 @@ class VideoConferences extends CrudResource
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createStream(string $conferenceId, array $body): array
     {
         return $this->client->post(

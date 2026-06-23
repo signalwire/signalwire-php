@@ -8,6 +8,7 @@ class FunctionResult
 {
     private string $response;
     private bool $postProcess;
+    /** @var list<array<string,mixed>> */
     private array $actions = [];
 
     public function __construct(?string $response = '', bool $postProcess = false)
@@ -30,12 +31,18 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $action
+     */
     public function addAction(array $action): self
     {
         $this->actions[] = $action;
         return $this;
     }
 
+    /**
+     * @param list<array<string,mixed>> $actions
+     */
     public function addActions(array $actions): self
     {
         foreach ($actions as $action) {
@@ -44,6 +51,9 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function toArray(): array
     {
         $result = [];
@@ -72,7 +82,11 @@ class FunctionResult
 
     public function toJson(): string
     {
-        return json_encode($this->toArray());
+        $encoded = json_encode($this->toArray());
+        if ($encoded === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
+        return $encoded;
     }
 
     // ── Call Control ─────────────────────────────────────────────────────
@@ -169,6 +183,9 @@ class FunctionResult
 
     // ── State & Data ─────────────────────────────────────────────────────
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function updateGlobalData(array $data): self
     {
         $this->actions[] = ['set_global_data' => $data];
@@ -186,6 +203,9 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function setMetadata(array $data): self
     {
         $this->actions[] = ['set_meta_data' => $data];
@@ -203,6 +223,9 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $eventData
+     */
     public function swmlUserEvent(array $eventData): self
     {
         // Python wraps the event in a SWML document with the data nested under
@@ -427,6 +450,9 @@ class FunctionResult
 
     // ── Speech & AI ──────────────────────────────────────────────────────
 
+    /**
+     * @param list<string|array<string,mixed>> $hints
+     */
     public function addDynamicHints(array $hints): self
     {
         $this->actions[] = ['add_dynamic_hints' => $hints];
@@ -455,6 +481,9 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param array<string,bool> $toggles map of function name => active flag
+     */
     public function toggleFunctions(array $toggles): self
     {
         $formatted = [];
@@ -478,6 +507,9 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $settings
+     */
     public function updateSettings(array $settings): self
     {
         // Python action name is "settings" (not "ai_settings").
@@ -494,7 +526,7 @@ class FunctionResult
      * key "transfer" => "true" is set INSIDE the SWML document; the action is
      * ALWAYS added under the "SWML" key (there is no separate transfer key).
      *
-     * @param array|string $swmlContent SWML JSON string or already-decoded array.
+     * @param array<string,mixed>|string $swmlContent SWML JSON string or already-decoded array.
      */
     public function executeSwml($swmlContent, bool $transfer = false): self
     {

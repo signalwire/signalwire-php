@@ -8,9 +8,10 @@ class Schema
 {
     private static ?self $instance = null;
 
-    /** @var array<string, array{name: string, schema_name: string, definition: array}> */
+    /** @var array<string, array{name: string, schema_name: string, definition: array<string,mixed>}> */
     private array $verbs = [];
 
+    /** @var array<string,mixed> */
     private array $schemaData = [];
 
     private function __construct()
@@ -57,7 +58,7 @@ class Schema
     /**
      * Get verb metadata, or null if not found.
      *
-     * @return array{name: string, schema_name: string, definition: array}|null
+     * @return array{name: string, schema_name: string, definition: array<string,mixed>}|null
      */
     public function getVerb(string $name): ?array
     {
@@ -80,6 +81,9 @@ class Schema
         }
 
         $raw = file_get_contents($schemaPath);
+        if ($raw === false) {
+            throw new \RuntimeException("Failed to read SWML schema.json at {$schemaPath}");
+        }
         $this->schemaData = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
 
         $defs = $this->schemaData['$defs'] ?? [];

@@ -6,10 +6,21 @@ namespace SignalWire\Skills;
 
 abstract class SkillBase
 {
+    // $agent is duck-typed: in production it is a SignalWire\Agent\AgentBase
+    // (constructed via SkillManager from AgentBase), but the skill-contract
+    // tooling (scripts/emit_skills.php) passes a lightweight capturing fake
+    // that only implements defineTool()/registerSwaigFunction(). Keeping the
+    // declared type as `object` preserves that contract. See the deferred
+    // phpstan notes for the typed-interface option.
     protected object $agent;
+    /** @var array<string,mixed> */
     protected array $params;
+    /** @var array<string,mixed> */
     protected array $swaigFields;
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function __construct(object $agent, array $params = [])
     {
         $this->agent = $agent;
@@ -30,6 +41,9 @@ abstract class SkillBase
         return '1.0.0';
     }
 
+    /**
+     * @return list<string>
+     */
     public function getRequiredEnvVars(): array
     {
         return [];
@@ -40,16 +54,25 @@ abstract class SkillBase
         return false;
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         return [];
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getGlobalData(): array
     {
         return [];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {
@@ -63,6 +86,9 @@ abstract class SkillBase
     {
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getParameterSchema(): array
     {
         return [
@@ -97,6 +123,9 @@ abstract class SkillBase
         return $key;
     }
 
+    /**
+     * @return list<string>
+     */
     public function validateEnvVars(): array
     {
         $missing = [];
@@ -110,6 +139,9 @@ abstract class SkillBase
         return $missing;
     }
 
+    /**
+     * @param array<string,mixed> $parameters
+     */
     protected function defineTool(string $name, string $description, array $parameters, callable $handler): void
     {
         if (!empty($this->swaigFields)) {

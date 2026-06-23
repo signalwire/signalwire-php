@@ -25,13 +25,19 @@ class RegistryBrands
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function create(array $body): array
     {
         return $this->http->post($this->basePath, $body);
@@ -43,13 +49,19 @@ class RegistryBrands
         return $this->http->get($this->basePath . '/' . $brandId);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listCampaigns(string $brandId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $brandId . '/campaigns', $params);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createCampaign(string $brandId, array $body): array
     {
         return $this->http->post($this->basePath . '/' . $brandId . '/campaigns', $body);

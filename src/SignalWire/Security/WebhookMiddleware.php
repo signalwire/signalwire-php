@@ -94,6 +94,8 @@ final class WebhookMiddleware
     /**
      * Extract the signature header value, preferring X-SignalWire-Signature
      * over the legacy X-Twilio-Signature alias (cXML compat).
+     *
+     * @param array<string,mixed> $headers
      */
     private function extractSignature(array $headers): ?string
     {

@@ -469,6 +469,8 @@ class ClaudeSkills extends SkillBase
 
     /**
      * Apply disable-model-invocation / user-invocable flags.
+     *
+     * @param array<string,mixed> $parsed
      */
     private function applyInvocationControl(array &$parsed): void
     {
@@ -499,6 +501,9 @@ class ClaudeSkills extends SkillBase
         return $sanitized !== '' ? $sanitized : 'unnamed';
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         $hints = [];
@@ -517,6 +522,9 @@ class ClaudeSkills extends SkillBase
         return $hints;
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

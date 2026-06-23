@@ -69,6 +69,8 @@ class Document
 
     /**
      * Append a pre-formatted verb hash to a section.
+     *
+     * @param array<string, mixed> $verbHash
      */
     public function addRawVerb(string $section, array $verbHash): void
     {
@@ -114,7 +116,11 @@ class Document
      */
     public function render(): string
     {
-        return json_encode($this->toArray(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $encoded = json_encode($this->toArray(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
+        return $encoded;
     }
 
     /**
@@ -122,6 +128,10 @@ class Document
      */
     public function renderPretty(): string
     {
-        return json_encode($this->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $encoded = json_encode($this->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
+        return $encoded;
     }
 }

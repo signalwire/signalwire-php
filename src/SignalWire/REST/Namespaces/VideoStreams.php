@@ -31,7 +31,10 @@ class VideoStreams
         return $this->http->get($this->basePath . '/' . $streamId);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function update(string $streamId, array $body): array
     {
         return $this->http->put($this->basePath . '/' . $streamId, $body);

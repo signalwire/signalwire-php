@@ -112,6 +112,9 @@ class DatasphereServerless extends SkillBase
         $this->agent->registerSwaigFunction($funcDef);
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getGlobalData(): array
     {
         return [
@@ -121,6 +124,9 @@ class DatasphereServerless extends SkillBase
         ];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

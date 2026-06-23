@@ -25,7 +25,10 @@ class VoiceLogs
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
@@ -37,7 +40,10 @@ class VoiceLogs
         return $this->http->get($this->basePath . '/' . $logId);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listEvents(string $logId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $logId . '/events', $params);

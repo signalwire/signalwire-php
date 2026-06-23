@@ -5175,7 +5175,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 }
               ],

@@ -31,6 +31,7 @@ class GatherQuestion
     private string $type;
     private bool $confirm;
     private ?string $prompt;
+    /** @var list<string>|null */
     private ?array $functions;
 
     /**
@@ -39,7 +40,7 @@ class GatherQuestion
      * @param string $type      JSON schema type for the answer (default 'string').
      * @param bool   $confirm   If true, the model must confirm the answer.
      * @param ?string $prompt   Extra instruction text appended after the question.
-     * @param ?array<string> $functions Functions to unlock for this question.
+     * @param list<string>|null $functions Functions to unlock for this question.
      */
     public function __construct(
         string $key,
@@ -62,6 +63,9 @@ class GatherQuestion
         return $this->key;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         $map = [
@@ -111,7 +115,7 @@ class GatherInfo
      *
      * @param string $key       Key name for storing the answer in global_data.
      * @param string $question  The question text to ask.
-     * @param array{type?:string,confirm?:bool,prompt?:?string,functions?:?array<string>} $kwargs
+     * @param array{type?:string,confirm?:bool,prompt?:?string,functions?:?list<string>} $kwargs
      *                          Optional named arguments forwarded to GatherQuestion.
      */
     public function addQuestion(string $key, string $question, array $kwargs = []): self
@@ -140,6 +144,9 @@ class GatherInfo
         return $this->completionAction;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         $map = [];
@@ -172,10 +179,12 @@ class Step
     private ?string $text = null;
     private ?string $stepCriteria = null;
 
-    /** @var string|array|null */
+    /** @var list<string>|string|null */
     private $functions = null;
 
+    /** @var list<string>|null */
     private ?array $validSteps = null;
+    /** @var list<string>|null */
     private ?array $validContexts = null;
 
     /** @var array<int, array<string, mixed>> */
@@ -234,6 +243,8 @@ class Step
 
     /**
      * Add a POM section with bullet points.
+     *
+     * @param list<string> $bullets
      */
     public function addBullets(string $title, array $bullets): self
     {
@@ -289,8 +300,8 @@ class Step
      * used; they are not affected by this list and do not need to
      * appear in it.
      *
-     * @param string|array $functions One of:
-     *   - array<string> — whitelist of function names allowed in this step
+     * @param list<string>|string $functions One of:
+     *   - list<string> — whitelist of function names allowed in this step
      *   - []            — explicit disable-all
      *   - 'none'        — synonym for []
      */
@@ -300,12 +311,18 @@ class Step
         return $this;
     }
 
+    /**
+     * @param list<string> $steps
+     */
     public function setValidSteps(array $steps): self
     {
         $this->validSteps = $steps;
         return $this;
     }
 
+    /**
+     * @param list<string> $contexts
+     */
     public function setValidContexts(array $contexts): self
     {
         $this->validContexts = $contexts;
@@ -388,6 +405,8 @@ class Step
      *   email, geocode a ZIP), list that tool name in this question's
      *   'functions' option. Functions listed here are active ONLY for
      *   this question.
+     *
+     * @param list<string>|null $functions
      */
     public function addGatherQuestion(
         string $key,
@@ -437,11 +456,17 @@ class Step
 
     // ── Package-level accessors for validation ──────────────────────────
 
+    /**
+     * @return list<string>|null
+     */
     public function getValidSteps(): ?array
     {
         return $this->validSteps;
     }
 
+    /**
+     * @return list<string>|null
+     */
     public function getValidContexts(): ?array
     {
         return $this->validContexts;
@@ -486,6 +511,9 @@ class Step
         return rtrim(implode("\n", $parts));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         $map = [
@@ -555,7 +583,9 @@ class Context
     /** @var string[] */
     private array $stepOrder = [];
 
+    /** @var list<string>|null */
     private ?array $validContexts = null;
+    /** @var list<string>|null */
     private ?array $validSteps = null;
     private ?string $initialStep = null;
 
@@ -605,13 +635,13 @@ class Context
      *
      * @param string $name       Step name (must be unique within the context).
      * @param ?string $task      Text for the "Task" section (≡ addSection("Task", $task)).
-     * @param ?array<string> $bullets List of bullet strings for the "Process"
+     * @param ?list<string> $bullets List of bullet strings for the "Process"
      *                           section (≡ addBullets("Process", $bullets)).
      *                           Requires $task to also be set.
      * @param ?string $criteria  Step-completion criteria (≡ setStepCriteria()).
-     * @param string|array<string>|null $functions Tool names the step may call,
+     * @param string|list<string>|null $functions Tool names the step may call,
      *                           or 'none' (≡ setFunctions()).
-     * @param ?array<string> $valid_steps Names of steps the agent may
+     * @param ?list<string> $valid_steps Names of steps the agent may
      *                           transition to (≡ setValidSteps()).
      *
      * @return Step The configured Step object for optional further chaining.
@@ -712,6 +742,9 @@ class Context
         return $this;
     }
 
+    /**
+     * @param list<string> $bullets
+     */
     public function addBullets(string $title, array $bullets): self
     {
         if ($this->promptText !== null) {
@@ -747,6 +780,9 @@ class Context
         return $this;
     }
 
+    /**
+     * @param list<string> $bullets
+     */
     public function addSystemBullets(string $title, array $bullets): self
     {
         if ($this->systemPrompt !== null) {
@@ -779,12 +815,18 @@ class Context
         return $this->initialStep;
     }
 
+    /**
+     * @param list<string> $contexts
+     */
     public function setValidContexts(array $contexts): self
     {
         $this->validContexts = $contexts;
         return $this;
     }
 
+    /**
+     * @param list<string> $steps
+     */
     public function setValidSteps(array $steps): self
     {
         $this->validSteps = $steps;
@@ -929,6 +971,9 @@ class Context
         return $this->stepOrder;
     }
 
+    /**
+     * @return list<string>|null
+     */
     public function getValidContexts(): ?array
     {
         return $this->validContexts;
@@ -938,6 +983,8 @@ class Context
 
     /**
      * Render POM sections to markdown text.
+     *
+     * @param array<int, array<string, mixed>> $sections
      */
     private function renderSections(array $sections): string
     {
@@ -962,6 +1009,9 @@ class Context
 
     // ── Serialization ───────────────────────────────────────────────────
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         $map = [];
@@ -1315,6 +1365,8 @@ class ContextBuilder
 
     /**
      * Serialize all contexts in order. Validates before converting.
+     *
+     * @return array<string, array<string, mixed>>
      */
     public function toArray(): array
     {

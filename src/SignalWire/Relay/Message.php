@@ -20,7 +20,9 @@ class Message
     protected ?string $fromNumber;
     protected ?string $toNumber;
     protected ?string $body;
+    /** @var list<string> */
     protected array $media;
+    /** @var list<string> */
     protected array $tags;
     protected ?string $state = null;
     protected ?string $reason = null;
@@ -40,6 +42,8 @@ class Message
      * Expected keys (all optional with sane defaults):
      *   message_id, context, direction, from_number / from,
      *   to_number / to, body, media, tags, state, reason
+     *
+     * @param array<string,mixed> $params
      */
     public function __construct(array $params = [])
     {
@@ -205,11 +209,13 @@ class Message
         return $this->body;
     }
 
+    /** @return list<string> */
     public function getMedia(): array
     {
         return $this->media;
     }
 
+    /** @return list<string> */
     public function getTags(): array
     {
         return $this->tags;

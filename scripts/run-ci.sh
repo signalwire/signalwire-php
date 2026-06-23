@@ -20,7 +20,7 @@
 #                                            vs Python to_dict() over the shared
 #                                            81-entry corpus; needs no mocks)
 #   7. fmt gate                           — php-cs-fixer (local: apply; CI: --dry-run)
-#   8. lint gate                          — phpstan level 5, zero findings (the floor)
+#   8. lint gate                          — phpstan level 6, zero findings (the floor)
 #   9. doc-audit gate                     — porting-sdk audit_docs.py
 #  10. surface-diff gate                  — porting-sdk diff_port_surface.py
 #  11. skill-contract gate                — porting-sdk diff_skill_contracts.py
@@ -340,23 +340,26 @@ fmt_gate() {
 }
 run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
 
-# Gate 8: LINT — the language lint gate (php: phpstan level 5, zero findings).
+# Gate 8: LINT — the language lint gate (php: phpstan level 6, zero findings).
 # This is the blocking quality floor: phpstan.neon analyses src/ + scripts/ at
-# level 5 (the highest level reachable with ZERO genuine findings without an
-# ignore-baseline) and the burndown took it 41 → 0 with every fix at the source
-# (no @phpstan-ignore, no baseline, no silencing casts). Proven neutral:
-# port_signatures.json byte-identical, port_surface.json differs only in the
-# generated_from git-sha, EMISSION 81/81. Mirrors the go golangci / rust clippy
-# blocking-lint gate.
+# level 6 (the highest level reachable with ZERO genuine findings without an
+# ignore-baseline) and the burndown took it 41 → 0 (level 5) then 372 → 0
+# (level 6, the bare-array value-type block) with every fix at the source
+# (no @phpstan-ignore, no baseline, no silencing casts; array shapes sourced
+# from the python reference / SWML schema / call sites). Levels 7-9 remain
+# gated only by a small residual of genuinely-ambiguous items (duck-typed
+# RELAY/serverless receivers tested via anonymous mock classes, and curl
+# CURLOPT_URL non-empty-string strictness) left for human triage — see the PR.
+# Mirrors the go golangci / rust clippy blocking-lint gate.
 #
 # --memory-limit=512M: phpstan defaults to php.ini's memory_limit, which on a
-# stock CLI install is 128M — too low for a full level-5 analysis of src/ +
+# stock CLI install is 128M — too low for a full level-6 analysis of src/ +
 # scripts/ (it OOMs mid-run with "Result is incomplete because of severe
 # errors", not a real finding). Pin a generous limit so the gate's result
 # depends on the code, not the host php.ini. This is not a suppression: no
 # baseline, no @phpstan-ignore — the analysis still runs to completion at
-# level 5 and must report zero findings.
-run_gate "LINT" "phpstan level 5 zero findings (lint gate)" \
+# level 6 and must report zero findings.
+run_gate "LINT" "phpstan level 6 zero findings (lint gate)" \
     vendor/bin/phpstan analyse --no-progress --memory-limit=512M
 
 # Gate 9: DOC-AUDIT — every method/class referenced in docs/ + examples/ fenced
