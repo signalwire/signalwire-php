@@ -31,13 +31,19 @@ class FabricTokens
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createSubscriberToken(array $body): array
     {
         return $this->http->post($this->basePath . '/subscribers/tokens', $body);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function refreshSubscriberToken(array $body): array
     {
         return $this->http->post($this->basePath . '/subscribers/tokens/refresh', $body);
@@ -55,13 +61,19 @@ class FabricTokens
         return $this->http->post($this->basePath . '/subscriber/invites', $body);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createGuestToken(array $body): array
     {
         return $this->http->post($this->basePath . '/guests/tokens', $body);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createEmbedToken(array $body): array
     {
         return $this->http->post($this->basePath . '/embeds/tokens', $body);

@@ -8,7 +8,7 @@ use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Utils\SchemaUtils;
 
-class Service
+class Service implements RequestHandlerLike
 {
     protected string $name;
     protected string $route;
@@ -32,7 +32,7 @@ class Service
      * SWAIG tool registry — lifted from AgentBase so any Service (sidecar,
      * non-agent verb host, etc.) can register and dispatch SWAIG functions.
      *
-     * @var array<string, array>
+     * @var array<string, array<string, mixed>>
      */
     protected array $tools = [];
 
@@ -58,7 +58,14 @@ class Service
         $this->name = $name;
         $this->route = rtrim($route, '/') ?: '/';
         $this->host = $host ?? '0.0.0.0';
-        $this->port = $port ?? (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 3000);
+        if ($port !== null) {
+            $this->port = $port;
+        } else {
+            $envPort = $_ENV['PORT'] ?? getenv('PORT');
+            $this->port = (is_string($envPort) || is_int($envPort)) && (int) $envPort !== 0
+                ? (int) $envPort
+                : 3000;
+        }
         $this->document = new Document();
         $this->logger = Logger::getLogger('swml_service');
 
@@ -110,6 +117,8 @@ class Service
      *   $service->answer('main', ['max_duration' => 3600]);
      *   $service->sleep('main', 2000);
      *   $service->hangup();
+     *
+     * @param list<mixed> $args
      */
     public function __call(string $method, array $args): static
     {
@@ -125,9 +134,9 @@ class Service
             // sleep(2000) or sleep('main', 2000)
             if (count($args) === 1 && is_int($args[0])) {
                 $config = $args[0];
-            } elseif (count($args) === 2) {
-                $section = (string) $args[0];
-                $config = (int) $args[1];
+            } elseif (count($args) === 2 && is_string($args[0]) && is_int($args[1])) {
+                $section = $args[0];
+                $config = $args[1];
             } else {
                 throw new \InvalidArgumentException('sleep requires an integer duration');
             }
@@ -142,7 +151,7 @@ class Service
                     $config = $args[0];
                 }
             } elseif (count($args) === 2) {
-                $section = (string) $args[0];
+                $section = is_string($args[0]) ? $args[0] : 'main';
                 $config = is_array($args[1]) ? $args[1] : [];
             }
         }
@@ -174,7 +183,10 @@ class Service
 
     /** Get (user, password, source) where source is "provided",
      * "environment", or "generated". Python parity:
-     * AuthMixin.get_basic_auth_credentials(include_source=True). */
+     * AuthMixin.get_basic_auth_credentials(include_source=True).
+     *
+     * @return array{string, string, string} [user, password, source]
+     */
     public function getBasicAuthCredentialsWithSource(): array
     {
         $envUser = getenv('SWML_BASIC_AUTH_USER');
@@ -222,6 +234,8 @@ class Service
      *
      * Tool descriptions and parameter descriptions are LLM-facing prompt
      * engineering, not internal documentation. See PORTING_GUIDE for guidance.
+     *
+     * @param array<string, mixed> $parameters JSON-Schema `properties` map for the tool argument.
      */
     public function defineTool(
         string $name,
@@ -248,11 +262,13 @@ class Service
 
     /**
      * Register a raw SWAIG function definition (e.g. DataMap tools).
+     *
+     * @param array<string, mixed> $funcDef
      */
     public function registerSwaigFunction(array $funcDef): static
     {
         $name = $funcDef['function'] ?? '';
-        if ($name === '') {
+        if (!is_string($name) || $name === '') {
             return $this;
         }
         $this->tools[$name] = $funcDef;
@@ -264,6 +280,8 @@ class Service
 
     /**
      * Register multiple tool definitions at once.
+     *
+     * @param list<array<string, mixed>> $toolDefs
      */
     public function defineTools(array $toolDefs): static
     {
@@ -280,7 +298,7 @@ class Service
      * harness, and any test that needs to inspect what's been
      * registered without going through a HTTP round trip).
      *
-     * @return array<string, array> name => tool definition
+     * @return array<string, array<string, mixed>> name => tool definition
      */
     public function getTools(): array
     {
@@ -295,14 +313,18 @@ class Service
     }
 
     /** Get a registered SWAIG function by name, or null when absent.
-     * Python parity: ``ToolRegistry.get_function``. */
+     * Python parity: ``ToolRegistry.get_function``.
+     *
+     * @return array<string, mixed>|null */
     public function getFunction(string $name): ?array
     {
         return $this->tools[$name] ?? null;
     }
 
     /** Snapshot of all registered SWAIG functions keyed by name.
-     * Python parity: ``ToolRegistry.get_all_functions``. */
+     * Python parity: ``ToolRegistry.get_all_functions``.
+     *
+     * @return array<string, array<string, mixed>> */
     public function getAllFunctions(): array
     {
         return $this->tools;  // copy on read in PHP arrays
@@ -333,6 +355,9 @@ class Service
 
     /**
      * Dispatch a function call to the registered handler.
+     *
+     * @param array<string, mixed> $args    parsed function arguments
+     * @param array<string, mixed> $rawData full SWAIG request payload
      */
     public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
     {
@@ -378,7 +403,9 @@ class Service
      * config. Returns [target, shortCircuit]: shortCircuit non-null replies
      * directly without dispatch.
      *
-     * @return array{0: object, 1: ?array}
+     * @param array<string, mixed> $requestData
+     * @param array<string, string> $headers
+     * @return array{0: self, 1: ?array<string, mixed>}
      */
     protected function swaigPreDispatch(array $requestData, array $headers, string $functionName): array
     {
@@ -400,6 +427,9 @@ class Service
      * Python parity: WebMixin.on_request(request_data, callback_path).
      * The Python third `request` arg is FastAPI-specific and is not
      * mirrored.
+     *
+     * @param array<string, mixed>|null $requestData
+     * @return array<string, mixed>|null
      */
     public function onRequest(?array $requestData = null, ?string $callbackPath = null): ?array
     {
@@ -413,6 +443,9 @@ class Service
      * callback path and return an associative array of overrides.
      *
      * Python parity: WebMixin.on_swml_request(request_data, callback_path).
+     *
+     * @param array<string, mixed>|null $requestData
+     * @return array<string, mixed>|null
      */
     public function onSwmlRequest(?array $requestData = null, ?string $callbackPath = null): ?array
     {
@@ -473,6 +506,10 @@ class Service
 
     /**
      * Render SWML for a request. Subclasses override this.
+     *
+     * @param array<string, mixed>|null $requestBody
+     * @param array<string, string> $headers
+     * @return array<string, mixed>
      */
     public function renderSwml(?array $requestBody = null, array $headers = []): array
     {
@@ -486,6 +523,7 @@ class Service
     /**
      * Handle an HTTP request. Returns [status, headers, body].
      *
+     * @param array<string, string> $headers
      * @return array{int, array<string, string>, string}
      */
     public function handleRequest(
@@ -535,7 +573,15 @@ class Service
             if (strlen($body) > 1_048_576) {
                 return $this->jsonResponse(413, ['error' => 'Request body too large']);
             }
-            $requestData = json_decode($body, true);
+            $decoded = json_decode($body, true);
+            if (is_array($decoded)) {
+                $requestData = [];
+                foreach ($decoded as $k => $v) {
+                    if (is_string($k)) {
+                        $requestData[$k] = $v;
+                    }
+                }
+            }
         }
 
         // Webhook signature validation (when signing_key is configured) —
@@ -578,6 +624,11 @@ class Service
     /**
      * Handle SWML document request.
      */
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed>|null $requestData
+     * @return array{int, array<string, string>, string}
+     */
     protected function handleSwmlRequest(string $method, ?array $requestData, array $headers): array
     {
         $swml = $this->renderSwml($requestData, $headers);
@@ -593,6 +644,10 @@ class Service
      *
      * Lifted from AgentBase so non-agent SWMLServices (e.g. ai_sidecar host)
      * can serve /swaig without subclassing AgentBase.
+     *
+     * @param array<string, string> $headers
+     * @param array<string, mixed>|null $requestData
+     * @return array{int, array<string, string>, string}
      */
     protected function handleSwaigRequest(string $method, ?array $requestData, array $headers): array
     {
@@ -606,14 +661,22 @@ class Service
         }
 
         $functionName = $requestData['function'] ?? '';
-        if ($functionName === '') {
+        if (!is_string($functionName) || $functionName === '') {
             return $this->jsonResponse(400, ['error' => 'Missing function name']);
         }
         if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $functionName)) {
             return $this->jsonResponse(400, ['error' => "Invalid function name format: '{$functionName}'"]);
         }
 
-        $args = $requestData['argument']['parsed'][0]
+        $argument = $requestData['argument'] ?? null;
+        $parsedFirst = null;
+        if (is_array($argument)) {
+            $parsed = $argument['parsed'] ?? null;
+            if (is_array($parsed)) {
+                $parsedFirst = $parsed[0] ?? null;
+            }
+        }
+        $args = $parsedFirst
             ?? (is_array($requestData['arguments'] ?? null) ? $requestData['arguments'] : []);
         if (!is_array($args)) {
             $args = [];
@@ -633,6 +696,10 @@ class Service
 
     /**
      * Handle post-prompt callback. Override in AgentBase.
+     *
+     * @param array<string, mixed>|null $requestData
+     * @param array<string, string> $headers
+     * @return array{int, array<string, string>, string}
      */
     protected function handlePostPrompt(?array $requestData, array $headers): array
     {
@@ -646,6 +713,8 @@ class Service
     /**
      * Extract SIP username from a request body.
      * Validates format: only [a-zA-Z0-9._-], max 64 chars.
+     *
+     * @param array<string, mixed>|null $requestBody
      */
     public static function extractSipUsername(?array $requestBody): ?string
     {
@@ -654,7 +723,8 @@ class Service
         }
 
         // Look for SIP URI in common locations
-        $sipUri = $requestBody['call']['to'] ?? $requestBody['to'] ?? null;
+        $call = $requestBody['call'] ?? null;
+        $sipUri = (is_array($call) ? ($call['to'] ?? null) : null) ?? $requestBody['to'] ?? null;
         if ($sipUri === null || !is_string($sipUri)) {
             return null;
         }
@@ -680,6 +750,8 @@ class Service
 
     /**
      * Detect or construct the proxy URL base from request headers.
+     *
+     * @param array<string, mixed> $headers
      */
     public function getProxyUrlBase(array $headers = []): string
     {
@@ -687,7 +759,8 @@ class Service
         //    AgentBase). Subclasses that override the proxy URL set
         //    $this->manualProxyUrl; check via property_exists for safety.
         if (property_exists($this, 'manualProxyUrl')
-            && !empty($this->manualProxyUrl)
+            && is_string($this->manualProxyUrl ?? null)
+            && $this->manualProxyUrl !== ''
         ) {
             return $this->manualProxyUrl;
         }
@@ -701,13 +774,13 @@ class Service
         // 2. X-Forwarded-Proto + X-Forwarded-Host
         $proto = $headers['X-Forwarded-Proto'] ?? $headers['x-forwarded-proto'] ?? null;
         $fwdHost = $headers['X-Forwarded-Host'] ?? $headers['x-forwarded-host'] ?? null;
-        if ($proto !== null && $fwdHost !== null) {
+        if (is_string($proto) && is_string($fwdHost)) {
             return "{$proto}://{$fwdHost}";
         }
 
         // 3. X-Original-URL
         $origUrl = $headers['X-Original-URL'] ?? $headers['x-original-url'] ?? null;
-        if ($origUrl !== null) {
+        if (is_string($origUrl)) {
             return rtrim($origUrl, '/');
         }
 
@@ -775,24 +848,28 @@ class Service
     public function dispatchFromGlobals(): void
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $method = is_string($method) ? $method : 'GET';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
 
         // Reconstruct headers from $_SERVER (cli-server doesn't populate
         // getallheaders() reliably; this works in every SAPI).
         $headers = [];
         foreach ($_SERVER as $k => $v) {
-            if (str_starts_with($k, 'HTTP_')) {
+            if (is_string($k) && str_starts_with($k, 'HTTP_') && is_string($v)) {
                 $name = str_replace('_', '-', substr($k, 5));
                 // Title-case for Authorization, Content-Type compatibility
                 $name = ucwords(strtolower($name), '-');
                 $headers[$name] = $v;
             }
         }
-        if (isset($_SERVER['CONTENT_TYPE'])) {
-            $headers['Content-Type'] = $_SERVER['CONTENT_TYPE'];
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? null;
+        if (is_string($contentType)) {
+            $headers['Content-Type'] = $contentType;
         }
-        if (isset($_SERVER['CONTENT_LENGTH'])) {
-            $headers['Content-Length'] = $_SERVER['CONTENT_LENGTH'];
+        $contentLength = $_SERVER['CONTENT_LENGTH'] ?? null;
+        if (is_string($contentLength)) {
+            $headers['Content-Length'] = $contentLength;
         }
         // PHP's cli-server eats the Authorization header for CGI safety;
         // recover it from REDIRECT_HTTP_AUTHORIZATION / PHP_AUTH_USER if set.
@@ -802,11 +879,12 @@ class Service
                 ?? null;
             if (is_string($authVal) && $authVal !== '') {
                 $headers['Authorization'] = $authVal;
-            } elseif (isset($_SERVER['PHP_AUTH_USER'])) {
+            } elseif (is_string($_SERVER['PHP_AUTH_USER'] ?? null)) {
                 // Reconstruct Basic auth from PHP_AUTH_USER/PW which are
                 // always present when the front-end has parsed the header.
-                $user = (string) $_SERVER['PHP_AUTH_USER'];
-                $pw = (string) ($_SERVER['PHP_AUTH_PW'] ?? '');
+                $user = $_SERVER['PHP_AUTH_USER'];
+                $pwRaw = $_SERVER['PHP_AUTH_PW'] ?? '';
+                $pw = is_string($pwRaw) ? $pwRaw : '';
                 $headers['Authorization'] = 'Basic ' . base64_encode($user . ':' . $pw);
             }
         }
@@ -848,7 +926,8 @@ class Service
         if (is_string($script) && $script !== '' && file_exists($script)) {
             return realpath($script) ?: $script;
         }
-        $argv0 = $_SERVER['argv'][0] ?? null;
+        $argv = $_SERVER['argv'] ?? null;
+        $argv0 = is_array($argv) ? ($argv[0] ?? null) : null;
         if (is_string($argv0) && $argv0 !== '') {
             $abs = realpath($argv0);
             if ($abs !== false && file_exists($abs)) {
@@ -966,6 +1045,8 @@ class Service
      *    proto + host. getProxyUrlBase already normalises this.
      *  - The query string MUST be preserved (Scheme A signs URL+body and
      *    cXML bodySHA256 lives in the query).
+     *
+     * @param array<string, mixed> $headers
      */
     protected function reconstructPublicUrl(array $headers, string $path): string
     {
@@ -994,6 +1075,8 @@ class Service
 
     /**
      * Check Basic Auth from request headers.
+     *
+     * @param array<string, string> $headers
      */
     protected function checkBasicAuth(array $headers): bool
     {
@@ -1048,6 +1131,9 @@ class Service
     protected function jsonResponse(int $status, mixed $data): array
     {
         $body = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($body === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
         $headers = array_merge(
             ['Content-Type' => 'application/json'],
             $this->securityHeaders(),
@@ -1057,6 +1143,8 @@ class Service
 
     /**
      * Generate cryptographically secure random hex string.
+     *
+     * @param int<1, max> $bytes Number of random bytes (must be positive).
      */
     protected function randomHex(int $bytes): string
     {

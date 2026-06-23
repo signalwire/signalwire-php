@@ -108,7 +108,7 @@ class FAQBotAgent extends AgentBase
                     return new FunctionResult('Please provide a search query.');
                 }
 
-                $keywords = preg_split('/\s+/', $query);
+                $keywords = preg_split('/\s+/', $query) ?: [];
 
                 // Score each FAQ by keyword matches
                 $scored = [];

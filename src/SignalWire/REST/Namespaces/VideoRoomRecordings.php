@@ -26,7 +26,10 @@ class VideoRoomRecordings
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
@@ -44,7 +47,10 @@ class VideoRoomRecordings
         return $this->http->delete($this->basePath . '/' . $recordingId);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listEvents(string $recordingId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $recordingId . '/events', $params);

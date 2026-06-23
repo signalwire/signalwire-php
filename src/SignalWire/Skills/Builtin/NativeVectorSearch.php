@@ -32,6 +32,30 @@ class NativeVectorSearch extends SkillBase
         return 'native_vector_search';
     }
 
+    /**
+     * Narrow a genuinely-mixed value (remote search JSON) to a string.
+     * Numeric scalars are stringified; anything else → ''.
+     */
+    private static function asString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+        return '';
+    }
+
+    /**
+     * Narrow a genuinely-mixed value (remote search JSON) to a float.
+     * Numeric values are coerced; anything else → 0.0.
+     */
+    private static function asFloat(mixed $value): float
+    {
+        return is_numeric($value) ? (float) $value : 0.0;
+    }
+
     public function getDescription(): string
     {
         return 'Search document indexes using vector similarity and keyword search (local or remote)';
@@ -46,27 +70,25 @@ class NativeVectorSearch extends SkillBase
     {
         // Either remote_url is set (network mode, supported), or
         // index_file is set (local mode, NOT supported in PHP).
-        $remoteUrl = (string) ($this->params['remote_url'] ?? '');
-        $indexFile = (string) ($this->params['index_file'] ?? '');
+        $remoteUrl = $this->paramString('remote_url');
+        $indexFile = $this->paramString('index_file');
         return $remoteUrl !== '' || $indexFile !== '';
     }
 
     public function registerTools(): void
     {
         $toolName = $this->getToolName('search_knowledge');
-        $toolDescription = (string) ($this->params['description']
-            ?? 'Search the local knowledge base for information');
-        $defaultCount = max(1, min(20, (int) ($this->params['count'] ?? 5)));
-        $similarityThreshold = (float) ($this->params['similarity_threshold'] ?? 0.0);
-        $tags = is_array($this->params['tags'] ?? null) ? $this->params['tags'] : [];
-        $maxContentLength = max(1000, (int) ($this->params['max_content_length'] ?? 32768));
-        $noResultsMessage = (string) ($this->params['no_results_message']
-            ?? "No information found for '{query}'");
-        $responsePrefix = (string) ($this->params['response_prefix'] ?? '');
-        $responsePostfix = (string) ($this->params['response_postfix'] ?? '');
-        $remoteUrl = (string) ($this->params['remote_url'] ?? '');
-        $indexName = (string) ($this->params['index_name'] ?? 'default');
-        $timeout = max(2, (int) ($this->params['timeout'] ?? 30));
+        $toolDescription = $this->paramString('description', 'Search the local knowledge base for information');
+        $defaultCount = max(1, min(20, $this->paramInt('count', 5)));
+        $similarityThreshold = $this->paramFloat('similarity_threshold', 0.0);
+        $tags = $this->paramArray('tags');
+        $maxContentLength = max(1000, $this->paramInt('max_content_length', 32768));
+        $noResultsMessage = $this->paramString('no_results_message', "No information found for '{query}'");
+        $responsePrefix = $this->paramString('response_prefix');
+        $responsePostfix = $this->paramString('response_postfix');
+        $remoteUrl = $this->paramString('remote_url');
+        $indexName = $this->paramString('index_name', 'default');
+        $timeout = max(2, $this->paramInt('timeout', 30));
 
         $this->defineTool(
             $toolName,
@@ -95,8 +117,10 @@ class NativeVectorSearch extends SkillBase
                 $indexName,
                 $timeout,
             ): FunctionResult {
-                $query = trim((string) ($args['query'] ?? ''));
-                $count = max(1, (int) ($args['count'] ?? $defaultCount));
+                $queryArg = $args['query'] ?? '';
+                $query = trim(is_string($queryArg) ? $queryArg : '');
+                $countArg = $args['count'] ?? null;
+                $count = max(1, is_numeric($countArg) ? (int) $countArg : $defaultCount);
 
                 if ($query === '') {
                     return new FunctionResult('Please provide a search query.');
@@ -196,7 +220,7 @@ class NativeVectorSearch extends SkillBase
      * Format the remote search results into a single response string,
      * mirroring the Python skill's per-result truncation behaviour.
      *
-     * @param array<int,mixed> $results
+     * @param array<mixed> $results
      */
     private function formatResults(
         string $query,
@@ -226,11 +250,12 @@ class NativeVectorSearch extends SkillBase
             if (!is_array($result)) {
                 continue;
             }
-            $content = (string) ($result['content'] ?? '');
-            $score = (float) ($result['score'] ?? 0.0);
-            $metadata = is_array($result['metadata'] ?? null) ? $result['metadata'] : [];
-            $filename = (string) ($metadata['filename'] ?? '');
-            $section = (string) ($metadata['section'] ?? '');
+            $content = self::asString($result['content'] ?? null);
+            $score = self::asFloat($result['score'] ?? null);
+            $metadataRaw = $result['metadata'] ?? null;
+            $metadata = is_array($metadataRaw) ? $metadataRaw : [];
+            $filename = self::asString($metadata['filename'] ?? null);
+            $section = self::asString($metadata['section'] ?? null);
 
             if (strlen($content) > $perResultLimit) {
                 $content = substr($content, 0, $perResultLimit) . '...';
@@ -255,6 +280,9 @@ class NativeVectorSearch extends SkillBase
         return implode("\n\n", $lines);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         $hints = ['search', 'find', 'look up', 'documentation', 'knowledge base'];

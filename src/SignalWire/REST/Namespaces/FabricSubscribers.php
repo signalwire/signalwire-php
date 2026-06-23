@@ -13,7 +13,10 @@ use SignalWire\REST\CrudWithAddresses;
  */
 class FabricSubscribers extends CrudWithAddresses
 {
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listSipEndpoints(string $subscriberId, array $params = []): array
     {
         return $this->client->get(
@@ -22,7 +25,10 @@ class FabricSubscribers extends CrudWithAddresses
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function createSipEndpoint(string $subscriberId, array $body): array
     {
         return $this->client->post(
@@ -39,7 +45,10 @@ class FabricSubscribers extends CrudWithAddresses
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function updateSipEndpoint(string $subscriberId, string $endpointId, array $body): array
     {
         return $this->client->patch(

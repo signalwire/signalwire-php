@@ -15,10 +15,17 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 $root = realpath(__DIR__ . '/../src/SignalWire');
+if ($root === false) {
+    fwrite(STDERR, "Could not resolve src/SignalWire path\n");
+    exit(1);
+}
 $classes = [];
 $sourceFiles = [];
 $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
 foreach ($rii as $f) {
+    if (!$f instanceof SplFileInfo) {
+        continue;
+    }
     if ($f->isDir()) {
         continue;
     }
@@ -50,6 +57,17 @@ foreach ($classes as $fqcn) {
     // Existence is verified above, so ReflectionClass cannot throw here.
     $r = new ReflectionClass($fqcn);
     if ($r->isInternal()) {
+        continue;
+    }
+    // Skip @internal duck-type contracts (AgentInterface, RelayClientLike,
+    // RequestHandlerLike — the TS RelayClientLike pattern). They are consumed
+    // only internally and are NOT exported API, so they must not enter the
+    // cross-language signature comparison. References to them in other
+    // signatures are folded onto their canonical concrete class via the
+    // CLASS_RENAME_MAP in enumerate_surface.py (e.g. AgentInterface ->
+    // AgentBase) — a rename, not an omission.
+    $docComment = $r->getDocComment();
+    if ($docComment !== false && strpos($docComment, '@internal') !== false) {
         continue;
     }
 
@@ -151,6 +169,16 @@ foreach ($declared['user'] as $fn) {
 
 echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), "\n";
 
+/**
+ * @return array{
+ *     name: string,
+ *     is_constructor: bool,
+ *     is_static: bool,
+ *     parameters: list<array{name: string, type: string, has_default: bool, default: string|int|float|bool|array{}|null, is_variadic: bool, is_optional: bool, allows_null: bool}>,
+ *     return_type: string,
+ *     return_allows_null: bool
+ * }
+ */
 function methodEntry(ReflectionMethod $m, bool $isCtor): array
 {
     $declaringClass = $m->getDeclaringClass()->getName();
@@ -205,6 +233,10 @@ function typeString(?ReflectionType $t, ?string $declaringClass = null): string
     return (string) $t;
 }
 
+/**
+ * @param mixed $v
+ * @return string|int|float|bool|array{}|null
+ */
 function normaliseDefault($v)
 {
     if ($v === null) {

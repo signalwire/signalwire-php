@@ -13,6 +13,21 @@ class PlayBackgroundFile extends SkillBase
         return 'play_background_file';
     }
 
+    /**
+     * Narrow a genuinely-mixed value (nested user file config) to a string.
+     * Numeric scalars are stringified; anything else → $default.
+     */
+    private static function asString(mixed $value, string $default = ''): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+        return $default;
+    }
+
     public function getDescription(): string
     {
         return 'Control background file playback';
@@ -35,15 +50,18 @@ class PlayBackgroundFile extends SkillBase
     public function registerTools(): void
     {
         $toolName = $this->getToolName('play_background_file');
-        $files = $this->params['files'] ?? [];
+        $files = $this->paramArray('files');
 
         // Build action enum: start_{key} for each file + stop
         $actionEnum = [];
         $descriptions = [];
 
         foreach ($files as $file) {
-            $key = $file['key'] ?? '';
-            $description = $file['description'] ?? $key;
+            if (!is_array($file)) {
+                continue;
+            }
+            $key = self::asString($file['key'] ?? null);
+            $description = self::asString($file['description'] ?? null, $key);
 
             if ($key === '') {
                 continue;
@@ -60,10 +78,13 @@ class PlayBackgroundFile extends SkillBase
         $expressions = [];
 
         foreach ($files as $file) {
-            $key = $file['key'] ?? '';
-            $url = $file['url'] ?? '';
-            $description = $file['description'] ?? $key;
-            $wait = $file['wait'] ?? false;
+            if (!is_array($file)) {
+                continue;
+            }
+            $key = self::asString($file['key'] ?? null);
+            $url = self::asString($file['url'] ?? null);
+            $description = self::asString($file['description'] ?? null, $key);
+            $wait = (bool) ($file['wait'] ?? false);
 
             if ($key === '' || $url === '') {
                 continue;

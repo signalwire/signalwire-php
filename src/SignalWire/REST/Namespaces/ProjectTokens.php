@@ -24,13 +24,19 @@ class ProjectTokens
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function create(array $body): array
     {
         return $this->http->post($this->basePath, $body);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function update(string $tokenId, array $body): array
     {
         return $this->http->patch($this->basePath . '/' . $tokenId, $body);

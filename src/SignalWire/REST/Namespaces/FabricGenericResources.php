@@ -28,7 +28,10 @@ class FabricGenericResources
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
@@ -46,7 +49,10 @@ class FabricGenericResources
         return $this->http->delete($this->basePath . '/' . $resourceId);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listAddresses(string $resourceId, array $params = []): array
     {
         return $this->http->get(

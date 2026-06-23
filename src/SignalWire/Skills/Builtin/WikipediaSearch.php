@@ -43,11 +43,13 @@ class WikipediaSearch extends SkillBase
 
     public function registerTools(): void
     {
-        $numResults = max(1, min(5, (int) ($this->params['num_results'] ?? 1)));
-        $timeout = max(2, (int) ($this->params['timeout'] ?? 10));
-        $noResultsMessage = (string) ($this->params['no_results_message']
-            ?? "I couldn't find any Wikipedia articles for '{query}'. "
-                . 'Try rephrasing your search or using different keywords.');
+        $numResults = max(1, min(5, $this->paramInt('num_results', 1)));
+        $timeout = max(2, $this->paramInt('timeout', 10));
+        $noResultsMessageRaw = $this->params['no_results_message'] ?? null;
+        $noResultsMessage = is_string($noResultsMessageRaw)
+            ? $noResultsMessageRaw
+            : "I couldn't find any Wikipedia articles for '{query}'. "
+                . 'Try rephrasing your search or using different keywords.';
 
         $this->defineTool(
             'search_wiki',
@@ -98,7 +100,8 @@ class WikipediaSearch extends SkillBase
                     );
                 }
 
-                $hits = $parsed['query']['search'] ?? [];
+                $queryBlock = $parsed['query'] ?? null;
+                $hits = is_array($queryBlock) ? ($queryBlock['search'] ?? []) : [];
                 if (!is_array($hits) || count($hits) === 0) {
                     return new FunctionResult(
                         str_replace('{query}', $query, $noResultsMessage)
@@ -108,11 +111,12 @@ class WikipediaSearch extends SkillBase
                 // Step 2: fetch the introductory extract for each hit.
                 $articles = [];
                 foreach (array_slice($hits, 0, $numResults) as $hit) {
-                    if (!is_array($hit) || empty($hit['title'])) {
+                    if (!is_array($hit) || empty($hit['title']) || !is_string($hit['title'])) {
                         continue;
                     }
-                    $title = (string) $hit['title'];
-                    $snippet = isset($hit['snippet']) ? (string) $hit['snippet'] : '';
+                    $title = $hit['title'];
+                    $snippetRaw = $hit['snippet'] ?? null;
+                    $snippet = is_string($snippetRaw) ? $snippetRaw : '';
 
                     try {
                         [$exStatus, , $extracted] = HttpHelper::get(
@@ -134,11 +138,13 @@ class WikipediaSearch extends SkillBase
 
                     $extract = '';
                     if ($exStatus >= 200 && $exStatus < 300 && is_array($extracted)) {
-                        $pages = $extracted['query']['pages'] ?? [];
+                        $extractedQuery = $extracted['query'] ?? null;
+                        $pages = is_array($extractedQuery) ? ($extractedQuery['pages'] ?? []) : [];
                         if (is_array($pages)) {
                             $first = reset($pages);
                             if (is_array($first)) {
-                                $extract = trim((string) ($first['extract'] ?? ''));
+                                $extractRaw = $first['extract'] ?? '';
+                                $extract = is_string($extractRaw) ? trim($extractRaw) : '';
                             }
                         }
                     }
@@ -173,6 +179,9 @@ class WikipediaSearch extends SkillBase
         );
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

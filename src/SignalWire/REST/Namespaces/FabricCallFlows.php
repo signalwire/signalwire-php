@@ -23,7 +23,10 @@ class FabricCallFlows extends CrudWithAddresses
         return str_replace('/call_flows', '/call_flow', $this->basePath);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listAddresses(string $resourceId, array $params = []): array
     {
         return $this->client->get(
@@ -32,7 +35,10 @@ class FabricCallFlows extends CrudWithAddresses
         );
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listVersions(string $resourceId, array $params = []): array
     {
         return $this->client->get(
@@ -41,7 +47,10 @@ class FabricCallFlows extends CrudWithAddresses
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function deployVersion(string $resourceId, array $body = []): array
     {
         return $this->client->post(

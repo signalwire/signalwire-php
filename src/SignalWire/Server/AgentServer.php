@@ -62,7 +62,14 @@ class AgentServer
         string $logLevel = 'info'
     ) {
         $this->host     = $host ?? '0.0.0.0';
-        $this->port     = $port ?? (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 3000);
+        if ($port !== null) {
+            $this->port = $port;
+        } else {
+            $envPort = $_ENV['PORT'] ?? getenv('PORT');
+            $this->port = (is_string($envPort) || is_int($envPort)) && (int) $envPort !== 0
+                ? (int) $envPort
+                : 3000;
+        }
         $this->logLevel = $logLevel;
         $this->logger   = Logger::getLogger('agent_server');
     }
@@ -237,6 +244,7 @@ class AgentServer
     /**
      * Handle an HTTP request and return [status, headers, body].
      *
+     * @param array<string, string> $headers
      * @return array{int, array<string, string>, string}
      */
     public function handleRequest(
@@ -395,7 +403,17 @@ class AgentServer
             $rawHeaders = $request->header();
             if (is_array($rawHeaders)) {
                 foreach ($rawHeaders as $name => $value) {
-                    $headers[(string) $name] = is_array($value) ? implode(', ', $value) : (string) $value;
+                    if (!is_string($name)) {
+                        continue;
+                    }
+                    if (is_array($value)) {
+                        $headers[$name] = implode(', ', array_map(
+                            static fn ($v): string => is_string($v) ? $v : '',
+                            $value
+                        ));
+                    } elseif (is_string($value)) {
+                        $headers[$name] = $value;
+                    }
                 }
             }
             $body = $request->rawBody();
@@ -619,6 +637,9 @@ class AgentServer
     private function jsonResponse(int $status, mixed $data): array
     {
         $body = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($body === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
         return [
             $status,
             array_merge(

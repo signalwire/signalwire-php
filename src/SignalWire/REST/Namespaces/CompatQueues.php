@@ -20,7 +20,10 @@ class CompatQueues extends CrudResource
         return $this->client->post($this->basePath . '/' . $sid, $body);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listMembers(string $queueSid, array $params = []): array
     {
         return $this->client->get(
@@ -37,7 +40,10 @@ class CompatQueues extends CrudResource
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function dequeueMember(string $queueSid, string $callSid, array $body = []): array
     {
         return $this->client->post(

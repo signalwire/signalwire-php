@@ -58,10 +58,23 @@ class Section
         if ($bullets !== null && !is_array($bullets)) {
             throw new \InvalidArgumentException('bullets must be a list or null');
         }
-        $this->bullets = $bullets === null ? [] : array_values($bullets);
+        $normalizedBullets = [];
+        if ($bullets !== null) {
+            foreach ($bullets as $b) {
+                if (!is_string($b)) {
+                    throw new \InvalidArgumentException('bullets must contain only strings');
+                }
+                $normalizedBullets[] = $b;
+            }
+        }
+        $this->bullets = $normalizedBullets;
 
         $this->subsections = [];
-        $this->numbered = $params['numbered'] ?? null;
+        $numbered = $params['numbered'] ?? null;
+        if ($numbered !== null && !is_bool($numbered)) {
+            throw new \InvalidArgumentException('numbered must be a bool or null');
+        }
+        $this->numbered = $numbered;
         $this->numberedBullets = (bool) ($params['numberedBullets'] ?? false);
     }
 

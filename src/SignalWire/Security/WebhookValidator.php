@@ -332,13 +332,15 @@ final class WebhookValidator
                 'qparams' => [],
             ];
         }
+        /** @var array<string, string> $qparams */
         $qparams = [];
         if (isset($parts['query']) && $parts['query'] !== '') {
-            parse_str($parts['query'], $qparams);
+            $parsed = [];
+            parse_str($parts['query'], $parsed);
             // parse_str returns mixed; the validator only reads string scalars.
-            foreach ($qparams as $k => $v) {
-                if (!is_string($v)) {
-                    unset($qparams[$k]);
+            foreach ($parsed as $k => $v) {
+                if (is_string($v)) {
+                    $qparams[(string) $k] = $v;
                 }
             }
         }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SignalWire\Serverless;
 
+use SignalWire\SWML\RequestHandlerLike;
+
 /**
  * Auto-detect and handle serverless environments (Lambda, GCF, Azure, CGI)
  * or fall back to the built-in PHP server.
@@ -57,30 +59,42 @@ class Adapter
      * format, calls agent->handleRequest(), and returns an API Gateway
      * compatible response.
      *
-     * @param object $agent   An AgentBase or Service instance with handleRequest().
-     * @param array  $event   The API Gateway event payload.
+     * @param RequestHandlerLike $agent An AgentBase or Service request handler.
+     * @param array<string,mixed> $event   The API Gateway event payload.
      * @param object $context The Lambda context object.
-     * @return array API Gateway response format {statusCode, headers, body}.
+     * @return array{statusCode: int, headers: array<string,string>, body: string} API Gateway response format.
      */
-    public static function handleLambda(object $agent, array $event, object $context): array
+    public static function handleLambda(RequestHandlerLike $agent, array $event, object $context): array
     {
-        $method = strtoupper($event['httpMethod'] ?? $event['requestContext']['http']['method'] ?? 'GET');
-        $path   = $event['path'] ?? $event['rawPath'] ?? '/';
-        $body   = $event['body'] ?? null;
+        $requestContext = $event['requestContext'] ?? null;
+        $ctxMethod = null;
+        if (is_array($requestContext)) {
+            $http = $requestContext['http'] ?? null;
+            if (is_array($http)) {
+                $ctxMethod = $http['method'] ?? null;
+            }
+        }
+        $method = strtoupper(self::asString($event['httpMethod'] ?? $ctxMethod ?? 'GET', 'GET'));
+        $path   = self::asString($event['path'] ?? $event['rawPath'] ?? '/', '/');
+
+        $rawBody = $event['body'] ?? null;
+        $body    = is_string($rawBody) ? $rawBody : null;
 
         // Decode base64-encoded bodies
         if ($body !== null && ($event['isBase64Encoded'] ?? false)) {
-            $body = base64_decode($body, true);
-            if ($body === false) {
-                $body = null;
-            }
+            $decoded = base64_decode($body, true);
+            $body = $decoded === false ? null : $decoded;
         }
 
-        // Normalise headers to mixed-case keys
+        // Normalise headers to string values.
         $headers = [];
         $rawHeaders = $event['headers'] ?? [];
-        foreach ($rawHeaders as $key => $value) {
-            $headers[$key] = $value;
+        if (is_array($rawHeaders)) {
+            foreach ($rawHeaders as $key => $value) {
+                if (is_string($key) && is_string($value)) {
+                    $headers[$key] = $value;
+                }
+            }
         }
 
         [$status, $responseHeaders, $responseBody] = $agent->handleRequest($method, $path, $headers, $body);
@@ -98,12 +112,12 @@ class Adapter
      * Reads from php://input and $_SERVER, calls agent->handleRequest(),
      * then outputs headers and body directly to the response stream.
      *
-     * @param object $agent An AgentBase or Service instance with handleRequest().
+     * @param RequestHandlerLike $agent An AgentBase or Service request handler.
      */
-    public static function handleGcf(object $agent): void
+    public static function handleGcf(RequestHandlerLike $agent): void
     {
-        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-        $path   = $_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/';
+        $method = strtoupper(self::asString($_SERVER['REQUEST_METHOD'] ?? 'GET', 'GET'));
+        $path   = self::asString($_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/', '/');
 
         // Strip query string from path
         $qPos = strpos($path, '?');
@@ -132,21 +146,31 @@ class Adapter
      * array, calls agent->handleRequest(), and returns an Azure-compatible
      * response array.
      *
-     * @param object $agent   An AgentBase or Service instance with handleRequest().
-     * @param array  $request The Azure Functions HTTP request array.
-     * @return array Azure response format {status, headers, body}.
+     * @param RequestHandlerLike $agent An AgentBase or Service request handler.
+     * @param array<string,mixed> $request The Azure Functions HTTP request array.
+     * @return array{status: int, headers: array<string,string>, body: string} Azure response format.
      */
-    public static function handleAzure(object $agent, array $request): array
+    public static function handleAzure(RequestHandlerLike $agent, array $request): array
     {
-        $method = strtoupper($request['method'] ?? $request['Method'] ?? 'GET');
-        $path   = $request['url'] ?? $request['Url'] ?? '/';
+        $method = strtoupper(self::asString($request['method'] ?? $request['Method'] ?? 'GET', 'GET'));
+        $url    = self::asString($request['url'] ?? $request['Url'] ?? '/', '/');
 
         // Parse the URL to extract just the path
-        $parsed = parse_url($path);
-        $path = $parsed['path'] ?? '/';
+        $parsed = parse_url($url);
+        $path = (is_array($parsed) && isset($parsed['path'])) ? $parsed['path'] : '/';
 
-        $body    = $request['body'] ?? $request['Body'] ?? null;
-        $headers = $request['headers'] ?? $request['Headers'] ?? [];
+        $rawBody = $request['body'] ?? $request['Body'] ?? null;
+        $body    = is_string($rawBody) ? $rawBody : null;
+
+        $rawHeaders = $request['headers'] ?? $request['Headers'] ?? [];
+        $headers = [];
+        if (is_array($rawHeaders)) {
+            foreach ($rawHeaders as $key => $value) {
+                if (is_string($key) && is_string($value)) {
+                    $headers[$key] = $value;
+                }
+            }
+        }
 
         [$status, $responseHeaders, $responseBody] = $agent->handleRequest($method, $path, $headers, $body);
 
@@ -164,12 +188,12 @@ class Adapter
      * reads body from php://input, parses headers from HTTP_* env vars,
      * and outputs the status line, headers, and body to stdout.
      *
-     * @param object $agent An AgentBase or Service instance with handleRequest().
+     * @param RequestHandlerLike $agent An AgentBase or Service request handler.
      */
-    public static function handleCgi(object $agent): void
+    public static function handleCgi(RequestHandlerLike $agent): void
     {
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        $path   = $_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/';
+        $method = self::asString($_SERVER['REQUEST_METHOD'] ?? 'GET', 'GET');
+        $path   = self::asString($_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/', '/');
 
         // Strip query string from path
         $qPos = strpos($path, '?');
@@ -206,7 +230,7 @@ class Adapter
      * For serverless environments, calls the appropriate handler.
      * For 'server', calls agent->run().
      *
-     * @param object $agent An AgentBase or Service instance.
+     * @param RequestHandlerLike $agent An AgentBase or Service request handler.
      * @param ExecutionMode|string|null $mode Optional explicit mode override.
      *        Pass an {@see ExecutionMode} (typed) or its backing string
      *        ('lambda'/'gcf'/'azure'/'cgi'/'server', for parity) to pin the
@@ -214,7 +238,7 @@ class Adapter
      *        out-of-set string raises \ValueError. Defaults to null
      *        (auto-detect), preserving the original single-argument behaviour.
      */
-    public static function serve(object $agent, ExecutionMode|string|null $mode = null): void
+    public static function serve(RequestHandlerLike $agent, ExecutionMode|string|null $mode = null): void
     {
         $resolved = $mode === null ? self::detectMode() : ExecutionMode::coerce($mode);
 
@@ -224,7 +248,7 @@ class Adapter
                 // in a real deployment this would be invoked by the runtime.
                 // Here we provide a minimal entrypoint that reads from stdin.
                 $input = file_get_contents('php://input') ?: '{}';
-                $event = json_decode($input, true) ?? [];
+                $event = self::decodeJsonObject($input);
                 $context = new \stdClass();
                 $response = self::handleLambda($agent, $event, $context);
                 echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -236,7 +260,7 @@ class Adapter
 
             case ExecutionMode::Azure:
                 $input = file_get_contents('php://input') ?: '{}';
-                $request = json_decode($input, true) ?? [];
+                $request = self::decodeJsonObject($input);
                 $response = self::handleAzure($agent, $request);
                 echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 break;
@@ -261,7 +285,7 @@ class Adapter
         $headers = [];
 
         foreach ($_SERVER as $key => $value) {
-            if (str_starts_with($key, 'HTTP_')) {
+            if (is_string($key) && str_starts_with($key, 'HTTP_') && is_string($value)) {
                 // HTTP_ACCEPT_LANGUAGE => Accept-Language
                 $name = str_replace('_', '-', substr($key, 5));
                 $name = implode('-', array_map('ucfirst', explode('-', strtolower($name))));
@@ -270,14 +294,52 @@ class Adapter
         }
 
         // CONTENT_TYPE and CONTENT_LENGTH are not prefixed with HTTP_
-        if (isset($_SERVER['CONTENT_TYPE'])) {
-            $headers['Content-Type'] = $_SERVER['CONTENT_TYPE'];
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? null;
+        if (is_string($contentType)) {
+            $headers['Content-Type'] = $contentType;
         }
-        if (isset($_SERVER['CONTENT_LENGTH'])) {
-            $headers['Content-Length'] = $_SERVER['CONTENT_LENGTH'];
+        $contentLength = $_SERVER['CONTENT_LENGTH'] ?? null;
+        if (is_string($contentLength)) {
+            $headers['Content-Length'] = $contentLength;
         }
 
         return $headers;
+    }
+
+    /**
+     * Coerce a possibly-mixed value to a string, falling back to $default
+     * for non-string/non-scalar inputs.
+     */
+    private static function asString(mixed $value, string $default): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value) || is_bool($value)) {
+            return (string) $value;
+        }
+        return $default;
+    }
+
+    /**
+     * Decode a JSON string to a string-keyed array, returning [] when the
+     * payload is not a JSON object.
+     *
+     * @return array<string, mixed>
+     */
+    private static function decodeJsonObject(string $json): array
+    {
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $out = [];
+        foreach ($decoded as $k => $v) {
+            if (is_string($k)) {
+                $out[$k] = $v;
+            }
+        }
+        return $out;
     }
 
     /**

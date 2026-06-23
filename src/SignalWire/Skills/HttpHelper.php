@@ -26,6 +26,8 @@ class HttpHelper
      * Issue a GET. Returns [status, body, parsed_json_or_null].
      *
      * @param array<string,string> $headers
+     * @param array<string,scalar>|null $query
+     * @param array{0:string,1:string}|null $basicAuth [user, password]
      * @return array{int, string, mixed}
      */
     public static function get(
@@ -46,6 +48,7 @@ class HttpHelper
      * Issue a POST with a JSON body. Returns [status, body, parsed].
      *
      * @param array<string,string> $headers
+     * @param array{0:string,1:string}|null $basicAuth [user, password]
      * @return array{int, string, mixed}
      */
     public static function postJson(
@@ -109,6 +112,17 @@ class HttpHelper
         ?array $basicAuth = null,
         int $timeout = self::DEFAULT_TIMEOUT,
     ): array {
+        // Public entry boundary: $method/$url arrive directly from skill
+        // callers with no upstream contract. Fail fast on empty input (and
+        // carry the non-empty-string guarantee down to CURLOPT_CUSTOMREQUEST /
+        // CURLOPT_URL).
+        if ($method === '') {
+            throw new \InvalidArgumentException('HTTP request method must not be empty');
+        }
+        if ($url === '') {
+            throw new \InvalidArgumentException('HTTP request URL must not be empty');
+        }
+
         $ch = \curl_init();
         if ($ch === false) {
             throw new \RuntimeException('curl_init() failed');

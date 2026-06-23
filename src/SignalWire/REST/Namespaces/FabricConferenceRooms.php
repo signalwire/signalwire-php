@@ -18,7 +18,10 @@ class FabricConferenceRooms extends CrudWithAddresses
         return str_replace('/conference_rooms', '/conference_room', $this->basePath);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listAddresses(string $resourceId, array $params = []): array
     {
         return $this->client->get(

@@ -61,6 +61,9 @@ class SkillRegistry
         return null;
     }
 
+    /**
+     * @return list<string>
+     */
     public function listSkills(): array
     {
         foreach (self::BUILTIN_SKILL_NAMES as $name) {
@@ -148,21 +151,16 @@ class SkillRegistry
             $entry = ['name' => $name, 'parameters' => []];
             $className = $this->getFactory($name);
             if ($className && \class_exists($className)) {
-                if (\method_exists($className, 'getDescription')) {
-                    try {
-                        $skill = new $className();
+                try {
+                    $skill = new $className();
+                    if (\method_exists($skill, 'getDescription')) {
                         $entry['description'] = $skill->getDescription();
-                    } catch (\Throwable $e) {
-                        // Skip on construction failure
                     }
-                }
-                if (\method_exists($className, 'getVersion')) {
-                    try {
-                        $skill = $skill ?? new $className();
+                    if (\method_exists($skill, 'getVersion')) {
                         $entry['version'] = $skill->getVersion();
-                    } catch (\Throwable $e) {
-                        // Skip on construction failure
                     }
+                } catch (\Throwable $e) {
+                    // Skip on construction failure
                 }
             }
             $out[$name] = $entry;

@@ -51,7 +51,10 @@ class CompatPhoneNumbers
         return $this->importedBase;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
@@ -63,7 +66,10 @@ class CompatPhoneNumbers
         return $this->http->get($this->basePath . '/' . $sid);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function update(string $sid, array $body): array
     {
         return $this->http->post($this->basePath . '/' . $sid, $body);
@@ -75,31 +81,46 @@ class CompatPhoneNumbers
         return $this->http->delete($this->basePath . '/' . $sid);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function purchase(array $body): array
     {
         return $this->http->post($this->basePath, $body);
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function importNumber(array $body): array
     {
         return $this->http->post($this->importedBase, $body);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listAvailableCountries(array $params = []): array
     {
         return $this->http->get($this->availableBase, $params);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function searchLocal(string $country, array $params = []): array
     {
         return $this->http->get($this->availableBase . '/' . $country . '/Local', $params);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function searchTollFree(string $country, array $params = []): array
     {
         return $this->http->get($this->availableBase . '/' . $country . '/TollFree', $params);

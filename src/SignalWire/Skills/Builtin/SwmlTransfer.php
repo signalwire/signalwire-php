@@ -13,6 +13,21 @@ class SwmlTransfer extends SkillBase
         return 'swml_transfer';
     }
 
+    /**
+     * Narrow a genuinely-mixed value (nested user transfer config) to a
+     * string. Numeric scalars are stringified; anything else → $default.
+     */
+    private static function asString(mixed $value, string $default = ''): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+        return $default;
+    }
+
     public function getDescription(): string
     {
         return 'Transfer calls between agents based on pattern matching';
@@ -35,12 +50,12 @@ class SwmlTransfer extends SkillBase
     public function registerTools(): void
     {
         $toolName = $this->getToolName('transfer_call');
-        $transfers = $this->params['transfers'] ?? [];
-        $description = $this->params['description'] ?? 'Transfer call based on pattern matching';
-        $paramName = $this->params['parameter_name'] ?? 'transfer_type';
-        $paramDescription = $this->params['parameter_description'] ?? 'The type of transfer to perform';
-        $defaultMessage = $this->params['default_message'] ?? 'Transferring your call, please hold.';
-        $requiredFields = $this->params['required_fields'] ?? [];
+        $transfers = $this->paramArray('transfers');
+        $description = $this->paramString('description', 'Transfer call based on pattern matching');
+        $paramName = $this->paramString('parameter_name', 'transfer_type');
+        $paramDescription = $this->paramString('parameter_description', 'The type of transfer to perform');
+        $defaultMessage = $this->paramString('default_message', 'Transferring your call, please hold.');
+        $requiredFields = $this->paramArray('required_fields');
 
         $properties = [
             $paramName => [
@@ -52,13 +67,16 @@ class SwmlTransfer extends SkillBase
         $required = [$paramName];
 
         foreach ($requiredFields as $field) {
-            $fieldName = $field['name'] ?? '';
+            if (!is_array($field)) {
+                continue;
+            }
+            $fieldName = self::asString($field['name'] ?? null);
             if ($fieldName === '') {
                 continue;
             }
             $properties[$fieldName] = [
-                'type' => $field['type'] ?? 'string',
-                'description' => $field['description'] ?? $fieldName,
+                'type' => self::asString($field['type'] ?? null, 'string'),
+                'description' => self::asString($field['description'] ?? null, $fieldName),
             ];
             $required[] = $fieldName;
         }
@@ -67,21 +85,23 @@ class SwmlTransfer extends SkillBase
         $expressions = [];
 
         foreach ($transfers as $pattern => $config) {
-            $url = $config['url'] ?? $config['address'] ?? '';
-            $message = $config['message'] ?? $defaultMessage;
-            $returnMessage = $config['return_message'] ?? '';
-            $postProcess = $config['post_process'] ?? false;
+            if (!is_array($config)) {
+                continue;
+            }
+            $url = self::asString($config['url'] ?? $config['address'] ?? null);
+            $message = self::asString($config['message'] ?? null, $defaultMessage);
+            $postProcess = (bool) ($config['post_process'] ?? false);
 
             $expression = [
                 'string' => '${args.' . $paramName . '}',
-                'pattern' => $pattern,
+                'pattern' => (string) $pattern,
                 'output' => [
                     'response' => $message,
                     'action' => [],
                 ],
             ];
 
-            if (!empty($url)) {
+            if ($url !== '') {
                 if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
                     $expression['output']['action'][] = ['transfer_uri' => $url];
                 } else {
@@ -124,14 +144,17 @@ class SwmlTransfer extends SkillBase
         $this->agent->registerSwaigFunction($funcDef);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         $hints = ['transfer', 'connect', 'speak to', 'talk to'];
-        $transfers = $this->params['transfers'] ?? [];
+        $transfers = $this->paramArray('transfers');
 
         foreach (array_keys($transfers) as $key) {
             // Split transfer keys into hint words
-            $words = preg_split('/[\s_\-]+/', (string) $key);
+            $words = preg_split('/[\s_\-]+/', (string) $key) ?: [];
             foreach ($words as $word) {
                 $word = trim($word);
                 if ($word !== '' && !in_array($word, $hints, true)) {
@@ -143,18 +166,21 @@ class SwmlTransfer extends SkillBase
         return $hints;
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {
             return [];
         }
 
-        $transfers = $this->params['transfers'] ?? [];
+        $transfers = $this->paramArray('transfers');
         $destinations = [];
 
         foreach ($transfers as $pattern => $config) {
-            $message = $config['message'] ?? '';
-            $destinations[] = $pattern . ($message !== '' ? ' - ' . $message : '');
+            $message = is_array($config) ? self::asString($config['message'] ?? null) : '';
+            $destinations[] = (string) $pattern . ($message !== '' ? ' - ' . $message : '');
         }
 
         $sections = [

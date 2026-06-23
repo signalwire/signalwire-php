@@ -23,7 +23,10 @@ class NumberGroups extends CrudResource
         parent::__construct($http, '/api/relay/rest/number_groups', 'PUT');
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listMemberships(string $groupId, array $params = []): array
     {
         return $this->client->get(
@@ -32,7 +35,10 @@ class NumberGroups extends CrudResource
         );
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function addMembership(string $groupId, array $body): array
     {
         return $this->client->post(

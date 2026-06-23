@@ -354,7 +354,7 @@
               "params": [
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.swml.SWMLService",
                   "required": true
                 },
                 {
@@ -369,7 +369,7 @@
               "params": [
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.swml.SWMLService",
                   "required": true
                 }
               ],
@@ -379,7 +379,7 @@
               "params": [
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.swml.SWMLService",
                   "required": true
                 }
               ],
@@ -389,7 +389,7 @@
               "params": [
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.swml.SWMLService",
                   "required": true
                 },
                 {
@@ -409,7 +409,7 @@
               "params": [
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.swml.SWMLService",
                   "required": true
                 },
                 {
@@ -5021,7 +5021,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -5175,7 +5175,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 }
               ],
@@ -7110,7 +7110,7 @@
                 },
                 {
                   "name": "client",
-                  "type": "any",
+                  "type": "class:signalwire.relay.RelayClient",
                   "required": true
                 }
               ],
@@ -7249,15 +7249,6 @@
                   "type": "any",
                   "required": false,
                   "default": []
-                }
-              ],
-              "returns": "any"
-            },
-            "client": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
                 }
               ],
               "returns": "any"
@@ -16585,7 +16576,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -16658,7 +16649,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -16749,7 +16740,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -16822,7 +16813,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -16913,7 +16904,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17004,7 +16995,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17077,7 +17068,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17297,7 +17288,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17388,7 +17379,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17470,7 +17461,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17543,7 +17534,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17634,7 +17625,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17716,7 +17707,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -17947,7 +17938,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -18029,7 +18020,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -18120,7 +18111,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -18184,7 +18175,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {
@@ -18293,7 +18284,7 @@
                 },
                 {
                   "name": "agent",
-                  "type": "any",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
                   "required": true
                 },
                 {

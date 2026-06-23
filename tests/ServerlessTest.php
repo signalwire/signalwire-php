@@ -7,6 +7,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Serverless\Adapter;
 use SignalWire\Serverless\ExecutionMode;
+use SignalWire\SWML\RequestHandlerLike;
 
 class ServerlessTest extends TestCase
 {
@@ -461,7 +462,7 @@ class ServerlessTest extends TestCase
 
         $captured = null;
 
-        $agent = new class ($captured) {
+        $agent = new class ($captured) implements RequestHandlerLike {
             private mixed $ref;
 
             public function __construct(mixed &$ref)
@@ -476,6 +477,10 @@ class ServerlessTest extends TestCase
             {
                 $this->ref = $headers;
                 return [200, ['Content-Type' => 'application/json'], '{"ok":true}'];
+            }
+
+            public function run(): void
+            {
             }
         };
 
@@ -502,7 +507,7 @@ class ServerlessTest extends TestCase
 
         $captured = null;
 
-        $agent = new class ($captured) {
+        $agent = new class ($captured) implements RequestHandlerLike {
             private mixed $ref;
 
             public function __construct(mixed &$ref)
@@ -517,6 +522,10 @@ class ServerlessTest extends TestCase
             {
                 $this->ref = $headers;
                 return [200, ['Content-Type' => 'application/json'], '{}'];
+            }
+
+            public function run(): void
+            {
             }
         };
 
@@ -739,7 +748,7 @@ class ServerlessTest extends TestCase
 
     private function makeRecordingAgent(): object
     {
-        return new class () {
+        return new class () implements RequestHandlerLike {
             public bool $ran = false;
             public int $handleRequestCalls = 0;
 
@@ -777,7 +786,7 @@ class ServerlessTest extends TestCase
     ): object {
         $test = $this;
 
-        return new class ($statusCode, $responseData, $expectedMethod, $expectedPath, $expectedHeaders, $expectedBody, $test) {
+        return new class ($statusCode, $responseData, $expectedMethod, $expectedPath, $expectedHeaders, $expectedBody, $test) implements RequestHandlerLike {
             private int $statusCode;
             private array $responseData;
             private string $expectedMethod;
@@ -827,6 +836,12 @@ class ServerlessTest extends TestCase
                     ['Content-Type' => 'application/json'],
                     $responseBody,
                 ];
+            }
+
+            public function run(): void
+            {
+                // No-op: the serverless dispatch tests never invoke the
+                // blocking serve loop (RequestHandlerLike contract method).
             }
         };
     }

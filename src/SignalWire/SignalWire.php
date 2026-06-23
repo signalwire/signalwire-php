@@ -74,7 +74,8 @@ final class SignalWire
         // a SKILL_NAME constant or the snake-cased class basename.
         $name = null;
         if (\defined("$skillClass::SKILL_NAME")) {
-            $name = \constant("$skillClass::SKILL_NAME");
+            $constant = \constant("$skillClass::SKILL_NAME");
+            $name = is_string($constant) ? $constant : null;
         }
         if (!$name) {
             // $skillClass is a class-string<SkillBase>, so getName() exists.
@@ -87,7 +88,10 @@ final class SignalWire
         }
         if (!$name) {
             $bare = \substr($skillClass, \strrpos($skillClass, '\\') + 1);
-            $name = \strtolower(\preg_replace('/(?<!^)[A-Z]/', '_$0', $bare));
+            // preg_replace returns null only on a regex engine error, which a
+            // static valid pattern cannot trigger; fall back to the bare name.
+            $snaked = \preg_replace('/(?<!^)[A-Z]/', '_$0', $bare) ?? $bare;
+            $name = \strtolower($snaked);
         }
         SkillRegistry::instance()->registerSkill($name, $skillClass);
     }

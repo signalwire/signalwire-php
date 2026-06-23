@@ -29,7 +29,7 @@ class GoogleMaps extends SkillBase
 
     public function registerTools(): void
     {
-        $apiKey = $this->params['api_key'] ?? '';
+        $apiKey = $this->paramString('api_key');
         $lookupToolName = $this->params['lookup_tool_name'] ?? 'lookup_address';
         $routeToolName = $this->params['route_tool_name'] ?? 'compute_route';
 
@@ -151,11 +151,17 @@ class GoogleMaps extends SkillBase
         $this->agent->registerSwaigFunction($routeDef);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getHints(): array
     {
         return ['address', 'location', 'route', 'directions', 'miles', 'distance'];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {

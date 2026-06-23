@@ -27,6 +27,9 @@ class Event
 {
     private readonly float $timestamp;
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public function __construct(
         private readonly string $eventType,
         private readonly array $params,
@@ -45,6 +48,7 @@ class Event
         return $this->timestamp;
     }
 
+    /** @return array<string,mixed> */
     public function getParams(): array
     {
         return $this->params;
@@ -52,27 +56,32 @@ class Event
 
     public function getCallId(): ?string
     {
-        return $this->params['call_id'] ?? null;
+        $value = $this->params['call_id'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getNodeId(): ?string
     {
-        return $this->params['node_id'] ?? null;
+        $value = $this->params['node_id'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getControlId(): ?string
     {
-        return $this->params['control_id'] ?? null;
+        $value = $this->params['control_id'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getTag(): ?string
     {
-        return $this->params['tag'] ?? null;
+        $value = $this->params['tag'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     public function getState(): ?string
     {
-        return $this->params['state'] ?? null;
+        $value = $this->params['state'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     /**
@@ -91,6 +100,7 @@ class Event
         return is_string($wire) ? DialState::tryFromWire($wire) : null;
     }
 
+    /** @return array{event_type: string, timestamp: float, params: array<string,mixed>} */
     public function toArray(): array
     {
         return [
@@ -100,6 +110,9 @@ class Event
         ];
     }
 
+    /**
+     * @param array<string,mixed> $params
+     */
     public static function parse(string $eventType, array $params): self
     {
         return new self($eventType, $params);

@@ -14,6 +14,41 @@ class InfoGatherer extends SkillBase
         return 'info_gatherer';
     }
 
+    /**
+     * Narrow the genuinely-mixed questions param to a list of question
+     * objects. Per the Python reference each question is a dict with
+     * 'key_name'/'question_text' (and optional 'confirm'/'prompt_add');
+     * non-array entries the platform might send are dropped.
+     *
+     * @param array<mixed> $questions
+     * @return list<array<string,mixed>>
+     */
+    private function normalizeQuestions(array $questions): array
+    {
+        $out = [];
+        foreach ($questions as $q) {
+            if (is_array($q)) {
+                $out[] = $q;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Narrow a genuinely-mixed value (question field / SWAIG arg) to a
+     * string. Numeric scalars are stringified; anything else → $default.
+     */
+    private static function asString(mixed $value, string $default = ''): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+        return $default;
+    }
+
     public function getDescription(): string
     {
         return 'Gather answers to a configurable list of questions';
@@ -35,9 +70,9 @@ class InfoGatherer extends SkillBase
 
     public function registerTools(): void
     {
-        $prefix = $this->params['prefix'] ?? '';
-        $questions = $this->params['questions'] ?? [];
-        $completionMessage = $this->params['completion_message'] ?? 'All questions have been answered. Thank you!';
+        $prefix = $this->paramString('prefix');
+        $questions = $this->normalizeQuestions($this->paramArray('questions'));
+        $completionMessage = $this->paramString('completion_message', 'All questions have been answered. Thank you!');
         $namespace = $this->getInstanceKey();
 
         $startToolName = $prefix !== '' ? $prefix . '_start_questions' : 'start_questions';
@@ -50,12 +85,12 @@ class InfoGatherer extends SkillBase
             function (array $args, array $rawData) use ($questions, $namespace): FunctionResult {
                 $result = new FunctionResult();
 
-                if (empty($questions)) {
+                if (count($questions) === 0) {
                     $result->setResponse('No questions configured.');
                     return $result;
                 }
 
-                $firstQuestion = $questions[0]['question_text'] ?? 'No question text.';
+                $firstQuestion = self::asString($questions[0]['question_text'] ?? null, 'No question text.');
 
                 $result->setResponse('Starting questions. First question: ' . $firstQuestion);
                 $result->updateGlobalData([
@@ -85,8 +120,8 @@ class InfoGatherer extends SkillBase
             ],
             function (array $args, array $rawData) use ($questions, $namespace, $completionMessage): FunctionResult {
                 $result = new FunctionResult();
-                $answer = $args['answer'] ?? '';
-                $confirmed = $args['confirmed_by_user'] ?? false;
+                $answer = self::asString($args['answer'] ?? null);
+                $confirmed = (bool) ($args['confirmed_by_user'] ?? false);
 
                 // In a stateful environment, question_index and answers would come from global data.
                 // For this stub, we use the questions array directly.
@@ -101,11 +136,11 @@ class InfoGatherer extends SkillBase
                     return $result;
                 }
 
-                $currentQuestion = $questions[$currentIndex] ?? null;
-                $needsConfirm = $currentQuestion['confirm'] ?? false;
+                $currentQuestion = $questions[$currentIndex] ?? [];
+                $needsConfirm = (bool) ($currentQuestion['confirm'] ?? false);
 
                 if ($needsConfirm && !$confirmed) {
-                    $questionText = $currentQuestion['question_text'] ?? '';
+                    $questionText = self::asString($currentQuestion['question_text'] ?? null);
                     $result->setResponse(
                         'You answered "' . $answer . '" for: ' . $questionText
                         . '. Can you confirm this is correct?'
@@ -123,7 +158,7 @@ class InfoGatherer extends SkillBase
                             'question_index' => $nextIndex,
                             'answers' => [
                                 [
-                                    'key' => $currentQuestion['key_name'] ?? 'q_' . $currentIndex,
+                                    'key' => self::asString($currentQuestion['key_name'] ?? null, 'q_' . $currentIndex),
                                     'answer' => $answer,
                                 ],
                             ],
@@ -131,7 +166,7 @@ class InfoGatherer extends SkillBase
                         ],
                     ]);
                 } else {
-                    $nextQuestion = $questions[$nextIndex]['question_text'] ?? 'No question text.';
+                    $nextQuestion = self::asString($questions[$nextIndex]['question_text'] ?? null, 'No question text.');
                     $result->setResponse('Answer recorded. Next question: ' . $nextQuestion);
                     $result->updateGlobalData([
                         $namespace => [
@@ -139,7 +174,7 @@ class InfoGatherer extends SkillBase
                             'question_index' => $nextIndex,
                             'answers' => [
                                 [
-                                    'key' => $currentQuestion['key_name'] ?? 'q_' . $currentIndex,
+                                    'key' => self::asString($currentQuestion['key_name'] ?? null, 'q_' . $currentIndex),
                                     'answer' => $answer,
                                 ],
                             ],
@@ -152,10 +187,13 @@ class InfoGatherer extends SkillBase
         );
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function getGlobalData(): array
     {
         $namespace = $this->getInstanceKey();
-        $questions = $this->params['questions'] ?? [];
+        $questions = $this->normalizeQuestions($this->paramArray('questions'));
 
         return [
             $namespace => [
@@ -166,6 +204,9 @@ class InfoGatherer extends SkillBase
         ];
     }
 
+    /**
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
     public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {
@@ -173,7 +214,7 @@ class InfoGatherer extends SkillBase
         }
 
         $instanceKey = $this->getInstanceKey();
-        $questions = $this->params['questions'] ?? [];
+        $questions = $this->normalizeQuestions($this->paramArray('questions'));
         $bullets = [
             'Call start_questions to begin the question flow.',
             'Submit each answer using submit_answer with the user\'s response.',
@@ -181,7 +222,7 @@ class InfoGatherer extends SkillBase
         ];
 
         foreach ($questions as $q) {
-            $promptAdd = $q['prompt_add'] ?? '';
+            $promptAdd = self::asString($q['prompt_add'] ?? null);
             if ($promptAdd !== '') {
                 $bullets[] = $promptAdd;
             }

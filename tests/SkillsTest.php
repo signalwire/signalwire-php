@@ -283,7 +283,8 @@ class SkillsTest extends TestCase
         $manager = new SkillManager($agent);
 
         // Datetime has no required env vars and setup returns true.
-        // Pass skip_prompt to avoid calling mergePromptSections.
+        // Pass skip_prompt to keep this test focused on load bookkeeping
+        // (skips the promptAddSection path).
         [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
@@ -391,6 +392,33 @@ class SkillsTest extends TestCase
         $this->assertStringContainsString('not found', $msg);
     }
 
+    /**
+     * Regression: loading a skill WITHOUT skip_prompt must merge the skill's
+     * prompt sections into the agent (Python parity: SkillManager forwards
+     * get_prompt_sections() to agent.prompt_add_section()). This path was
+     * previously broken — SkillManager called a non-existent mergePromptSections()
+     * which would fatal at runtime — so every other test passes skip_prompt to
+     * dodge it. Here we exercise the real merge path end-to-end.
+     */
+    public function testSkillManagerLoadMergesPromptSections(): void
+    {
+        $agent = $this->makeAgent();
+        $manager = new SkillManager($agent);
+
+        [$ok, $msg] = $manager->loadSkill('datetime');
+
+        $this->assertTrue($ok, "datetime should load: {$msg}");
+
+        $prompt = $agent->getPrompt();
+        $this->assertIsArray($prompt, 'POM sections should be present after merge');
+        $titles = array_map(static fn (array $s): mixed => $s['title'] ?? null, $prompt);
+        $this->assertContains(
+            'Date and Time Information',
+            $titles,
+            'datetime skill prompt section should be merged into the agent',
+        );
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  Agent integration tests (5)
     // ══════════════════════════════════════════════════════════════════════
@@ -398,7 +426,7 @@ class SkillsTest extends TestCase
     public function testAgentAddSkillDatetimeWorks(): void
     {
         $agent = $this->makeAgent();
-        // Use skip_prompt to keep integration clean (avoids mergePromptSections)
+        // Use skip_prompt to keep integration clean (skips promptAddSection)
         $agent->addSkill('datetime', ['skip_prompt' => true]);
 
         $this->assertTrue($agent->hasSkill('datetime'));
@@ -566,8 +594,9 @@ class SkillsTest extends TestCase
 
     /**
      * Construct + register a WebSearch skill directly (bypassing
-     * SkillManager so we don't drag in unrelated AgentBase merge
-     * methods). Returns the agent so the caller can dispatch.
+     * SkillManager so we don't drag in the agent hint/global-data/
+     * prompt-section merge step). Returns the agent so the caller can
+     * dispatch.
      *
      * @param array<string,mixed> $params
      */

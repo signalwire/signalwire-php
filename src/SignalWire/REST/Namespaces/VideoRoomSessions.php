@@ -26,7 +26,10 @@ class VideoRoomSessions
         return $this->basePath;
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function list(array $params = []): array
     {
         return $this->http->get($this->basePath, $params);
@@ -38,19 +41,28 @@ class VideoRoomSessions
         return $this->http->get($this->basePath . '/' . $sessionId);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listEvents(string $sessionId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $sessionId . '/events', $params);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listMembers(string $sessionId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $sessionId . '/members', $params);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listRecordings(string $sessionId, array $params = []): array
     {
         return $this->http->get($this->basePath . '/' . $sessionId . '/recordings', $params);

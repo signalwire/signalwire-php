@@ -17,13 +17,19 @@ class DatasphereDocuments extends CrudResource
         parent::__construct($http, '/api/datasphere/documents');
     }
 
-    /** @param array<string,mixed> $body @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $body
+     * @return array<string,mixed>
+     */
     public function search(array $body): array
     {
         return $this->client->post($this->basePath . '/search', $body);
     }
 
-    /** @param array<string,mixed> $params @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
     public function listChunks(string $documentId, array $params = []): array
     {
         return $this->client->get(
