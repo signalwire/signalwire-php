@@ -102,7 +102,7 @@ class RegistryMockTest extends TestCase
         // RegistryCampaigns.update uses PUT (not PATCH).
         $body = $this->client->registry()->campaigns()->update(
             'camp-2',
-            ['description' => 'Updated']
+            extras: ['description' => 'Updated']
         );
         $this->assertIsArray($body);
 
@@ -131,7 +131,7 @@ class RegistryMockTest extends TestCase
     {
         $body = $this->client->registry()->campaigns()->createOrder(
             'camp-4',
-            ['numbers' => ['pn-1', 'pn-2']]
+            extras: ['numbers' => ['pn-1', 'pn-2']]
         );
         $this->assertIsArray($body);
 

@@ -8,9 +8,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\CrudResource;
 use SignalWire\REST\HttpClient;
-use SignalWire\REST\Namespaces\Calling;
 use SignalWire\REST\Namespaces\Compat;
-use SignalWire\REST\Namespaces\Fabric;
+use SignalWire\REST\Namespaces\Generated\Calling;
+use SignalWire\REST\Namespaces\Generated\FabricNamespace as Fabric;
 use SignalWire\REST\RestClient;
 use SignalWire\REST\SignalWireRestError;
 
@@ -398,8 +398,11 @@ class RestClientTest extends TestCase
         $client = new RestClient('p', 't', 'h');
         $fabric = $client->fabric();
 
-        $this->assertSame($client->getHttp(), $fabric->getClient());
+        // The generated FabricNamespace container hangs its sub-resources off
+        // the client's HttpClient. Sub-resources expose it via getClient()
+        // (ReadResource/CrudResource base); assert the shared instance.
         $this->assertSame($client->getHttp(), $fabric->subscribers()->getClient());
+        $this->assertSame($client->getHttp(), $fabric->aiAgents()->getClient());
     }
 
     // =================================================================
@@ -413,7 +416,10 @@ class RestClientTest extends TestCase
         $calling = $client->calling();
 
         $this->assertInstanceOf(Calling::class, $calling);
-        $this->assertSame('proj-123', $calling->getProjectId());
+        // The generated command-dispatch Calling resource bakes its collection
+        // path from the spec ( /api/calling/calls ). Project scoping is applied
+        // by the HttpClient (Authorization header), not the resource path — so
+        // Calling no longer carries a projectId of its own.
         $this->assertSame('/api/calling/calls', $calling->getBasePath());
     }
 
@@ -470,7 +476,12 @@ class RestClientTest extends TestCase
         $client = new RestClient('p', 't', 'h');
         $calling = $client->calling();
 
-        $this->assertSame($client->getHttp(), $calling->getClient());
+        // The generated command-dispatch Calling resource holds the client's
+        // HttpClient privately (it POSTs every command over it). It exposes no
+        // getClient() accessor, so assert the shared instance via reflection.
+        $prop = new \ReflectionProperty($calling, 'http');
+        $prop->setAccessible(true);
+        $this->assertSame($client->getHttp(), $prop->getValue($calling));
     }
 
     // =================================================================

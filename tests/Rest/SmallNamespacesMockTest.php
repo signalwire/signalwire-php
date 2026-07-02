@@ -54,12 +54,18 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function addressesCreate(): void
     {
-        $body = $this->client->addresses()->create([
-            'address_type' => 'commercial',
-            'first_name' => 'Ada',
-            'last_name' => 'Lovelace',
-            'country' => 'US',
-        ]);
+        $body = $this->client->addresses()->create(
+            label: 'HQ',
+            country: 'US',
+            firstName: 'Ada',
+            lastName: 'Lovelace',
+            streetNumber: '1',
+            streetName: 'Main St',
+            city: 'Springfield',
+            state: 'IL',
+            postalCode: '62701',
+            addressType: 'commercial',
+        );
         $this->assertIsArray($body);
         // An Address resource carries an 'id' field.
         $this->assertArrayHasKey('id', $body);
@@ -170,7 +176,7 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function shortCodesUpdate(): void
     {
-        $body = $this->client->shortCodes()->update('sc-1', ['name' => 'Marketing SMS']);
+        $body = $this->client->shortCodes()->update('sc-1', 'Marketing SMS', 'handler');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
@@ -188,12 +194,15 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function importedNumbersCreate(): void
     {
-        $body = $this->client->importedNumbers()->create([
-            'number' => '+15551234567',
-            'sip_username' => 'alice',
-            'sip_password' => 'secret',
-            'sip_proxy' => 'sip.example.com',
-        ]);
+        $body = $this->client->importedNumbers()->create(
+            '+15551234567',
+            'longcode',
+            extras: [
+                'sip_username' => 'alice',
+                'sip_password' => 'secret',
+                'sip_proxy' => 'sip.example.com',
+            ],
+        );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
@@ -212,11 +221,11 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function mfaCall(): void
     {
-        $body = $this->client->mfa()->call([
-            'to' => '+15551234567',
-            'from_' => '+15559876543',
-            'message' => 'Your code is {code}',
-        ]);
+        $body = $this->client->mfa()->call(
+            to: '+15551234567',
+            message: 'Your code is {code}',
+            extras: ['from_' => '+15559876543'],
+        );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
@@ -235,10 +244,10 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function sipProfileUpdate(): void
     {
-        $body = $this->client->sipProfile()->update([
-            'domain' => 'myco.sip.signalwire.com',
-            'default_codecs' => ['PCMU', 'PCMA'],
-        ]);
+        $body = $this->client->sipProfile()->update(
+            defaultCodecs: ['PCMU', 'PCMA'],
+            extras: ['domain' => 'myco.sip.signalwire.com'],
+        );
         $this->assertIsArray($body);
         // The SIP profile resource has a 'domain' field.
         $this->assertTrue(
@@ -290,7 +299,7 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function projectTokensUpdate(): void
     {
-        $body = $this->client->project()->tokens()->update('tok-1', ['name' => 'renamed-token']);
+        $body = $this->client->project()->tokens()->update('tok-1', name: 'renamed-token');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 

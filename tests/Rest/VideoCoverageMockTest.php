@@ -194,7 +194,7 @@ class VideoCoverageMockTest extends TestCase
     {
         $body = $this->client->video()->rooms()->createStream(
             'room-1001',
-            ['url' => 'rtmp://example.com/live']
+            'rtmp://example.com/live'
         );
         $this->assertIsArray($body);
         $j = $this->mock->journal()->last();
@@ -208,7 +208,7 @@ class VideoCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('video.create_room_stream', 422, ['error' => 'invalid']);
         try {
-            $this->client->video()->rooms()->createStream('room-1001', []);
+            $this->client->video()->rooms()->createStream('room-1001', 'rtmp://example.com/live');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -223,7 +223,7 @@ class VideoCoverageMockTest extends TestCase
     #[Test]
     public function createRoomTokenSuccess(): void
     {
-        $body = $this->client->video()->roomTokens()->create(['room_name' => 'room-alpha']);
+        $body = $this->client->video()->roomTokens()->create('room-alpha');
         $this->assertIsArray($body);
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -236,7 +236,7 @@ class VideoCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('video.create_room_token', 422, ['error' => 'invalid']);
         try {
-            $this->client->video()->roomTokens()->create([]);
+            $this->client->video()->roomTokens()->create('room-alpha');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -673,7 +673,7 @@ class VideoCoverageMockTest extends TestCase
     {
         $body = $this->client->video()->conferences()->createStream(
             'conf-1',
-            ['url' => 'rtmp://example.com/live']
+            'rtmp://example.com/live'
         );
         $this->assertIsArray($body);
         $j = $this->mock->journal()->last();
@@ -687,7 +687,7 @@ class VideoCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('video.create_conference_stream', 422, ['error' => 'invalid']);
         try {
-            $this->client->video()->conferences()->createStream('conf-1', []);
+            $this->client->video()->conferences()->createStream('conf-1', 'rtmp://example.com/live');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -782,7 +782,7 @@ class VideoCoverageMockTest extends TestCase
     #[Test]
     public function updateStreamSuccess(): void
     {
-        $body = $this->client->video()->streams()->update('stream-1', ['url' => 'rtmp://example.com/new']);
+        $body = $this->client->video()->streams()->update('stream-1', 'rtmp://example.com/new');
         $this->assertIsArray($body);
         $j = $this->mock->journal()->last();
         $this->assertSame('PUT', $j->method);
@@ -795,7 +795,7 @@ class VideoCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('video.update_stream', 404, ['error' => 'not found']);
         try {
-            $this->client->video()->streams()->update('missing', ['url' => 'x']);
+            $this->client->video()->streams()->update('missing', 'x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());

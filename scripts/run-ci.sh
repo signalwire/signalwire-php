@@ -14,6 +14,13 @@
 #                                            matches, modulo the generated_from
 #                                            git-sha; closes the Layer-B-not-gated
 #                                            hole where port_surface.json rots)
+#   4b. gen-fresh gate                     — scripts/generate_rest.py --check
+#                                           (regenerate the generated REST tree +
+#                                            rest_signatures.json sidecar from the
+#                                            canonical specs and byte-diff against
+#                                            the committed copy; validates the
+#                                            generated code's SHAPE, which DRIFT/
+#                                            SURFACE-FRESH can't)
 #   5. no-cheat gate                      — porting-sdk audit_no_cheat_tests.py
 #   6. emission gate                      — porting-sdk diff_port_emission.py
 #                                           (byte-compare FunctionResult.toArray()
@@ -227,6 +234,19 @@ run_gate "DRIFT" "diff_port_signatures vs python reference" \
 # the hole where the drift gate only polices Layer A and port_surface.json rots.
 run_gate "SURFACE-FRESH" "check_surface_freshness vs fresh regen" \
     surface_fresh_gate
+
+# Gate 4b: GEN-FRESH — the committed generated REST tree
+# (src/SignalWire/REST/Namespaces/Generated/*.php + the Generated/rest_signatures.json
+# sidecar) must still match what scripts/generate_rest.py produces from the canonical
+# rest-apis specs. This is the ONLY gate that validates the generated code's SHAPE:
+# DRIFT/SURFACE-FRESH police the enumerated surface/signatures, but a generated
+# body-key mapping, param-typing, or enumerator-unfold change (or a hand-edit, or a
+# spec change with stale output) can leave the committed .php faithful-looking to the
+# enumerator yet wrong on the wire — only regenerate-and-byte-diff catches it.
+# Read-only: --check regenerates in memory and diffs, never writes. Mirrors go's
+# REST-TESTS-FRESH / ts's GEN-FRESH.
+run_gate "GEN-FRESH" "generated REST tree + rest_signatures.json match canonical specs (--check)" \
+    python3 scripts/generate_rest.py --check
 
 # Gate 5: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \

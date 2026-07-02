@@ -50,6 +50,31 @@ def load_aliases() -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Generated-REST typed-param sidecar (§5 unfold).
+#
+# scripts/generate_rest.py emits src/SignalWire/REST/Namespaces/Generated/
+# rest_signatures.json — the canonical typed-param records for every generated
+# operation/command/set method. PHP reflection can't express keyword-only kind,
+# an ``array``'s element type, or the open ``extras`` dict, so for those methods
+# we REPLACE the reflected params with the recorded shape (mirrors Go's
+# enumerator struct-unfold). Keyed "<PhpClassName>::<phpMethodName>". The PHP
+# signature and this sidecar are derived from the same computed param list in the
+# generator, so they never diverge (GEN-FRESH covers the sidecar).
+# ---------------------------------------------------------------------------
+
+_SIDECAR_PATH = (
+    PORT_ROOT / "src" / "SignalWire" / "REST" / "Namespaces" / "Generated" / "rest_signatures.json"
+)
+
+
+def load_rest_sidecar() -> dict[str, list[dict]]:
+    if not _SIDECAR_PATH.is_file():
+        return {}
+    data = json.loads(_SIDECAR_PATH.read_text(encoding="utf-8"))
+    return data.get("methods", {})
+
+
+# ---------------------------------------------------------------------------
 # PHP type translation
 # ---------------------------------------------------------------------------
 
@@ -221,7 +246,9 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
 }
 
 
-def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
+def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None = None) -> tuple[dict, list]:
+    if rest_sidecar is None:
+        rest_sidecar = {}
     out_modules: dict = {}
     failures: list = []
 
@@ -323,6 +350,15 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
             except TypeTranslationError as e:
                 failures.append(str(e))
                 continue
+            # §5 unfold: a generated REST operation/command/set method takes its
+            # wire fields as named PHP params (options-struct idiom); PHP
+            # reflection can't recover keyword kind / element types / the open
+            # ``extras`` dict, so REPLACE the reflected params with the generator's
+            # canonical records. Keyed by PHP class + PHP method name.
+            sidecar_key = f"{php_name}::{native}"
+            if sidecar_key in rest_sidecar:
+                records = [dict(r) for r in rest_sidecar[sidecar_key]]
+                sig["params"] = [{"name": "self", "kind": "self"}] + records
             if method_canonical in methods_out:
                 continue
             methods_out[method_canonical] = sig
@@ -551,7 +587,8 @@ def main() -> int:
     else:
         raw = run_dump()
 
-    canonical, failures = collect(raw, aliases)
+    rest_sidecar = load_rest_sidecar()
+    canonical, failures = collect(raw, aliases, rest_sidecar)
     if failures:
         print(f"enumerate_signatures: {len(failures)} translation failure(s)", file=sys.stderr)
         for f in failures[:30]:

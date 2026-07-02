@@ -59,11 +59,12 @@ class CallingMockTest extends TestCase
     #[Test]
     public function testDialForwardsCodecsArray(): void
     {
-        $body = $this->client->calling()->dial([
-            'url' => 'https://example.com/swml',
-            'to' => '+15551234567',
-            'codecs' => ['OPUS', 'G729', 'VP8', 'PCMA'],
-        ]);
+        $body = $this->client->calling()->dial(
+            from_: '+15550000000',
+            to: '+15551234567',
+            url: 'https://example.com/swml',
+            codecs: ['OPUS', 'G729', 'VP8', 'PCMA'],
+        );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'dial', null);
@@ -78,11 +79,12 @@ class CallingMockTest extends TestCase
     #[Test]
     public function testDialForwardsCodecsString(): void
     {
-        $body = $this->client->calling()->dial([
-            'url' => 'https://example.com/swml',
-            'to' => '+15551234567',
-            'codecs' => 'OPUS,G729,VP8,PCMA',
-        ]);
+        $body = $this->client->calling()->dial(
+            from_: '+15550000000',
+            to: '+15551234567',
+            url: 'https://example.com/swml',
+            extras: ['codecs' => 'OPUS,G729,VP8,PCMA'],
+        );
         $this->assertIsArray($body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'dial', null);
         $this->assertSame(
@@ -95,7 +97,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function update(): void
     {
-        $body = $this->client->calling()->update(['id' => 'call-1', 'state' => 'hold']);
+        $body = $this->client->calling()->update('call-1', extras: ['state' => 'hold']);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'update', null);
@@ -106,7 +108,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function transfer(): void
     {
-        $body = $this->client->calling()->transfer('call-123', [
+        $body = $this->client->calling()->transfer('call-123', [], extras: [
             'destination' => '+15551234567',
             'from_number' => '+15559876543',
         ]);
@@ -120,7 +122,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function disconnect(): void
     {
-        $body = $this->client->calling()->disconnect('call-456', ['reason' => 'busy']);
+        $body = $this->client->calling()->disconnect('call-456', extras: ['reason' => 'busy']);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.disconnect', 'call-456');
@@ -132,7 +134,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function playPause(): void
     {
-        $body = $this->client->calling()->playPause('call-1', ['control_id' => 'ctrl-1']);
+        $body = $this->client->calling()->playPause('call-1', 'ctrl-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.play.pause', 'call-1');
@@ -142,7 +144,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function playResume(): void
     {
-        $body = $this->client->calling()->playResume('call-1', ['control_id' => 'ctrl-1']);
+        $body = $this->client->calling()->playResume('call-1', 'ctrl-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.play.resume', 'call-1');
@@ -152,7 +154,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function playStop(): void
     {
-        $body = $this->client->calling()->playStop('call-1', ['control_id' => 'ctrl-1']);
+        $body = $this->client->calling()->playStop('call-1', 'ctrl-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.play.stop', 'call-1');
@@ -162,10 +164,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function playVolume(): void
     {
-        $body = $this->client->calling()->playVolume(
-            'call-1',
-            ['control_id' => 'ctrl-1', 'volume' => 2.5]
-        );
+        $body = $this->client->calling()->playVolume('call-1', 'ctrl-1', 2.5);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.play.volume', 'call-1');
@@ -177,7 +176,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function record(): void
     {
-        $body = $this->client->calling()->record('call-1', ['record' => ['format' => 'mp3']]);
+        $body = $this->client->calling()->record('call-1', extras: ['record' => ['format' => 'mp3']]);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.record', 'call-1');
@@ -187,7 +186,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function recordPause(): void
     {
-        $body = $this->client->calling()->recordPause('call-1', ['control_id' => 'rec-1']);
+        $body = $this->client->calling()->recordPause('call-1', 'rec-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.record.pause', 'call-1');
@@ -197,7 +196,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function recordResume(): void
     {
-        $body = $this->client->calling()->recordResume('call-1', ['control_id' => 'rec-1']);
+        $body = $this->client->calling()->recordResume('call-1', 'rec-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.record.resume', 'call-1');
@@ -211,7 +210,8 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->collect(
             'call-1',
-            ['initial_timeout' => 5, 'digits' => ['max' => 4]]
+            digits: ['max' => 4],
+            extras: ['initial_timeout' => 5],
         );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
@@ -222,7 +222,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function collectStop(): void
     {
-        $body = $this->client->calling()->collectStop('call-1', ['control_id' => 'col-1']);
+        $body = $this->client->calling()->collectStop('call-1', 'col-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.collect.stop', 'call-1');
@@ -232,10 +232,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function collectStartInputTimers(): void
     {
-        $body = $this->client->calling()->collectStartInputTimers(
-            'call-1',
-            ['control_id' => 'col-1']
-        );
+        $body = $this->client->calling()->collectStartInputTimers('call-1', 'col-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert(
@@ -253,7 +250,7 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->detect(
             'call-1',
-            ['detect' => ['type' => 'machine', 'params' => []]]
+            ['type' => 'machine', 'params' => []]
         );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
@@ -264,7 +261,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function detectStop(): void
     {
-        $body = $this->client->calling()->detectStop('call-1', ['control_id' => 'det-1']);
+        $body = $this->client->calling()->detectStop('call-1', 'det-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.detect.stop', 'call-1');
@@ -278,7 +275,8 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->tap(
             'call-1',
-            ['tap' => ['type' => 'audio'], 'device' => ['type' => 'rtp']]
+            ['type' => 'audio'],
+            ['type' => 'rtp']
         );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
@@ -289,7 +287,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function tapStop(): void
     {
-        $body = $this->client->calling()->tapStop('call-1', ['control_id' => 'tap-1']);
+        $body = $this->client->calling()->tapStop('call-1', 'tap-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.tap.stop', 'call-1');
@@ -301,7 +299,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function stream(): void
     {
-        $body = $this->client->calling()->stream('call-1', ['url' => 'wss://example.com/audio']);
+        $body = $this->client->calling()->stream('call-1', 'wss://example.com/audio');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.stream', 'call-1');
@@ -311,7 +309,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function streamStop(): void
     {
-        $body = $this->client->calling()->streamStop('call-1', ['control_id' => 'stream-1']);
+        $body = $this->client->calling()->streamStop('call-1', 'stream-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.stream.stop', 'call-1');
@@ -332,7 +330,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function denoiseStop(): void
     {
-        $body = $this->client->calling()->denoiseStop('call-1', ['control_id' => 'dn-1']);
+        $body = $this->client->calling()->denoiseStop('call-1', extras: ['control_id' => 'dn-1']);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.denoise.stop', 'call-1');
@@ -346,7 +344,7 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->transcribe(
             'call-1',
-            ['language' => 'en-US', 'transcribe' => ['engine' => 'google']]
+            extras: ['language' => 'en-US', 'transcribe' => ['engine' => 'google']]
         );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
@@ -357,7 +355,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function transcribeStop(): void
     {
-        $body = $this->client->calling()->transcribeStop('call-1', ['control_id' => 'tr-1']);
+        $body = $this->client->calling()->transcribeStop('call-1', 'tr-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert(
@@ -391,7 +389,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function aiStop(): void
     {
-        $body = $this->client->calling()->aiStop('call-1');
+        $body = $this->client->calling()->aiStop('call-1', 'ctrl-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $this->commandAssert($this->mock->journal()->last(), 'calling.ai.stop', 'call-1');
@@ -402,7 +400,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function liveTranscribe(): void
     {
-        $body = $this->client->calling()->liveTranscribe('call-1', ['language' => 'en-US']);
+        $body = $this->client->calling()->liveTranscribe('call-1', [], extras: ['language' => 'en-US']);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert(
@@ -418,7 +416,8 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->liveTranslate(
             'call-1',
-            ['source_language' => 'en', 'target_language' => 'es']
+            [],
+            extras: ['source_language' => 'en', 'target_language' => 'es']
         );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
@@ -436,7 +435,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function sendFaxStop(): void
     {
-        $body = $this->client->calling()->sendFaxStop('call-1');
+        $body = $this->client->calling()->sendFaxStop('call-1', 'ctrl-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $this->commandAssert($this->mock->journal()->last(), 'calling.send_fax.stop', 'call-1');
@@ -445,7 +444,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function receiveFaxStop(): void
     {
-        $body = $this->client->calling()->receiveFaxStop('call-1');
+        $body = $this->client->calling()->receiveFaxStop('call-1', 'ctrl-1');
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $this->commandAssert($this->mock->journal()->last(), 'calling.receive_fax.stop', 'call-1');
@@ -456,7 +455,7 @@ class CallingMockTest extends TestCase
     #[Test]
     public function refer(): void
     {
-        $body = $this->client->calling()->refer('call-1', ['to' => 'sip:other@example.com']);
+        $body = $this->client->calling()->refer('call-1', [], extras: ['to' => 'sip:other@example.com']);
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.refer', 'call-1');
@@ -468,7 +467,8 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->userEvent(
             'call-1',
-            ['event_name' => 'my-event', 'payload' => ['foo' => 'bar']]
+            [],
+            extras: ['event_name' => 'my-event', 'payload' => ['foo' => 'bar']]
         );
         $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);

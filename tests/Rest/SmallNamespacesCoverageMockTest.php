@@ -31,10 +31,11 @@ class SmallNamespacesCoverageMockTest extends TestCase
     #[Test]
     public function callingCommandSuccess(): void
     {
-        $body = $this->client->calling()->dial([
-            'url' => 'https://example.com/swml',
-            'to' => '+15551234567',
-        ]);
+        $body = $this->client->calling()->dial(
+            from_: '+15550000000',
+            to: '+15551234567',
+            url: 'https://example.com/swml',
+        );
         $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
@@ -48,7 +49,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('calling.call-commands', 422, ['error' => 'bad']);
         try {
-            $this->client->calling()->dial(['url' => 'https://example.com/swml']);
+            $this->client->calling()->dial(from_: '+15550000000', to: '+15551234567', url: 'https://example.com/swml');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -63,7 +64,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     #[Test]
     public function chatCreateTokenSuccess(): void
     {
-        $body = $this->client->chat()->createToken(['ttl' => 60]);
+        $body = $this->client->chat()->createToken(60, []);
         $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
@@ -77,7 +78,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('chat.create_chat_token', 422, ['error' => 'bad']);
         try {
-            $this->client->chat()->createToken(['ttl' => 60]);
+            $this->client->chat()->createToken(60, []);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -92,7 +93,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     #[Test]
     public function pubsubCreateTokenSuccess(): void
     {
-        $body = $this->client->pubsub()->createToken(['ttl' => 60]);
+        $body = $this->client->pubsub()->createToken(60, []);
         $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
@@ -106,7 +107,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('pubsub.create_token', 422, ['error' => 'bad']);
         try {
-            $this->client->pubsub()->createToken(['ttl' => 60]);
+            $this->client->pubsub()->createToken(60, []);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -266,7 +267,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     #[Test]
     public function datasphereSearchDocumentsSuccess(): void
     {
-        $body = $this->client->datasphere()->documents()->search(['query' => 'hello']);
+        $body = $this->client->datasphere()->documents()->search('hello', extras: ['query' => 'hello']);
         $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
@@ -280,7 +281,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('datasphere.search_documents', 422, ['error' => 'bad']);
         try {
-            $this->client->datasphere()->documents()->search(['query' => 'hello']);
+            $this->client->datasphere()->documents()->search('hello', extras: ['query' => 'hello']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -614,7 +615,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     #[Test]
     public function projectCreateTokenSuccess(): void
     {
-        $body = $this->client->project()->tokens()->create(['name' => 'tok']);
+        $body = $this->client->project()->tokens()->create('tok', []);
         $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
@@ -628,7 +629,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('project.create_token', 422, ['error' => 'bad']);
         try {
-            $this->client->project()->tokens()->create(['name' => 'tok']);
+            $this->client->project()->tokens()->create('tok', []);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -643,7 +644,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     #[Test]
     public function projectUpdateTokenSuccess(): void
     {
-        $body = $this->client->project()->tokens()->update('tok-1', ['name' => 'renamed']);
+        $body = $this->client->project()->tokens()->update('tok-1', name: 'renamed');
         $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
@@ -657,7 +658,7 @@ class SmallNamespacesCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('project.update_token', 404, ['error' => 'nope']);
         try {
-            $this->client->project()->tokens()->update('missing', ['name' => 'x']);
+            $this->client->project()->tokens()->update('missing', name: 'x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());
