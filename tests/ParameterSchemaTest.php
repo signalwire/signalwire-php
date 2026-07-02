@@ -12,6 +12,7 @@ use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWAIG\ParameterSchema;
 use SignalWire\SWAIG\RecordFormat;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * ParameterSchema is a typed, fluent builder over the EXACT untyped
@@ -52,10 +53,14 @@ class ParameterSchemaTest extends TestCase
         );
     }
 
+    /**
+     * @param array<string,mixed> $swml
+     * @return array<array-key,mixed>
+     */
     private function extractAiVerb(array $swml): array
     {
-        foreach ($swml['sections']['main'] as $verb) {
-            if (isset($verb['ai'])) {
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            if (is_array($verb) && isset($verb['ai']) && is_array($verb['ai'])) {
                 return $verb['ai'];
             }
         }
@@ -169,9 +174,10 @@ class ParameterSchemaTest extends TestCase
             ],
         ];
 
+        // Both the typed-enum and bare-string inputs equal the hand-written
+        // wire shape — which (transitively) proves they equal each other.
         $this->assertSame($handWritten, $fromEnum);
         $this->assertSame($handWritten, $fromStrings);
-        $this->assertSame($fromEnum, $fromStrings);
         $this->assertSame(json_encode($handWritten), json_encode($fromEnum));
     }
 
@@ -409,16 +415,16 @@ class ParameterSchemaTest extends TestCase
         // Render the agent's SWML and locate the SWAIG function entry.
         $swml = $agent->renderSwml();
         $ai = $this->extractAiVerb($swml);
-        $functions = $ai['SWAIG']['functions'];
+        $functions = Shape::sub($ai, 'SWAIG', 'functions');
 
         $this->assertCount(1, $functions);
-        $func = $functions[0];
+        $func = Shape::sub($functions, 0);
         $this->assertSame('lookup', $func['function']);
 
         // The generated SWAIG JSON must carry the builder-built parameters in
         // the canonical argument shape: {type:object, properties:{...}}.
-        $this->assertSame('object', $func['argument']['type']);
-        $props = $func['argument']['properties'];
+        $this->assertSame('object', Shape::at($func, 'argument', 'type'));
+        $props = Shape::sub($func, 'argument', 'properties');
 
         $this->assertSame(
             ['type' => 'string', 'description' => 'The service to look up', 'required' => true],
@@ -462,8 +468,8 @@ class ParameterSchemaTest extends TestCase
             fn (array $a, array $r): FunctionResult => new FunctionResult('ok'),
         );
 
-        $builtArg = $this->extractAiVerb($built->renderSwml())['SWAIG']['functions'][0]['argument'];
-        $handArg = $this->extractAiVerb($hand->renderSwml())['SWAIG']['functions'][0]['argument'];
+        $builtArg = Shape::at($this->extractAiVerb($built->renderSwml()), 'SWAIG', 'functions', 0, 'argument');
+        $handArg = Shape::at($this->extractAiVerb($hand->renderSwml()), 'SWAIG', 'functions', 0, 'argument');
 
         $this->assertSame($handArg, $builtArg);
         $this->assertSame(json_encode($handArg), json_encode($builtArg));
@@ -484,7 +490,7 @@ class ParameterSchemaTest extends TestCase
         $agent->defineTool(
             'pick',
             'Pick a joke type',
-            $argument['properties'],          // properties feed defineTool
+            Shape::sub($argument, 'properties'),          // properties feed defineTool
             function (array $args, array $raw): FunctionResult {
                 return new FunctionResult('picked ' . ($args['type'] ?? '?'));
             },
@@ -493,10 +499,10 @@ class ParameterSchemaTest extends TestCase
         // Real dispatch through the registered handler (no mock).
         $result = $agent->onFunctionCall('pick', ['type' => 'dadjokes'], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
-        $this->assertSame('picked dadjokes', $result->toArray()['response']);
+        $this->assertSame('picked dadjokes', Shape::at($result->toArray(), 'response'));
 
         // And the rendered argument carries the enum the builder produced.
-        $func = $this->extractAiVerb($agent->renderSwml())['SWAIG']['functions'][0];
-        $this->assertSame(['jokes', 'dadjokes'], $func['argument']['properties']['type']['enum']);
+        $func = Shape::sub($this->extractAiVerb($agent->renderSwml()), 'SWAIG', 'functions', 0);
+        $this->assertSame(['jokes', 'dadjokes'], Shape::at($func, 'argument', 'properties', 'type', 'enum'));
     }
 }

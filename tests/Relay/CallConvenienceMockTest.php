@@ -8,10 +8,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
-use SignalWire\Relay\CollectAction;
 use SignalWire\Relay\Constants;
-use SignalWire\Relay\DetectAction;
-use SignalWire\Relay\PlayAction;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for Call's typed convenience methods:
@@ -56,6 +54,7 @@ class CallConvenienceMockTest extends TestCase
      */
     private function answeredInboundCall(string $callId): Call
     {
+        /** @var \ArrayObject<string, Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -81,6 +80,7 @@ class CallConvenienceMockTest extends TestCase
      */
     private function createdInboundCall(string $callId): Call
     {
+        /** @var \ArrayObject<string, Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -131,30 +131,33 @@ class CallConvenienceMockTest extends TestCase
     public function playTtsJournalsTtsMediaShape(): void
     {
         $call = $this->answeredInboundCall('call-ptts');
-        $action = $call->playTts('Hello there', [
+        // Return type is PlayAction, so an instanceof assertion is redundant.
+        $call->playTts('Hello there', [
             'language'   => 'en-US',
             'gender'     => 'female',
             'voice'      => 'spore',
             'volume'     => 3.5,
             'control_id' => 'ptts-ctl',
         ]);
-        $this->assertInstanceOf(PlayAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('call-ptts', $p['call_id'] ?? null);
         $this->assertSame('ptts-ctl', $p['control_id'] ?? null);
         // Media: a single tts frame with text + optional voice params nested.
-        $this->assertCount(1, $p['play'] ?? []);
-        $this->assertSame('tts', $p['play'][0]['type'] ?? null);
-        $this->assertSame('Hello there', $p['play'][0]['params']['text'] ?? null);
-        $this->assertSame('en-US', $p['play'][0]['params']['language'] ?? null);
-        $this->assertSame('female', $p['play'][0]['params']['gender'] ?? null);
-        $this->assertSame('spore', $p['play'][0]['params']['voice'] ?? null);
+        $this->assertCount(1, Shape::sub($p, 'play'));
+        $media0 = Shape::sub($p, 'play', 0);
+        $this->assertSame('tts', $media0['type'] ?? null);
+        $mparams = Shape::sub($media0, 'params');
+        $this->assertSame('Hello there', $mparams['text'] ?? null);
+        $this->assertSame('en-US', $mparams['language'] ?? null);
+        $this->assertSame('female', $mparams['gender'] ?? null);
+        $this->assertSame('spore', $mparams['voice'] ?? null);
         // volume rides at the top level, NOT inside the tts params.
-        $this->assertEqualsWithDelta(3.5, (float) ($p['volume'] ?? 0), 0.0001);
-        $this->assertArrayNotHasKey('volume', $p['play'][0]['params']);
+        $volume = $p['volume'] ?? 0;
+        $this->assertEqualsWithDelta(3.5, Shape::num($volume), 0.0001);
+        $this->assertArrayNotHasKey('volume', $mparams);
     }
 
     #[Test]
@@ -165,14 +168,14 @@ class CallConvenienceMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $params = $entries[0]->frame['params']['play'][0]['params'] ?? [];
+        $params = Shape::sub($entries[0]->frame, 'params', 'play', 0, 'params');
         $this->assertSame('Just text', $params['text'] ?? null);
         // Only-provided-keys: language/gender/voice absent when not passed.
         $this->assertArrayNotHasKey('language', $params);
         $this->assertArrayNotHasKey('gender', $params);
         $this->assertArrayNotHasKey('voice', $params);
         // No volume sibling when not supplied.
-        $this->assertArrayNotHasKey('volume', $entries[0]->frame['params']);
+        $this->assertArrayNotHasKey('volume', Shape::sub($entries[0]->frame, 'params'));
     }
 
     // ------------------------------------------------------------------
@@ -183,22 +186,24 @@ class CallConvenienceMockTest extends TestCase
     public function playAudioJournalsAudioMediaShape(): void
     {
         $call = $this->answeredInboundCall('call-paud');
-        $action = $call->playAudio('https://cdn.example/clip.mp3', [
+        // Return type is PlayAction; instanceof would be redundant.
+        $call->playAudio('https://cdn.example/clip.mp3', [
             'volume'     => -6.0,
             'control_id' => 'paud-ctl',
         ]);
-        $this->assertInstanceOf(PlayAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('paud-ctl', $p['control_id'] ?? null);
-        $this->assertSame('audio', $p['play'][0]['type'] ?? null);
+        $media0 = Shape::sub($p, 'play', 0);
+        $this->assertSame('audio', $media0['type'] ?? null);
         $this->assertSame(
             'https://cdn.example/clip.mp3',
-            $p['play'][0]['params']['url'] ?? null,
+            Shape::at($media0, 'params', 'url'),
         );
-        $this->assertEqualsWithDelta(-6.0, (float) ($p['volume'] ?? 0), 0.0001);
+        $volume = $p['volume'] ?? 0;
+        $this->assertEqualsWithDelta(-6.0, Shape::num($volume), 0.0001);
     }
 
     // ------------------------------------------------------------------
@@ -209,18 +214,16 @@ class CallConvenienceMockTest extends TestCase
     public function playSilenceJournalsSilenceMediaShape(): void
     {
         $call = $this->answeredInboundCall('call-psil');
-        $action = $call->playSilence(2.5, ['control_id' => 'psil-ctl']);
-        $this->assertInstanceOf(PlayAction::class, $action);
+        // Return type is PlayAction; instanceof would be redundant.
+        $call->playSilence(2.5, ['control_id' => 'psil-ctl']);
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('silence', $p['play'][0]['type'] ?? null);
-        $this->assertEqualsWithDelta(
-            2.5,
-            (float) ($p['play'][0]['params']['duration'] ?? 0),
-            0.0001,
-        );
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $media0 = Shape::sub($p, 'play', 0);
+        $this->assertSame('silence', $media0['type'] ?? null);
+        $duration = Shape::at($media0, 'params', 'duration');
+        $this->assertEqualsWithDelta(2.5, Shape::num($duration), 0.0001);
     }
 
     // ------------------------------------------------------------------
@@ -231,20 +234,23 @@ class CallConvenienceMockTest extends TestCase
     public function playRingtoneJournalsRingtoneMediaShape(): void
     {
         $call = $this->answeredInboundCall('call-prng');
-        $action = $call->playRingtone('us', [
+        // Return type is PlayAction; instanceof would be redundant.
+        $call->playRingtone('us', [
             'duration'   => 4,
             'volume'     => 1.0,
             'control_id' => 'prng-ctl',
         ]);
-        $this->assertInstanceOf(PlayAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('ringtone', $p['play'][0]['type'] ?? null);
-        $this->assertSame('us', $p['play'][0]['params']['name'] ?? null);
-        $this->assertSame(4, $p['play'][0]['params']['duration'] ?? null);
-        $this->assertEqualsWithDelta(1.0, (float) ($p['volume'] ?? 0), 0.0001);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $media0 = Shape::sub($p, 'play', 0);
+        $this->assertSame('ringtone', $media0['type'] ?? null);
+        $mparams = Shape::sub($media0, 'params');
+        $this->assertSame('us', $mparams['name'] ?? null);
+        $this->assertSame(4, $mparams['duration'] ?? null);
+        $volume = $p['volume'] ?? 0;
+        $this->assertEqualsWithDelta(1.0, Shape::num($volume), 0.0001);
     }
 
     #[Test]
@@ -255,7 +261,7 @@ class CallConvenienceMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $params = $entries[0]->frame['params']['play'][0]['params'] ?? [];
+        $params = Shape::sub($entries[0]->frame, 'params', 'play', 0, 'params');
         $this->assertSame('de', $params['name'] ?? null);
         $this->assertArrayNotHasKey('duration', $params);
     }
@@ -268,21 +274,24 @@ class CallConvenienceMockTest extends TestCase
     public function detectDigitJournalsDigitDetectShape(): void
     {
         $call = $this->answeredInboundCall('call-ddig');
-        $action = $call->detectDigit([
+        // Return type is DetectAction; instanceof would be redundant.
+        $call->detectDigit([
             'digits'     => '123#',
             'timeout'    => 12.0,
             'control_id' => 'ddig-ctl',
         ]);
-        $this->assertInstanceOf(DetectAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.detect');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('digit', $p['detect']['type'] ?? null);
-        $this->assertSame('123#', $p['detect']['params']['digits'] ?? null);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $detect = Shape::sub($p, 'detect');
+        $this->assertSame('digit', $detect['type'] ?? null);
+        $dparams = Shape::sub($detect, 'params');
+        $this->assertSame('123#', $dparams['digits'] ?? null);
         // timeout is a SIBLING of detect, not nested inside it.
-        $this->assertEqualsWithDelta(12.0, (float) ($p['timeout'] ?? 0), 0.0001);
-        $this->assertArrayNotHasKey('timeout', $p['detect']['params']);
+        $timeout = $p['timeout'] ?? 0;
+        $this->assertEqualsWithDelta(12.0, Shape::num($timeout), 0.0001);
+        $this->assertArrayNotHasKey('timeout', $dparams);
     }
 
     #[Test]
@@ -293,10 +302,10 @@ class CallConvenienceMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.detect');
         $this->assertCount(1, $entries);
-        $detect = $entries[0]->frame['params']['detect'] ?? [];
+        $detect = Shape::sub($entries[0]->frame, 'params', 'detect');
         $this->assertSame('digit', $detect['type'] ?? null);
         // Empty params object when no digits supplied (server applies default).
-        $this->assertArrayNotHasKey('digits', $detect['params'] ?? []);
+        $this->assertArrayNotHasKey('digits', Shape::sub($detect, 'params'));
     }
 
     // ------------------------------------------------------------------
@@ -307,7 +316,8 @@ class CallConvenienceMockTest extends TestCase
     public function detectAnsweringMachineJournalsMachineDetectShape(): void
     {
         $call = $this->answeredInboundCall('call-damd');
-        $action = $call->detectAnsweringMachine([
+        // Return type is DetectAction; instanceof would be redundant.
+        $call->detectAnsweringMachine([
             'initial_timeout'         => 5.0,
             'end_silence_timeout'     => 1.5,
             'machine_voice_threshold' => 1.25,
@@ -317,21 +327,25 @@ class CallConvenienceMockTest extends TestCase
             'timeout'                 => 30.0,
             'control_id'              => 'damd-ctl',
         ]);
-        $this->assertInstanceOf(DetectAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.detect');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('machine', $p['detect']['type'] ?? null);
-        $mp = $p['detect']['params'] ?? [];
-        $this->assertEqualsWithDelta(5.0, (float) ($mp['initial_timeout'] ?? 0), 0.0001);
-        $this->assertEqualsWithDelta(1.5, (float) ($mp['end_silence_timeout'] ?? 0), 0.0001);
-        $this->assertEqualsWithDelta(1.25, (float) ($mp['machine_voice_threshold'] ?? 0), 0.0001);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $detect = Shape::sub($p, 'detect');
+        $this->assertSame('machine', $detect['type'] ?? null);
+        $mp = Shape::sub($detect, 'params');
+        $initialTimeout = $mp['initial_timeout'] ?? 0;
+        $this->assertEqualsWithDelta(5.0, Shape::num($initialTimeout), 0.0001);
+        $endSilence = $mp['end_silence_timeout'] ?? 0;
+        $this->assertEqualsWithDelta(1.5, Shape::num($endSilence), 0.0001);
+        $voiceThreshold = $mp['machine_voice_threshold'] ?? 0;
+        $this->assertEqualsWithDelta(1.25, Shape::num($voiceThreshold), 0.0001);
         $this->assertSame(6, $mp['machine_words_threshold'] ?? null);
         $this->assertTrue($mp['detect_interruptions'] ?? null);
         $this->assertFalse($mp['detect_message_end'] ?? null);
         // timeout rides at the top level (sibling of detect).
-        $this->assertEqualsWithDelta(30.0, (float) ($p['timeout'] ?? 0), 0.0001);
+        $timeout = $p['timeout'] ?? 0;
+        $this->assertEqualsWithDelta(30.0, Shape::num($timeout), 0.0001);
         $this->assertArrayNotHasKey('timeout', $mp);
     }
 
@@ -346,12 +360,14 @@ class CallConvenienceMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.detect');
         $this->assertCount(1, $entries);
-        $mp = $entries[0]->frame['params']['detect']['params'] ?? [];
+        $mp = Shape::sub($entries[0]->frame, 'params', 'detect', 'params');
         // Only the supplied key is present; the rest are server defaults.
         // (JSON may round-trip 7.0 as int 7 — compare key set + value
         // numerically rather than with a strict float identity.)
         $this->assertSame(['initial_timeout'], array_keys($mp));
-        $this->assertEqualsWithDelta(7.0, (float) $mp['initial_timeout'], 0.0001);
+        $initialTimeout = $mp['initial_timeout'];
+        $this->assertIsNumeric($initialTimeout);
+        $this->assertEqualsWithDelta(7.0, (float) $initialTimeout, 0.0001);
     }
 
     // ------------------------------------------------------------------
@@ -362,20 +378,23 @@ class CallConvenienceMockTest extends TestCase
     public function detectFaxJournalsFaxDetectShape(): void
     {
         $call = $this->answeredInboundCall('call-dfax');
-        $action = $call->detectFax([
+        // Return type is DetectAction; instanceof would be redundant.
+        $call->detectFax([
             'tone'       => 'CED',
             'timeout'    => 20.0,
             'control_id' => 'dfax-ctl',
         ]);
-        $this->assertInstanceOf(DetectAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.detect');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('fax', $p['detect']['type'] ?? null);
-        $this->assertSame('CED', $p['detect']['params']['tone'] ?? null);
-        $this->assertEqualsWithDelta(20.0, (float) ($p['timeout'] ?? 0), 0.0001);
-        $this->assertArrayNotHasKey('timeout', $p['detect']['params']);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $detect = Shape::sub($p, 'detect');
+        $this->assertSame('fax', $detect['type'] ?? null);
+        $dparams = Shape::sub($detect, 'params');
+        $this->assertSame('CED', $dparams['tone'] ?? null);
+        $timeout = $p['timeout'] ?? 0;
+        $this->assertEqualsWithDelta(20.0, Shape::num($timeout), 0.0001);
+        $this->assertArrayNotHasKey('timeout', $dparams);
     }
 
     #[Test]
@@ -386,9 +405,9 @@ class CallConvenienceMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.detect');
         $this->assertCount(1, $entries);
-        $detect = $entries[0]->frame['params']['detect'] ?? [];
+        $detect = Shape::sub($entries[0]->frame, 'params', 'detect');
         $this->assertSame('fax', $detect['type'] ?? null);
-        $this->assertArrayNotHasKey('tone', $detect['params'] ?? []);
+        $this->assertArrayNotHasKey('tone', Shape::sub($detect, 'params'));
     }
 
     // ------------------------------------------------------------------
@@ -399,7 +418,8 @@ class CallConvenienceMockTest extends TestCase
     public function promptTtsJournalsTtsMediaAndCollect(): void
     {
         $call = $this->answeredInboundCall('call-prtts');
-        $action = $call->promptTts(
+        // Return type is CollectAction; instanceof would be redundant.
+        $call->promptTts(
             'Press a digit',
             ['digits' => ['max' => 1]],
             [
@@ -409,22 +429,24 @@ class CallConvenienceMockTest extends TestCase
                 'control_id' => 'prtts-ctl',
             ],
         );
-        $this->assertInstanceOf(CollectAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.play_and_collect');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('prtts-ctl', $p['control_id'] ?? null);
         // Typed media built like play_tts.
-        $this->assertSame('tts', $p['play'][0]['type'] ?? null);
-        $this->assertSame('Press a digit', $p['play'][0]['params']['text'] ?? null);
-        $this->assertSame('en-US', $p['play'][0]['params']['language'] ?? null);
-        $this->assertSame('spore', $p['play'][0]['params']['voice'] ?? null);
+        $media0 = Shape::sub($p, 'play', 0);
+        $this->assertSame('tts', $media0['type'] ?? null);
+        $mparams = Shape::sub($media0, 'params');
+        $this->assertSame('Press a digit', $mparams['text'] ?? null);
+        $this->assertSame('en-US', $mparams['language'] ?? null);
+        $this->assertSame('spore', $mparams['voice'] ?? null);
         // Caller's collect spec forwarded verbatim.
-        $this->assertSame(1, $p['collect']['digits']['max'] ?? null);
+        $this->assertSame(1, Shape::at($p, 'collect', 'digits', 'max'));
         // volume sibling, not inside the media params.
-        $this->assertEqualsWithDelta(2.0, (float) ($p['volume'] ?? 0), 0.0001);
-        $this->assertArrayNotHasKey('volume', $p['play'][0]['params']);
+        $volume = $p['volume'] ?? 0;
+        $this->assertEqualsWithDelta(2.0, Shape::num($volume), 0.0001);
+        $this->assertArrayNotHasKey('volume', $mparams);
     }
 
     // ------------------------------------------------------------------
@@ -435,27 +457,26 @@ class CallConvenienceMockTest extends TestCase
     public function promptAudioJournalsAudioMediaAndCollect(): void
     {
         $call = $this->answeredInboundCall('call-praud');
-        $action = $call->promptAudio(
+        // Return type is CollectAction; instanceof would be redundant.
+        $call->promptAudio(
             'https://cdn.example/prompt.wav',
             ['speech' => ['end_silence_timeout' => 1.0]],
             ['volume' => -2.0, 'control_id' => 'praud-ctl'],
         );
-        $this->assertInstanceOf(CollectAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.play_and_collect');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('audio', $p['play'][0]['type'] ?? null);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $media0 = Shape::sub($p, 'play', 0);
+        $this->assertSame('audio', $media0['type'] ?? null);
         $this->assertSame(
             'https://cdn.example/prompt.wav',
-            $p['play'][0]['params']['url'] ?? null,
+            Shape::at($media0, 'params', 'url'),
         );
-        $this->assertEqualsWithDelta(
-            1.0,
-            (float) ($p['collect']['speech']['end_silence_timeout'] ?? 0),
-            0.0001,
-        );
-        $this->assertEqualsWithDelta(-2.0, (float) ($p['volume'] ?? 0), 0.0001);
+        $endSilence = Shape::at($p, 'collect', 'speech', 'end_silence_timeout');
+        $this->assertEqualsWithDelta(1.0, Shape::num($endSilence), 0.0001);
+        $volume = $p['volume'] ?? 0;
+        $this->assertEqualsWithDelta(-2.0, Shape::num($volume), 0.0001);
     }
 
     // ------------------------------------------------------------------

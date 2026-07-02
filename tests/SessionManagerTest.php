@@ -6,6 +6,7 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Security\SessionManager;
+use SignalWire\Tests\Support\Shape;
 
 class SessionManagerTest extends TestCase
 {
@@ -84,7 +85,6 @@ class SessionManagerTest extends TestCase
     public function testGenerateTokenReturnsNonEmptyString(): void
     {
         $token = $this->manager->generateToken('func', 'call-123');
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
     }
 
@@ -298,9 +298,9 @@ class SessionManagerTest extends TestCase
         $this->manager->setDebugMode(true);
         $debug = $this->manager->debugToken($token);
         $this->assertTrue($debug['valid_format']);
-        $this->assertSame('my_func', $debug['components']['function']);
-        $this->assertFalse($debug['status']['is_expired']);
-        $this->assertGreaterThan(0, $debug['status']['expires_in_seconds']);
+        $this->assertSame('my_func', Shape::at($debug, 'components', 'function'));
+        $this->assertFalse(Shape::at($debug, 'status', 'is_expired'));
+        $this->assertGreaterThan(0, Shape::at($debug, 'status', 'expires_in_seconds'));
     }
 
     public function testDebugTokenMalformed(): void

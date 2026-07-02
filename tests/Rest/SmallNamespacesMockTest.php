@@ -40,7 +40,6 @@ class SmallNamespacesMockTest extends TestCase
     public function addressesList(): void
     {
         $body = $this->client->addresses()->list(['page_size' => '10']);
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -66,7 +65,6 @@ class SmallNamespacesMockTest extends TestCase
             postalCode: '62701',
             addressType: 'commercial',
         );
-        $this->assertIsArray($body);
         // An Address resource carries an 'id' field.
         $this->assertArrayHasKey('id', $body);
 
@@ -84,7 +82,6 @@ class SmallNamespacesMockTest extends TestCase
     public function addressesGet(): void
     {
         $body = $this->client->addresses()->get('addr-123');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
         $j = $this->mock->journal()->last();
@@ -97,7 +94,6 @@ class SmallNamespacesMockTest extends TestCase
     public function addressesDelete(): void
     {
         $body = $this->client->addresses()->delete('addr-123');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -111,7 +107,6 @@ class SmallNamespacesMockTest extends TestCase
     public function recordingsList(): void
     {
         $body = $this->client->recordings()->list(['page_size' => '5']);
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -125,7 +120,6 @@ class SmallNamespacesMockTest extends TestCase
     public function recordingsGet(): void
     {
         $body = $this->client->recordings()->get('rec-123');
-        $this->assertIsArray($body);
         // The Recording schema has an 'id' field.
         $this->assertArrayHasKey('id', $body);
 
@@ -138,7 +132,6 @@ class SmallNamespacesMockTest extends TestCase
     public function recordingsDelete(): void
     {
         $body = $this->client->recordings()->delete('rec-123');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -152,7 +145,6 @@ class SmallNamespacesMockTest extends TestCase
     public function shortCodesList(): void
     {
         $body = $this->client->shortCodes()->list(['page_size' => '20']);
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -165,7 +157,6 @@ class SmallNamespacesMockTest extends TestCase
     public function shortCodesGet(): void
     {
         $body = $this->client->shortCodes()->get('sc-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
         $j = $this->mock->journal()->last();
@@ -177,7 +168,6 @@ class SmallNamespacesMockTest extends TestCase
     public function shortCodesUpdate(): void
     {
         $body = $this->client->shortCodes()->update('sc-1', 'Marketing SMS', 'handler');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
         $j = $this->mock->journal()->last();
@@ -203,7 +193,6 @@ class SmallNamespacesMockTest extends TestCase
                 'sip_proxy' => 'sip.example.com',
             ],
         );
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
         $j = $this->mock->journal()->last();
@@ -226,7 +215,6 @@ class SmallNamespacesMockTest extends TestCase
             message: 'Your code is {code}',
             extras: ['from_' => '+15559876543'],
         );
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
         $j = $this->mock->journal()->last();
@@ -248,7 +236,6 @@ class SmallNamespacesMockTest extends TestCase
             defaultCodecs: ['PCMU', 'PCMA'],
             extras: ['domain' => 'myco.sip.signalwire.com'],
         );
-        $this->assertIsArray($body);
         // The SIP profile resource has a 'domain' field.
         $this->assertTrue(
             array_key_exists('domain', $body) || array_key_exists('default_codecs', $body)
@@ -269,7 +256,6 @@ class SmallNamespacesMockTest extends TestCase
     public function numberGroupsListMemberships(): void
     {
         $body = $this->client->numberGroups()->listMemberships('ng-1', ['page_size' => '10']);
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -286,7 +272,6 @@ class SmallNamespacesMockTest extends TestCase
     public function numberGroupsDeleteMembership(): void
     {
         $body = $this->client->numberGroups()->deleteMembership('mem-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -300,7 +285,6 @@ class SmallNamespacesMockTest extends TestCase
     public function projectTokensUpdate(): void
     {
         $body = $this->client->project()->tokens()->update('tok-1', name: 'renamed-token');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('id', $body);
 
         $j = $this->mock->journal()->last();
@@ -315,7 +299,6 @@ class SmallNamespacesMockTest extends TestCase
     public function projectTokensDelete(): void
     {
         $body = $this->client->project()->tokens()->delete('tok-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -329,7 +312,6 @@ class SmallNamespacesMockTest extends TestCase
     public function datasphereGetChunk(): void
     {
         $body = $this->client->datasphere()->documents()->getChunk('doc-1', 'chunk-99');
-        $this->assertIsArray($body);
         // The DatasphereChunk schema has an 'id'.
         $this->assertArrayHasKey('id', $body);
 
@@ -344,7 +326,6 @@ class SmallNamespacesMockTest extends TestCase
     public function queuesGetMember(): void
     {
         $body = $this->client->queues()->getMember('q-1', 'mem-7');
-        $this->assertIsArray($body);
         // A queue member has 'queue_id' and 'call_id' per the spec example.
         $this->assertTrue(
             array_key_exists('queue_id', $body) || array_key_exists('call_id', $body)

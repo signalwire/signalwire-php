@@ -9,6 +9,7 @@ use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 use SignalWire\Server\AgentServer;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 class AgentServerTest extends TestCase
 {
@@ -42,6 +43,9 @@ class AgentServerTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function authHeader(string $user = 'testuser', string $pass = 'testpass'): array
     {
         return ['Authorization' => 'Basic ' . base64_encode("{$user}:{$pass}")];
@@ -55,7 +59,7 @@ class AgentServerTest extends TestCase
     {
         $server = new AgentServer();
         $this->assertSame('0.0.0.0', $server->getHost());
-        $this->assertIsInt($server->getPort());
+        $this->assertGreaterThan(0, $server->getPort());
         $this->assertSame([], $server->getAgents());
     }
 
@@ -203,9 +207,9 @@ class AgentServerTest extends TestCase
         $this->assertSame('application/json', $headers['Content-Type']);
 
         $data = json_decode($body, true);
-        $this->assertSame('healthy', $data['status']);
-        $this->assertArrayHasKey('agents', $data);
-        $this->assertContains('agent1', $data['agents']);
+        $this->assertSame('healthy', Shape::at($data, 'status'));
+        $this->assertArrayHasKey('agents', Shape::arr($data));
+        $this->assertContains('agent1', Shape::sub($data, 'agents'));
     }
 
     // ==================================================================
@@ -220,7 +224,7 @@ class AgentServerTest extends TestCase
 
         $this->assertSame(200, $status);
         $data = json_decode($body, true);
-        $this->assertSame('ready', $data['status']);
+        $this->assertSame('ready', Shape::at($data, 'status'));
     }
 
     // ==================================================================
@@ -255,10 +259,11 @@ class AgentServerTest extends TestCase
 
         $this->assertSame(200, $status);
         $data = json_decode($body, true);
-        $this->assertArrayHasKey('agents', $data);
-        $this->assertCount(2, $data['agents']);
+        $this->assertArrayHasKey('agents', Shape::arr($data));
+        $agents = Shape::sub($data, 'agents');
+        $this->assertCount(2, $agents);
 
-        $names = array_column($data['agents'], 'name');
+        $names = array_column($agents, 'name');
         $this->assertContains('alpha', $names);
         $this->assertContains('beta', $names);
     }
@@ -278,7 +283,7 @@ class AgentServerTest extends TestCase
 
         $this->assertSame(200, $status);
         $data = json_decode($body, true);
-        $this->assertSame('1.0.0', $data['version']);
+        $this->assertSame('1.0.0', Shape::at($data, 'version'));
     }
 
     public function testRouteDispatchWithoutAuthReturns401(): void
@@ -314,7 +319,7 @@ class AgentServerTest extends TestCase
 
         $this->assertSame(404, $status);
         $data = json_decode($body, true);
-        $this->assertArrayHasKey('error', $data);
+        $this->assertArrayHasKey('error', Shape::arr($data));
     }
 
     // ==================================================================
@@ -363,8 +368,8 @@ class AgentServerTest extends TestCase
         $dataA = json_decode($bodyA, true);
         $dataB = json_decode($bodyB, true);
 
-        $this->assertSame('1.0.0', $dataA['version']);
-        $this->assertSame('1.0.0', $dataB['version']);
+        $this->assertSame('1.0.0', Shape::at($dataA, 'version'));
+        $this->assertSame('1.0.0', Shape::at($dataB, 'version'));
     }
 
     // ==================================================================
@@ -619,11 +624,14 @@ class AgentServerTest extends TestCase
             'function' => 'test_func',
             'argument' => ['parsed' => [['key' => 'value']]],
         ]);
+        $this->assertNotFalse($body);
 
         [$status, , $responseBody] = $server->handleRequest('POST', '/sub/swaig', $headers, $body);
 
         $this->assertSame(200, $status);
         $data = json_decode($responseBody, true);
-        $this->assertStringContainsString('test response', $data['response']);
+        $response = Shape::at($data, 'response');
+        $this->assertIsString($response);
+        $this->assertStringContainsString('test response', $response);
     }
 }

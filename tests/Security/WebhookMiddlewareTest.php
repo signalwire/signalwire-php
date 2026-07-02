@@ -26,17 +26,6 @@ class WebhookMiddlewareTest extends TestCase
         Logger::reset();
     }
 
-    private function makeNext(): callable
-    {
-        return function (string $method, string $url, array $headers, string $rawBody): array {
-            return [
-                200,
-                ['Content-Type' => 'application/json'],
-                json_encode(['method' => $method, 'url' => $url, 'rawBody' => $rawBody, 'received' => true]),
-            ];
-        };
-    }
-
     public function testValidSignatureForwardsToHandlerAndReturns200(): void
     {
         $mw = new WebhookMiddleware(self::KEY);

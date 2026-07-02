@@ -10,6 +10,7 @@ use SignalWire\Contexts\ContextBuilder;
 use SignalWire\Contexts\GatherInfo;
 use SignalWire\Contexts\GatherQuestion;
 use SignalWire\Contexts\Step;
+use SignalWire\Tests\Support\Shape;
 
 class ContextsTest extends TestCase
 {
@@ -81,9 +82,9 @@ class ContextsTest extends TestCase
         $this->assertSame('next_step', $gi->getCompletionAction());
 
         $arr = $gi->toArray();
-        $this->assertCount(2, $arr['questions']);
-        $this->assertSame('color', $arr['questions'][0]['key']);
-        $this->assertSame('food', $arr['questions'][1]['key']);
+        $this->assertCount(2, Shape::sub($arr, 'questions'));
+        $this->assertSame('color', Shape::at($arr, 'questions', 0, 'key'));
+        $this->assertSame('food', Shape::at($arr, 'questions', 1, 'key'));
         $this->assertSame('Please answer', $arr['prompt']);
         $this->assertSame('result_key', $arr['output_key']);
         $this->assertSame('next_step', $arr['completion_action']);
@@ -128,10 +129,12 @@ class ContextsTest extends TestCase
         $step->addSection('Instructions', 'Ask for their name.');
 
         $arr = $step->toArray();
-        $this->assertStringContainsString('## Greeting', $arr['text']);
-        $this->assertStringContainsString('Say hello to the caller.', $arr['text']);
-        $this->assertStringContainsString('## Instructions', $arr['text']);
-        $this->assertStringContainsString('Ask for their name.', $arr['text']);
+        $text = Shape::at($arr, 'text');
+        $this->assertIsString($text);
+        $this->assertStringContainsString('## Greeting', $text);
+        $this->assertStringContainsString('Say hello to the caller.', $text);
+        $this->assertStringContainsString('## Instructions', $text);
+        $this->assertStringContainsString('Ask for their name.', $text);
     }
 
     public function testStepAddBullets(): void
@@ -140,9 +143,11 @@ class ContextsTest extends TestCase
         $step->addBullets('Rules', ['Be polite', 'Be concise']);
 
         $arr = $step->toArray();
-        $this->assertStringContainsString('## Rules', $arr['text']);
-        $this->assertStringContainsString('- Be polite', $arr['text']);
-        $this->assertStringContainsString('- Be concise', $arr['text']);
+        $text = Shape::at($arr, 'text');
+        $this->assertIsString($text);
+        $this->assertStringContainsString('## Rules', $text);
+        $this->assertStringContainsString('- Be polite', $text);
+        $this->assertStringContainsString('- Be concise', $text);
     }
 
     public function testStepClearSections(): void
@@ -154,7 +159,9 @@ class ContextsTest extends TestCase
         // After clearing, addSection should work without conflict
         $step->addSection('Fresh', 'New content');
         $arr = $step->toArray();
-        $this->assertStringContainsString('## Fresh', $arr['text']);
+        $text = Shape::at($arr, 'text');
+        $this->assertIsString($text);
+        $this->assertStringContainsString('## Fresh', $text);
     }
 
     public function testStepClearSectionsRemovesBothTextAndSections(): void
@@ -317,10 +324,10 @@ class ContextsTest extends TestCase
 
         $arr = $step->toArray();
         $this->assertArrayHasKey('gather_info', $arr);
-        $this->assertSame('info', $arr['gather_info']['output_key']);
-        $this->assertSame('next_step', $arr['gather_info']['completion_action']);
-        $this->assertSame('Answer these questions', $arr['gather_info']['prompt']);
-        $this->assertCount(1, $arr['gather_info']['questions']);
+        $this->assertSame('info', Shape::at($arr, 'gather_info', 'output_key'));
+        $this->assertSame('next_step', Shape::at($arr, 'gather_info', 'completion_action'));
+        $this->assertSame('Answer these questions', Shape::at($arr, 'gather_info', 'prompt'));
+        $this->assertCount(1, Shape::sub($arr, 'gather_info', 'questions'));
     }
 
     public function testStepAddGatherQuestionWithoutSetGatherInfoThrows(): void
@@ -377,10 +384,10 @@ class ContextsTest extends TestCase
 
         $arr = $step->toArray();
         $this->assertArrayHasKey('reset', $arr);
-        $this->assertSame('New system prompt', $arr['reset']['system_prompt']);
-        $this->assertSame('New user prompt', $arr['reset']['user_prompt']);
-        $this->assertTrue($arr['reset']['consolidate']);
-        $this->assertTrue($arr['reset']['full_reset']);
+        $this->assertSame('New system prompt', Shape::at($arr, 'reset', 'system_prompt'));
+        $this->assertSame('New user prompt', Shape::at($arr, 'reset', 'user_prompt'));
+        $this->assertTrue(Shape::at($arr, 'reset', 'consolidate'));
+        $this->assertTrue(Shape::at($arr, 'reset', 'full_reset'));
     }
 
     public function testStepNoResetWhenNotSet(): void
@@ -400,7 +407,6 @@ class ContextsTest extends TestCase
         $ctx = new Context('default');
         $step = $ctx->addStep('greeting')->setText('Hello');
 
-        $this->assertInstanceOf(Step::class, $step);
         $this->assertSame($step, $ctx->getStep('greeting'));
         $this->assertNull($ctx->getStep('nonexistent'));
     }
@@ -421,10 +427,12 @@ class ContextsTest extends TestCase
         );
 
         $arr = $step->toArray();
-        $this->assertStringContainsString('## Task', $arr['text']);
-        $this->assertStringContainsString('Greet the caller', $arr['text']);
-        $this->assertStringContainsString('## Process', $arr['text']);
-        $this->assertStringContainsString('- Be polite', $arr['text']);
+        $text = Shape::at($arr, 'text');
+        $this->assertIsString($text);
+        $this->assertStringContainsString('## Task', $text);
+        $this->assertStringContainsString('Greet the caller', $text);
+        $this->assertStringContainsString('## Process', $text);
+        $this->assertStringContainsString('- Be polite', $text);
         $this->assertSame('always', $arr['step_criteria']);
         $this->assertSame(['fn1'], $arr['functions']);
         $this->assertSame(['s2'], $arr['valid_steps']);
@@ -512,10 +520,12 @@ class ContextsTest extends TestCase
         $ctx->addBullets('Rules', ['Be kind', 'Be brief']);
 
         $arr = $ctx->toArray();
-        $this->assertStringContainsString('## Role', $arr['prompt']);
-        $this->assertStringContainsString('You are a concierge.', $arr['prompt']);
-        $this->assertStringContainsString('- Be kind', $arr['prompt']);
-        $this->assertStringContainsString('- Be brief', $arr['prompt']);
+        $prompt = Shape::at($arr, 'prompt');
+        $this->assertIsString($prompt);
+        $this->assertStringContainsString('## Role', $prompt);
+        $this->assertStringContainsString('You are a concierge.', $prompt);
+        $this->assertStringContainsString('- Be kind', $prompt);
+        $this->assertStringContainsString('- Be brief', $prompt);
     }
 
     public function testContextSetPromptAfterSectionsThrows(): void
@@ -565,9 +575,11 @@ class ContextsTest extends TestCase
         $ctx->addSystemBullets('Constraints', ['No profanity']);
 
         $arr = $ctx->toArray();
-        $this->assertStringContainsString('## Behavior', $arr['system_prompt']);
-        $this->assertStringContainsString('Be professional.', $arr['system_prompt']);
-        $this->assertStringContainsString('- No profanity', $arr['system_prompt']);
+        $systemPrompt = Shape::at($arr, 'system_prompt');
+        $this->assertIsString($systemPrompt);
+        $this->assertStringContainsString('## Behavior', $systemPrompt);
+        $this->assertStringContainsString('Be professional.', $systemPrompt);
+        $this->assertStringContainsString('- No profanity', $systemPrompt);
     }
 
     public function testContextSystemPromptConflicts(): void
@@ -627,8 +639,8 @@ class ContextsTest extends TestCase
         $ctx->addEnterFiller('es', ['Un momento']);
 
         $arr = $ctx->toArray();
-        $this->assertSame(['Hold on', 'Just a sec'], $arr['enter_fillers']['en']);
-        $this->assertSame(['Un momento'], $arr['enter_fillers']['es']);
+        $this->assertSame(['Hold on', 'Just a sec'], Shape::at($arr, 'enter_fillers', 'en'));
+        $this->assertSame(['Un momento'], Shape::at($arr, 'enter_fillers', 'es'));
     }
 
     public function testContextAddExitFiller(): void
@@ -638,7 +650,7 @@ class ContextsTest extends TestCase
         $ctx->addExitFiller('en', ['Bye', 'See you']);
 
         $arr = $ctx->toArray();
-        $this->assertSame(['Bye', 'See you'], $arr['exit_fillers']['en']);
+        $this->assertSame(['Bye', 'See you'], Shape::at($arr, 'exit_fillers', 'en'));
     }
 
     public function testContextFillersOmittedWhenNotSet(): void
@@ -661,9 +673,9 @@ class ContextsTest extends TestCase
         $ctx->addStep('third')->setText('Third');
 
         $arr = $ctx->toArray();
-        $this->assertSame('first', $arr['steps'][0]['name']);
-        $this->assertSame('second', $arr['steps'][1]['name']);
-        $this->assertSame('third', $arr['steps'][2]['name']);
+        $this->assertSame('first', Shape::at($arr, 'steps', 0, 'name'));
+        $this->assertSame('second', Shape::at($arr, 'steps', 1, 'name'));
+        $this->assertSame('third', Shape::at($arr, 'steps', 2, 'name'));
     }
 
     public function testContextToArrayFullSerialization(): void
@@ -683,7 +695,7 @@ class ContextsTest extends TestCase
         $ctx->setExitFillers(['en' => ['Bye']]);
 
         $arr = $ctx->toArray();
-        $this->assertCount(1, $arr['steps']);
+        $this->assertCount(1, Shape::sub($arr, 'steps'));
         $this->assertSame('Context prompt', $arr['prompt']);
         $this->assertSame('System prompt', $arr['system_prompt']);
         $this->assertSame('Post prompt', $arr['post_prompt']);
@@ -724,7 +736,6 @@ class ContextsTest extends TestCase
         $builder = new ContextBuilder();
         $ctx = $builder->addContext('default');
 
-        $this->assertInstanceOf(Context::class, $ctx);
         $this->assertSame($ctx, $builder->getContext('default'));
         $this->assertNull($builder->getContext('nonexistent'));
     }
@@ -910,9 +921,9 @@ class ContextsTest extends TestCase
 
         $arr = $builder->toArray();
         $this->assertArrayHasKey('default', $arr);
-        $this->assertCount(1, $arr['default']['steps']);
-        $this->assertSame('greeting', $arr['default']['steps'][0]['name']);
-        $this->assertSame('Be helpful', $arr['default']['prompt']);
+        $this->assertCount(1, Shape::sub($arr, 'default', 'steps'));
+        $this->assertSame('greeting', Shape::at($arr, 'default', 'steps', 0, 'name'));
+        $this->assertSame('Be helpful', Shape::at($arr, 'default', 'prompt'));
     }
 
     public function testContextBuilderToArrayPreservesOrder(): void
@@ -944,7 +955,6 @@ class ContextsTest extends TestCase
     {
         $builder = ContextBuilder::createSimpleContext('default');
 
-        $this->assertInstanceOf(ContextBuilder::class, $builder);
         $this->assertTrue($builder->hasContexts());
         $this->assertNotNull($builder->getContext('default'));
     }
@@ -952,11 +962,13 @@ class ContextsTest extends TestCase
     public function testCreateSimpleContextCanBeUsedEndToEnd(): void
     {
         $builder = ContextBuilder::createSimpleContext('default');
-        $builder->getContext('default')->addStep('greet')->setText('Hi there');
+        $defaultCtx = $builder->getContext('default');
+        $this->assertNotNull($defaultCtx);
+        $defaultCtx->addStep('greet')->setText('Hi there');
 
         $arr = $builder->toArray();
         $this->assertArrayHasKey('default', $arr);
-        $this->assertSame('greet', $arr['default']['steps'][0]['name']);
+        $this->assertSame('greet', Shape::at($arr, 'default', 'steps', 0, 'name'));
     }
 
     // ── Method chaining on Context ───────────────────────────────────────
@@ -1015,7 +1027,10 @@ class ContextsTest extends TestCase
     {
         // Mirror Python's ContextBuilder(agent) — pass an agent reference.
         $agent = new class () {
+            /** @var array<string,bool> */
             public array $tools = [];
+
+            /** @return list<string> */
             public function getRegisteredToolNames(): array
             {
                 return array_keys($this->tools);
@@ -1056,7 +1071,6 @@ class ContextsTest extends TestCase
         // free functions) hosts it as the static Context::createSimpleContext,
         // projected to the module name via FREE_FUNCTION_PROJECTIONS.
         $ctx = Context::createSimpleContext('greeting');
-        $this->assertInstanceOf(Context::class, $ctx);
         $this->assertSame('greeting', $ctx->getName());
     }
 
@@ -1079,11 +1093,11 @@ class ContextsTest extends TestCase
         ]);
 
         $arr = $gi->toArray();
-        $this->assertSame('food', $arr['questions'][0]['key']);
-        $this->assertSame('What food?', $arr['questions'][0]['question']);
-        $this->assertTrue($arr['questions'][0]['confirm']);
-        $this->assertSame('Confirm food', $arr['questions'][0]['prompt']);
-        $this->assertSame(['validate_food'], $arr['questions'][0]['functions']);
+        $this->assertSame('food', Shape::at($arr, 'questions', 0, 'key'));
+        $this->assertSame('What food?', Shape::at($arr, 'questions', 0, 'question'));
+        $this->assertTrue(Shape::at($arr, 'questions', 0, 'confirm'));
+        $this->assertSame('Confirm food', Shape::at($arr, 'questions', 0, 'prompt'));
+        $this->assertSame(['validate_food'], Shape::at($arr, 'questions', 0, 'functions'));
     }
 
     public function testStepSetGatherInfoNamedArgs(): void
@@ -1099,10 +1113,10 @@ class ContextsTest extends TestCase
         $step->addGatherQuestion('color', 'Color?', confirm: true);
 
         $arr = $step->toArray();
-        $this->assertSame('collected', $arr['gather_info']['output_key']);
-        $this->assertSame('next_step', $arr['gather_info']['completion_action']);
-        $this->assertSame('Be friendly', $arr['gather_info']['prompt']);
-        $this->assertTrue($arr['gather_info']['questions'][0]['confirm']);
+        $this->assertSame('collected', Shape::at($arr, 'gather_info', 'output_key'));
+        $this->assertSame('next_step', Shape::at($arr, 'gather_info', 'completion_action'));
+        $this->assertSame('Be friendly', Shape::at($arr, 'gather_info', 'prompt'));
+        $this->assertTrue(Shape::at($arr, 'gather_info', 'questions', 0, 'confirm'));
     }
 
     public function testStepAddGatherQuestionAllNamedArgs(): void
@@ -1121,7 +1135,9 @@ class ContextsTest extends TestCase
             functions: ['validate_age']
         );
 
-        $q = $step->getGatherInfo()->toArray()['questions'][0];
+        $gatherInfo = $step->getGatherInfo();
+        $this->assertNotNull($gatherInfo);
+        $q = Shape::sub($gatherInfo->toArray(), 'questions', 0);
         $this->assertSame('age', $q['key']);
         $this->assertSame('How old?', $q['question']);
         $this->assertSame('integer', $q['type']);
@@ -1140,8 +1156,8 @@ class ContextsTest extends TestCase
         $ctx->addEnterFiller('es', ['Hola', 'Bienvenido']);
 
         $arr = $ctx->toArray();
-        $this->assertSame(['Welcome', 'Hi', 'Hello'], $arr['enter_fillers']['en-US']);
-        $this->assertSame(['Hola', 'Bienvenido'], $arr['enter_fillers']['es']);
+        $this->assertSame(['Welcome', 'Hi', 'Hello'], Shape::at($arr, 'enter_fillers', 'en-US'));
+        $this->assertSame(['Hola', 'Bienvenido'], Shape::at($arr, 'enter_fillers', 'es'));
     }
 
     public function testContextSetEnterFillersAcceptsNestedMap(): void
@@ -1156,8 +1172,8 @@ class ContextsTest extends TestCase
         ]);
 
         $arr = $ctx->toArray();
-        $this->assertSame(['Welcome', 'Hi'], $arr['enter_fillers']['en-US']);
-        $this->assertSame(['Entering...'], $arr['enter_fillers']['default']);
+        $this->assertSame(['Welcome', 'Hi'], Shape::at($arr, 'enter_fillers', 'en-US'));
+        $this->assertSame(['Entering...'], Shape::at($arr, 'enter_fillers', 'default'));
     }
 
     public function testContextAddStepAllNamedKwargs(): void
@@ -1176,12 +1192,14 @@ class ContextsTest extends TestCase
 
         $this->assertSame('survey', $step->getName());
         $arr = $step->toArray();
-        $this->assertStringContainsString('## Task', $arr['text']);
-        $this->assertStringContainsString('Survey the customer', $arr['text']);
-        $this->assertStringContainsString('## Process', $arr['text']);
-        $this->assertStringContainsString('- Confirm name', $arr['text']);
-        $this->assertStringContainsString('- Ask satisfaction', $arr['text']);
-        $this->assertStringContainsString('- Collect feedback', $arr['text']);
+        $text = Shape::at($arr, 'text');
+        $this->assertIsString($text);
+        $this->assertStringContainsString('## Task', $text);
+        $this->assertStringContainsString('Survey the customer', $text);
+        $this->assertStringContainsString('## Process', $text);
+        $this->assertStringContainsString('- Confirm name', $text);
+        $this->assertStringContainsString('- Ask satisfaction', $text);
+        $this->assertStringContainsString('- Collect feedback', $text);
         $this->assertSame('All three answers gathered', $arr['step_criteria']);
         $this->assertSame(['log_response'], $arr['functions']);
         $this->assertSame(['next'], $arr['valid_steps']);

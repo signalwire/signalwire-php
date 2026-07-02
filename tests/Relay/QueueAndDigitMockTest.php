@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Mock-backed tests for queue management and digit-binding control on
@@ -38,6 +39,7 @@ class QueueAndDigitMockTest extends TestCase
 
     private function answeredInboundCall(string $callId): Call
     {
+        /** @var \ArrayObject<string,Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -85,7 +87,7 @@ class QueueAndDigitMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.queue.leave');
         $this->assertNotEmpty($entries);
-        $params = $entries[count($entries) - 1]->frame['params'] ?? [];
+        $params = Shape::arr($entries[count($entries) - 1]->frame['params'] ?? []);
         $this->assertSame('support', $params['queue_name']);
         // Auto-generated control_id present and looks like 32 hex chars.
         $this->assertArrayHasKey('control_id', $params);
@@ -105,7 +107,7 @@ class QueueAndDigitMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.queue.leave');
         $this->assertNotEmpty($entries);
-        $params = $entries[count($entries) - 1]->frame['params'] ?? [];
+        $params = Shape::arr($entries[count($entries) - 1]->frame['params'] ?? []);
         $this->assertSame('ctrl-explicit-42', $params['control_id']);
         $this->assertSame('sales', $params['queue_name']);
         $this->assertSame('q-uuid-1', $params['queue_id']);
@@ -124,7 +126,7 @@ class QueueAndDigitMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.queue.leave');
         $this->assertNotEmpty($entries);
-        $params = $entries[count($entries) - 1]->frame['params'] ?? [];
+        $params = Shape::arr($entries[count($entries) - 1]->frame['params'] ?? []);
         $this->assertSame('X', $params['custom_field']);
     }
 
@@ -140,7 +142,7 @@ class QueueAndDigitMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.clear_digit_bindings');
         $this->assertNotEmpty($entries);
-        $params = $entries[count($entries) - 1]->frame['params'] ?? [];
+        $params = Shape::arr($entries[count($entries) - 1]->frame['params'] ?? []);
         $this->assertArrayNotHasKey('realm', $params);
     }
 
@@ -152,7 +154,7 @@ class QueueAndDigitMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.clear_digit_bindings');
         $this->assertNotEmpty($entries);
-        $params = $entries[count($entries) - 1]->frame['params'] ?? [];
+        $params = Shape::arr($entries[count($entries) - 1]->frame['params'] ?? []);
         $this->assertSame('menu1', $params['realm']);
     }
 
@@ -167,7 +169,7 @@ class QueueAndDigitMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.clear_digit_bindings');
         $this->assertNotEmpty($entries);
-        $params = $entries[count($entries) - 1]->frame['params'] ?? [];
+        $params = Shape::arr($entries[count($entries) - 1]->frame['params'] ?? []);
         $this->assertSame('r1', $params['realm']);
         $this->assertTrue($params['extra_flag']);
     }

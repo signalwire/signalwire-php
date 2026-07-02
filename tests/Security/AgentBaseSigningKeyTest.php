@@ -9,6 +9,7 @@ use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 use SignalWire\Security\WebhookValidator;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * AgentBase webhook signature integration tests.
@@ -45,6 +46,17 @@ class AgentBaseSigningKeyTest extends TestCase
         unset($_SERVER['REQUEST_URI']);
     }
 
+    /**
+     * @param array{
+     *     name?: string,
+     *     route?: string,
+     *     host?: string|null,
+     *     port?: int|null,
+     *     basic_auth_user?: string|null,
+     *     basic_auth_password?: string|null,
+     *     signing_key?: string|null,
+     * } $opts
+     */
     private function makeAgent(array $opts = []): AgentBase
     {
         return new AgentBase(
@@ -58,6 +70,9 @@ class AgentBaseSigningKeyTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string,string>
+     */
     private function authHeader(): array
     {
         return ['Authorization' => 'Basic ' . base64_encode('testuser:testpass')];
@@ -67,6 +82,9 @@ class AgentBaseSigningKeyTest extends TestCase
      * Build a valid X-SignalWire-Signature for a Scheme A POST. The agent
      * reconstructs URL via getProxyUrlBase(); we inject X-Forwarded-Proto /
      * X-Forwarded-Host so the URL is fully deterministic in-test.
+     */
+    /**
+     * @return array<string,string>
      */
     private function signedHeaders(string $path, string $body): array
     {
@@ -182,6 +200,7 @@ class AgentBaseSigningKeyTest extends TestCase
             'function' => 'echo_tool',
             'argument' => ['parsed' => [['msg' => 'hi']]],
         ]);
+        $this->assertIsString($body);
 
         [$status, , $respBody] = $agent->handleRequest(
             'POST',
@@ -192,7 +211,7 @@ class AgentBaseSigningKeyTest extends TestCase
 
         $this->assertSame(200, $status);
         $decoded = json_decode($respBody, true);
-        $this->assertSame('Echo: hi', $decoded['response']);
+        $this->assertSame('Echo: hi', Shape::at($decoded, 'response'));
     }
 
     public function testInvalidSignatureOnSwaigRejected(): void
@@ -200,6 +219,7 @@ class AgentBaseSigningKeyTest extends TestCase
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);
 
         $body = json_encode(['function' => 'whatever', 'argument' => ['parsed' => [[]]]]);
+        $this->assertIsString($body);
         $headers = array_merge($this->authHeader(), [
             'X-Forwarded-Proto' => 'https',
             'X-Forwarded-Host' => 'signed-host.example.com',
@@ -216,6 +236,7 @@ class AgentBaseSigningKeyTest extends TestCase
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);
 
         $body = json_encode(['post_prompt_data' => ['raw' => 'A summary.']]);
+        $this->assertIsString($body);
 
         [$status, ,] = $agent->handleRequest(
             'POST',
@@ -232,6 +253,7 @@ class AgentBaseSigningKeyTest extends TestCase
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);
 
         $body = json_encode(['post_prompt_data' => ['raw' => 'x']]);
+        $this->assertIsString($body);
 
         [$status, , $respBody] = $agent->handleRequest(
             'POST',

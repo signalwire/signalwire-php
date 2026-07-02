@@ -7,6 +7,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\DataMap\DataMap;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\Tests\Support\Shape;
 
 class DataMapTest extends TestCase
 {
@@ -52,11 +53,11 @@ class DataMapTest extends TestCase
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayHasKey('argument', $result);
-        $this->assertSame('object', $result['argument']['type']);
+        $this->assertSame('object', Shape::at($result, 'argument', 'type'));
         $this->assertSame([
             'city' => ['type' => 'string', 'description' => 'The city name'],
-        ], $result['argument']['properties']);
-        $this->assertSame(['city'], $result['argument']['required']);
+        ], Shape::at($result, 'argument', 'properties'));
+        $this->assertSame(['city'], Shape::at($result, 'argument', 'required'));
     }
 
     public function testOptionalParameterNotInRequired(): void
@@ -65,7 +66,7 @@ class DataMapTest extends TestCase
         $dm->parameter('note', 'string', 'Optional note', false);
         $result = $dm->toSwaigFunction();
 
-        $this->assertArrayNotHasKey('required', $result['argument']);
+        $this->assertArrayNotHasKey('required', Shape::sub($result, 'argument'));
     }
 
     public function testParameterWithEnum(): void
@@ -74,7 +75,7 @@ class DataMapTest extends TestCase
         $dm->parameter('unit', 'string', 'Unit', true, ['celsius', 'fahrenheit']);
         $result = $dm->toSwaigFunction();
 
-        $prop = $result['argument']['properties']['unit'];
+        $prop = Shape::sub($result, 'argument', 'properties', 'unit');
         $this->assertSame(['celsius', 'fahrenheit'], $prop['enum']);
         $this->assertSame('string', $prop['type']);
         $this->assertSame('Unit', $prop['description']);
@@ -88,8 +89,8 @@ class DataMapTest extends TestCase
         $dm->parameter('c', 'boolean', 'Third', false);
         $result = $dm->toSwaigFunction();
 
-        $this->assertCount(3, $result['argument']['properties']);
-        $this->assertSame(['a', 'b'], $result['argument']['required']);
+        $this->assertCount(3, Shape::sub($result, 'argument', 'properties'));
+        $this->assertSame(['a', 'b'], Shape::at($result, 'argument', 'required'));
     }
 
     public function testDuplicateRequiredParameterNotDuplicated(): void
@@ -99,8 +100,8 @@ class DataMapTest extends TestCase
         $dm->parameter('x', 'string', 'Updated desc', true);
         $result = $dm->toSwaigFunction();
 
-        $this->assertCount(1, $result['argument']['required']);
-        $this->assertSame('Updated desc', $result['argument']['properties']['x']['description']);
+        $this->assertCount(1, Shape::sub($result, 'argument', 'required'));
+        $this->assertSame('Updated desc', Shape::at($result, 'argument', 'properties', 'x', 'description'));
     }
 
     // ── Expression ───────────────────────────────────────────────────────
@@ -112,11 +113,11 @@ class DataMapTest extends TestCase
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayHasKey('data_map', $result);
-        $this->assertCount(1, $result['data_map']['expressions']);
-        $this->assertSame('${args.color}', $result['data_map']['expressions'][0]['string']);
-        $this->assertSame('/^red$/', $result['data_map']['expressions'][0]['pattern']);
-        $this->assertSame(['response' => 'Red detected'], $result['data_map']['expressions'][0]['output']);
-        $this->assertArrayNotHasKey('nomatch_output', $result['data_map']['expressions'][0]);
+        $this->assertCount(1, Shape::sub($result, 'data_map', 'expressions'));
+        $this->assertSame('${args.color}', Shape::at($result, 'data_map', 'expressions', 0, 'string'));
+        $this->assertSame('/^red$/', Shape::at($result, 'data_map', 'expressions', 0, 'pattern'));
+        $this->assertSame(['response' => 'Red detected'], Shape::at($result, 'data_map', 'expressions', 0, 'output'));
+        $this->assertArrayNotHasKey('nomatch_output', Shape::sub($result, 'data_map', 'expressions', 0));
     }
 
     public function testExpressionWithNomatchOutput(): void
@@ -125,7 +126,7 @@ class DataMapTest extends TestCase
         $dm->expression('${args.x}', '/yes/', 'matched', 'not matched');
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame('not matched', $result['data_map']['expressions'][0]['nomatch_output']);
+        $this->assertSame('not matched', Shape::at($result, 'data_map', 'expressions', 0, 'nomatch_output'));
     }
 
     public function testMultipleExpressionsAccumulate(): void
@@ -135,7 +136,7 @@ class DataMapTest extends TestCase
         $dm->expression('${b}', '/2/', 'two');
         $result = $dm->toSwaigFunction();
 
-        $this->assertCount(2, $result['data_map']['expressions']);
+        $this->assertCount(2, Shape::sub($result, 'data_map', 'expressions'));
     }
 
     // ── Webhook ──────────────────────────────────────────────────────────
@@ -147,9 +148,9 @@ class DataMapTest extends TestCase
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayHasKey('data_map', $result);
-        $this->assertCount(1, $result['data_map']['webhooks']);
-        $this->assertSame('GET', $result['data_map']['webhooks'][0]['method']);
-        $this->assertSame('https://api.example.com/data', $result['data_map']['webhooks'][0]['url']);
+        $this->assertCount(1, Shape::sub($result, 'data_map', 'webhooks'));
+        $this->assertSame('GET', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
+        $this->assertSame('https://api.example.com/data', Shape::at($result, 'data_map', 'webhooks', 0, 'url'));
     }
 
     public function testWebhookWithAllOptions(): void
@@ -164,7 +165,7 @@ class DataMapTest extends TestCase
             ['city']
         );
         $result = $dm->toSwaigFunction();
-        $wh = $result['data_map']['webhooks'][0];
+        $wh = Shape::sub($result, 'data_map', 'webhooks', 0);
 
         $this->assertSame('POST', $wh['method']);
         $this->assertSame(['Authorization' => 'Bearer tok'], $wh['headers']);
@@ -178,7 +179,7 @@ class DataMapTest extends TestCase
         $dm = new DataMap('fn');
         $dm->webhook('GET', 'https://example.com');
         $result = $dm->toSwaigFunction();
-        $wh = $result['data_map']['webhooks'][0];
+        $wh = Shape::sub($result, 'data_map', 'webhooks', 0);
 
         $this->assertArrayNotHasKey('headers', $wh);
         $this->assertArrayNotHasKey('form_param', $wh);
@@ -196,10 +197,10 @@ class DataMapTest extends TestCase
             ['string' => '${response}', 'pattern' => '/ok/', 'output' => 'success'],
         ]);
         $result = $dm->toSwaigFunction();
-        $wh = $result['data_map']['webhooks'][0];
+        $wh = Shape::sub($result, 'data_map', 'webhooks', 0);
 
-        $this->assertCount(1, $wh['expressions']);
-        $this->assertSame('${response}', $wh['expressions'][0]['string']);
+        $this->assertCount(1, Shape::sub($wh, 'expressions'));
+        $this->assertSame('${response}', Shape::at($wh, 'expressions', 0, 'string'));
     }
 
     public function testWebhookExpressionsIgnoredWithNoWebhooks(): void
@@ -220,7 +221,7 @@ class DataMapTest extends TestCase
         $dm->body(['key' => '${args.val}']);
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame(['key' => '${args.val}'], $result['data_map']['webhooks'][0]['body']);
+        $this->assertSame(['key' => '${args.val}'], Shape::at($result, 'data_map', 'webhooks', 0, 'body'));
     }
 
     public function testBodyIgnoredWithNoWebhooks(): void
@@ -241,7 +242,7 @@ class DataMapTest extends TestCase
         $dm->params(['q' => '${args.query}']);
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame(['q' => '${args.query}'], $result['data_map']['webhooks'][0]['params']);
+        $this->assertSame(['q' => '${args.query}'], Shape::at($result, 'data_map', 'webhooks', 0, 'params'));
     }
 
     public function testParamsIgnoredWithNoWebhooks(): void
@@ -264,7 +265,7 @@ class DataMapTest extends TestCase
 
         $this->assertSame(
             ['input_key' => 'items', 'output_key' => 'names', 'append' => true],
-            $result['data_map']['webhooks'][0]['foreach']
+            Shape::at($result, 'data_map', 'webhooks', 0, 'foreach')
         );
     }
 
@@ -288,7 +289,7 @@ class DataMapTest extends TestCase
 
         $this->assertSame(
             ['response' => 'Done: ${response}'],
-            $result['data_map']['webhooks'][0]['output']
+            Shape::at($result, 'data_map', 'webhooks', 0, 'output')
         );
     }
 
@@ -299,7 +300,7 @@ class DataMapTest extends TestCase
         $dm->output('plain string');
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame('plain string', $result['data_map']['webhooks'][0]['output']);
+        $this->assertSame('plain string', Shape::at($result, 'data_map', 'webhooks', 0, 'output'));
     }
 
     public function testOutputOnWebhookWithFunctionResult(): void
@@ -316,7 +317,7 @@ class DataMapTest extends TestCase
         $result = $dm->toSwaigFunction();
 
         $expected = ['response' => 'OK', 'action' => [['stop' => true]], 'post_process' => true];
-        $this->assertSame($expected, $result['data_map']['webhooks'][0]['output']);
+        $this->assertSame($expected, Shape::at($result, 'data_map', 'webhooks', 0, 'output'));
     }
 
     public function testOutputIgnoredWithNoWebhooks(): void
@@ -336,7 +337,7 @@ class DataMapTest extends TestCase
         $dm->fallbackOutput(['response' => 'Fallback']);
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame(['response' => 'Fallback'], $result['data_map']['output']);
+        $this->assertSame(['response' => 'Fallback'], Shape::at($result, 'data_map', 'output'));
     }
 
     public function testFallbackOutputWithFunctionResult(): void
@@ -347,7 +348,7 @@ class DataMapTest extends TestCase
         $dm->fallbackOutput($fr);
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame(['response' => 'Error occurred'], $result['data_map']['output']);
+        $this->assertSame(['response' => 'Error occurred'], Shape::at($result, 'data_map', 'output'));
     }
 
     public function testFallbackOutputWithString(): void
@@ -356,7 +357,7 @@ class DataMapTest extends TestCase
         $dm->fallbackOutput('simple fallback');
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame('simple fallback', $result['data_map']['output']);
+        $this->assertSame('simple fallback', Shape::at($result, 'data_map', 'output'));
     }
 
     // ── errorKeys on webhook ─────────────────────────────────────────────
@@ -368,7 +369,7 @@ class DataMapTest extends TestCase
         $dm->errorKeys(['error', 'message']);
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame(['error', 'message'], $result['data_map']['webhooks'][0]['error_keys']);
+        $this->assertSame(['error', 'message'], Shape::at($result, 'data_map', 'webhooks', 0, 'error_keys'));
     }
 
     public function testErrorKeysIgnoredWithNoWebhooks(): void
@@ -388,7 +389,7 @@ class DataMapTest extends TestCase
         $dm->globalErrorKeys(['error', 'detail']);
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame(['error', 'detail'], $result['data_map']['error_keys']);
+        $this->assertSame(['error', 'detail'], Shape::at($result, 'data_map', 'error_keys'));
     }
 
     // ── toSwaigFunction full serialization ───────────────────────────────
@@ -412,31 +413,31 @@ class DataMapTest extends TestCase
         $this->assertSame('Get the weather for a city', $result['purpose']);
 
         // Argument
-        $this->assertSame('object', $result['argument']['type']);
-        $this->assertArrayHasKey('city', $result['argument']['properties']);
-        $this->assertArrayHasKey('unit', $result['argument']['properties']);
-        $this->assertSame(['city'], $result['argument']['required']);
-        $this->assertSame(['celsius', 'fahrenheit'], $result['argument']['properties']['unit']['enum']);
+        $this->assertSame('object', Shape::at($result, 'argument', 'type'));
+        $this->assertArrayHasKey('city', Shape::sub($result, 'argument', 'properties'));
+        $this->assertArrayHasKey('unit', Shape::sub($result, 'argument', 'properties'));
+        $this->assertSame(['city'], Shape::at($result, 'argument', 'required'));
+        $this->assertSame(['celsius', 'fahrenheit'], Shape::at($result, 'argument', 'properties', 'unit', 'enum'));
 
         // Data map
         $this->assertArrayHasKey('data_map', $result);
-        $dataMap = $result['data_map'];
+        $dataMap = Shape::sub($result, 'data_map');
 
         // Expressions
-        $this->assertCount(1, $dataMap['expressions']);
-        $this->assertSame('${args.city}', $dataMap['expressions'][0]['string']);
+        $this->assertCount(1, Shape::sub($dataMap, 'expressions'));
+        $this->assertSame('${args.city}', Shape::at($dataMap, 'expressions', 0, 'string'));
 
         // Webhooks
-        $this->assertCount(1, $dataMap['webhooks']);
-        $this->assertSame('GET', $dataMap['webhooks'][0]['method']);
-        $this->assertSame(['X-Key' => 'abc'], $dataMap['webhooks'][0]['headers']);
-        $this->assertSame(['response' => 'Weather: ${temp}'], $dataMap['webhooks'][0]['output']);
+        $this->assertCount(1, Shape::sub($dataMap, 'webhooks'));
+        $this->assertSame('GET', Shape::at($dataMap, 'webhooks', 0, 'method'));
+        $this->assertSame(['X-Key' => 'abc'], Shape::at($dataMap, 'webhooks', 0, 'headers'));
+        $this->assertSame(['response' => 'Weather: ${temp}'], Shape::at($dataMap, 'webhooks', 0, 'output'));
 
         // Global output
-        $this->assertSame(['response' => 'Unable to retrieve weather'], $dataMap['output']);
+        $this->assertSame(['response' => 'Unable to retrieve weather'], Shape::at($dataMap, 'output'));
 
         // Global error_keys
-        $this->assertSame(['error'], $dataMap['error_keys']);
+        $this->assertSame(['error'], Shape::at($dataMap, 'error_keys'));
     }
 
     // ── createSimpleApiTool ──────────────────────────────────────────────
@@ -456,17 +457,16 @@ class DataMapTest extends TestCase
             ['Authorization' => 'Bearer secret']
         );
 
-        $this->assertInstanceOf(DataMap::class, $dataMap);
         $result = $dataMap->toSwaigFunction();
 
         $this->assertSame('lookup_user', $result['function']);
-        $this->assertSame(['user_id'], $result['argument']['required']);
-        $this->assertArrayHasKey('format', $result['argument']['properties']);
-        $this->assertSame('GET', $result['data_map']['webhooks'][0]['method']);
-        $this->assertSame('https://api.example.com/users', $result['data_map']['webhooks'][0]['url']);
-        $this->assertSame(['Authorization' => 'Bearer secret'], $result['data_map']['webhooks'][0]['headers']);
+        $this->assertSame(['user_id'], Shape::at($result, 'argument', 'required'));
+        $this->assertArrayHasKey('format', Shape::sub($result, 'argument', 'properties'));
+        $this->assertSame('GET', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
+        $this->assertSame('https://api.example.com/users', Shape::at($result, 'data_map', 'webhooks', 0, 'url'));
+        $this->assertSame(['Authorization' => 'Bearer secret'], Shape::at($result, 'data_map', 'webhooks', 0, 'headers'));
         // Output derives from the response_template FunctionResult.
-        $this->assertSame('User: ${response.name}', $result['data_map']['webhooks'][0]['output']['response']);
+        $this->assertSame('User: ${response.name}', Shape::at($result, 'data_map', 'webhooks', 0, 'output', 'response'));
     }
 
     public function testCreateSimpleApiToolWithoutParametersOrHeaders(): void
@@ -480,8 +480,8 @@ class DataMapTest extends TestCase
         $result = $dataMap->toSwaigFunction();
         $this->assertSame('simple', $result['function']);
         $this->assertArrayNotHasKey('argument', $result);
-        $this->assertArrayNotHasKey('headers', $result['data_map']['webhooks'][0]);
-        $this->assertSame('GET', $result['data_map']['webhooks'][0]['method']);
+        $this->assertArrayNotHasKey('headers', Shape::sub($result, 'data_map', 'webhooks', 0));
+        $this->assertSame('GET', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
     }
 
     public function testCreateSimpleApiToolWithBodyAndErrorKeys(): void
@@ -498,9 +498,9 @@ class DataMapTest extends TestCase
         );
 
         $result = $dataMap->toSwaigFunction();
-        $this->assertSame('POST', $result['data_map']['webhooks'][0]['method']);
-        $this->assertSame(['name' => '${args.name}'], $result['data_map']['webhooks'][0]['body']);
-        $this->assertSame(['error', 'message'], $result['data_map']['webhooks'][0]['error_keys']);
+        $this->assertSame('POST', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
+        $this->assertSame(['name' => '${args.name}'], Shape::at($result, 'data_map', 'webhooks', 0, 'body'));
+        $this->assertSame(['error', 'message'], Shape::at($result, 'data_map', 'webhooks', 0, 'error_keys'));
     }
 
     // ── createExpressionTool ─────────────────────────────────────────────
@@ -518,13 +518,12 @@ class DataMapTest extends TestCase
             ]
         );
 
-        $this->assertInstanceOf(DataMap::class, $dataMap);
         $result = $dataMap->toSwaigFunction();
 
         $this->assertSame('route_call', $result['function']);
-        $this->assertSame(['dept'], $result['argument']['required']);
-        $this->assertCount(2, $result['data_map']['expressions']);
-        $this->assertSame('/sales/', $result['data_map']['expressions'][0]['pattern']);
+        $this->assertSame(['dept'], Shape::at($result, 'argument', 'required'));
+        $this->assertCount(2, Shape::sub($result, 'data_map', 'expressions'));
+        $this->assertSame('/sales/', Shape::at($result, 'data_map', 'expressions', 0, 'pattern'));
     }
 
     public function testCreateExpressionToolNoParams(): void
@@ -536,7 +535,7 @@ class DataMapTest extends TestCase
 
         $result = $dataMap->toSwaigFunction();
         $this->assertArrayNotHasKey('argument', $result);
-        $this->assertCount(1, $result['data_map']['expressions']);
+        $this->assertCount(1, Shape::sub($result, 'data_map', 'expressions'));
     }
 
     // ── Method chaining ──────────────────────────────────────────────────
@@ -598,10 +597,10 @@ class DataMapTest extends TestCase
 
         $this->assertSame('api', $result['function']);
         $this->assertSame('Test API', $result['purpose']);
-        $this->assertSame(['q'], $result['argument']['required']);
-        $this->assertSame(['query' => '${args.q}'], $result['data_map']['webhooks'][0]['body']);
-        $this->assertSame(['response' => '${result}'], $result['data_map']['webhooks'][0]['output']);
-        $this->assertSame(['err'], $result['data_map']['error_keys']);
+        $this->assertSame(['q'], Shape::at($result, 'argument', 'required'));
+        $this->assertSame(['query' => '${args.q}'], Shape::at($result, 'data_map', 'webhooks', 0, 'body'));
+        $this->assertSame(['response' => '${result}'], Shape::at($result, 'data_map', 'webhooks', 0, 'output'));
+        $this->assertSame(['err'], Shape::at($result, 'data_map', 'error_keys'));
     }
 
     // ── Webhook modifier targets last webhook ────────────────────────────
@@ -617,18 +616,18 @@ class DataMapTest extends TestCase
         $dm->errorKeys(['err']);
 
         $result = $dm->toSwaigFunction();
-        $webhooks = $result['data_map']['webhooks'];
+        $webhooks = Shape::sub($result, 'data_map', 'webhooks');
 
         // First webhook should be untouched
-        $this->assertArrayNotHasKey('output', $webhooks[0]);
-        $this->assertArrayNotHasKey('body', $webhooks[0]);
-        $this->assertArrayNotHasKey('params', $webhooks[0]);
-        $this->assertArrayNotHasKey('error_keys', $webhooks[0]);
+        $this->assertArrayNotHasKey('output', Shape::sub($webhooks, 0));
+        $this->assertArrayNotHasKey('body', Shape::sub($webhooks, 0));
+        $this->assertArrayNotHasKey('params', Shape::sub($webhooks, 0));
+        $this->assertArrayNotHasKey('error_keys', Shape::sub($webhooks, 0));
 
         // Second webhook should have all modifications
-        $this->assertSame(['response' => 'from second'], $webhooks[1]['output']);
-        $this->assertSame(['key' => 'val'], $webhooks[1]['body']);
-        $this->assertSame(['p' => 'v'], $webhooks[1]['params']);
-        $this->assertSame(['err'], $webhooks[1]['error_keys']);
+        $this->assertSame(['response' => 'from second'], Shape::at($webhooks, 1, 'output'));
+        $this->assertSame(['key' => 'val'], Shape::at($webhooks, 1, 'body'));
+        $this->assertSame(['p' => 'v'], Shape::at($webhooks, 1, 'params'));
+        $this->assertSame(['err'], Shape::at($webhooks, 1, 'error_keys'));
     }
 }

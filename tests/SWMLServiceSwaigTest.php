@@ -9,6 +9,7 @@ use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
 use SignalWire\SWML\Service;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Tests proving SWMLService can host SWAIG functions and serve a non-agent
@@ -32,6 +33,16 @@ class SWMLServiceSwaigTest extends TestCase
         Logger::reset();
     }
 
+    /**
+     * @param array{
+     *     name?: string,
+     *     route?: string,
+     *     host?: string|null,
+     *     port?: int|null,
+     *     basic_auth_user?: string,
+     *     basic_auth_password?: string
+     * } $opts
+     */
     private function svc(array $opts = []): Service
     {
         return new Service(
@@ -44,9 +55,23 @@ class SWMLServiceSwaigTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string,string>
+     */
     private function auth(): array
     {
         return ['Authorization' => 'Basic ' . base64_encode('u:p')];
+    }
+
+    /**
+     * json_encode a payload, asserting it succeeds, so callers get a `string`
+     * (not `string|false`) to hand to handleRequest.
+     */
+    private function encode(mixed $data): string
+    {
+        $json = json_encode($data);
+        $this->assertIsString($json);
+        return $json;
     }
 
     // ------------------------------------------------------------------
@@ -56,10 +81,11 @@ class SWMLServiceSwaigTest extends TestCase
     public function testServiceHasSwaigMethods(): void
     {
         $svc = $this->svc();
-        $this->assertTrue(method_exists($svc, 'defineTool'));
-        $this->assertTrue(method_exists($svc, 'registerSwaigFunction'));
-        $this->assertTrue(method_exists($svc, 'defineTools'));
-        $this->assertTrue(method_exists($svc, 'onFunctionCall'));
+        $methods = get_class_methods($svc);
+        $this->assertContains('defineTool', $methods);
+        $this->assertContains('registerSwaigFunction', $methods);
+        $this->assertContains('defineTools', $methods);
+        $this->assertContains('onFunctionCall', $methods);
     }
 
     public function testDefineToolRegistersFunction(): void
@@ -84,12 +110,12 @@ class SWMLServiceSwaigTest extends TestCase
     public function testSwaigGetReturnsSwml(): void
     {
         $svc = $this->svc();
-        $svc->hangup();
+        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         [$status, , $body] = $svc->handleRequest('GET', '/swaig', $this->auth());
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
-        $this->assertArrayHasKey('sections', $decoded);
-        $this->assertCount(1, $decoded['sections']['main']);
+        $this->assertArrayHasKey('sections', Shape::arr($decoded));
+        $this->assertCount(1, Shape::sub($decoded, 'sections', 'main'));
     }
 
     public function testSwaigPostDispatchesRegisteredHandler(): void
@@ -105,7 +131,7 @@ class SWMLServiceSwaigTest extends TestCase
                 return new FunctionResult("{$args['competitor']} is \$99/seat; we're \$79.");
             },
         );
-        $payload = json_encode([
+        $payload = $this->encode([
             'function' => 'lookup_competitor',
             'argument' => ['parsed' => [['competitor' => 'ACME']]],
             'call_id' => 'c-1',
@@ -131,7 +157,7 @@ class SWMLServiceSwaigTest extends TestCase
             'POST',
             '/swaig',
             $this->auth(),
-            json_encode(['function' => '../etc/passwd']),
+            $this->encode(['function' => '../etc/passwd']),
         );
         $this->assertSame(400, $status);
     }
@@ -143,7 +169,7 @@ class SWMLServiceSwaigTest extends TestCase
             'POST',
             '/swaig',
             $this->auth(),
-            json_encode(['function' => 'nope', 'argument' => ['parsed' => [[]]]]),
+            $this->encode(['function' => 'nope', 'argument' => ['parsed' => [[]]]]),
         );
         $this->assertSame(404, $status);
     }
@@ -164,7 +190,7 @@ class SWMLServiceSwaigTest extends TestCase
         $svc = $this->svc();
 
         // 1. Build the SWML — an `answer` then an `ai_sidecar` verb config.
-        $svc->answer();
+        $svc->answer(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         // ai_sidecar isn't in the live schema yet; bypass via the document.
         // Once schema lands, callers will use the auto-vivified verb method.
         $svc->getDocument()->addVerbToSection('main', 'ai_sidecar', [
@@ -173,7 +199,10 @@ class SWMLServiceSwaigTest extends TestCase
             'direction' => ['remote-caller', 'local-caller'],
         ]);
         $rendered = json_decode($svc->render(), true);
-        $verbs = array_map(fn ($v) => array_key_first($v), $rendered['sections']['main']);
+        $verbs = array_map(
+            fn ($v) => array_key_first(Shape::arr($v)),
+            Shape::sub($rendered, 'sections', 'main')
+        );
         $this->assertContains('answer', $verbs);
         $this->assertContains('ai_sidecar', $verbs);
 
@@ -193,7 +222,7 @@ class SWMLServiceSwaigTest extends TestCase
         });
 
         // Verify the SWAIG dispatch works end-to-end.
-        [$status, , $body] = $svc->handleRequest('POST', '/swaig', $this->auth(), json_encode([
+        [$status, , $body] = $svc->handleRequest('POST', '/swaig', $this->auth(), $this->encode([
             'function' => 'lookup_competitor',
             'argument' => ['parsed' => [['competitor' => 'ACME']]],
         ]));
@@ -201,7 +230,7 @@ class SWMLServiceSwaigTest extends TestCase
         $this->assertStringContainsString('ACME', $body);
 
         // Verify the event sink works end-to-end.
-        [$status,,] = $svc->handleRequest('POST', '/events', $this->auth(), json_encode([
+        [$status,,] = $svc->handleRequest('POST', '/events', $this->auth(), $this->encode([
             'type' => 'insight',
             'tick_id' => 7,
         ]));

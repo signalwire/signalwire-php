@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\Tests\Web;
 
 use PHPUnit\Framework\TestCase;
+use SignalWire\Tests\Support\Shape;
 use SignalWire\Web\WebService;
 
 /**
@@ -39,6 +40,15 @@ final class WebServiceTest extends TestCase
         @rmdir($this->dir);
     }
 
+    /**
+     * @param array{
+     *     port?: int,
+     *     directories?: array<string,string>,
+     *     basicAuth?: array{0: string, 1: string}|null,
+     *     enableDirectoryBrowsing?: bool,
+     *     allowedExtensions?: list<string>|null
+     * } $overrides
+     */
     private function service(array $overrides = []): WebService
     {
         return new WebService(
@@ -125,8 +135,8 @@ final class WebServiceTest extends TestCase
         $this->assertSame(200, $status);
         $this->assertSame('application/json', $headers['Content-Type']);
         $decoded = json_decode($body, true);
-        $this->assertSame('healthy', $decoded['status']);
-        $this->assertContains('/static', $decoded['directories']);
+        $this->assertSame('healthy', Shape::at($decoded, 'status'));
+        $this->assertContains('/static', Shape::sub($decoded, 'directories'));
     }
 
     public function testRootEndpointListsDirectories(): void

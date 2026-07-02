@@ -11,6 +11,7 @@ use SignalWire\Skills\SkillManager;
 use SignalWire\Skills\SkillName;
 use SignalWire\Skills\SkillRegistry;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 class SkillsTest extends TestCase
 {
@@ -42,6 +43,14 @@ class SkillsTest extends TestCase
         putenv('SIGNALWIRE_LOG_MODE');
     }
 
+    /**
+     * @param array{
+     *     name?: string,
+     *     route?: string,
+     *     basic_auth_user?: string,
+     *     basic_auth_password?: string
+     * } $opts
+     */
     private function makeAgent(array $opts = []): AgentBase
     {
         return new AgentBase(
@@ -214,7 +223,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $skill = new \SignalWire\Skills\Builtin\Datetime($agent);
 
-        $this->assertInstanceOf(\SignalWire\Skills\SkillBase::class, $skill);
+        $this->assertSame('datetime', $skill->getName());
     }
 
     public function testSkillBaseGetNameGetDescriptionGetVersion(): void
@@ -233,7 +242,6 @@ class SkillsTest extends TestCase
         $skill = new \SignalWire\Skills\Builtin\Datetime($agent);
 
         $envVars = $skill->getRequiredEnvVars();
-        $this->assertIsArray($envVars);
         // Datetime has no required env vars
         $this->assertEmpty($envVars);
     }
@@ -265,12 +273,12 @@ class SkillsTest extends TestCase
 
         $schema = $skill->getParameterSchema();
 
-        $this->assertIsArray($schema);
         $this->assertSame('object', $schema['type']);
         $this->assertArrayHasKey('properties', $schema);
-        $this->assertArrayHasKey('swaig_fields', $schema['properties']);
-        $this->assertArrayHasKey('skip_prompt', $schema['properties']);
-        $this->assertArrayHasKey('tool_name', $schema['properties']);
+        $properties = Shape::sub($schema, 'properties');
+        $this->assertArrayHasKey('swaig_fields', $properties);
+        $this->assertArrayHasKey('skip_prompt', $properties);
+        $this->assertArrayHasKey('tool_name', $properties);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -328,9 +336,7 @@ class SkillsTest extends TestCase
 
     public function testAddSkillAcceptsSkillNameEnumOrString(): void
     {
-        // The backed enum's value is the canonical wire string.
-        $this->assertSame('datetime', SkillName::Datetime->value);
-
+        // The backed enum's value is the canonical wire string 'datetime'.
         // addSkill() via the typed enum loads the identical skill as the bare
         // string; hasSkill()/removeSkill() accept the enum too.
         $agent = $this->makeAgent();
@@ -448,7 +454,8 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
 
         // Before any skills loaded, listSkills returns empty
-        $this->assertSame([], $agent->listSkills());
+        $before = $agent->listSkills();
+        $this->assertSame([], $before);
 
         $agent->addSkill('datetime', ['skip_prompt' => true]);
         $agent->addSkill('math', ['skip_prompt' => true]);
@@ -480,20 +487,22 @@ class SkillsTest extends TestCase
         // Datetime registers get_current_time and get_current_date tools.
         // These should appear in the SWAIG functions block.
         $aiVerb = null;
-        foreach ($swml['sections']['main'] as $verb) {
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            $verb = Shape::arr($verb);
             if (isset($verb['ai'])) {
-                $aiVerb = $verb['ai'];
+                $aiVerb = Shape::arr($verb['ai']);
                 break;
             }
         }
 
         $this->assertNotNull($aiVerb, 'Expected an ai verb in SWML output');
         $this->assertArrayHasKey('SWAIG', $aiVerb);
-        $this->assertArrayHasKey('functions', $aiVerb['SWAIG']);
+        $swaig = Shape::sub($aiVerb, 'SWAIG');
+        $this->assertArrayHasKey('functions', $swaig);
 
         $functionNames = array_map(
-            fn (array $f) => $f['function'],
-            $aiVerb['SWAIG']['functions'],
+            fn ($f) => Shape::at($f, 'function'),
+            Shape::sub($swaig, 'functions'),
         );
 
         $this->assertContains('get_current_time', $functionNames);
@@ -532,6 +541,7 @@ class SkillsTest extends TestCase
 
         // Bind an ephemeral port.
         $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        $this->assertNotFalse($sock, 'Failed to create socket');
         \socket_bind($sock, '127.0.0.1', 0);
         \socket_getsockname($sock, $addr, $port);
         \socket_close($sock);
@@ -635,6 +645,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
             $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
             $this->assertStringContainsString("Snippet-only results for 'hello'", $body);
             $this->assertStringContainsString('Title: Result One', $body);
@@ -666,6 +677,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
             $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
             $this->assertStringEndsWith("\n\nPOSTFIX_FOOTER.", $body);
             $this->assertStringContainsString('Title: Result One', $body);
@@ -695,6 +707,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
             // Bare response — no prefix / postfix markers anywhere.
             $this->assertStringStartsWith("Snippet-only results for 'hello'", $body);
             $this->assertStringContainsString('Title: Result One', $body);
@@ -766,6 +779,7 @@ class SkillsTest extends TestCase
         \file_put_contents($tmp, $script);
 
         $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        $this->assertNotFalse($sock, 'Failed to create socket');
         \socket_bind($sock, '127.0.0.1', 0);
         \socket_getsockname($sock, $addr, $port);
         \socket_close($sock);
@@ -847,6 +861,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Snippet formatter output, carrying the CSE titles + snippets.
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
@@ -888,6 +903,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Snippet fallback fired: non-empty, carries titles + snippets.
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
@@ -937,6 +953,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Every page timed out -> snippet fallback (non-empty).
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
@@ -990,6 +1007,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha beta gamma'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Full scraped-result format, with extracted page content.
             $this->assertStringContainsString('Web search results for "alpha beta gamma"', $body);
@@ -1013,7 +1031,7 @@ class SkillsTest extends TestCase
             'api_key'          => 'fake-key',
             'search_engine_id' => 'fake-cx',
         ]);
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
 
         // Every latency / response param the skill reads must be advertised
         // (guards the recurring "read a param but forgot the schema entry"
@@ -1065,6 +1083,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'weather forecast'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Default path scraped (not snippets_only) and the page cleared
             // the default quality threshold.
@@ -1102,6 +1121,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
             $paths = $this->readRequestLog($log);
@@ -1160,12 +1180,9 @@ class SkillsTest extends TestCase
                 "Skill '{$name}' should extend SkillBase",
             );
 
-            // Verify basic accessors work
-            $this->assertIsString($instance->getName());
-            $this->assertIsString($instance->getDescription());
-            $this->assertIsString($instance->getVersion());
-            $this->assertIsArray($instance->getRequiredEnvVars());
-            $this->assertIsBool($instance->supportsMultipleInstances());
+            // Verify basic accessors are callable and non-empty where expected.
+            $this->assertNotSame('', $instance->getName());
+            $this->assertNotSame('', $instance->getVersion());
         }
     }
 
@@ -1178,17 +1195,17 @@ class SkillsTest extends TestCase
     {
         $agent = $this->makeAgent();
         $skill = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k']);
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
 
         // base props preserved
         $this->assertArrayHasKey('swaig_fields', $props);
         // skill-specific props merged
         $this->assertArrayHasKey('api_key', $props);
-        $this->assertTrue($props['api_key']['required']);
-        $this->assertTrue($props['api_key']['hidden']);
-        $this->assertSame('API_NINJAS_KEY', $props['api_key']['env_var']);
+        $this->assertTrue(Shape::at($props, 'api_key', 'required'));
+        $this->assertTrue(Shape::at($props, 'api_key', 'hidden'));
+        $this->assertSame('API_NINJAS_KEY', Shape::at($props, 'api_key', 'env_var'));
         $this->assertArrayHasKey('categories', $props);
-        $this->assertSame('array', $props['categories']['type']);
+        $this->assertSame('array', Shape::at($props, 'categories', 'type'));
     }
 
     public function testTriviaGetInstanceKeyDistinctPerToolName(): void
@@ -1209,13 +1226,14 @@ class SkillsTest extends TestCase
         $tools = $skill->getTools();
 
         $this->assertCount(1, $tools);
-        $this->assertSame('get_trivia', $tools[0]['function']);
-        $this->assertArrayHasKey('data_map', $tools[0]);
+        $tool = Shape::sub($tools, 0);
+        $this->assertSame('get_trivia', $tool['function']);
+        $this->assertArrayHasKey('data_map', $tool);
         $this->assertSame(
             'secret',
-            $tools[0]['data_map']['webhooks'][0]['headers']['X-Api-Key'],
+            Shape::at($tool, 'data_map', 'webhooks', 0, 'headers', 'X-Api-Key'),
         );
-        $this->assertContains('category', $tools[0]['argument']['required']);
+        $this->assertContains('category', Shape::sub($tool, 'argument', 'required'));
     }
 
     public function testTriviaConstructorRejectsMissingApiKey(): void
@@ -1243,15 +1261,18 @@ class SkillsTest extends TestCase
             'temperature_unit' => 'celsius',
         ]);
 
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
         $this->assertArrayHasKey('temperature_unit', $props);
-        $this->assertSame(['fahrenheit', 'celsius'], $props['temperature_unit']['enum']);
+        $this->assertSame(['fahrenheit', 'celsius'], Shape::at($props, 'temperature_unit', 'enum'));
 
         $tools = $skill->getTools();
         $this->assertCount(1, $tools);
-        $this->assertSame('get_weather', $tools[0]['function']);
+        $tool = Shape::sub($tools, 0);
+        $this->assertSame('get_weather', $tool['function']);
         // celsius unit selected -> temp_c template used
-        $this->assertStringContainsString('temp_c', $tools[0]['data_map']['webhooks'][0]['output']['response']);
+        $response = Shape::at($tool, 'data_map', 'webhooks', 0, 'output', 'response');
+        $this->assertIsString($response);
+        $this->assertStringContainsString('temp_c', $response);
 
         $this->expectException(\InvalidArgumentException::class);
         new \SignalWire\Skills\Builtin\WeatherApi($agent, ['api_key' => 'k', 'temperature_unit' => 'kelvin']);
@@ -1267,13 +1288,13 @@ class SkillsTest extends TestCase
 
         $this->assertSame('play_background_file_play_background_file', $skill->getInstanceKey());
 
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
         $this->assertArrayHasKey('files', $props);
-        $this->assertTrue($props['files']['required']);
+        $this->assertTrue(Shape::at($props, 'files', 'required'));
 
         $tools = $skill->getTools();
         $this->assertCount(1, $tools);
-        $enum = $tools[0]['argument']['properties']['action']['enum'];
+        $enum = Shape::sub($tools, 0, 'argument', 'properties', 'action', 'enum');
         $this->assertContains('start_hold', $enum);
         $this->assertContains('stop', $enum);
 
@@ -1292,7 +1313,7 @@ class SkillsTest extends TestCase
         $this->assertSame('datasphere_kb', $b->getInstanceKey());
         $this->assertSame([], $a->getHints());
 
-        $props = $a->getParameterSchema()['properties'];
+        $props = Shape::sub($a->getParameterSchema(), 'properties');
         foreach (['space_name', 'project_id', 'token', 'document_id', 'count', 'distance'] as $k) {
             $this->assertArrayHasKey($k, $props, "datasphere schema omits {$k}");
         }
@@ -1306,7 +1327,7 @@ class SkillsTest extends TestCase
 
         $this->assertSame('datasphere_serverless_search_knowledge', $skill->getInstanceKey());
         $this->assertSame([], $skill->getHints());
-        $this->assertArrayHasKey('document_id', $skill->getParameterSchema()['properties']);
+        $this->assertArrayHasKey('document_id', Shape::sub($skill->getParameterSchema(), 'properties'));
     }
 
     public function testDatetimeAndMathSchemasAreBaseOnly(): void
@@ -1316,8 +1337,8 @@ class SkillsTest extends TestCase
         $math = new \SignalWire\Skills\Builtin\Math($agent);
 
         // Both inherit only the base schema (no custom props beyond base three).
-        $dtProps = array_keys($dt->getParameterSchema()['properties']);
-        $mathProps = array_keys($math->getParameterSchema()['properties']);
+        $dtProps = array_keys(Shape::sub($dt->getParameterSchema(), 'properties'));
+        $mathProps = array_keys(Shape::sub($math->getParameterSchema(), 'properties'));
         sort($dtProps);
         sort($mathProps);
         $this->assertSame(['skip_prompt', 'swaig_fields', 'tool_name'], $dtProps);
@@ -1331,9 +1352,9 @@ class SkillsTest extends TestCase
     {
         $agent = $this->makeAgent();
         $skill = new \SignalWire\Skills\Builtin\Joke($agent);
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
         $this->assertArrayHasKey('api_key', $props);
-        $this->assertSame('get_joke', $props['tool_name']['default']);
+        $this->assertSame('get_joke', Shape::at($props, 'tool_name', 'default'));
         $this->assertSame([], $skill->getHints());
     }
 
@@ -1341,9 +1362,9 @@ class SkillsTest extends TestCase
     {
         $agent = $this->makeAgent();
         $skill = new \SignalWire\Skills\Builtin\GoogleMaps($agent, ['api_key' => 'k']);
-        $props = $skill->getParameterSchema()['properties'];
-        $this->assertSame('lookup_address', $props['lookup_tool_name']['default']);
-        $this->assertSame('compute_route', $props['route_tool_name']['default']);
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertSame('lookup_address', Shape::at($props, 'lookup_tool_name', 'default'));
+        $this->assertSame('compute_route', Shape::at($props, 'route_tool_name', 'default'));
     }
 
     public function testInfoGathererInstanceKeyAndSchema(): void
@@ -1355,7 +1376,7 @@ class SkillsTest extends TestCase
 
         $this->assertSame('info_gatherer', $plain->getInstanceKey());
         $this->assertSame('info_gatherer_intake', $prefixed->getInstanceKey());
-        $this->assertArrayHasKey('questions', $plain->getParameterSchema()['properties']);
+        $this->assertArrayHasKey('questions', Shape::sub($plain->getParameterSchema(), 'properties'));
     }
 
     public function testClaudeSkillsInstanceKeyDistinctPerPath(): void
@@ -1366,7 +1387,7 @@ class SkillsTest extends TestCase
 
         $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
         $this->assertStringStartsWith('claude_skills_', $a->getInstanceKey());
-        $this->assertArrayHasKey('skills_path', $a->getParameterSchema()['properties']);
+        $this->assertArrayHasKey('skills_path', Shape::sub($a->getParameterSchema(), 'properties'));
     }
 
     public function testNativeVectorSearchInterfaceMethods(): void
@@ -1382,13 +1403,13 @@ class SkillsTest extends TestCase
         // cleanup is a no-op; must not throw
         $a->cleanup();
 
-        $props = $a->getParameterSchema()['properties'];
+        $props = Shape::sub($a->getParameterSchema(), 'properties');
         $this->assertArrayHasKey('remote_url', $props);
         $this->assertArrayHasKey('exclude_patterns', $props);
         // exclude_patterns default matches Python's glob set (byte-identical)
         $this->assertSame(
             ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
-            $props['exclude_patterns']['default'],
+            Shape::at($props, 'exclude_patterns', 'default'),
         );
     }
 
@@ -1399,9 +1420,12 @@ class SkillsTest extends TestCase
 
         $this->assertSame('spider_spider', $skill->getInstanceKey());
         $skill->cleanup(); // no-op, must not throw
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
         $this->assertArrayHasKey('max_depth', $props);
-        $this->assertSame(['fast_text', 'clean_text', 'full_text', 'html', 'custom'], $props['extract_type']['enum']);
+        $this->assertSame(
+            ['fast_text', 'clean_text', 'full_text', 'html', 'custom'],
+            Shape::at($props, 'extract_type', 'enum'),
+        );
     }
 
     public function testSwmlTransferInstanceKeyAndSchema(): void
@@ -1413,7 +1437,7 @@ class SkillsTest extends TestCase
 
         $this->assertSame('swml_transfer_transfer_call', $a->getInstanceKey());
         $this->assertSame('swml_transfer_route', $b->getInstanceKey());
-        $this->assertArrayHasKey('transfers', $a->getParameterSchema()['properties']);
+        $this->assertArrayHasKey('transfers', Shape::sub($a->getParameterSchema(), 'properties'));
     }
 
     public function testWebSearchInstanceKeyAndHints(): void
@@ -1432,7 +1456,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $skill = new \SignalWire\Skills\Builtin\WikipediaSearch($agent);
 
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
         $this->assertArrayHasKey('num_results', $props);
         $this->assertSame(1, $props['num_results']['default']);
         $this->assertSame([], $skill->getHints());
@@ -1468,10 +1492,6 @@ class SkillsTest extends TestCase
         $registry = SkillRegistry::instance();
         $sources = $registry->listAllSkillSources();
 
-        $this->assertArrayHasKey('built-in', $sources);
-        $this->assertArrayHasKey('external_paths', $sources);
-        $this->assertArrayHasKey('entry_points', $sources);
-        $this->assertArrayHasKey('registered', $sources);
         $this->assertContains('datetime', $sources['built-in']);
 
         // A directly-registered non-builtin appears under 'registered'.
@@ -1486,7 +1506,7 @@ class SkillsTest extends TestCase
         // Constructor is public (mirrors Python's plain-class registry) while
         // instance() still returns one shared singleton.
         $fresh = new SkillRegistry();
-        $this->assertInstanceOf(SkillRegistry::class, $fresh);
+        $this->assertNotSame(SkillRegistry::instance(), $fresh);
         $this->assertSame(SkillRegistry::instance(), SkillRegistry::instance());
     }
 }

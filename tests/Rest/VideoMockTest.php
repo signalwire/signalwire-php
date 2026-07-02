@@ -31,7 +31,6 @@ class VideoMockTest extends TestCase
     public function roomsListStreamsReturnsDataCollection(): void
     {
         $body = $this->client->video()->rooms()->listStreams('room-1');
-        $this->assertIsArray($body);
         // /api/video/rooms/{id}/streams returns a paginated list ('data').
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
@@ -49,7 +48,6 @@ class VideoMockTest extends TestCase
             'room-1',
             'rtmp://example.com/live'
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -65,7 +63,6 @@ class VideoMockTest extends TestCase
     public function roomSessionsListReturnsDataCollection(): void
     {
         $body = $this->client->video()->roomSessions()->list();
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -78,7 +75,6 @@ class VideoMockTest extends TestCase
     public function roomSessionsGetReturnsSessionObject(): void
     {
         $body = $this->client->video()->roomSessions()->get('sess-abc');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -90,7 +86,6 @@ class VideoMockTest extends TestCase
     public function roomSessionsListEventsUsesEventsSubpath(): void
     {
         $body = $this->client->video()->roomSessions()->listEvents('sess-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -103,7 +98,6 @@ class VideoMockTest extends TestCase
     public function roomSessionsListRecordingsUsesRecordingsSubpath(): void
     {
         $body = $this->client->video()->roomSessions()->listRecordings('sess-2');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
 
         $j = $this->mock->journal()->last();
@@ -117,7 +111,6 @@ class VideoMockTest extends TestCase
     public function roomRecordingsListReturnsDataCollection(): void
     {
         $body = $this->client->video()->roomRecordings()->list();
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -130,7 +123,6 @@ class VideoMockTest extends TestCase
     public function roomRecordingsGetReturnsSingleRecording(): void
     {
         $body = $this->client->video()->roomRecordings()->get('rec-xyz');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -142,7 +134,6 @@ class VideoMockTest extends TestCase
     {
         // 204/empty turns into [] in the SDK.
         $body = $this->client->video()->roomRecordings()->delete('rec-del');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -154,7 +145,6 @@ class VideoMockTest extends TestCase
     public function roomRecordingsListEventsUsesEventsSubpath(): void
     {
         $body = $this->client->video()->roomRecordings()->listEvents('rec-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
 
         $j = $this->mock->journal()->last();
@@ -168,7 +158,6 @@ class VideoMockTest extends TestCase
     public function conferencesListConferenceTokens(): void
     {
         $body = $this->client->video()->conferences()->listConferenceTokens('conf-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -181,7 +170,6 @@ class VideoMockTest extends TestCase
     public function conferencesListStreams(): void
     {
         $body = $this->client->video()->conferences()->listStreams('conf-2');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -196,7 +184,6 @@ class VideoMockTest extends TestCase
     public function conferenceTokensGetReturnsSingleToken(): void
     {
         $body = $this->client->video()->conferenceTokens()->get('tok-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -208,7 +195,6 @@ class VideoMockTest extends TestCase
     public function conferenceTokensResetPostsToResetSubpath(): void
     {
         $body = $this->client->video()->conferenceTokens()->reset('tok-2');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -226,7 +212,6 @@ class VideoMockTest extends TestCase
     public function streamsGetReturnsStreamResource(): void
     {
         $body = $this->client->video()->streams()->get('stream-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -241,7 +226,6 @@ class VideoMockTest extends TestCase
             'stream-2',
             'rtmp://example.com/new'
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('PUT', $j->method);
@@ -255,7 +239,6 @@ class VideoMockTest extends TestCase
     public function streamsDelete(): void
     {
         $body = $this->client->video()->streams()->delete('stream-3');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);

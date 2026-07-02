@@ -20,6 +20,7 @@ use SignalWire\Relay\RecordAction;
 use SignalWire\Relay\StreamAction;
 use SignalWire\Relay\TapAction;
 use SignalWire\Relay\TranscribeAction;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for Action classes (Play / Record / Detect /
@@ -62,6 +63,7 @@ class ActionsMockTest extends TestCase
      */
     private function answeredInboundCall(string $callId): Call
     {
+        /** @var \ArrayObject<string,Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -97,10 +99,10 @@ class ActionsMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('call-play', $p['call_id'] ?? null);
         $this->assertSame('play-ctl-1', $p['control_id'] ?? null);
-        $this->assertSame('tts', $p['play'][0]['type'] ?? null);
+        $this->assertSame('tts', Shape::at($p, 'play', 0, 'type'));
     }
 
     #[Test]
@@ -115,7 +117,6 @@ class ActionsMockTest extends TestCase
             [['type' => 'silence', 'params' => ['duration' => 1]]],
             ['control_id' => 'play-ctl-fin'],
         );
-        $this->assertInstanceOf(PlayAction::class, $action);
         $event = $action->wait(5);
         $this->assertNotNull($event);
         $this->assertTrue($action->isDone());
@@ -137,7 +138,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'play-ctl-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -159,11 +160,9 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($vols);
         // JSON has no int/float distinction; the volume could decode as
         // either depending on the encoder. Compare numerically.
-        $this->assertEqualsWithDelta(
-            -3.0,
-            (float) ($vols[count($vols) - 1]->frame['params']['volume'] ?? null),
-            0.0001,
-        );
+        $vol = Shape::at($vols[count($vols) - 1]->frame, 'params', 'volume');
+        $this->assertIsNumeric($vol);
+        $this->assertEqualsWithDelta(-3.0, (float) $vol, 0.0001);
     }
 
     #[Test]
@@ -174,6 +173,7 @@ class ActionsMockTest extends TestCase
             ['emit' => ['state' => 'finished'], 'delay_ms' => 1],
         ]);
 
+        /** @var \ArrayObject<int,Action> $seen */
         $seen = new \ArrayObject();
         $action = $call->play(
             [['type' => 'silence', 'params' => ['duration' => 1]]],
@@ -206,10 +206,10 @@ class ActionsMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.record');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('call-rec', $p['call_id'] ?? null);
         $this->assertSame('rec-ctl-1', $p['control_id'] ?? null);
-        $this->assertSame('mp3', $p['record']['audio']['format'] ?? null);
+        $this->assertSame('mp3', Shape::at($p, 'record', 'audio', 'format'));
     }
 
     #[Test]
@@ -224,7 +224,6 @@ class ActionsMockTest extends TestCase
             ['format' => 'wav'],
             ['control_id' => 'rec-ctl-fin'],
         );
-        $this->assertInstanceOf(RecordAction::class, $action);
         $event = $action->wait(5);
         $this->assertNotNull($event);
         $this->assertSame('finished', $event->getParams()['state'] ?? null);
@@ -245,7 +244,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'rec-ctl-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -272,13 +271,12 @@ class ActionsMockTest extends TestCase
             ['type' => 'machine', 'params' => new \stdClass()],
             ['control_id' => 'det-ctl-1'],
         );
-        $this->assertInstanceOf(DetectAction::class, $action);
         $event = $action->wait(5);
         $this->assertNotNull($event);
         // Resolved with the detect payload, not the state(finished).
         $this->assertSame(
             'machine',
-            $event->getParams()['detect']['type'] ?? null,
+            Shape::at($event->getParams(), 'detect', 'type'),
         );
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.detect'));
@@ -297,7 +295,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'det-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -316,10 +314,10 @@ class ActionsMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.play_and_collect');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('call-pac', $p['call_id'] ?? null);
-        $this->assertSame('tts', $p['play'][0]['type'] ?? null);
-        $this->assertSame(1, $p['collect']['digits']['max'] ?? null);
+        $this->assertSame('tts', Shape::at($p, 'play', 0, 'type'));
+        $this->assertSame(1, Shape::at($p, 'collect', 'digits', 'max'));
     }
 
     #[Test]
@@ -331,7 +329,6 @@ class ActionsMockTest extends TestCase
             ['digits' => ['max' => 1]],
             ['control_id' => 'pac-go'],
         );
-        $this->assertInstanceOf(CollectAction::class, $action);
 
         // Push a play(finished) — the action MUST NOT resolve.
         $this->mock->push([
@@ -372,7 +369,7 @@ class ActionsMockTest extends TestCase
         $this->assertSame('calling.call.collect', $event->getEventType());
         $this->assertSame(
             'digit',
-            $event->getParams()['result']['type'] ?? null,
+            Shape::at($event->getParams(), 'result', 'type'),
         );
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.play_and_collect'));
@@ -392,7 +389,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'pac-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -404,21 +401,20 @@ class ActionsMockTest extends TestCase
     public function collectJournalsCallingCollect(): void
     {
         $call = $this->answeredInboundCall('call-col');
-        $action = $call->collect([
+        $call->collect([
             'digits'     => ['max' => 4],
             'control_id' => 'col-ctl',
         ]);
-        $this->assertInstanceOf(CollectAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.collect');
         $this->assertCount(1, $entries);
         $this->assertSame(
             ['max' => 4],
-            $entries[0]->frame['params']['digits'] ?? null,
+            Shape::at($entries[0]->frame, 'params', 'digits'),
         );
         $this->assertSame(
             'col-ctl',
-            $entries[0]->frame['params']['control_id'] ?? null,
+            Shape::at($entries[0]->frame, 'params', 'control_id'),
         );
     }
 
@@ -435,7 +431,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'col-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -453,7 +449,7 @@ class ActionsMockTest extends TestCase
         ]);
         $entries = $this->mock->journal()->recv('calling.pay');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('https://pay.example/connect', $p['payment_connector_url'] ?? null);
         $this->assertSame('pay-ctl', $p['control_id'] ?? null);
         $this->assertSame('9.99', $p['charge_amount'] ?? null);
@@ -464,7 +460,6 @@ class ActionsMockTest extends TestCase
     {
         $call = $this->answeredInboundCall('call-pay-act');
         $action = $call->pay('https://pay.example/connect', ['control_id' => 'pay-act']);
-        $this->assertInstanceOf(PayAction::class, $action);
         $this->assertSame('pay-act', $action->getControlId());
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.pay'));
@@ -483,7 +478,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'pay-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -502,7 +497,7 @@ class ActionsMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.send_fax');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('https://docs.example/test.pdf', $p['document'] ?? null);
         $this->assertSame('+15551112222', $p['identity'] ?? null);
         $this->assertSame('sfax-ctl', $p['control_id'] ?? null);
@@ -513,7 +508,6 @@ class ActionsMockTest extends TestCase
     {
         $call = $this->answeredInboundCall('call-rfax');
         $action = $call->receiveFax(['control_id' => 'rfax-ctl']);
-        $this->assertInstanceOf(FaxAction::class, $action);
         $this->assertSame('receive', $action->getFaxType());
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.receive_fax'));
@@ -534,9 +528,9 @@ class ActionsMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.tap');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertSame('audio', $p['tap']['type'] ?? null);
-        $this->assertSame(4000, $p['device']['params']['port'] ?? null);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame('audio', Shape::at($p, 'tap', 'type'));
+        $this->assertSame(4000, Shape::at($p, 'device', 'params', 'port'));
         $this->assertSame('tap-ctl', $p['control_id'] ?? null);
     }
 
@@ -549,13 +543,12 @@ class ActionsMockTest extends TestCase
             ['type' => 'rtp', 'params' => ['addr' => '203.0.113.1', 'port' => 4000]],
             ['control_id' => 'tap-stop'],
         );
-        $this->assertInstanceOf(TapAction::class, $action);
         $action->stop();
         $stops = $this->mock->journal()->recv('calling.tap.stop');
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'tap-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -573,7 +566,7 @@ class ActionsMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.stream');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('wss://stream.example/audio', $p['url'] ?? null);
         $this->assertSame('OPUS@48000h', $p['codec'] ?? null);
         $this->assertSame('strm-ctl', $p['control_id'] ?? null);
@@ -587,13 +580,12 @@ class ActionsMockTest extends TestCase
             'wss://stream.example/audio',
             ['control_id' => 'strm-stop'],
         );
-        $this->assertInstanceOf(StreamAction::class, $action);
         $action->stop();
         $stops = $this->mock->journal()->recv('calling.stream.stop');
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'strm-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -605,14 +597,13 @@ class ActionsMockTest extends TestCase
     public function transcribeJournalsCallingTranscribe(): void
     {
         $call = $this->answeredInboundCall('call-tr');
-        $action = $call->transcribe(['control_id' => 'tr-ctl']);
-        $this->assertInstanceOf(TranscribeAction::class, $action);
+        $call->transcribe(['control_id' => 'tr-ctl']);
 
         $entries = $this->mock->journal()->recv('calling.transcribe');
         $this->assertCount(1, $entries);
         $this->assertSame(
             'tr-ctl',
-            $entries[0]->frame['params']['control_id'] ?? null,
+            Shape::at($entries[0]->frame, 'params', 'control_id'),
         );
     }
 
@@ -626,7 +617,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'tr-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -638,15 +629,14 @@ class ActionsMockTest extends TestCase
     public function aiJournalsCallingAi(): void
     {
         $call = $this->answeredInboundCall('call-ai');
-        $action = $call->ai(
+        $call->ai(
             ['text' => 'You are helpful.'],
             ['control_id' => 'ai-ctl'],
         );
-        $this->assertInstanceOf(AIAction::class, $action);
 
         $entries = $this->mock->journal()->recv('calling.ai');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame(['text' => 'You are helpful.'], $p['prompt'] ?? null);
         $this->assertSame('ai-ctl', $p['control_id'] ?? null);
     }
@@ -664,7 +654,7 @@ class ActionsMockTest extends TestCase
         $this->assertNotEmpty($stops);
         $this->assertSame(
             'ai-stop',
-            $stops[count($stops) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
         );
     }
 

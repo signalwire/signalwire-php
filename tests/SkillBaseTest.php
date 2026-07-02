@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Skills\SkillBase;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Behavioral parity tests for the SkillBase.define_tool / SkillBase.validate_packages
@@ -87,7 +88,7 @@ class SkillBaseTest extends TestCase
         $this->assertNotNull($fn);
         // SkillBase::defineTool merges the skill's swaig_fields into the tool's
         // parameters (PHP's Service::defineTool carries them under argument.properties).
-        $this->assertSame('abc', $fn['argument']['properties']['meta_data_token'] ?? null);
+        $this->assertSame('abc', Shape::at($fn, 'argument', 'properties', 'meta_data_token'));
     }
 
     public function testValidatePackagesTrueWhenNoneRequired(): void
@@ -180,6 +181,9 @@ class SkillBaseTest extends TestCase
     // get_skill_data / update_skill_data (item I) — namespaced global_data
     // ------------------------------------------------------------------
 
+    /**
+     * @param array<string,mixed> $params
+     */
     private function dataSkill(AgentBase $agent, array $params = []): SkillBase
     {
         return new class ($agent, $params) extends SkillBase {
@@ -234,7 +238,8 @@ class SkillBaseTest extends TestCase
 
         $arr = $result->toArray();
         $update = null;
-        foreach ($arr['action'] ?? [] as $action) {
+        foreach (Shape::sub($arr, 'action') as $action) {
+            $action = Shape::arr($action);
             if (isset($action['set_global_data'])) {
                 $update = $action['set_global_data'];
             }
@@ -252,12 +257,13 @@ class SkillBaseTest extends TestCase
 
         $arr = $result->toArray();
         $update = null;
-        foreach ($arr['action'] ?? [] as $action) {
+        foreach (Shape::sub($arr, 'action') as $action) {
+            $action = Shape::arr($action);
             if (isset($action['set_global_data'])) {
                 $update = $action['set_global_data'];
             }
         }
         $this->assertNotNull($update);
-        $this->assertArrayHasKey('skill:stateful', $update);
+        $this->assertArrayHasKey('skill:stateful', Shape::arr($update));
     }
 }

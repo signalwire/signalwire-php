@@ -14,6 +14,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\SWML\Service;
 use SignalWire\SWML\SwmlRenderer;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Behavioral parity tests for SwmlRenderer. Mirrors the Python reference
@@ -27,12 +28,10 @@ class SwmlRendererTest extends TestCase
         return new Service(name: 'test', basicAuthUser: 'u', basicAuthPassword: 'p');
     }
 
-    /** @return array<string,mixed> */
+    /** @return array<array-key,mixed> */
     private function decode(string $swml): array
     {
-        $decoded = json_decode($swml, true);
-        $this->assertIsArray($decoded);
-        return $decoded;
+        return Shape::arr(json_decode($swml, true));
     }
 
     public function testRenderSwmlBuildsAiVerbWithPromptText(): void
@@ -40,15 +39,15 @@ class SwmlRendererTest extends TestCase
         $swml = SwmlRenderer::renderSwml('You are a helpful agent.', $this->service());
         $doc = $this->decode($swml);
 
-        $main = $doc['sections']['main'];
+        $main = Shape::sub($doc, 'sections', 'main');
         $ai = null;
         foreach ($main as $verb) {
-            if (isset($verb['ai'])) {
+            if (is_array($verb) && isset($verb['ai'])) {
                 $ai = $verb['ai'];
             }
         }
         $this->assertNotNull($ai, 'an ai verb must be present');
-        $this->assertSame('You are a helpful agent.', $ai['prompt']['text']);
+        $this->assertSame('You are a helpful agent.', Shape::at($ai, 'prompt', 'text'));
     }
 
     public function testRenderSwmlIncludesSwaigFunctions(): void
@@ -63,7 +62,7 @@ class SwmlRendererTest extends TestCase
 
         $ai = $this->findAi($doc);
         $this->assertArrayHasKey('SWAIG', $ai);
-        $this->assertSame('get_time', $ai['SWAIG']['functions'][0]['function']);
+        $this->assertSame('get_time', Shape::at($ai, 'SWAIG', 'functions', 0, 'function'));
     }
 
     public function testRenderSwmlPrependsStartupAndHangupHooks(): void
@@ -75,7 +74,7 @@ class SwmlRendererTest extends TestCase
             hangupHookUrl: 'https://a.example.com/hangup',
         );
         $ai = $this->findAi($this->decode($swml));
-        $names = array_column($ai['SWAIG']['functions'], 'function');
+        $names = array_column(Shape::sub($ai, 'SWAIG', 'functions'), 'function');
         $this->assertContains('startup_hook', $names);
         $this->assertContains('hangup_hook', $names);
     }
@@ -90,7 +89,10 @@ class SwmlRendererTest extends TestCase
             recordFormat: 'wav',
         );
         $doc = $this->decode($swml);
-        $verbs = array_map(static fn ($v) => array_key_first($v), $doc['sections']['main']);
+        $verbs = array_map(
+            static fn (mixed $v): int|string|null => is_array($v) ? array_key_first($v) : null,
+            Shape::sub($doc, 'sections', 'main')
+        );
         $this->assertContains('answer', $verbs);
         $this->assertContains('record_call', $verbs);
     }
@@ -103,7 +105,7 @@ class SwmlRendererTest extends TestCase
             defaultWebhookUrl: 'https://a.example.com/swaig',
         );
         $ai = $this->findAi($this->decode($swml));
-        $this->assertSame('https://a.example.com/swaig', $ai['SWAIG']['defaults']['web_hook_url']);
+        $this->assertSame('https://a.example.com/swaig', Shape::at($ai, 'SWAIG', 'defaults', 'web_hook_url'));
     }
 
     public function testRenderFunctionResponseSwmlBuildsPlay(): void
@@ -111,8 +113,8 @@ class SwmlRendererTest extends TestCase
         $swml = SwmlRenderer::renderFunctionResponseSwml('Here is your answer.', $this->service());
         $doc = $this->decode($swml);
         $play = null;
-        foreach ($doc['sections']['main'] as $verb) {
-            if (isset($verb['play'])) {
+        foreach (Shape::sub($doc, 'sections', 'main') as $verb) {
+            if (is_array($verb) && isset($verb['play'])) {
                 $play = $verb['play'];
             }
         }
@@ -127,7 +129,10 @@ class SwmlRendererTest extends TestCase
             actions: [['hangup' => ['reason' => 'done']]],
         );
         $doc = $this->decode($swml);
-        $verbs = array_map(static fn ($v) => array_key_first($v), $doc['sections']['main']);
+        $verbs = array_map(
+            static fn (mixed $v): int|string|null => is_array($v) ? array_key_first($v) : null,
+            Shape::sub($doc, 'sections', 'main')
+        );
         $this->assertContains('hangup', $verbs);
     }
 
@@ -137,9 +142,12 @@ class SwmlRendererTest extends TestCase
      */
     private function findAi(array $doc): array
     {
-        foreach ($doc['sections']['main'] as $verb) {
-            if (isset($verb['ai'])) {
-                return $verb['ai'];
+        foreach (Shape::sub($doc, 'sections', 'main') as $verb) {
+            if (is_array($verb) && isset($verb['ai'])) {
+                $ai = $verb['ai'];
+                $this->assertIsArray($ai);
+                /** @var array<string,mixed> $ai */
+                return $ai;
             }
         }
         $this->fail('no ai verb found');

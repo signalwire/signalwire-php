@@ -33,7 +33,6 @@ class FabricMockTest extends TestCase
     public function addressesListReturnsDataCollection(): void
     {
         $body = $this->client->fabric()->addresses()->list();
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -47,7 +46,6 @@ class FabricMockTest extends TestCase
     public function addressesGetUsesAddressId(): void
     {
         $body = $this->client->fabric()->addresses()->get('addr-9001');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -82,7 +80,6 @@ class FabricMockTest extends TestCase
     public function callFlowsListAddressesUsesSingularPath(): void
     {
         $body = $this->client->fabric()->callFlows()->listAddresses('cf-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -99,7 +96,6 @@ class FabricMockTest extends TestCase
     public function conferenceRoomsListAddressesUsesSingularPath(): void
     {
         $body = $this->client->fabric()->conferenceRooms()->listAddresses('cr-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
 
         $j = $this->mock->journal()->last();
@@ -114,7 +110,6 @@ class FabricMockTest extends TestCase
     public function subscribersGetSipEndpoint(): void
     {
         $body = $this->client->fabric()->subscribers()->getSipEndpoint('sub-1', 'ep-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -133,7 +128,6 @@ class FabricMockTest extends TestCase
             'ep-1',
             username: 'renamed'
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('PATCH', $j->method);
@@ -150,7 +144,6 @@ class FabricMockTest extends TestCase
     public function subscribersDeleteSipEndpoint(): void
     {
         $body = $this->client->fabric()->subscribers()->deleteSipEndpoint('sub-1', 'ep-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -170,7 +163,6 @@ class FabricMockTest extends TestCase
             'addr-1',
             extras: ['email' => 'invitee@example.com']
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -188,7 +180,6 @@ class FabricMockTest extends TestCase
             'tok-1',
             extras: ['allowed_addresses' => ['addr-1', 'addr-2']]
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -202,7 +193,6 @@ class FabricMockTest extends TestCase
     public function tokensRefreshSubscriberToken(): void
     {
         $body = $this->client->fabric()->tokens()->refreshSubscriberToken('abc-123');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -218,7 +208,6 @@ class FabricMockTest extends TestCase
     public function resourcesListReturnsDataCollection(): void
     {
         $body = $this->client->fabric()->resources()->list();
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -232,7 +221,6 @@ class FabricMockTest extends TestCase
     public function resourcesGetReturnsSingleResource(): void
     {
         $body = $this->client->fabric()->resources()->get('res-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -243,7 +231,6 @@ class FabricMockTest extends TestCase
     public function resourcesDelete(): void
     {
         $body = $this->client->fabric()->resources()->delete('res-2');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -255,7 +242,6 @@ class FabricMockTest extends TestCase
     public function resourcesListAddresses(): void
     {
         $body = $this->client->fabric()->resources()->listAddresses('res-3');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -271,7 +257,6 @@ class FabricMockTest extends TestCase
             'res-4',
             'da-7'
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);

@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Event;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for inbound calls (server-initiated).
@@ -76,6 +77,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function onCallHandlerFiresWithCallObject(): void
     {
+        /** @var \ArrayObject<int, Call> $seen */
         $seen = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($seen): void {
             $seen[] = $call;
@@ -95,7 +97,7 @@ class InboundCallMockTest extends TestCase
         $this->assertTrue($arrived);
         $this->assertCount(1, $seen);
         $first = $seen[0];
-        $this->assertInstanceOf(Call::class, $first);
+        $this->assertNotNull($first);
         $this->assertSame('c-handler', $first->callId);
 
         // Journal: the server pushed a calling.call.receive event.
@@ -106,6 +108,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function inboundCallObjectHasCorrectCallIdAndDirection(): void
     {
+        /** @var \ArrayObject<string, mixed> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call_id'] = $call->callId;
@@ -128,6 +131,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function inboundCallCarriesFromToInDevice(): void
     {
+        /** @var \ArrayObject<string, mixed> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['device'] = $call->device;
@@ -145,7 +149,7 @@ class InboundCallMockTest extends TestCase
             5.0,
         );
         $this->assertTrue($arrived);
-        $params = $captured['device']['params'] ?? [];
+        $params = Shape::sub($captured['device'], 'params');
         $this->assertSame('+15551112233', $params['from_number'] ?? null);
         $this->assertSame('+15554445566', $params['to_number'] ?? null);
 
@@ -155,6 +159,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function inboundCallInitialStateIsCreated(): void
     {
+        /** @var \ArrayObject<string, mixed> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['state'] = $call->state;
@@ -178,6 +183,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function answerInHandlerJournalsCallingAnswer(): void
     {
+        /** @var \ArrayObject<int, bool> $answered */
         $answered = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($answered): void {
             $call->answer();
@@ -194,12 +200,13 @@ class InboundCallMockTest extends TestCase
 
         $answers = $this->mock->journal()->recv('calling.answer');
         $this->assertNotEmpty($answers, 'no calling.answer in journal');
-        $this->assertSame('c-ans', $answers[count($answers) - 1]->frame['params']['call_id'] ?? null);
+        $this->assertSame('c-ans', Shape::at($answers[count($answers) - 1]->frame, 'params', 'call_id'));
     }
 
     #[Test]
     public function answerThenStateEventAdvancesCallState(): void
     {
+        /** @var \ArrayObject<string, Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -236,6 +243,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function hangupInHandlerJournalsCallingEnd(): void
     {
+        /** @var \ArrayObject<int, bool> $hung */
         $hung = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($hung): void {
             $call->hangup('busy');
@@ -252,7 +260,7 @@ class InboundCallMockTest extends TestCase
 
         $ends = $this->mock->journal()->recv('calling.end');
         $this->assertNotEmpty($ends, 'no calling.end in journal');
-        $p = $ends[count($ends) - 1]->frame['params'] ?? [];
+        $p = Shape::sub($ends[count($ends) - 1]->frame, 'params');
         $this->assertSame('c-hangup', $p['call_id'] ?? null);
         $this->assertSame('busy', $p['reason'] ?? null);
     }
@@ -260,6 +268,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function passInHandlerJournalsCallingPass(): void
     {
+        /** @var \ArrayObject<int, bool> $passed */
         $passed = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($passed): void {
             $call->pass();
@@ -278,7 +287,7 @@ class InboundCallMockTest extends TestCase
         $this->assertNotEmpty($passes);
         $this->assertSame(
             'c-pass',
-            $passes[count($passes) - 1]->frame['params']['call_id'] ?? null,
+            Shape::at($passes[count($passes) - 1]->frame, 'params', 'call_id'),
         );
     }
 
@@ -289,6 +298,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function multipleInboundCallsInSequenceEachUniqueObject(): void
     {
+        /** @var \ArrayObject<int, Call> $seen */
         $seen = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($seen): void {
             $seen[] = $call;
@@ -301,9 +311,13 @@ class InboundCallMockTest extends TestCase
 
         $this->assertTrue($both);
         $this->assertCount(2, $seen);
-        $this->assertSame('c-seq-1', $seen[0]->callId);
-        $this->assertSame('c-seq-2', $seen[1]->callId);
-        $this->assertNotSame($seen[0], $seen[1]);
+        $first  = $seen[0];
+        $second = $seen[1];
+        $this->assertNotNull($first);
+        $this->assertNotNull($second);
+        $this->assertSame('c-seq-1', $first->callId);
+        $this->assertSame('c-seq-2', $second->callId);
+        $this->assertNotSame($first, $second);
 
         // Two receives showed up in the server outbound journal.
         $this->assertGreaterThanOrEqual(
@@ -315,6 +329,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function multipleInboundCallsNoStateBleed(): void
     {
+        /** @var \ArrayObject<string, Call> $callsById */
         $callsById = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($callsById): void {
             $callsById[$call->callId] = $call;
@@ -359,6 +374,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function scriptedStateSequenceAdvancesCall(): void
     {
+        /** @var \ArrayObject<string, Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -393,6 +409,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function syncHandlerCompletesNormally(): void
     {
+        /** @var \ArrayObject<string, mixed> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call_id'] = $call->callId;
@@ -413,6 +430,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function handlerExceptionDoesNotCrashClient(): void
     {
+        /** @var \ArrayObject<int, bool> $fired */
         $fired = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($fired): void {
             $fired[] = true;
@@ -441,6 +459,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function scenarioPlayFullInboundFlow(): void
     {
+        /** @var \ArrayObject<string, Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -499,7 +518,6 @@ class InboundCallMockTest extends TestCase
         $this->assertNotEmpty($pid, 'failed to fork scenario_play curl');
 
         // Drive the SDK's recv loop synchronously while the scenario runs.
-        /** @var Call|null $call */
         $reached = MockTest::pumpUntil(
             $this->client,
             function () use ($captured): bool {
@@ -538,6 +556,7 @@ class InboundCallMockTest extends TestCase
     #[Test]
     public function inboundCallJournalSendRecordsCallingCallReceive(): void
     {
+        /** @var \ArrayObject<int, bool> $fired */
         $fired = new \ArrayObject();
         $this->client->onCall(function () use ($fired): void {
             $fired[] = true;
@@ -548,7 +567,7 @@ class InboundCallMockTest extends TestCase
 
         $sends = $this->mock->journal()->send('calling.call.receive');
         $this->assertNotEmpty($sends);
-        $inner = $sends[count($sends) - 1]->frame['params']['params'] ?? [];
+        $inner = Shape::sub($sends[count($sends) - 1]->frame, 'params', 'params');
         $this->assertSame('c-wire', $inner['call_id'] ?? null);
         $this->assertSame('inbound', $inner['direction'] ?? null);
     }

@@ -13,6 +13,7 @@ namespace SignalWire\Tests\Security;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Security\AuthHandler;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Behavioral parity tests for AuthHandler — the multi-method auth helper.
@@ -61,9 +62,9 @@ class AuthHandlerTest extends TestCase
         $info = $h->getAuthInfo();
 
         $this->assertSame(['enabled' => true, 'username' => 'user'], $info['basic']);
-        $this->assertTrue($info['bearer']['enabled']);
-        $this->assertSame('X-Custom-Key', $info['api_key']['header']);
-        $this->assertSame('Use X-Custom-Key: <key>', $info['api_key']['hint']);
+        $this->assertTrue(Shape::at($info, 'bearer', 'enabled'));
+        $this->assertSame('X-Custom-Key', Shape::at($info, 'api_key', 'header'));
+        $this->assertSame('Use X-Custom-Key: <key>', Shape::at($info, 'api_key', 'hint'));
     }
 
     public function testGetAuthInfoOmitsUnconfiguredMethods(): void

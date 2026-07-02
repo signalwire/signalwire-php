@@ -7,6 +7,7 @@ namespace SignalWire\Tests\POM;
 use PHPUnit\Framework\TestCase;
 use SignalWire\POM\PomBuilder;
 use SignalWire\POM\Section;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-behavior tests for SignalWire\POM\PomBuilder.
@@ -51,11 +52,14 @@ final class PomBuilderTest extends TestCase
             ->addToSection('Fresh', null, null, ['x', 'y']); // auto-vivify
 
         $notes = $builder->getSection('Notes');
+        $this->assertNotNull($notes);
         $this->assertSame("First.\n\nSecond.", $notes->body);
         $this->assertSame(['a bullet'], $notes->bullets);
 
         $this->assertTrue($builder->hasSection('Fresh'));
-        $this->assertSame(['x', 'y'], $builder->getSection('Fresh')->bullets);
+        $fresh = $builder->getSection('Fresh');
+        $this->assertNotNull($fresh);
+        $this->assertSame(['x', 'y'], $fresh->bullets);
     }
 
     public function testAddSubsectionAutoVivifiesParent(): void
@@ -65,6 +69,7 @@ final class PomBuilderTest extends TestCase
 
         $this->assertTrue($builder->hasSection('Parent'));
         $parent = $builder->getSection('Parent');
+        $this->assertNotNull($parent);
         $this->assertCount(1, $parent->subsections);
         $this->assertSame('Child', $parent->subsections[0]->title);
         $this->assertSame('child body', $parent->subsections[0]->body);
@@ -89,7 +94,7 @@ final class PomBuilderTest extends TestCase
 
         $json = $builder->toJson();
         $decoded = json_decode($json, true);
-        $this->assertSame('S', $decoded[0]['title']);
+        $this->assertSame('S', Shape::at($decoded, 0, 'title'));
     }
 
     public function testFromSectionsRebuildsTitleLookup(): void

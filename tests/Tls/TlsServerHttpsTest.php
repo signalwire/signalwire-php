@@ -87,7 +87,7 @@ final class TlsServerHttpsTest extends TestCase
         $status = proc_get_status($proc);
         // With setsid the spawned process is its own session/group leader, so
         // its PID is also the process-group id.
-        self::$pgid = (int) ($status['pid'] ?? 0);
+        self::$pgid = (int) $status['pid'];
     }
 
     public static function tearDownAfterClass(): void

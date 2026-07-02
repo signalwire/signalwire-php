@@ -14,6 +14,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWAIG\SwaigFunction;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Behavioral parity tests for SwaigFunction. Mirrors the Python reference
@@ -79,7 +80,9 @@ class SwaigFunctionTest extends TestCase
         );
         $result = $fn->execute([], []);
         // Error is contained — the AI sees a generic recovery message, never the exception.
-        $this->assertStringContainsString("couldn't complete that action", $result['response']);
+        $response = $result['response'] ?? null;
+        $this->assertIsString($response);
+        $this->assertStringContainsString("couldn't complete that action", $response);
     }
 
     public function testToSwaigBuildsDefinition(): void
@@ -96,9 +99,9 @@ class SwaigFunctionTest extends TestCase
         $this->assertSame('lookup', $def['function']);
         $this->assertSame('Look something up', $def['description']);
         $this->assertSame('https://agent.example.com/swaig', $def['web_hook_url']);
-        $this->assertSame('object', $def['parameters']['type']);
-        $this->assertArrayHasKey('query', $def['parameters']['properties']);
-        $this->assertSame(['query'], $def['parameters']['required']);
+        $this->assertSame('object', Shape::at($def, 'parameters', 'type'));
+        $this->assertArrayHasKey('query', Shape::sub($def, 'parameters', 'properties'));
+        $this->assertSame(['query'], Shape::at($def, 'parameters', 'required'));
     }
 
     public function testToSwaigAppendsTokenAndCallId(): void

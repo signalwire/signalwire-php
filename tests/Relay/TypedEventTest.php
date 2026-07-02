@@ -6,9 +6,9 @@ namespace SignalWire\Tests\Relay;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use SignalWire\Relay\Event\CallingErrorEvent;
 use SignalWire\Relay\Event\CallReceiveEvent;
 use SignalWire\Relay\Event\CallStateEvent;
-use SignalWire\Relay\Event\CallingErrorEvent;
 use SignalWire\Relay\Event\CollectEvent;
 use SignalWire\Relay\Event\ConferenceEvent;
 use SignalWire\Relay\Event\ConnectEvent;
@@ -30,6 +30,7 @@ use SignalWire\Relay\Event\SendDigitsEvent;
 use SignalWire\Relay\Event\StreamEvent;
 use SignalWire\Relay\Event\TapEvent;
 use SignalWire\Relay\Event\TranscribeEvent;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Tests for the typed RELAY event hierarchy (signalwire.relay.event).
@@ -257,7 +258,7 @@ final class TypedEventTest extends TestCase
         ]);
         $this->assertSame('tapping', $event->getState());
         $this->assertSame('audio', $event->getTap()['type']);
-        $this->assertSame('1.2.3.4', $event->getDevice()['params']['addr']);
+        $this->assertSame('1.2.3.4', Shape::at($event->getDevice(), 'params', 'addr'));
     }
 
     #[Test]

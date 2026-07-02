@@ -7,6 +7,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agents\BedrockAgent;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Tests for the Amazon Bedrock voice-to-voice prefab agent (item I).
@@ -29,11 +30,12 @@ class BedrockAgentTest extends TestCase
         $agent = $this->makeAgent();
         $swml = $agent->renderSwml();
 
-        $main = $swml['sections']['main'];
+        $main = Shape::sub($swml, 'sections', 'main');
         // No `ai` verb should remain; it must be transformed to amazon_bedrock.
         $hasAi = false;
         $bedrock = null;
         foreach ($main as $verb) {
+            $verb = Shape::arr($verb);
             if (isset($verb['ai'])) {
                 $hasAi = true;
             }
@@ -59,15 +61,16 @@ class BedrockAgentTest extends TestCase
         $swml = $agent->renderSwml();
 
         $bedrock = null;
-        foreach ($swml['sections']['main'] as $verb) {
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            $verb = Shape::arr($verb);
             if (isset($verb['amazon_bedrock'])) {
                 $bedrock = $verb['amazon_bedrock'];
             }
         }
         $this->assertNotNull($bedrock);
-        $this->assertSame('joanna', $bedrock['prompt']['voice_id']);
-        $this->assertSame(0.5, $bedrock['prompt']['temperature']);
-        $this->assertSame(0.95, $bedrock['prompt']['top_p']);
+        $this->assertSame('joanna', Shape::at($bedrock, 'prompt', 'voice_id'));
+        $this->assertSame(0.5, Shape::at($bedrock, 'prompt', 'temperature'));
+        $this->assertSame(0.95, Shape::at($bedrock, 'prompt', 'top_p'));
     }
 
     #[Test]
@@ -78,7 +81,7 @@ class BedrockAgentTest extends TestCase
         $this->assertSame($agent, $ret);
 
         $bedrock = $this->bedrockVerb($agent);
-        $this->assertSame('kevin', $bedrock['prompt']['voice_id']);
+        $this->assertSame('kevin', Shape::at($bedrock, 'prompt', 'voice_id'));
     }
 
     #[Test]
@@ -88,9 +91,9 @@ class BedrockAgentTest extends TestCase
         $agent->setInferenceParams(temperature: 0.2);
 
         $bedrock = $this->bedrockVerb($agent);
-        $this->assertSame(0.2, $bedrock['prompt']['temperature']);
+        $this->assertSame(0.2, Shape::at($bedrock, 'prompt', 'temperature'));
         // top_p unchanged from the 0.9 default.
-        $this->assertSame(0.9, $bedrock['prompt']['top_p']);
+        $this->assertSame(0.9, Shape::at($bedrock, 'prompt', 'top_p'));
     }
 
     #[Test]
@@ -100,7 +103,7 @@ class BedrockAgentTest extends TestCase
         $agent->setLlmTemperature(0.33);
 
         $bedrock = $this->bedrockVerb($agent);
-        $this->assertSame(0.33, $bedrock['prompt']['temperature']);
+        $this->assertSame(0.33, Shape::at($bedrock, 'prompt', 'temperature'));
     }
 
     #[Test]
@@ -125,20 +128,22 @@ class BedrockAgentTest extends TestCase
         ]);
 
         $bedrock = $this->bedrockVerb($agent);
-        $this->assertArrayNotHasKey('barge_confidence', $bedrock['prompt']);
-        $this->assertArrayNotHasKey('presence_penalty', $bedrock['prompt']);
-        $this->assertArrayNotHasKey('frequency_penalty', $bedrock['prompt']);
+        $prompt = Shape::sub($bedrock, 'prompt');
+        $this->assertArrayNotHasKey('barge_confidence', $prompt);
+        $this->assertArrayNotHasKey('presence_penalty', $prompt);
+        $this->assertArrayNotHasKey('frequency_penalty', $prompt);
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function bedrockVerb(BedrockAgent $agent): array
     {
         $swml = $agent->renderSwml();
-        foreach ($swml['sections']['main'] as $verb) {
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            $verb = Shape::arr($verb);
             if (isset($verb['amazon_bedrock'])) {
-                return $verb['amazon_bedrock'];
+                return Shape::arr($verb['amazon_bedrock']);
             }
         }
         $this->fail('amazon_bedrock verb not found');

@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\Logging\Logger;
 use SignalWire\Logging\LoggingConfig;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Behavioral parity tests for the LoggingConfig free-function hosts:
@@ -37,7 +37,6 @@ class LoggingConfigFreeFunctionsTest extends TestCase
     public function testGetLoggerReturnsNamedLogger(): void
     {
         $logger = LoggingConfig::getLogger('my.component');
-        $this->assertInstanceOf(Logger::class, $logger);
         $this->assertSame('my.component', $logger->getName());
     }
 
@@ -72,7 +71,7 @@ class LoggingConfigFreeFunctionsTest extends TestCase
 
         $this->assertSame('helloworld[31m', $result['msg']);
         $this->assertSame('ok', $result['clean']);
-        $this->assertSame('ab', $result['nested']['inner']);
+        $this->assertSame('ab', Shape::at($result, 'nested', 'inner'));
         $this->assertSame(42, $result['num']);
     }
 

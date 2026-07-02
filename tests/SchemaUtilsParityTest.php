@@ -123,7 +123,6 @@ class SchemaUtilsParityTest extends TestCase
     {
         $svc = new Service(name: 'test');
         $su = $svc->getSchemaUtils();
-        $this->assertInstanceOf(SchemaUtils::class, $su);
         $this->assertNotEmpty($su->getAllVerbNames());
     }
 

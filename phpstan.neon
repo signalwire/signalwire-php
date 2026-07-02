@@ -1,7 +1,16 @@
+includes:
+    # phpstan-phpunit: teaches the analyser that PHPUnit assertions narrow types
+    # (assertIsArray()/assertInstanceOf()/assertNotNull()/… refine the value's
+    # static type for the rest of the method). Load ONLY the type-inference
+    # extension, not rules.neon — we want the narrowing, not extra opinionated
+    # PHPUnit lint rules. This is what makes the test suite's existing
+    # assert-then-index idiom type-check at level 9 instead of hitting `mixed`.
+    - vendor/phpstan/phpstan-phpunit/extension.neon
 parameters:
     level: 9
     paths:
         - src
         - scripts
+        - tests
     bootstrapFiles:
         - vendor/autoload.php

@@ -68,11 +68,13 @@ final class TlsSupport
         }
     }
 
+    /** @return non-empty-string */
     public static function caCert(string $certsDir): string
     {
         return $certsDir . DIRECTORY_SEPARATOR . 'ca.crt';
     }
 
+    /** @return non-empty-string */
     public static function serverCert(string $certsDir): string
     {
         return $certsDir . DIRECTORY_SEPARATOR . 'server.crt';
@@ -194,10 +196,11 @@ final class TlsSupport
      * Return the most recent mock_signalwire journal entry as an assoc array,
      * fetched over the HTTPS control plane (trusting the test CA), or null.
      *
-     * @return array<string,mixed>|null
+     * @return array<array-key,mixed>|null
      */
     public static function restLastJournal(string $httpsBase, string $caCert): ?array
     {
+        self::assertNonEmpty($caCert, 'restLastJournal: caCert path is empty');
         $ch = curl_init($httpsBase . '/__mock__/journal');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -221,6 +224,7 @@ final class TlsSupport
 
     public static function restReset(string $httpsBase, string $caCert): void
     {
+        self::assertNonEmpty($caCert, 'restReset: caCert path is empty');
         foreach (['/__mock__/journal/reset', '/__mock__/scenarios/reset'] as $path) {
             $ch = curl_init($httpsBase . $path);
             curl_setopt_array($ch, [
@@ -335,6 +339,7 @@ final class TlsSupport
 
     private static function probeHealthTls(string $base, string $caCert, string $needle): bool
     {
+        self::assertNonEmpty($caCert, 'probeHealthTls: caCert path is empty');
         $ch = curl_init($base . '/__mock__/health');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -348,6 +353,20 @@ final class TlsSupport
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         return $code === 200 && is_string($body) && str_contains($body, $needle);
+    }
+
+    /**
+     * Guard that a CA-cert path is a non-empty string before it is handed to
+     * CURLOPT_CAINFO (which the cURL stub types as non-empty-string). An empty
+     * path here is a real harness misconfiguration, not a runtime input.
+     *
+     * @phpstan-assert non-empty-string $value
+     */
+    private static function assertNonEmpty(string $value, string $message): void
+    {
+        if ($value === '') {
+            throw new \RuntimeException($message);
+        }
     }
 
     private static function python(): string

@@ -12,6 +12,7 @@ use SignalWire\DataMap\DataMap;
 use SignalWire\Server\AgentServer;
 use SignalWire\SignalWire;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Tests for the non-skills "tail" of item I: AgentBase get_name / get_full_url /
@@ -68,7 +69,7 @@ class ItemINonSkillsTailTest extends TestCase
         $this->assertSame($agent, $ret);
         // registerSipUsername stores the derived name under the 'sip_username'
         // AI param; the final registration wins. Assert it is a cleaned token.
-        $params = $agent->buildAiVerb()['params'] ?? [];
+        $params = Shape::sub($agent->buildAiVerb(), 'params');
         $this->assertArrayHasKey('sip_username', $params);
         $this->assertMatchesRegularExpression('/^[a-z0-9_]+$/', (string) $params['sip_username']);
     }
@@ -82,7 +83,6 @@ class ItemINonSkillsTailTest extends TestCase
         $this->assertNotEmpty($skills);
         // Each entry is an associative array carrying at least a name.
         foreach ($skills as $entry) {
-            $this->assertIsArray($entry);
             $this->assertArrayHasKey('name', $entry);
         }
         $names = array_column($skills, 'name');
@@ -103,7 +103,6 @@ class ItemINonSkillsTailTest extends TestCase
     public function createSimpleContextReturnsNamedContext(): void
     {
         $ctx = Context::createSimpleContext();
-        $this->assertInstanceOf(Context::class, $ctx);
         $this->assertSame('default', $ctx->getName());
 
         $named = Context::createSimpleContext('onboarding');
@@ -121,12 +120,10 @@ class ItemINonSkillsTailTest extends TestCase
             'It is ${response.temp}',
             ['city' => ['type' => 'string', 'required' => true]],
         );
-        $this->assertInstanceOf(DataMap::class, $dm);
-
         $swaig = $dm->toSwaigFunction();
         $this->assertSame('weather', $swaig['function']);
-        $this->assertSame(['city'], $swaig['argument']['required']);
-        $this->assertSame('https://api.example.com/weather', $swaig['data_map']['webhooks'][0]['url']);
+        $this->assertSame(['city'], Shape::at($swaig, 'argument', 'required'));
+        $this->assertSame('https://api.example.com/weather', Shape::at($swaig, 'data_map', 'webhooks', 0, 'url'));
     }
 
     #[Test]
@@ -136,12 +133,10 @@ class ItemINonSkillsTailTest extends TestCase
             'router',
             ['${args.dept}' => ['/sales/', new FunctionResult('to sales')]],
         );
-        $this->assertInstanceOf(DataMap::class, $dm);
-
         $swaig = $dm->toSwaigFunction();
         $this->assertSame('router', $swaig['function']);
-        $this->assertCount(1, $swaig['data_map']['expressions']);
-        $this->assertSame('/sales/', $swaig['data_map']['expressions'][0]['pattern']);
+        $this->assertCount(1, Shape::sub($swaig, 'data_map', 'expressions'));
+        $this->assertSame('/sales/', Shape::at($swaig, 'data_map', 'expressions', 0, 'pattern'));
     }
 
     // ── AgentServer.register_global_routing_callback ─────────────────────

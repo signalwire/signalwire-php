@@ -227,8 +227,10 @@ class LivewireTest extends TestCase
 
     public function testStopResponseAndToolErrorAreExceptions(): void
     {
-        $this->assertInstanceOf(\Throwable::class, new StopResponse('stop'));
-        $this->assertInstanceOf(\Throwable::class, new ToolError('boom'));
+        // StopResponse / ToolError extend \Exception (statically guaranteed);
+        // exercise that they are throwable and carry their message.
+        $this->assertSame('stop', (new StopResponse('stop'))->getMessage());
+        $this->assertSame('boom', (new ToolError('boom'))->getMessage());
         $this->expectException(ToolError::class);
         throw new ToolError('boom');
     }
@@ -303,9 +305,8 @@ class LivewireTest extends TestCase
         $llm = new OpenAILLM(['model' => 'gpt-4o-mini']);
         $this->assertSame('gpt-4o-mini', $llm->model);
 
-        // SileroVAD.load() factory returns a fresh instance.
-        $vad = SileroVAD::load();
-        $this->assertInstanceOf(SileroVAD::class, $vad);
+        // SileroVAD.load() factory returns a fresh instance (non-null by return type).
+        SileroVAD::load();
     }
 
     public function testRoomHasConstantName(): void
@@ -316,8 +317,7 @@ class LivewireTest extends TestCase
     public function testJobContextProvidesRoomAndProc(): void
     {
         $ctx = new JobContext();
-        $this->assertInstanceOf(Room::class, $ctx->room);
-        $this->assertInstanceOf(JobProcess::class, $ctx->proc);
+        $this->assertSame('livewire-room', $ctx->room->name);
         // connect / waitForParticipant are no-ops.
         $ctx->connect();
         $ctx->waitForParticipant();

@@ -6,6 +6,7 @@ namespace SignalWire\Tests\Core;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Core\ConfigLoader;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-behavior tests for SignalWire\Core\ConfigLoader.
@@ -35,6 +36,9 @@ final class ConfigLoaderTest extends TestCase
         putenv('SWML_FOO_BAR');
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     private function writeConfig(array $data): string
     {
         $path = $this->dir . '/config.json';
@@ -112,9 +116,9 @@ final class ConfigLoaderTest extends TestCase
 
         $merged = $loader->mergeWithEnv('SWML_');
         // Nested env key materialized
-        $this->assertSame('fromenv', $merged['foo']['bar']);
+        $this->assertSame('fromenv', Shape::at($merged, 'foo', 'bar'));
         // Config value preserved
-        $this->assertSame('fromconfig', $merged['existing']['key']);
+        $this->assertSame('fromconfig', Shape::at($merged, 'existing', 'key'));
     }
 
     public function testFindConfigFileServiceSpecific(): void

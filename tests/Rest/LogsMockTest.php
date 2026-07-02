@@ -31,7 +31,6 @@ class LogsMockTest extends TestCase
     public function messagesListReturnsArray(): void
     {
         $body = $this->client->logs()->messages()->list();
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -43,7 +42,6 @@ class LogsMockTest extends TestCase
     public function messagesGetUsesIdInPath(): void
     {
         $body = $this->client->logs()->messages()->get('ml-42');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -57,7 +55,6 @@ class LogsMockTest extends TestCase
     public function voiceListReturnsArray(): void
     {
         $body = $this->client->logs()->voice()->list();
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -69,7 +66,6 @@ class LogsMockTest extends TestCase
     public function voiceGetUsesIdInPath(): void
     {
         $body = $this->client->logs()->voice()->get('vl-99');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -82,7 +78,6 @@ class LogsMockTest extends TestCase
     public function faxListReturnsArray(): void
     {
         $body = $this->client->logs()->fax()->list();
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -94,7 +89,6 @@ class LogsMockTest extends TestCase
     public function faxGetUsesIdInPath(): void
     {
         $body = $this->client->logs()->fax()->get('fl-7');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -107,7 +101,6 @@ class LogsMockTest extends TestCase
     public function conferencesListReturnsArray(): void
     {
         $body = $this->client->logs()->conferences()->list();
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);

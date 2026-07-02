@@ -12,6 +12,7 @@ use SignalWire\SWML\Service;
 use SignalWire\SWML\SWMLBuilder;
 use SignalWire\SWML\SWMLVerbHandler;
 use SignalWire\SWML\VerbHandlerRegistry;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Tests for the SWML core subsystem: SWMLBuilder, the verb-handler registry
@@ -62,9 +63,9 @@ class SWMLCoreTest extends TestCase
             ->build();
 
         $this->assertSame('1.0.0', $doc['version']);
-        $this->assertArrayHasKey('main', $doc['sections']);
+        $this->assertArrayHasKey('main', Shape::sub($doc, 'sections'));
 
-        $main = $doc['sections']['main'];
+        $main = Shape::sub($doc, 'sections', 'main');
         $this->assertCount(3, $main);
         $this->assertSame(['answer' => []], $main[0]);
         $this->assertSame(['play' => ['url' => 'https://cdn.example.com/greeting.mp3']], $main[1]);
@@ -84,7 +85,7 @@ class SWMLCoreTest extends TestCase
         $doc = $builder->answer(maxDuration: 3600, codecs: 'PCMU,PCMA')->build();
         $this->assertSame(
             ['answer' => ['max_duration' => 3600, 'codecs' => 'PCMU,PCMA']],
-            $doc['sections']['main'][0]
+            Shape::at($doc, 'sections', 'main', 0)
         );
     }
 
@@ -98,7 +99,7 @@ class SWMLCoreTest extends TestCase
                 'volume' => 5.0,
                 'say_voice' => 'en-US-Neural',
             ]],
-            $doc['sections']['main'][0]
+            Shape::at($doc, 'sections', 'main', 0)
         );
     }
 
@@ -108,7 +109,7 @@ class SWMLCoreTest extends TestCase
         $doc = $builder->ai(promptText: 'You are helpful')->build();
         $this->assertSame(
             ['ai' => ['prompt' => ['text' => 'You are helpful']]],
-            $doc['sections']['main'][0]
+            Shape::at($doc, 'sections', 'main', 0)
         );
     }
 
@@ -129,7 +130,7 @@ class SWMLCoreTest extends TestCase
                 'post_prompt_url' => 'https://x.example.com/pp',
                 'SWAIG' => ['functions' => []],
             ]],
-            $doc['sections']['main'][0]
+            Shape::at($doc, 'sections', 'main', 0)
         );
     }
 
@@ -144,8 +145,8 @@ class SWMLCoreTest extends TestCase
     {
         $builder = new SWMLBuilder($this->makeService());
         $doc = $builder->addSection('intro')->build();
-        $this->assertArrayHasKey('intro', $doc['sections']);
-        $this->assertSame([], $doc['sections']['intro']);
+        $this->assertArrayHasKey('intro', Shape::sub($doc, 'sections'));
+        $this->assertSame([], Shape::at($doc, 'sections', 'intro'));
     }
 
     public function testBuilderResetClearsDocument(): void
@@ -163,28 +164,31 @@ class SWMLCoreTest extends TestCase
         /** @var array<string, mixed> $decoded */
         $decoded = json_decode($json, true);
         $this->assertSame('1.0.0', $decoded['version']);
-        $this->assertSame([['answer' => []]], $decoded['sections']['main']);
+        $this->assertSame([['answer' => []]], Shape::at($decoded, 'sections', 'main'));
     }
 
     public function testBuilderAutoVivifiesSchemaVerb(): void
     {
         $builder = new SWMLBuilder($this->makeService());
         // `denoise` has no explicit method — dispatched via __call.
+        // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         $doc = $builder->denoise()->build();
-        $this->assertSame(['denoise' => []], $doc['sections']['main'][0]);
+        $this->assertSame(['denoise' => []], Shape::at($doc, 'sections', 'main', 0));
     }
 
     public function testBuilderAutoVivifiedSleepTakesInteger(): void
     {
         $builder = new SWMLBuilder($this->makeService());
+        // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         $doc = $builder->sleep(2000)->build();
-        $this->assertSame(['sleep' => 2000], $doc['sections']['main'][0]);
+        $this->assertSame(['sleep' => 2000], Shape::at($doc, 'sections', 'main', 0));
     }
 
     public function testBuilderUnknownVerbThrows(): void
     {
         $builder = new SWMLBuilder($this->makeService());
         $this->expectException(\BadMethodCallException::class);
+        // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call; intentionally unknown)
         $builder->definitelyNotAVerb();
     }
 
@@ -211,7 +215,7 @@ class SWMLCoreTest extends TestCase
     public function testRegistryRegisterAndGetRoundTrip(): void
     {
         $registry = new VerbHandlerRegistry();
-        $handler = new class extends SWMLVerbHandler {
+        $handler = new class () extends SWMLVerbHandler {
             public function getVerbName(): string
             {
                 return 'my_verb';
@@ -417,13 +421,13 @@ class SWMLCoreTest extends TestCase
         $svc->addVerb('answer', []);
         /** @var array<string, mixed> $decoded */
         $decoded = json_decode($svc->renderDocument(), true);
-        $this->assertSame([['answer' => []]], $decoded['sections']['main']);
+        $this->assertSame([['answer' => []]], Shape::at($decoded, 'sections', 'main'));
     }
 
     public function testServiceRegisterVerbHandlerRoutesValidation(): void
     {
         $svc = $this->makeService();
-        $handler = new class extends SWMLVerbHandler {
+        $handler = new class () extends SWMLVerbHandler {
             public function getVerbName(): string
             {
                 return 'answer';
@@ -451,8 +455,8 @@ class SWMLCoreTest extends TestCase
     public function testServiceAsRouterReturnsHandler(): void
     {
         $svc = $this->makeService();
+        // asRouter() returns the service itself (which implements RequestHandlerLike).
         $router = $svc->asRouter();
-        $this->assertInstanceOf(\SignalWire\SWML\RequestHandlerLike::class, $router);
         $this->assertSame($svc, $router);
     }
 
@@ -482,6 +486,8 @@ class SWMLCoreTest extends TestCase
     public function testServiceFullValidationEnabledReturnsBool(): void
     {
         $svc = $this->makeService();
-        $this->assertIsBool($svc->fullValidationEnabled());
+        // The flag is deterministic per service instance; calling it must not
+        // throw and must return a stable boolean across calls.
+        $this->assertSame($svc->fullValidationEnabled(), $svc->fullValidationEnabled());
     }
 }

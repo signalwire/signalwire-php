@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SignalWire\Serverless\Adapter;
 use SignalWire\Serverless\ExecutionMode;
 use SignalWire\SWML\RequestHandlerLike;
+use SignalWire\Tests\Support\Shape;
 
 class ServerlessTest extends TestCase
 {
@@ -178,9 +179,10 @@ class ServerlessTest extends TestCase
 
         $result = Adapter::handleLambda($agent, $event, new \stdClass());
 
+        // The Lambda envelope is a fixed shape: statusCode + headers + body.
         $this->assertSame(200, $result['statusCode']);
-        $this->assertArrayHasKey('headers', $result);
-        $this->assertArrayHasKey('body', $result);
+        $this->assertSame('application/json', $result['headers']['Content-Type']);
+        $this->assertSame('{"status":"ok"}', $result['body']);
     }
 
     // ==================================================================
@@ -290,9 +292,6 @@ class ServerlessTest extends TestCase
 
         $result = Adapter::handleLambda($agent, $event, new \stdClass());
 
-        $this->assertArrayHasKey('statusCode', $result);
-        $this->assertArrayHasKey('headers', $result);
-        $this->assertArrayHasKey('body', $result);
         $this->assertSame(404, $result['statusCode']);
     }
 
@@ -313,9 +312,9 @@ class ServerlessTest extends TestCase
 
         $result = Adapter::handleAzure($agent, $request);
 
+        // The Azure envelope is a fixed shape: status + headers + body.
         $this->assertSame(200, $result['status']);
-        $this->assertArrayHasKey('headers', $result);
-        $this->assertArrayHasKey('body', $result);
+        $this->assertSame('application/json', $result['headers']['Content-Type']);
     }
 
     // ==================================================================
@@ -356,9 +355,7 @@ class ServerlessTest extends TestCase
 
         $result = Adapter::handleAzure($agent, $request);
 
-        // Azure uses 'status', not 'statusCode'
-        $this->assertArrayHasKey('status', $result);
-        $this->assertArrayNotHasKey('statusCode', $result);
+        // Azure uses 'status', not 'statusCode' (enforced by the envelope shape).
         $this->assertSame(201, $result['status']);
     }
 
@@ -376,6 +373,7 @@ class ServerlessTest extends TestCase
         ob_start();
         Adapter::handleCgi($agent);
         $output = ob_get_clean();
+        $this->assertNotFalse($output);
 
         // Should start with Status line
         $this->assertStringStartsWith('Status: 200 OK', $output);
@@ -390,7 +388,7 @@ class ServerlessTest extends TestCase
         $parts = explode("\r\n\r\n", $output, 2);
         $this->assertCount(2, $parts);
         $body = json_decode($parts[1], true);
-        $this->assertSame('healthy', $body['status']);
+        $this->assertSame('healthy', Shape::at($body, 'status'));
     }
 
     // ==================================================================
@@ -408,6 +406,7 @@ class ServerlessTest extends TestCase
         ob_start();
         Adapter::handleCgi($agent);
         $output = ob_get_clean();
+        $this->assertNotFalse($output);
 
         $this->assertStringStartsWith('Status: 200 OK', $output);
     }
@@ -426,6 +425,7 @@ class ServerlessTest extends TestCase
         ob_start();
         Adapter::handleCgi($agent);
         $output = ob_get_clean();
+        $this->assertNotFalse($output);
 
         $this->assertStringStartsWith('Status: 404 Not Found', $output);
     }
@@ -445,6 +445,7 @@ class ServerlessTest extends TestCase
         ob_start();
         Adapter::handleCgi($agent);
         $output = ob_get_clean();
+        $this->assertNotFalse($output);
 
         $this->assertStringStartsWith('Status: 200 OK', $output);
     }
@@ -463,6 +464,7 @@ class ServerlessTest extends TestCase
         $captured = null;
 
         $agent = new class ($captured) implements RequestHandlerLike {
+            // @phpstan-ignore property.onlyWritten (reference-bound to outer $captured; writes here propagate out, no direct read)
             private mixed $ref;
 
             public function __construct(mixed &$ref)
@@ -508,6 +510,7 @@ class ServerlessTest extends TestCase
         $captured = null;
 
         $agent = new class ($captured) implements RequestHandlerLike {
+            // @phpstan-ignore property.onlyWritten (reference-bound to outer $captured; writes here propagate out, no direct read)
             private mixed $ref;
 
             public function __construct(mixed &$ref)
@@ -533,6 +536,7 @@ class ServerlessTest extends TestCase
         Adapter::handleCgi($agent);
         ob_end_clean();
 
+        $this->assertIsArray($captured);
         $this->assertArrayHasKey('Content-Type', $captured);
         $this->assertSame('application/json', $captured['Content-Type']);
     }
@@ -576,13 +580,9 @@ class ServerlessTest extends TestCase
 
     public function testExecutionModeBackingStrings(): void
     {
-        $this->assertSame('lambda', ExecutionMode::Lambda->value);
-        $this->assertSame('gcf', ExecutionMode::Gcf->value);
-        $this->assertSame('azure', ExecutionMode::Azure->value);
-        $this->assertSame('cgi', ExecutionMode::Cgi->value);
-        $this->assertSame('server', ExecutionMode::Server->value);
-
         // The enum's value set is exactly the strings detect() can return.
+        // (Iterating cases() keeps this a real runtime check of every backing
+        // string rather than statically-folded per-case comparisons.)
         $values = array_map(fn (ExecutionMode $m) => $m->value, ExecutionMode::cases());
         sort($values);
         $this->assertSame(['azure', 'cgi', 'gcf', 'lambda', 'server'], $values);
@@ -594,24 +594,28 @@ class ServerlessTest extends TestCase
 
     public function testDetectModeTypedAndRoundTrips(): void
     {
+        // detect() returns exactly detectMode()->value, so the two round-trip.
+        // We prove the round-trip once (below) and then, per environment,
+        // assert the typed mode and its bare-string counterpart independently.
+        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+
         // Default (server) environment.
         $this->assertSame(ExecutionMode::Server, Adapter::detectMode());
-        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+        $this->assertSame('server', Adapter::detect());
 
         putenv('AWS_LAMBDA_FUNCTION_NAME=fn');
         $this->assertSame(ExecutionMode::Lambda, Adapter::detectMode());
         $this->assertSame('lambda', Adapter::detect());
-        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
         putenv('AWS_LAMBDA_FUNCTION_NAME');
 
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
         $this->assertSame(ExecutionMode::Azure, Adapter::detectMode());
-        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+        $this->assertSame('azure', Adapter::detect());
         putenv('AZURE_FUNCTIONS_ENVIRONMENT');
 
         $_SERVER['GATEWAY_INTERFACE'] = 'CGI/1.1';
         $this->assertSame(ExecutionMode::Cgi, Adapter::detectMode());
-        $this->assertSame(Adapter::detect(), Adapter::detectMode()->value);
+        $this->assertSame('cgi', Adapter::detect());
     }
 
     // ==================================================================
@@ -687,6 +691,7 @@ class ServerlessTest extends TestCase
         ob_start();
         Adapter::serve($agent, ExecutionMode::Azure);
         $output = ob_get_clean();
+        $this->assertNotFalse($output);
 
         $this->assertFalse($agent->ran, 'azure mode must NOT call run()');
         $this->assertSame(1, $agent->handleRequestCalls, 'azure mode drives handleRequest exactly once');
@@ -694,7 +699,7 @@ class ServerlessTest extends TestCase
         // The emitted Azure envelope is JSON with a status field.
         $decoded = json_decode($output, true);
         $this->assertIsArray($decoded);
-        $this->assertSame(200, $decoded['status']);
+        $this->assertSame(200, Shape::at($decoded, 'status'));
     }
 
     // ==================================================================
@@ -708,11 +713,12 @@ class ServerlessTest extends TestCase
         ob_start();
         Adapter::serve($agent, 'azure');
         $output = ob_get_clean();
+        $this->assertNotFalse($output);
 
         $this->assertFalse($agent->ran);
         $this->assertSame(1, $agent->handleRequestCalls);
         $decoded = json_decode($output, true);
-        $this->assertSame(200, $decoded['status']);
+        $this->assertSame(200, Shape::at($decoded, 'status'));
     }
 
     // ==================================================================
@@ -746,26 +752,9 @@ class ServerlessTest extends TestCase
     //  object whose handleRequest()/run() record that they were invoked).
     // ==================================================================
 
-    private function makeRecordingAgent(): object
+    private function makeRecordingAgent(): RecordingAgent
     {
-        return new class () implements RequestHandlerLike {
-            public bool $ran = false;
-            public int $handleRequestCalls = 0;
-
-            public function run(): void
-            {
-                $this->ran = true;
-            }
-
-            /**
-             * @return array{int, array<string, string>, string}
-             */
-            public function handleRequest(string $method, string $path, array $headers = [], ?string $body = null): array
-            {
-                $this->handleRequestCalls++;
-                return [200, ['Content-Type' => 'application/json'], '{"ok":true}'];
-            }
-        };
+        return new RecordingAgent();
     }
 
     // ==================================================================
@@ -775,6 +764,9 @@ class ServerlessTest extends TestCase
     /**
      * Create a mock agent object that expects specific handleRequest args
      * and returns a predefined response.
+     *
+     * @param array<string, mixed>  $responseData
+     * @param array<string, string> $expectedHeaders
      */
     private function createMockAgent(
         int $statusCode,
@@ -783,18 +775,24 @@ class ServerlessTest extends TestCase
         string $expectedPath,
         array $expectedHeaders,
         ?string $expectedBody,
-    ): object {
+    ): RequestHandlerLike {
         $test = $this;
 
         return new class ($statusCode, $responseData, $expectedMethod, $expectedPath, $expectedHeaders, $expectedBody, $test) implements RequestHandlerLike {
             private int $statusCode;
+            /** @var array<string, mixed> */
             private array $responseData;
             private string $expectedMethod;
             private string $expectedPath;
+            /** @var array<string, string> */
             private array $expectedHeaders;
             private ?string $expectedBody;
             private TestCase $test;
 
+            /**
+             * @param array<string, mixed>  $responseData
+             * @param array<string, string> $expectedHeaders
+             */
             public function __construct(
                 int $statusCode,
                 array $responseData,
@@ -831,6 +829,7 @@ class ServerlessTest extends TestCase
                 }
 
                 $responseBody = json_encode($this->responseData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $this->test->assertNotFalse($responseBody);
                 return [
                     $this->statusCode,
                     ['Content-Type' => 'application/json'],
@@ -844,5 +843,31 @@ class ServerlessTest extends TestCase
                 // blocking serve loop (RequestHandlerLike contract method).
             }
         };
+    }
+}
+
+/**
+ * A concrete recording agent (NOT a PHPUnit mock) whose run()/handleRequest()
+ * record that they were invoked. Named (rather than anonymous) so the helper's
+ * return type carries both the RequestHandlerLike contract and the public
+ * counters the serve() dispatch tests read.
+ */
+final class RecordingAgent implements RequestHandlerLike
+{
+    public bool $ran = false;
+    public int $handleRequestCalls = 0;
+
+    public function run(): void
+    {
+        $this->ran = true;
+    }
+
+    /**
+     * @return array{int, array<string, string>, string}
+     */
+    public function handleRequest(string $method, string $path, array $headers = [], ?string $body = null): array
+    {
+        $this->handleRequestCalls++;
+        return [200, ['Content-Type' => 'application/json'], '{"ok":true}'];
     }
 }

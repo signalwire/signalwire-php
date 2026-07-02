@@ -354,6 +354,7 @@ class MockTest extends TestCase
      * so we resolve porting-sdk/test_harness/mock_relay/ without prior
      * pip-install.
      */
+    /** @return resource */
     private static function spawnMockServer(int $wsPort, int $httpPort)
     {
         $python = self::resolvePython();
@@ -417,6 +418,8 @@ class MockTest extends TestCase
      * Probe /__mock__/health. Returns true on 200 + "schemas_loaded" in body.
      * A generous timeout so a busy (but alive) single-threaded mock under
      * parallel load isn't mistaken for "down".
+     *
+     * @phpstan-impure network probe — result changes as the mock server comes up
      */
     private static function probeHealth(string $base): bool
     {
@@ -625,7 +628,7 @@ final class RelayHarness
     /**
      * Return active session metadata.
      *
-     * @return list<array<string,mixed>>
+     * @return array<array-key,mixed>
      */
     public function sessions(): array
     {
@@ -645,7 +648,7 @@ final class RelayHarness
     }
 
     /**
-     * @return array<string,mixed>
+     * @return array<array-key,mixed>
      */
     private static function decode(string $body): array
     {
@@ -708,6 +711,9 @@ final class RelayJournal
         }
         $entries = [];
         foreach ($decoded as $row) {
+            if (!is_array($row)) {
+                throw new \RuntimeException('mock_relay: journal row is not a JSON object');
+            }
             $entries[] = RelayJournalEntry::fromArray($row);
         }
         return $entries;
@@ -794,7 +800,7 @@ final class RelayJournalEntry
     public string $direction;
     public string $method;
     public string $requestId;
-    /** @var array<string,mixed> */
+    /** @var array<array-key,mixed> */
     public array $frame;
     public string $connectionId;
     public string $sessionId;
@@ -805,26 +811,32 @@ final class RelayJournalEntry
     }
 
     /**
-     * @param array<string,mixed> $raw
+     * @param array<array-key,mixed> $raw
      */
     public static function fromArray(array $raw): self
     {
         $e = new self();
-        $e->direction = (string) ($raw['direction'] ?? '');
-        $e->method = (string) ($raw['method'] ?? '');
-        $e->requestId = (string) ($raw['request_id'] ?? '');
+        $e->direction = self::coerceString($raw['direction'] ?? '');
+        $e->method = self::coerceString($raw['method'] ?? '');
+        $e->requestId = self::coerceString($raw['request_id'] ?? '');
         $frame = $raw['frame'] ?? [];
         $e->frame = is_array($frame) ? $frame : [];
-        $e->connectionId = (string) ($raw['connection_id'] ?? '');
-        $e->sessionId = (string) ($raw['session_id'] ?? '');
-        $e->timestamp = isset($raw['timestamp']) ? (float) $raw['timestamp'] : 0.0;
+        $e->connectionId = self::coerceString($raw['connection_id'] ?? '');
+        $e->sessionId = self::coerceString($raw['session_id'] ?? '');
+        $e->timestamp = is_numeric($raw['timestamp'] ?? null) ? (float) $raw['timestamp'] : 0.0;
         return $e;
+    }
+
+    /** Coerce a scalar JSON value to string; non-scalars (arrays/objects) become ''. */
+    private static function coerceString(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 
     /**
      * Returns the inner ``params`` dict from a JSON-RPC frame, if present.
      *
-     * @return array<string,mixed>|null
+     * @return array<array-key,mixed>|null
      */
     public function params(): ?array
     {

@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SignalWire\Logging\Logger;
 use SignalWire\SWML\Schema;
 use SignalWire\SWML\Service;
+use SignalWire\Tests\Support\Shape;
 
 class SWMLServiceTest extends TestCase
 {
@@ -31,6 +32,16 @@ class SWMLServiceTest extends TestCase
         putenv('PORT');
     }
 
+    /**
+     * @param array{
+     *     name?: string,
+     *     route?: string,
+     *     host?: ?string,
+     *     port?: ?int,
+     *     basic_auth_user?: string,
+     *     basic_auth_password?: string
+     * } $opts
+     */
     private function makeService(array $opts = []): Service
     {
         return new Service(
@@ -43,6 +54,7 @@ class SWMLServiceTest extends TestCase
         );
     }
 
+    /** @return array<string,string> */
     private function authHeader(string $user = 'testuser', string $pass = 'testpass'): array
     {
         return ['Authorization' => 'Basic ' . base64_encode("{$user}:{$pass}")];
@@ -159,7 +171,7 @@ class SWMLServiceTest extends TestCase
     public function testAnswerVerb(): void
     {
         $svc = $this->makeService();
-        $svc->answer(['max_duration' => 3600]);
+        $svc->answer(['max_duration' => 3600]); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertCount(1, $verbs);
@@ -169,7 +181,7 @@ class SWMLServiceTest extends TestCase
     public function testHangupVerbNoArgs(): void
     {
         $svc = $this->makeService();
-        $svc->hangup();
+        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertCount(1, $verbs);
@@ -179,7 +191,7 @@ class SWMLServiceTest extends TestCase
     public function testSleepVerbInteger(): void
     {
         $svc = $this->makeService();
-        $svc->sleep(2000);
+        $svc->sleep(2000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertSame(['sleep' => 2000], $verbs[0]);
@@ -189,7 +201,7 @@ class SWMLServiceTest extends TestCase
     {
         $svc = $this->makeService();
         $svc->getDocument()->addSection('custom');
-        $svc->sleep('custom', 1000);
+        $svc->sleep('custom', 1000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         $verbs = $svc->getDocument()->getVerbs('custom');
         $this->assertSame(['sleep' => 1000], $verbs[0]);
@@ -199,7 +211,7 @@ class SWMLServiceTest extends TestCase
     {
         $svc = $this->makeService();
         $svc->getDocument()->addSection('custom');
-        $svc->answer('custom', ['max_duration' => 7200]);
+        $svc->answer('custom', ['max_duration' => 7200]); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         $verbs = $svc->getDocument()->getVerbs('custom');
         $this->assertSame(['answer' => ['max_duration' => 7200]], $verbs[0]);
@@ -208,14 +220,14 @@ class SWMLServiceTest extends TestCase
     public function testVerbChaining(): void
     {
         $svc = $this->makeService();
-        $result = $svc->answer(['max_duration' => 3600]);
+        $result = $svc->answer(['max_duration' => 3600]); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         $this->assertSame($svc, $result);
     }
 
     public function testMultipleVerbs(): void
     {
         $svc = $this->makeService();
-        $svc->answer(['max_duration' => 3600])
+        $svc->answer(['max_duration' => 3600]) // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
             ->sleep(1000)
             ->hangup();
 
@@ -231,7 +243,7 @@ class SWMLServiceTest extends TestCase
 
         foreach ($names as $verb) {
             if ($verb === 'sleep') {
-                $svc->sleep(1000);
+                $svc->sleep(1000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
             } else {
                 $svc->$verb([]);
             }
@@ -245,7 +257,7 @@ class SWMLServiceTest extends TestCase
     {
         $svc = $this->makeService();
         $this->expectException(\BadMethodCallException::class);
-        $svc->nonexistentVerb();
+        $svc->nonexistentVerb(); // @phpstan-ignore method.notFound (deliberately-undefined verb to exercise the BadMethodCallException path)
     }
 
     // ------------------------------------------------------------------
@@ -260,7 +272,7 @@ class SWMLServiceTest extends TestCase
         $this->assertSame(200, $status);
         $this->assertSame('application/json', $headers['Content-Type']);
         $decoded = json_decode($body, true);
-        $this->assertSame('healthy', $decoded['status']);
+        $this->assertSame('healthy', Shape::at($decoded, 'status'));
     }
 
     public function testReadyEndpoint(): void
@@ -270,7 +282,7 @@ class SWMLServiceTest extends TestCase
 
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
-        $this->assertSame('ready', $decoded['status']);
+        $this->assertSame('ready', Shape::at($decoded, 'status'));
     }
 
     public function testHealthNoAuthRequired(): void
@@ -300,7 +312,7 @@ class SWMLServiceTest extends TestCase
 
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
-        $this->assertSame('1.0.0', $decoded['version']);
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
     }
 
     public function testWrongPasswordReturns401(): void
@@ -363,14 +375,14 @@ class SWMLServiceTest extends TestCase
     public function testSwmlEndpointReturnsDocument(): void
     {
         $svc = $this->makeService();
-        $svc->answer(['max_duration' => 3600])->hangup();
+        $svc->answer(['max_duration' => 3600])->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         [$status, , $body] = $svc->handleRequest('GET', '/', $this->authHeader());
         $this->assertSame(200, $status);
 
         $decoded = json_decode($body, true);
-        $this->assertSame('1.0.0', $decoded['version']);
-        $this->assertCount(2, $decoded['sections']['main']);
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
+        $this->assertCount(2, Shape::sub($decoded, 'sections', 'main'));
     }
 
     public function testSwaigEndpointAuth(): void
@@ -412,13 +424,13 @@ class SWMLServiceTest extends TestCase
     public function testCustomRouteSwml(): void
     {
         $svc = $this->makeService(['route' => '/agent']);
-        $svc->hangup();
+        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
 
         [$status, , $body] = $svc->handleRequest('GET', '/agent', $this->authHeader());
         $this->assertSame(200, $status);
 
         $decoded = json_decode($body, true);
-        $this->assertCount(1, $decoded['sections']['main']);
+        $this->assertCount(1, Shape::sub($decoded, 'sections', 'main'));
     }
 
     public function testCustomRouteSwaig(): void
@@ -481,7 +493,7 @@ class SWMLServiceTest extends TestCase
         $this->assertTrue($called);
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
-        $this->assertSame('response', $decoded['custom']);
+        $this->assertSame('response', Shape::at($decoded, 'custom'));
     }
 
     // ------------------------------------------------------------------
@@ -567,16 +579,16 @@ class SWMLServiceTest extends TestCase
     public function testRender(): void
     {
         $svc = $this->makeService();
-        $svc->hangup();
+        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         $json = $svc->render();
         $decoded = json_decode($json, true);
-        $this->assertSame('1.0.0', $decoded['version']);
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
     }
 
     public function testRenderPretty(): void
     {
         $svc = $this->makeService();
-        $svc->hangup();
+        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         $json = $svc->renderPretty();
         $this->assertStringContainsString("\n", $json);
     }

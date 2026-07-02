@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Constants;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for ``SignalWire\Relay\Client::connect()``.
@@ -89,8 +90,7 @@ class ConnectMockTest extends TestCase
         try {
             $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
-            $auth = $entries[0]->frame['params']['authentication'] ?? null;
-            $this->assertIsArray($auth);
+            $auth = Shape::sub($entries[0]->frame, 'params', 'authentication');
             $this->assertSame('test_proj', $auth['project'] ?? null);
             $this->assertSame('test_tok', $auth['token'] ?? null);
         } finally {
@@ -105,7 +105,7 @@ class ConnectMockTest extends TestCase
         try {
             $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
-            $this->assertSame(['default'], $entries[0]->frame['params']['contexts'] ?? null);
+            $this->assertSame(['default'], Shape::at($entries[0]->frame, 'params', 'contexts'));
         } finally {
             $client->disconnect();
         }
@@ -134,7 +134,7 @@ class ConnectMockTest extends TestCase
         try {
             $entries = $mock->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
-            $this->assertTrue($entries[0]->frame['params']['event_acks'] ?? null);
+            $this->assertTrue(Shape::at($entries[0]->frame, 'params', 'event_acks'));
         } finally {
             $client->disconnect();
         }
@@ -174,7 +174,8 @@ class ConnectMockTest extends TestCase
             // c2's own session — scope to it so we read only this test's frame.
             $matches = [];
             foreach ($this->scopedFor($c2)->journal()->recv('signalwire.connect') as $entry) {
-                if (($entry->frame['params']['protocol'] ?? null) === $issuedProtocol) {
+                $params = $entry->frame['params'] ?? null;
+                if (is_array($params) && ($params['protocol'] ?? null) === $issuedProtocol) {
                     $matches[] = $entry;
                 }
             }
@@ -211,7 +212,8 @@ class ConnectMockTest extends TestCase
             // Confirm c2's own journaled connect carries that protocol.
             $found = false;
             foreach ($this->scopedFor($c2)->journal()->recv('signalwire.connect') as $entry) {
-                if (($entry->frame['params']['protocol'] ?? null) === $issuedProtocol) {
+                $params = $entry->frame['params'] ?? null;
+                if (is_array($params) && ($params['protocol'] ?? null) === $issuedProtocol) {
                     $found = true;
                     break;
                 }
@@ -292,8 +294,7 @@ class ConnectMockTest extends TestCase
 
             $entries = $this->scopedFor($client)->journal()->recv('signalwire.connect');
             $this->assertCount(1, $entries);
-            $auth = $entries[0]->frame['params']['authentication'] ?? null;
-            $this->assertIsArray($auth);
+            $auth = Shape::sub($entries[0]->frame, 'params', 'authentication');
             $this->assertSame('fake-jwt-eyJ.AaaA.BbB', $auth['jwt_token'] ?? null);
             // JWT path: project/token must NOT be on the wire.
             $this->assertArrayNotHasKey('project', $auth);
@@ -326,10 +327,11 @@ final class RawWsClient
             throw new \InvalidArgumentException("RawWsClient: bad url {$url}");
         }
         $address = sprintf('tcp://%s:%d', $parts['host'], $parts['port']);
-        $this->stream = @stream_socket_client($address, $errno, $errstr, $timeout);
-        if (!is_resource($this->stream)) {
+        $stream = @stream_socket_client($address, $errno, $errstr, $timeout);
+        if (!is_resource($stream)) {
             throw new \RuntimeException("connect failed: {$errstr}");
         }
+        $this->stream = $stream;
         stream_set_blocking($this->stream, true);
 
         $key = base64_encode(random_bytes(16));
@@ -362,6 +364,19 @@ final class RawWsClient
         stream_set_blocking($this->stream, false);
     }
 
+    /**
+     * The connected socket, asserting the client has been connect()-ed.
+     *
+     * @return resource
+     */
+    private function stream()
+    {
+        if (!is_resource($this->stream)) {
+            throw new \RuntimeException('RawWsClient: not connected');
+        }
+        return $this->stream;
+    }
+
     public function sendText(string $payload): void
     {
         $b0 = chr(0x81);
@@ -378,7 +393,7 @@ final class RawWsClient
         for ($i = 0; $i < $len; $i++) {
             $masked .= chr(ord($payload[$i]) ^ ord($mask[$i % 4]));
         }
-        fwrite($this->stream, $hdr . $masked);
+        fwrite($this->stream(), $hdr . $masked);
     }
 
     public function receive(float $timeout = 2.0): string
@@ -389,13 +404,13 @@ final class RawWsClient
             if ($frame !== null) {
                 return $frame;
             }
-            $r = [$this->stream];
+            $r = [$this->stream()];
             $w = $e = null;
             $remaining = max(0.0, $deadline - microtime(true));
             $secs = (int) floor($remaining);
             $usecs = (int) (($remaining - $secs) * 1_000_000);
             @stream_select($r, $w, $e, $secs, $usecs);
-            $chunk = @fread($this->stream, 8192);
+            $chunk = @fread($this->stream(), 8192);
             if (is_string($chunk) && $chunk !== '') {
                 $this->readBuffer .= $chunk;
             }

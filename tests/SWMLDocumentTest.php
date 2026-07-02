@@ -6,6 +6,7 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\SWML\Document;
+use SignalWire\Tests\Support\Shape;
 
 class SWMLDocumentTest extends TestCase
 {
@@ -146,8 +147,8 @@ class SWMLDocumentTest extends TestCase
 
         $json = $doc->render();
         $decoded = json_decode($json, true);
-        $this->assertSame('1.0.0', $decoded['version']);
-        $this->assertCount(1, $decoded['sections']['main']);
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
+        $this->assertCount(1, Shape::sub($decoded, 'sections', 'main'));
     }
 
     public function testRenderPretty(): void
@@ -159,7 +160,7 @@ class SWMLDocumentTest extends TestCase
         // Pretty JSON should contain newlines
         $this->assertStringContainsString("\n", $json);
         $decoded = json_decode($json, true);
-        $this->assertSame('1.0.0', $decoded['version']);
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
     }
 
     public function testJsonRoundTrip(): void
@@ -172,8 +173,8 @@ class SWMLDocumentTest extends TestCase
         $json = $doc->render();
         $decoded = json_decode($json, true);
 
-        $this->assertSame('1.0.0', $decoded['version']);
-        $verbs = $decoded['sections']['main'];
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
+        $verbs = Shape::sub($decoded, 'sections', 'main');
         $this->assertCount(3, $verbs);
         $this->assertSame(['answer' => ['max_duration' => 3600]], $verbs[0]);
         $this->assertSame(['sleep' => 2000], $verbs[1]);
