@@ -248,6 +248,15 @@ run_gate "SURFACE-FRESH" "check_surface_freshness vs fresh regen" \
 run_gate "GEN-FRESH" "generated REST tree + rest_signatures.json match canonical specs (--check)" \
     python3 scripts/generate_rest.py --check
 
+# Gate 4c: GEN-FRESH (SWML verbs) — the committed generated SWML-verbs config tree
+# (src/SignalWire/SWML/Generated/*.php) must still match what
+# scripts/generate_swml_verbs.py produces from porting-sdk/schema.json ($defs). Same
+# rationale as gate 4b: SURFACE-DIFF policing the enumerated surface can't catch a
+# stale/hand-edited generated body or a schema.json change with stale output — only
+# regenerate-and-byte-diff does. Read-only (--check never writes). Item D2.
+run_gate "GEN-FRESH-SWML" "generated SWML-verbs config tree matches schema.json \$defs (--check)" \
+    python3 scripts/generate_swml_verbs.py --check
+
 # Gate 5: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
