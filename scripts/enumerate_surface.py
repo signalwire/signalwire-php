@@ -586,6 +586,30 @@ def _is_swml_verbs_file(file_relative: Path) -> bool:
     return _SWML_VERBS_DIR_MARKER in file_relative.as_posix()
 
 
+# ---------------------------------------------------------------------------
+# Generated RELAY-protocol wire-type surface (item I — relay.protocol_types_generated).
+#
+# scripts/generate_relay_protocol.py emits one method-less PHP data class per RELAY
+# WS method+phase object schema (123) into src/SignalWire/Relay/Generated/<Name>.php.
+# The Python reference records these as the 123 method-less type definitions in
+# signalwire.relay.protocol_types_generated. Routing is BY FILE PATH (not class
+# name) — and MUST be scoped strictly to the Relay/Generated/ subdir so the existing
+# Relay SDK classes one level up (Call/Client/CallState/Event/AIAction/…, routed by
+# CLASS_MODULE_MAP to signalwire.relay.call/client/event) are NOT misrouted. A
+# relay-protocol type name that also exists as a REST/SWML wire type would collide
+# with CLASS_MODULE_MAP, so the path route MUST win over it for these files (§H
+# item 3), exactly like the REST Types + SWML Generated routing above.
+# ---------------------------------------------------------------------------
+_RELAY_PROTO_DIR_MARKER = "Relay/Generated/"
+_RELAY_PROTO_MODULE = "signalwire.relay.protocol_types_generated"
+
+
+def _is_relay_proto_file(file_relative: Path) -> bool:
+    """True when ``file_relative`` is a generated RELAY-protocol wire-type file
+    (src/SignalWire/Relay/Generated/<Name>.php)."""
+    return _RELAY_PROTO_DIR_MARKER in file_relative.as_posix()
+
+
 def _module_path_for_class(name: str, file_relative: Path) -> str:
     """Map a PHP class to its Python-canonical module path."""
     # Generated wire-type files route by PATH (their <Sub> subdir → the oracle
@@ -600,6 +624,12 @@ def _module_path_for_class(name: str, file_relative: Path) -> str:
     # — name recurrence/collision means path MUST win over CLASS_MODULE_MAP).
     if _is_swml_verbs_file(file_relative):
         return _SWML_VERBS_MODULE
+    # Generated RELAY-protocol wire-type files route by PATH to the single oracle
+    # module signalwire.relay.protocol_types_generated — scoped strictly to the
+    # Relay/Generated/ subdir so the hand-written Relay SDK classes one level up
+    # keep their CLASS_MODULE_MAP routing.
+    if _is_relay_proto_file(file_relative):
+        return _RELAY_PROTO_MODULE
     if name in CLASS_MODULE_MAP:
         return CLASS_MODULE_MAP[name]
     # Fallback: derive from file path. e.g. src/SignalWire/Foo/Bar.php
@@ -630,7 +660,9 @@ def _translate_class_in_file(name: str, file_relative: Path) -> str:
     back to the bare oracle leaf; scoped to those generated files so a non-type
     class of the same spelling is unaffected."""
     in_generated_type_file = (
-        _types_subdir(file_relative) is not None or _is_swml_verbs_file(file_relative)
+        _types_subdir(file_relative) is not None
+        or _is_swml_verbs_file(file_relative)
+        or _is_relay_proto_file(file_relative)
     )
     if in_generated_type_file and name in _TYPES_RESERVED_UNRENAME:
         return _TYPES_RESERVED_UNRENAME[name]
