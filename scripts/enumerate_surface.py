@@ -506,8 +506,69 @@ def camel_to_snake(name: str) -> str:
     return s2.lower()
 
 
+# ---------------------------------------------------------------------------
+# Generated REST wire-type surface (item A/H — REAL types, not `array`).
+#
+# scripts/generate_rest.py emits one PHP data class / enum per components/schemas
+# object into src/SignalWire/REST/Namespaces/Generated/Types/<Sub>/<Name>.php. The
+# reference records these as method-less type definitions in
+# signalwire.rest.namespaces.<ns>_types_generated. Each <Sub> subdir maps 1:1 to a
+# <ns>_types_generated module. Routing is BY FILE PATH (not class name) because the
+# same type name recurs across namespaces (AIObject in calling AND fabric; the shared
+# Types_StatusCodes_* error types in every namespace) and even collides with existing
+# SDK class names (DataMap/Document/Section) — so the path-based route MUST win over
+# CLASS_MODULE_MAP for these files (§H item 3). The SURFACE-DIFF gen-type leaf fold
+# collapses the cross-module duplicates to one gen-type.<Leaf> on both ref and port.
+# ---------------------------------------------------------------------------
+_TYPES_DIR_MARKER = "REST/Namespaces/Generated/Types/"
+_TYPES_SUB_TO_MODULE: dict[str, str] = {
+    "RelayRest": "signalwire.rest.namespaces.relay_rest_types_generated",
+    "Fabric": "signalwire.rest.namespaces.fabric_types_generated",
+    "Calling": "signalwire.rest.namespaces.calling_types_generated",
+    "Video": "signalwire.rest.namespaces.video_types_generated",
+    "Datasphere": "signalwire.rest.namespaces.datasphere_types_generated",
+    "Logs": "signalwire.rest.namespaces.logs_types_generated",
+    "Message": "signalwire.rest.namespaces.message_types_generated",
+    "Voice": "signalwire.rest.namespaces.voice_types_generated",
+    "Fax": "signalwire.rest.namespaces.fax_types_generated",
+    "Project": "signalwire.rest.namespaces.project_types_generated",
+    "Chat": "signalwire.rest.namespaces.chat_types_generated",
+    "PubSub": "signalwire.rest.namespaces.pubsub_types_generated",
+    "SwmlWebhooks": "signalwire.rest.namespaces.swml_webhooks_types_generated",
+}
+# Hard-reserved PHP keyword class names generate_rest.py suffixed with `_`; map back
+# to the bare oracle leaf (the type-name analog of the reserved-word field rename).
+# SCOPED to the Types/ files so a non-type class named `Return_` (none today) is
+# unaffected.
+_TYPES_RESERVED_UNRENAME: dict[str, str] = {
+    "Goto_": "Goto",
+    "Return_": "Return",
+    "Switch_": "Switch",
+    "Unset_": "Unset",
+}
+
+
+def _types_subdir(file_relative: Path) -> str | None:
+    """If ``file_relative`` is a generated wire-type file
+    (REST/Namespaces/Generated/Types/<Sub>/…), return <Sub>; else None."""
+    rel = file_relative.as_posix()
+    idx = rel.find(_TYPES_DIR_MARKER)
+    if idx == -1:
+        return None
+    tail = rel[idx + len(_TYPES_DIR_MARKER):]
+    sub = tail.split("/", 1)[0]
+    return sub or None
+
+
 def _module_path_for_class(name: str, file_relative: Path) -> str:
     """Map a PHP class to its Python-canonical module path."""
+    # Generated wire-type files route by PATH (their <Sub> subdir → the oracle
+    # <ns>_types_generated module), winning over CLASS_MODULE_MAP so a type name
+    # that recurs across namespaces / collides with an SDK class name lands in the
+    # right module.
+    sub = _types_subdir(file_relative)
+    if sub is not None and sub in _TYPES_SUB_TO_MODULE:
+        return _TYPES_SUB_TO_MODULE[sub]
     if name in CLASS_MODULE_MAP:
         return CLASS_MODULE_MAP[name]
     # Fallback: derive from file path. e.g. src/SignalWire/Foo/Bar.php
@@ -529,6 +590,16 @@ def _module_path_for_class(name: str, file_relative: Path) -> str:
 
 def _translate_class(name: str) -> str:
     return CLASS_RENAME_MAP.get(name, name)
+
+
+def _translate_class_in_file(name: str, file_relative: Path) -> str:
+    """Class-name translation aware of the file's location. For a generated wire-
+    type file, a reserved-keyword class name generate_rest.py suffixed with ``_``
+    (Goto_/Return_/Switch_/Unset_) is renamed back to the bare oracle leaf; scoped
+    to Types/ files so a non-type class of the same spelling is unaffected."""
+    if _types_subdir(file_relative) is not None and name in _TYPES_RESERVED_UNRENAME:
+        return _TYPES_RESERVED_UNRENAME[name]
+    return _translate_class(name)
 
 
 def _walk_source_files() -> list[Path]:
@@ -812,18 +883,26 @@ def build_surface() -> dict:
                         all_trait_methods[trait]
                     )
         for cls, meth_set in methods.items():
-            module_path = _module_path_for_class(
-                cls, class_defining_files.get(cls, rel)
-            )
-            translated = _translate_class(cls)
+            # Route by the CURRENT file's path, not the first-seen defining file:
+            # a class name can recur across files (the SWML `Document`/`Section`/
+            # `DataMap` builders vs the same-named generated wire-type data classes
+            # in Types/<Sub>/), and each file's methods must land in ITS module.
+            module_path = _module_path_for_class(cls, rel)
+            translated = _translate_class_in_file(cls, rel)
             existing = set(modules[module_path]["classes"].get(translated, []))
             existing.update(meth_set)
             modules[module_path]["classes"][translated] = sorted(existing)
-        # Also add classes that have no methods (rare but possible)
+        # Also add classes that have no methods (the generated wire-type data
+        # classes / enums are exactly this — method-less type definitions). Use
+        # the CURRENT file's path (`rel`, not the first-seen defining file) so a
+        # type name that recurs across namespaces (AIObject in Types/Calling AND
+        # Types/Fabric, the shared Types_StatusCodes_* in every namespace) is
+        # routed to EACH namespace's <ns>_types_generated module — the reference
+        # duplicates them the same way and the gen-type fold collapses both.
         for cls in classes:
             if cls not in methods:
                 module_path = _module_path_for_class(cls, rel)
-                translated = _translate_class(cls)
+                translated = _translate_class_in_file(cls, rel)
                 modules[module_path]["classes"].setdefault(translated, [])
 
     # REST implicit-base projection (mirrors Go's implicitBaseMethods()).

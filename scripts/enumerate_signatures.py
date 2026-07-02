@@ -37,6 +37,7 @@ sys.path.insert(0, str(HERE))
 from enumerate_surface import (  # type: ignore
     CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES,
     camel_to_snake, _module_path_for_class, _translate_class,
+    _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
 )
 
 
@@ -265,10 +266,24 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         canonical_name = _translate_class(php_name)
         # Compute file_relative for module resolution
         file_relative = Path(ns.replace("SignalWire\\", "").replace("\\", "/")) / php_name
+        # Generated wire-type classes (SignalWire\REST\Namespaces\Generated\Types\
+        # <Sub>\...) route by their <Sub> namespace segment to the oracle's
+        # <ns>_types_generated module — this MUST win over CLASS_MODULE_MAP because
+        # a type name can collide with an SDK class (DataMap/Section/Document) or
+        # recur across namespaces (AIObject). Reserved-keyword class names
+        # generate_rest.py suffixed with `_` are renamed back to the bare oracle
+        # leaf. Mirrors enumerate_surface.py's path-based routing.
+        types_mod = None
+        if "\\REST\\Namespaces\\Generated\\Types\\" in f"{ns}\\":
+            sub = ns.rsplit("\\", 1)[-1]
+            types_mod = _TYPES_SUB_TO_MODULE.get(sub)
         # FQN_CLASS_MODULE_MAP wins when set — disambiguates short-name
         # collisions between e.g. REST namespace classes and skills.
         full_php_for_lookup = f"{ns}\\{php_name}" if ns else php_name
-        if full_php_for_lookup in FQN_CLASS_MODULE_MAP:
+        if types_mod is not None:
+            mod = types_mod
+            canonical_name = _TYPES_RESERVED_UNRENAME.get(php_name, canonical_name)
+        elif full_php_for_lookup in FQN_CLASS_MODULE_MAP:
             mod, override_name = FQN_CLASS_MODULE_MAP[full_php_for_lookup]
             if override_name is not None:
                 canonical_name = override_name
