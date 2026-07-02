@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 01ec2d90a5beb465ab2e7ab7915ac59c0c748f69",
+  "generated_from": "signalwire-php @ d3aaf7c9dfcea6f9211b6e1126acd4073a5142c1",
   "modules": {
     "signalwire": {
       "classes": {
@@ -454,6 +454,25 @@
       },
       "functions": []
     },
+    "signalwire.core.post_prompt_generated": {
+      "classes": {
+        "PostPrompt": [],
+        "PostPromptAssistantEntry": [],
+        "PostPromptData": [],
+        "PostPromptEntity": [],
+        "PostPromptEot": [],
+        "PostPromptStampsUs": [],
+        "PostPromptSwaigLogEntry": [],
+        "PostPromptSystemEntry": [],
+        "PostPromptSystemLogEntry": [],
+        "PostPromptThinkingEntry": [],
+        "PostPromptTimesEntry": [],
+        "PostPromptTiming": [],
+        "PostPromptToolEntry": [],
+        "PostPromptUserEntry": []
+      },
+      "functions": []
+    },
     "signalwire.core.security.security_utils": {
       "classes": {
         "SecurityUtils": [
@@ -524,6 +543,22 @@
           "load_skill",
           "unload_skill"
         ]
+      },
+      "functions": []
+    },
+    "signalwire.core.swaig_actions_generated": {
+      "classes": {
+        "ContextSwitchAction": [],
+        "HoldAction": [],
+        "PlaybackBgAction": [],
+        "TransferAction": []
+      },
+      "functions": []
+    },
+    "signalwire.core.swaig_request_generated": {
+      "classes": {
+        "SwaigArgument": [],
+        "SwaigRequest": []
       },
       "functions": []
     },

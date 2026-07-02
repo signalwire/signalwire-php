@@ -610,6 +610,43 @@ def _is_relay_proto_file(file_relative: Path) -> bool:
     return _RELAY_PROTO_DIR_MARKER in file_relative.as_posix()
 
 
+# ---------------------------------------------------------------------------
+# Generated SWAIG read-side payload surface (item D1 — the three
+# signalwire.core.*_generated SWAIG payload modules).
+#
+# scripts/generate_swaig_payloads.py emits one method-less PHP data class per SWAIG
+# payload object schema into src/SignalWire/SWAIG/Generated/<Sub>/<Name>.php, where
+# <Sub> is one of PostPrompt / SwaigRequest / SwaigActions. The Python reference
+# records these as the 14 + 2 + 4 = 20 method-less type definitions in
+# signalwire.core.post_prompt_generated / .swaig_request_generated /
+# .swaig_actions_generated. Routing is BY FILE PATH (the <Sub> subdir → the oracle
+# module), same rationale as the REST Types + SWML Generated + RELAY Generated routes
+# above: a payload type name can collide with a hand-written SWAIG SDK class one/two
+# levels up (FunctionResult/ParameterSchema/RecordFormat) or recur elsewhere, so the
+# path route MUST win over CLASS_MODULE_MAP (§H item 3). The module strings end in the
+# ``*_generated`` markers the diff tool's gen-payload fold recognises, so a class-typed
+# field compares by (class, field) cross-port regardless of file grouping.
+# ---------------------------------------------------------------------------
+_SWAIG_PAYLOAD_DIR_MARKER = "SWAIG/Generated/"
+_SWAIG_PAYLOAD_SUB_TO_MODULE: dict[str, str] = {
+    "PostPrompt": "signalwire.core.post_prompt_generated",
+    "SwaigRequest": "signalwire.core.swaig_request_generated",
+    "SwaigActions": "signalwire.core.swaig_actions_generated",
+}
+
+
+def _swaig_payload_subdir(file_relative: Path) -> str | None:
+    """If ``file_relative`` is a generated SWAIG-payload file
+    (SWAIG/Generated/<Sub>/…), return <Sub>; else None."""
+    rel = file_relative.as_posix()
+    idx = rel.find(_SWAIG_PAYLOAD_DIR_MARKER)
+    if idx == -1:
+        return None
+    tail = rel[idx + len(_SWAIG_PAYLOAD_DIR_MARKER):]
+    sub = tail.split("/", 1)[0]
+    return sub or None
+
+
 def _module_path_for_class(name: str, file_relative: Path) -> str:
     """Map a PHP class to its Python-canonical module path."""
     # Generated wire-type files route by PATH (their <Sub> subdir → the oracle
@@ -630,6 +667,13 @@ def _module_path_for_class(name: str, file_relative: Path) -> str:
     # keep their CLASS_MODULE_MAP routing.
     if _is_relay_proto_file(file_relative):
         return _RELAY_PROTO_MODULE
+    # Generated SWAIG-payload files route by PATH: the <Sub> subdir (PostPrompt /
+    # SwaigRequest / SwaigActions) → its signalwire.core.*_generated module, winning
+    # over CLASS_MODULE_MAP so a payload type name never misroutes onto a hand SWAIG
+    # SDK class (FunctionResult/ParameterSchema/RecordFormat) or elsewhere.
+    swaig_sub = _swaig_payload_subdir(file_relative)
+    if swaig_sub is not None and swaig_sub in _SWAIG_PAYLOAD_SUB_TO_MODULE:
+        return _SWAIG_PAYLOAD_SUB_TO_MODULE[swaig_sub]
     if name in CLASS_MODULE_MAP:
         return CLASS_MODULE_MAP[name]
     # Fallback: derive from file path. e.g. src/SignalWire/Foo/Bar.php
@@ -663,6 +707,7 @@ def _translate_class_in_file(name: str, file_relative: Path) -> str:
         _types_subdir(file_relative) is not None
         or _is_swml_verbs_file(file_relative)
         or _is_relay_proto_file(file_relative)
+        or _swaig_payload_subdir(file_relative) is not None
     )
     if in_generated_type_file and name in _TYPES_RESERVED_UNRENAME:
         return _TYPES_RESERVED_UNRENAME[name]

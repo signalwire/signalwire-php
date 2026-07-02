@@ -267,6 +267,17 @@ run_gate "GEN-FRESH-SWML" "generated SWML-verbs config tree matches schema.json 
 run_gate "GEN-FRESH-RELAY" "generated RELAY-protocol tree matches relay-protocol/*.json (--check)" \
     python3 scripts/generate_relay_protocol.py --check
 
+# Gate 4e: GEN-FRESH (SWAIG payloads) — the committed generated SWAIG read-side
+# payload tree (src/SignalWire/SWAIG/Generated/{PostPrompt,SwaigRequest,SwaigActions}/
+# *.php) must still match what scripts/generate_swaig_payloads.py produces from the
+# vendored porting-sdk/swaig-specs/*.yaml. Same rationale as gates 4b/4c/4d:
+# SURFACE-DIFF policing the enumerated surface can't catch a stale/hand-edited
+# generated body or a swaig-spec change with stale output — only regenerate-and-byte-
+# diff does. Read-only (--check never writes). Item D1 (post_prompt/swaig_request/
+# swaig_actions_generated, 14+2+4=20 method-less payload types).
+run_gate "GEN-FRESH-SWAIG" "generated SWAIG-payload tree matches swaig-specs/*.yaml (--check)" \
+    python3 scripts/generate_swaig_payloads.py --check
+
 # Gate 5: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
@@ -481,6 +492,19 @@ run_gate "SWAIG-CLI" "swaig-test shared mini-contract (verbs/serverless-reject/d
         --require-url-model \
         --default-action-argv='--url|http://user:pass@127.0.0.1:1/' \
         --no-serverless-argv='--url|http://user:pass@127.0.0.1:1/|--simulate-serverless|lambda|--list-tools'
+
+# SWAIG-COVERAGE — every engine response action in the vendored
+# swaig-specs/swaig-response.yaml must be emittable by this port's FunctionResult
+# (or signed off in porting-sdk/SWAIG_COVERAGE_ALLOWLIST.md). Back-pressure: when
+# mod_openai adds an action and the vendored spec is refreshed, this flags the port
+# if it hasn't adopted it. The shared checker's per-language _sdk_emits_php scraper
+# captures ONLY the top-level keys of a `$this->actions[] = [ … ];` literal (the
+# fluent emission idiom) — not every nested array literal — landing at ~25 of the 27
+# engine actions (the 2 gaps, back_to_back_functions + user_event, are allowlisted).
+# Same gate go/ts run, pointed at the PHP FunctionResult source.
+run_gate "SWAIG-COVERAGE" "every engine SWAIG action emittable (modulo allowlist)" \
+    python3 "$PORTING_SDK_DIR/scripts/swaig_coverage.py" --check \
+        --emission "$PORT_ROOT/src/SignalWire/SWAIG/FunctionResult.php"
 
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
