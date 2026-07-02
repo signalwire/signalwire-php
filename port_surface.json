@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 61f49030294beb5464650cbb1789aa6cc1e2be21",
+  "generated_from": "signalwire-php @ c404c88e6af77d849e3af5cf590489d1edaa3918",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1019,7 +1019,6 @@
           "addresses",
           "calling",
           "chat",
-          "compat",
           "datasphere",
           "fabric",
           "get_base_url",
@@ -1153,121 +1152,6 @@
         "Chat": [
           "__init__",
           "create_token"
-        ]
-      },
-      "functions": []
-    },
-    "signalwire.rest.namespaces.compat": {
-      "classes": {
-        "CompatAccounts": [
-          "__init__",
-          "create",
-          "get",
-          "get_base_path",
-          "list",
-          "update"
-        ],
-        "CompatApplications": [
-          "update"
-        ],
-        "CompatCalls": [
-          "start_recording",
-          "start_stream",
-          "stop_stream",
-          "update",
-          "update_recording"
-        ],
-        "CompatConferences": [
-          "__init__",
-          "delete_recording",
-          "get",
-          "get_base_path",
-          "get_participant",
-          "get_recording",
-          "list",
-          "list_participants",
-          "list_recordings",
-          "remove_participant",
-          "start_stream",
-          "stop_stream",
-          "update",
-          "update_participant",
-          "update_recording"
-        ],
-        "CompatFaxes": [
-          "delete_media",
-          "get_media",
-          "list_media",
-          "update"
-        ],
-        "CompatLamlBins": [
-          "update"
-        ],
-        "CompatMessages": [
-          "delete_media",
-          "get_media",
-          "list_media",
-          "update"
-        ],
-        "CompatNamespace": [
-          "__init__",
-          "accounts",
-          "applications",
-          "calls",
-          "conferences",
-          "faxes",
-          "get_account_base",
-          "get_account_sid",
-          "get_http",
-          "laml_bins",
-          "messages",
-          "phone_numbers",
-          "queues",
-          "recordings",
-          "tokens",
-          "transcriptions"
-        ],
-        "CompatPhoneNumbers": [
-          "__init__",
-          "delete",
-          "get",
-          "get_available_base",
-          "get_base_path",
-          "get_imported_base",
-          "import_number",
-          "list",
-          "list_available_countries",
-          "purchase",
-          "search_local",
-          "search_toll_free",
-          "update"
-        ],
-        "CompatQueues": [
-          "dequeue_member",
-          "get_member",
-          "list_members",
-          "update"
-        ],
-        "CompatRecordings": [
-          "__init__",
-          "delete",
-          "get",
-          "get_base_path",
-          "list"
-        ],
-        "CompatTokens": [
-          "__init__",
-          "create",
-          "delete",
-          "get_base_path",
-          "update"
-        ],
-        "CompatTranscriptions": [
-          "__init__",
-          "delete",
-          "get",
-          "get_base_path",
-          "list"
         ]
       },
       "functions": []

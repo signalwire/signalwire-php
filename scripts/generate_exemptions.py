@@ -425,11 +425,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "for the mapping.",
     ),
     (
-        "signalwire.rest.namespaces.compat.",
-        "PHP exposes the Compat (LAML) API through a single Compat "
-        "CrudResource wrapper; Python splits into one class per resource.",
-    ),
-    (
         "signalwire.rest.namespaces.video.",
         "PHP exposes the Video API through a Video CrudResource; Python "
         "splits into one class per resource (rooms, sessions, recordings, "

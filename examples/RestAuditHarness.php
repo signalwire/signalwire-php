@@ -18,18 +18,18 @@ declare(strict_types=1);
  * named operation with the parsed args, prints the parsed return
  * value as JSON to stdout. Exits 0 on success, non-zero on error.
  *
- * Operation map (audit dotted name → PHP REST namespace path):
- *   - calling.list_calls         → compat()->list({Calls path})
- *   - messaging.send             → compat()->getClient()->post(Messages path)
+ * Operation map (audit dotted name → PHP REST call):
+ *   - calling.list_calls         → getHttp()->get({LAML Calls path})
+ *   - messaging.send             → getHttp()->post({LAML Messages path})
  *   - phone_numbers.list         → phoneNumbers()->list()
  *   - fabric.subscribers.list    → fabric()->subscribers()->list()
- *   - compatibility.calls.list   → compat()->list({Calls path})
+ *   - compatibility.calls.list   → getHttp()->get({LAML Calls path})
  *
  * Calling.list_calls / compatibility.calls.list both list LAML
- * calls. The PHP REST surface doesn't ship a typed `list_calls()`
- * method — the audit's `Calling` namespace contract is for live RPC
- * call control, not LAML history listing — so the harness builds
- * the LAML path explicitly using the project-scoped Compat resource.
+ * calls. The PHP REST surface doesn't ship a typed LAML/compat
+ * namespace — the audit only checks the wire path + auth header —
+ * so the harness builds the LAML path explicitly and drives it
+ * through the client's raw HttpClient.
  *
  * Copyright (c) 2025 SignalWire
  * Licensed under the MIT License.
@@ -120,7 +120,7 @@ function callingListCalls(RestClient $client, array $args): array
 function messagingSend(RestClient $client, array $args): array
 {
     $path = '/api/laml/2010-04-01/Accounts/' . $client->getProjectId() . '/Messages.json';
-    // LAML uses urlencoded form bodies, but the Compat HttpClient is
+    // LAML uses urlencoded form bodies, but the client HttpClient is
     // JSON-only; the audit fixture doesn't validate the body shape,
     // only the path and auth header, so JSON is acceptable here.
     return $client->getHttp()->post($path, $args);
