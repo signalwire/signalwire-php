@@ -257,6 +257,16 @@ run_gate "GEN-FRESH" "generated REST tree + rest_signatures.json match canonical
 run_gate "GEN-FRESH-SWML" "generated SWML-verbs config tree matches schema.json \$defs (--check)" \
     python3 scripts/generate_swml_verbs.py --check
 
+# Gate 4d: GEN-FRESH (RELAY protocol) — the committed generated RELAY-protocol
+# wire-type tree (src/SignalWire/Relay/Generated/*.php) must still match what
+# scripts/generate_relay_protocol.py produces from porting-sdk/relay-protocol/*.json.
+# Same rationale as gates 4b/4c: SURFACE-DIFF policing the enumerated surface can't
+# catch a stale/hand-edited generated body or a relay-protocol schema change with
+# stale output — only regenerate-and-byte-diff does. Read-only (--check never
+# writes). Item I (relay.protocol_types_generated, 123 method-less wire types).
+run_gate "GEN-FRESH-RELAY" "generated RELAY-protocol tree matches relay-protocol/*.json (--check)" \
+    python3 scripts/generate_relay_protocol.py --check
+
 # Gate 5: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"

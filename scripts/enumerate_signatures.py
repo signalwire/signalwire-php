@@ -38,7 +38,7 @@ from enumerate_surface import (  # type: ignore
     CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES,
     camel_to_snake, _module_path_for_class, _translate_class,
     _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
-    _SWML_VERBS_MODULE,
+    _SWML_VERBS_MODULE, _RELAY_PROTO_MODULE,
 )
 
 
@@ -286,6 +286,13 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         # names the generator suffixed with `_` (Goto_/…) rename back to the bare leaf.
         elif ns == "SignalWire\\SWML\\Generated":
             types_mod = _SWML_VERBS_MODULE
+        # Generated RELAY-protocol wire-type classes (SignalWire\Relay\Generated\...)
+        # route by PATH to the single oracle module
+        # signalwire.relay.protocol_types_generated. Scoped strictly to the
+        # \Relay\Generated namespace so the hand-written Relay SDK classes one level
+        # up (Call/Client/Event/…) keep their CLASS_MODULE_MAP routing.
+        elif ns == "SignalWire\\Relay\\Generated":
+            types_mod = _RELAY_PROTO_MODULE
         # (types_mod, when set, wins below over CLASS_MODULE_MAP.)
         # FQN_CLASS_MODULE_MAP wins when set — disambiguates short-name
         # collisions between e.g. REST namespace classes and skills.
