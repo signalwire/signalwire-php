@@ -95,6 +95,15 @@ foreach ($classes as $fqcn) {
         if ($m->isDestructor()) {
             continue;
         }
+        // Skip PHP-synthesised enum methods (cases()/from()/tryFrom() on a
+        // BackedEnum, cases() on a pure enum). They report as internal methods
+        // declared on the enum, but they are language machinery, not authored
+        // API — the reference records the generated public enum (PhoneCallHandler)
+        // with an empty method set. A HAND-written public method on an enum is
+        // NOT internal, so it is still captured.
+        if ($r->isEnum() && $m->isInternal()) {
+            continue;
+        }
         $methods[] = methodEntry($m, false);
     }
 

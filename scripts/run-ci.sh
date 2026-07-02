@@ -379,15 +379,17 @@ run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
 # no baseline, no silencing casts, no mixed-widening.
 # Mirrors the go golangci / rust clippy blocking-lint gate.
 #
-# --memory-limit=512M: phpstan defaults to php.ini's memory_limit, which on a
+# --memory-limit=1G: phpstan defaults to php.ini's memory_limit, which on a
 # stock CLI install is 128M — too low for a full level-9 analysis of src/ +
 # scripts/ (it OOMs mid-run with "Result is incomplete because of severe
-# errors", not a real finding). Pin a generous limit so the gate's result
-# depends on the code, not the host php.ini. This is not a suppression: no
-# baseline, no @phpstan-ignore — the analysis still runs to completion at
-# level 9 and must report zero findings.
+# errors", not a real finding). The generated REST wire-type surface added ~800
+# type/enum classes under REST/Namespaces/Generated/Types/, pushing peak usage
+# past the old 512M; 1G runs to completion with headroom. Pin a generous limit so
+# the gate's result depends on the code, not the host php.ini. This is not a
+# suppression: no baseline, no @phpstan-ignore — the analysis still runs to
+# completion at level 9 and must report zero findings.
 run_gate "LINT" "phpstan level 9 zero findings (lint gate)" \
-    vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+    vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
 # Gate 9: DOC-AUDIT — every method/class referenced in docs/ + examples/ fenced
 # code blocks must resolve to a real symbol in the port surface (catches
