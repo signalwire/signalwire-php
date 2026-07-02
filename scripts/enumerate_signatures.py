@@ -39,6 +39,7 @@ from enumerate_surface import (  # type: ignore
     camel_to_snake, _module_path_for_class, _translate_class,
     _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
     _SWML_VERBS_MODULE, _RELAY_PROTO_MODULE,
+    _SWAIG_PAYLOAD_SUB_TO_MODULE,
 )
 
 
@@ -293,6 +294,15 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         # up (Call/Client/Event/…) keep their CLASS_MODULE_MAP routing.
         elif ns == "SignalWire\\Relay\\Generated":
             types_mod = _RELAY_PROTO_MODULE
+        # Generated SWAIG-payload classes (SignalWire\SWAIG\Generated\<Sub>\...) route
+        # by PATH: the <Sub> namespace segment (PostPrompt / SwaigRequest / SwaigActions)
+        # → its signalwire.core.*_generated oracle module. Same rationale as the Types
+        # route: the path MUST win over CLASS_MODULE_MAP so a payload type name never
+        # misroutes onto a hand SWAIG SDK class one/two levels up. The diff tool's
+        # gen-payload fold then keys a class-typed field by (class, field) cross-port.
+        elif ns.startswith("SignalWire\\SWAIG\\Generated\\"):
+            sub = ns.rsplit("\\", 1)[-1]
+            types_mod = _SWAIG_PAYLOAD_SUB_TO_MODULE.get(sub)
         # (types_mod, when set, wins below over CLASS_MODULE_MAP.)
         # FQN_CLASS_MODULE_MAP wins when set — disambiguates short-name
         # collisions between e.g. REST namespace classes and skills.
