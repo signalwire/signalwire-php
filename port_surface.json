@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 4aa677d121576af07894e1885b2121b7e4ecb8d2",
+  "generated_from": "signalwire-php @ 20f7131cb09471cf7c0ba63c4b74c8a566d6ab1e",
   "modules": {
     "signalwire": {
       "classes": {
@@ -3124,8 +3124,12 @@
     "signalwire.skills.api_ninjas_trivia.skill": {
       "classes": {
         "ApiNinjasTriviaSkill": [
+          "__init__",
           "get_description",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
+          "get_tools",
           "register_tools",
           "setup",
           "supports_multiple_instances"
@@ -3138,7 +3142,9 @@
         "ClaudeSkillsSkill": [
           "get_description",
           "get_hints",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup",
@@ -3162,9 +3168,13 @@
     "signalwire.skills.datasphere.skill": {
       "classes": {
         "DataSphereSkill": [
+          "cleanup",
           "get_description",
           "get_global_data",
+          "get_hints",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup",
@@ -3178,7 +3188,10 @@
         "DataSphereServerlessSkill": [
           "get_description",
           "get_global_data",
+          "get_hints",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup",
@@ -3191,7 +3204,9 @@
       "classes": {
         "DateTimeSkill": [
           "get_description",
+          "get_hints",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup"
@@ -3205,6 +3220,7 @@
           "get_description",
           "get_hints",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup"
@@ -3228,7 +3244,9 @@
         "InfoGathererSkill": [
           "get_description",
           "get_global_data",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup",
@@ -3242,7 +3260,9 @@
         "JokeSkill": [
           "get_description",
           "get_global_data",
+          "get_hints",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup"
@@ -3254,7 +3274,9 @@
       "classes": {
         "MathSkill": [
           "get_description",
+          "get_hints",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup"
@@ -3279,9 +3301,14 @@
     "signalwire.skills.native_vector_search.skill": {
       "classes": {
         "NativeVectorSearchSkill": [
+          "cleanup",
           "get_description",
+          "get_global_data",
           "get_hints",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
+          "get_prompt_sections",
           "register_tools",
           "setup",
           "supports_multiple_instances"
@@ -3292,8 +3319,12 @@
     "signalwire.skills.play_background_file.skill": {
       "classes": {
         "PlayBackgroundFileSkill": [
+          "__init__",
           "get_description",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
+          "get_tools",
           "register_tools",
           "setup",
           "supports_multiple_instances"
@@ -3304,11 +3335,15 @@
     "signalwire.skills.registry": {
       "classes": {
         "SkillRegistry": [
+          "__init__",
           "add_skill_directory",
+          "discover_skills",
           "get_all_skills_schema",
           "get_external_paths",
           "get_factory",
+          "get_skill_class",
           "instance",
+          "list_all_skill_sources",
           "list_skills",
           "register_skill",
           "reset"
@@ -3325,9 +3360,13 @@
     "signalwire.skills.spider.skill": {
       "classes": {
         "SpiderSkill": [
+          "__init__",
+          "cleanup",
           "get_description",
           "get_hints",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
           "register_tools",
           "setup",
           "supports_multiple_instances"
@@ -3340,7 +3379,9 @@
         "SWMLTransferSkill": [
           "get_description",
           "get_hints",
+          "get_instance_key",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
           "setup",
@@ -3352,8 +3393,11 @@
     "signalwire.skills.weather_api.skill": {
       "classes": {
         "WeatherApiSkill": [
+          "__init__",
           "get_description",
           "get_name",
+          "get_parameter_schema",
+          "get_tools",
           "register_tools",
           "setup"
         ]
@@ -3365,6 +3409,8 @@
         "WebSearchSkill": [
           "get_description",
           "get_global_data",
+          "get_hints",
+          "get_instance_key",
           "get_name",
           "get_parameter_schema",
           "get_prompt_sections",
@@ -3380,9 +3426,12 @@
       "classes": {
         "WikipediaSearchSkill": [
           "get_description",
+          "get_hints",
           "get_name",
+          "get_parameter_schema",
           "get_prompt_sections",
           "register_tools",
+          "search_wiki",
           "setup"
         ]
       },

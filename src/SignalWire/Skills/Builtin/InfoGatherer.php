@@ -59,6 +59,69 @@ class InfoGatherer extends SkillBase
         return true;
     }
 
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `InfoGathererSkill.get_instance_key` (skill.py:83): the
+     * optional `prefix` param differentiates instances.
+     */
+    public function getInstanceKey(): string
+    {
+        $prefix = $this->paramString('prefix');
+        if ($prefix !== '') {
+            return 'info_gatherer_' . $prefix;
+        }
+        return 'info_gatherer';
+    }
+
+    /**
+     * Parameter schema for the info_gatherer skill.
+     *
+     * Mirrors Python `InfoGathererSkill.get_parameter_schema` (skill.py:34):
+     * merges the base schema with questions + prefix + completion_message.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'questions' => [
+                'type' => 'array',
+                'description' => "List of question objects. Each must have 'key_name' (str) and "
+                    . "'question_text' (str). Optional 'confirm' (bool) asks the agent "
+                    . 'to confirm the answer before proceeding.',
+                'required' => true,
+                'items' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'key_name' => ['type' => 'string'],
+                        'question_text' => ['type' => 'string'],
+                        'confirm' => ['type' => 'boolean'],
+                        'prompt_add' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+            'prefix' => [
+                'type' => 'string',
+                'description' => 'Optional prefix for tool names and namespace. When set, tools '
+                    . 'are named <prefix>_start_questions / <prefix>_submit_answer and '
+                    . "state is stored under 'skill:<prefix>' in global_data.",
+                'required' => false,
+            ],
+            'completion_message' => [
+                'type' => 'string',
+                'description' => 'Message returned after all questions are answered',
+                'default' => 'Thank you! All questions have been answered. You can now '
+                    . 'summarize the information collected or ask if there\'s anything '
+                    . 'else the user would like to discuss.',
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
     public function setup(): bool
     {
         if (empty($this->params['questions']) || !is_array($this->params['questions'])) {

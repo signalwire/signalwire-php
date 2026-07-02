@@ -44,6 +44,139 @@ class Datasphere extends SkillBase
         return true;
     }
 
+    /**
+     * Speech-recognition hints for this skill.
+     *
+     * Mirrors Python `DataSphereSkill.get_hints` (skill.py:308): no hints
+     * provided.
+     *
+     * @return list<string>
+     */
+    public function getHints(): array
+    {
+        return [];
+    }
+
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `DataSphereSkill.get_instance_key` (skill.py:111): the
+     * tool name (default 'search_knowledge') differentiates instances.
+     */
+    public function getInstanceKey(): string
+    {
+        return 'datasphere_' . $this->getToolName('search_knowledge');
+    }
+
+    /**
+     * Release resources when the skill is unloaded.
+     *
+     * Mirrors Python `DataSphereSkill.cleanup` (skill.py:303), which closes the
+     * requests session. The PHP skill holds no persistent connection (each
+     * search is a stateless HTTP call), so cleanup is a no-op.
+     */
+    public function cleanup(): void
+    {
+    }
+
+    /**
+     * Parameter schema for the DataSphere skill.
+     *
+     * Mirrors Python `DataSphereSkill.get_parameter_schema` (skill.py:33).
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, self::datasphereSchemaProperties());
+        return $schema;
+    }
+
+    /**
+     * The shared DataSphere search parameter properties (identical between the
+     * standard and serverless skills — Python defines the same block in both).
+     * Private so it stays off the enumerated surface (it is an internal helper,
+     * not a skill-interface method).
+     *
+     * @return array<string,mixed>
+     */
+    private static function datasphereSchemaProperties(): array
+    {
+        return [
+            'space_name' => [
+                'type' => 'string',
+                'description' => "SignalWire space name (e.g., 'mycompany' from mycompany.signalwire.com)",
+                'required' => true,
+            ],
+            'project_id' => [
+                'type' => 'string',
+                'description' => 'SignalWire project ID',
+                'required' => true,
+                'env_var' => 'SIGNALWIRE_PROJECT_ID',
+            ],
+            'token' => [
+                'type' => 'string',
+                'description' => 'SignalWire API token',
+                'required' => true,
+                'hidden' => true,
+                'env_var' => 'SIGNALWIRE_TOKEN',
+            ],
+            'document_id' => [
+                'type' => 'string',
+                'description' => 'DataSphere document ID to search within',
+                'required' => true,
+            ],
+            'count' => [
+                'type' => 'integer',
+                'description' => 'Number of search results to return',
+                'default' => 1,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 10,
+            ],
+            'distance' => [
+                'type' => 'number',
+                'description' => 'Maximum distance threshold for results (lower is more relevant)',
+                'default' => 3.0,
+                'required' => false,
+                'minimum' => 0.0,
+                'maximum' => 10.0,
+            ],
+            'tags' => [
+                'type' => 'array',
+                'description' => 'Tags to filter search results',
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'language' => [
+                'type' => 'string',
+                'description' => "Language code for query expansion (e.g., 'en', 'es')",
+                'required' => false,
+            ],
+            'pos_to_expand' => [
+                'type' => 'array',
+                'description' => 'Parts of speech to expand with synonyms',
+                'required' => false,
+                'items' => ['type' => 'string', 'enum' => ['NOUN', 'VERB', 'ADJ', 'ADV']],
+            ],
+            'max_synonyms' => [
+                'type' => 'integer',
+                'description' => 'Maximum number of synonyms to use for query expansion',
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 10,
+            ],
+            'no_results_message' => [
+                'type' => 'string',
+                'description' => 'Message to return when no results are found',
+                'default' => "I couldn't find any relevant information for '{query}' in the knowledge base. Try rephrasing your question or asking about a different topic.",
+                'required' => false,
+            ],
+        ];
+    }
+
     public function setup(): bool
     {
         $required = ['space_name', 'project_id', 'token', 'document_id'];

@@ -23,6 +23,118 @@ class DatasphereServerless extends SkillBase
         return true;
     }
 
+    /**
+     * Speech-recognition hints for this skill.
+     *
+     * Mirrors Python `DataSphereServerlessSkill.get_hints` (skill.py:242): no
+     * hints provided.
+     *
+     * @return list<string>
+     */
+    public function getHints(): array
+    {
+        return [];
+    }
+
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `DataSphereServerlessSkill.get_instance_key`
+     * (skill.py:115): the tool name (default 'search_knowledge') differentiates
+     * instances.
+     */
+    public function getInstanceKey(): string
+    {
+        return 'datasphere_serverless_' . $this->getToolName('search_knowledge');
+    }
+
+    /**
+     * Parameter schema for the DataSphere Serverless skill.
+     *
+     * Mirrors Python `DataSphereServerlessSkill.get_parameter_schema`
+     * (skill.py:37): the same search-parameter block as the standard
+     * DataSphere skill.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'space_name' => [
+                'type' => 'string',
+                'description' => "SignalWire space name (e.g., 'mycompany' from mycompany.signalwire.com)",
+                'required' => true,
+            ],
+            'project_id' => [
+                'type' => 'string',
+                'description' => 'SignalWire project ID',
+                'required' => true,
+                'env_var' => 'SIGNALWIRE_PROJECT_ID',
+            ],
+            'token' => [
+                'type' => 'string',
+                'description' => 'SignalWire API token',
+                'required' => true,
+                'hidden' => true,
+                'env_var' => 'SIGNALWIRE_TOKEN',
+            ],
+            'document_id' => [
+                'type' => 'string',
+                'description' => 'DataSphere document ID to search within',
+                'required' => true,
+            ],
+            'count' => [
+                'type' => 'integer',
+                'description' => 'Number of search results to return',
+                'default' => 1,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 10,
+            ],
+            'distance' => [
+                'type' => 'number',
+                'description' => 'Maximum distance threshold for results (lower is more relevant)',
+                'default' => 3.0,
+                'required' => false,
+                'minimum' => 0.0,
+                'maximum' => 10.0,
+            ],
+            'tags' => [
+                'type' => 'array',
+                'description' => 'Tags to filter search results',
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'language' => [
+                'type' => 'string',
+                'description' => "Language code for query expansion (e.g., 'en', 'es')",
+                'required' => false,
+            ],
+            'pos_to_expand' => [
+                'type' => 'array',
+                'description' => 'Parts of speech to expand with synonyms',
+                'required' => false,
+                'items' => ['type' => 'string', 'enum' => ['NOUN', 'VERB', 'ADJ', 'ADV']],
+            ],
+            'max_synonyms' => [
+                'type' => 'integer',
+                'description' => 'Maximum number of synonyms to use for query expansion',
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 10,
+            ],
+            'no_results_message' => [
+                'type' => 'string',
+                'description' => 'Message to return when no results are found',
+                'default' => "I couldn't find any relevant information for '{query}' in the knowledge base. Try rephrasing your question or asking about a different topic.",
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
     public function setup(): bool
     {
         $required = ['space_name', 'project_id', 'token', 'document_id'];

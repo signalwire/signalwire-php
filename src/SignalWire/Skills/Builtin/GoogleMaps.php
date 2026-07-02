@@ -160,6 +160,42 @@ class GoogleMaps extends SkillBase
     }
 
     /**
+     * Parameter schema for the google_maps skill.
+     *
+     * Mirrors Python `GoogleMapsSkill.get_parameter_schema` (skill.py:474):
+     * merges the base schema with api_key + lookup/route tool-name overrides.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'api_key' => [
+                'type' => 'string',
+                'description' => 'Google Maps API key',
+                'required' => true,
+                'hidden' => true,
+                'env_var' => 'GOOGLE_MAPS_API_KEY',
+            ],
+            'lookup_tool_name' => [
+                'type' => 'string',
+                'description' => 'Name for the address lookup tool',
+                'default' => 'lookup_address',
+                'required' => false,
+            ],
+            'route_tool_name' => [
+                'type' => 'string',
+                'description' => 'Name for the route computation tool',
+                'default' => 'compute_route',
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
+    /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
     public function getPromptSections(): array

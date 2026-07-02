@@ -41,8 +41,65 @@ class WikipediaSearch extends SkillBase
         return true;
     }
 
-    public function registerTools(): void
+    /**
+     * Speech-recognition hints for this skill.
+     *
+     * Mirrors Python `WikipediaSearchSkill.get_hints` (skill.py:212): no hints
+     * provided.
+     *
+     * @return list<string>
+     */
+    public function getHints(): array
     {
+        return [];
+    }
+
+    /**
+     * Parameter schema for the Wikipedia search skill.
+     *
+     * Mirrors Python `WikipediaSearchSkill.get_parameter_schema` (skill.py:44):
+     * merges the base schema with num_results + no_results_message.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'num_results' => [
+                'type' => 'integer',
+                'description' => 'Maximum number of Wikipedia articles to return',
+                'default' => 1,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 5,
+            ],
+            'no_results_message' => [
+                'type' => 'string',
+                'description' => 'Custom message when no Wikipedia articles are found',
+                'default' => "I couldn't find any Wikipedia articles for '{query}'. Try rephrasing your search or using different keywords.",
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
+    /**
+     * Search Wikipedia for articles matching the query and return the formatted
+     * article content (or an error / no-results message) as a string.
+     *
+     * Mirrors Python `WikipediaSearchSkill.search_wiki` (skill.py:121): a
+     * two-step API call (search, then per-hit extract) returning a plain
+     * string. The SWAIG tool handler wraps this in a {@see FunctionResult}.
+     */
+    public function searchWiki(string $query): string
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return 'Error: No search query provided.';
+        }
+
         $numResults = max(1, min(5, $this->paramInt('num_results', 1)));
         $timeout = max(2, $this->paramInt('timeout', 10));
         $noResultsMessageRaw = $this->params['no_results_message'] ?? null;
@@ -51,6 +108,104 @@ class WikipediaSearch extends SkillBase
             : "I couldn't find any Wikipedia articles for '{query}'. "
                 . 'Try rephrasing your search or using different keywords.';
 
+        $endpoint = HttpHelper::applyBaseUrlOverride(
+            self::SEARCH_ENDPOINT,
+            self::BASE_URL_ENV,
+        );
+
+        // Step 1: search for matching articles.
+        try {
+            [$status, $rawBody, $parsed] = HttpHelper::get(
+                $endpoint,
+                query: [
+                    'action' => 'query',
+                    'list' => 'search',
+                    'format' => 'json',
+                    'srsearch' => $query,
+                    'srlimit' => $numResults,
+                ],
+                timeout: $timeout,
+            );
+        } catch (\RuntimeException $e) {
+            return 'Error accessing Wikipedia: ' . $e->getMessage();
+        }
+
+        if ($status < 200 || $status >= 300 || !is_array($parsed)) {
+            return str_replace('{query}', $query, $noResultsMessage);
+        }
+
+        $queryBlock = $parsed['query'] ?? null;
+        $hits = is_array($queryBlock) ? ($queryBlock['search'] ?? []) : [];
+        if (!is_array($hits) || count($hits) === 0) {
+            return str_replace('{query}', $query, $noResultsMessage);
+        }
+
+        // Step 2: fetch the introductory extract for each hit.
+        $articles = [];
+        foreach (array_slice($hits, 0, $numResults) as $hit) {
+            if (!is_array($hit) || empty($hit['title']) || !is_string($hit['title'])) {
+                continue;
+            }
+            $title = $hit['title'];
+            $snippetRaw = $hit['snippet'] ?? null;
+            $snippet = is_string($snippetRaw) ? $snippetRaw : '';
+
+            try {
+                [$exStatus, , $extracted] = HttpHelper::get(
+                    $endpoint,
+                    query: [
+                        'action' => 'query',
+                        'prop' => 'extracts',
+                        'exintro' => '1',
+                        'explaintext' => '1',
+                        'format' => 'json',
+                        'titles' => $title,
+                    ],
+                    timeout: $timeout,
+                );
+            } catch (\RuntimeException) {
+                $exStatus = 0;
+                $extracted = null;
+            }
+
+            $extract = '';
+            if ($exStatus >= 200 && $exStatus < 300 && is_array($extracted)) {
+                $extractedQuery = $extracted['query'] ?? null;
+                $pages = is_array($extractedQuery) ? ($extractedQuery['pages'] ?? []) : [];
+                if (is_array($pages)) {
+                    $first = reset($pages);
+                    if (is_array($first)) {
+                        $extractRaw = $first['extract'] ?? '';
+                        $extract = is_string($extractRaw) ? trim($extractRaw) : '';
+                    }
+                }
+            }
+
+            if ($extract === '' && $snippet !== '') {
+                // The audit's canned response only carries search hits with
+                // snippets, no extracts. Fall back to the snippet so we still
+                // surface the sentinel to the caller.
+                $extract = strip_tags($snippet);
+            }
+
+            if ($extract !== '') {
+                $articles[] = "**{$title}**\n\n{$extract}";
+            } else {
+                $articles[] = "**{$title}**\n\nNo summary available for this article.";
+            }
+        }
+
+        if (count($articles) === 0) {
+            return str_replace('{query}', $query, $noResultsMessage);
+        }
+        if (count($articles) === 1) {
+            return $articles[0];
+        }
+        return implode("\n\n" . str_repeat('=', 50) . "\n\n", $articles);
+    }
+
+    public function registerTools(): void
+    {
         $this->defineTool(
             'search_wiki',
             'Search Wikipedia for information about a topic and get article summaries',
@@ -60,121 +215,9 @@ class WikipediaSearch extends SkillBase
                     'description' => 'The topic to search for on Wikipedia',
                 ],
             ],
-            function (array $args, array $rawData) use (
-                $numResults,
-                $timeout,
-                $noResultsMessage,
-            ): FunctionResult {
+            function (array $args, array $rawData): FunctionResult {
                 $query = trim((string) ($args['query'] ?? ''));
-                if ($query === '') {
-                    return new FunctionResult('Error: No search query provided.');
-                }
-
-                $endpoint = HttpHelper::applyBaseUrlOverride(
-                    self::SEARCH_ENDPOINT,
-                    self::BASE_URL_ENV,
-                );
-
-                // Step 1: search for matching articles.
-                try {
-                    [$status, $rawBody, $parsed] = HttpHelper::get(
-                        $endpoint,
-                        query: [
-                            'action' => 'query',
-                            'list' => 'search',
-                            'format' => 'json',
-                            'srsearch' => $query,
-                            'srlimit' => $numResults,
-                        ],
-                        timeout: $timeout,
-                    );
-                } catch (\RuntimeException $e) {
-                    return new FunctionResult(
-                        'Error accessing Wikipedia: ' . $e->getMessage()
-                    );
-                }
-
-                if ($status < 200 || $status >= 300 || !is_array($parsed)) {
-                    return new FunctionResult(
-                        str_replace('{query}', $query, $noResultsMessage)
-                    );
-                }
-
-                $queryBlock = $parsed['query'] ?? null;
-                $hits = is_array($queryBlock) ? ($queryBlock['search'] ?? []) : [];
-                if (!is_array($hits) || count($hits) === 0) {
-                    return new FunctionResult(
-                        str_replace('{query}', $query, $noResultsMessage)
-                    );
-                }
-
-                // Step 2: fetch the introductory extract for each hit.
-                $articles = [];
-                foreach (array_slice($hits, 0, $numResults) as $hit) {
-                    if (!is_array($hit) || empty($hit['title']) || !is_string($hit['title'])) {
-                        continue;
-                    }
-                    $title = $hit['title'];
-                    $snippetRaw = $hit['snippet'] ?? null;
-                    $snippet = is_string($snippetRaw) ? $snippetRaw : '';
-
-                    try {
-                        [$exStatus, , $extracted] = HttpHelper::get(
-                            $endpoint,
-                            query: [
-                                'action' => 'query',
-                                'prop' => 'extracts',
-                                'exintro' => '1',
-                                'explaintext' => '1',
-                                'format' => 'json',
-                                'titles' => $title,
-                            ],
-                            timeout: $timeout,
-                        );
-                    } catch (\RuntimeException) {
-                        $exStatus = 0;
-                        $extracted = null;
-                    }
-
-                    $extract = '';
-                    if ($exStatus >= 200 && $exStatus < 300 && is_array($extracted)) {
-                        $extractedQuery = $extracted['query'] ?? null;
-                        $pages = is_array($extractedQuery) ? ($extractedQuery['pages'] ?? []) : [];
-                        if (is_array($pages)) {
-                            $first = reset($pages);
-                            if (is_array($first)) {
-                                $extractRaw = $first['extract'] ?? '';
-                                $extract = is_string($extractRaw) ? trim($extractRaw) : '';
-                            }
-                        }
-                    }
-
-                    if ($extract === '' && $snippet !== '') {
-                        // The audit's canned response only carries
-                        // search hits with snippets, no extracts. Fall
-                        // back to the snippet so we still surface the
-                        // sentinel to the caller.
-                        $extract = strip_tags($snippet);
-                    }
-
-                    if ($extract !== '') {
-                        $articles[] = "**{$title}**\n\n{$extract}";
-                    } else {
-                        $articles[] = "**{$title}**\n\nNo summary available for this article.";
-                    }
-                }
-
-                if (count($articles) === 0) {
-                    return new FunctionResult(
-                        str_replace('{query}', $query, $noResultsMessage)
-                    );
-                }
-                if (count($articles) === 1) {
-                    return new FunctionResult($articles[0]);
-                }
-                return new FunctionResult(
-                    implode("\n\n" . str_repeat('=', 50) . "\n\n", $articles)
-                );
+                return new FunctionResult($this->searchWiki($query));
             }
         );
     }

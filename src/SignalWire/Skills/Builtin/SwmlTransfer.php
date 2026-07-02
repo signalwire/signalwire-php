@@ -38,6 +38,115 @@ class SwmlTransfer extends SkillBase
         return true;
     }
 
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `SWMLTransferSkill.get_instance_key` (skill.py:121): the
+     * tool name (default 'transfer_call') differentiates instances.
+     */
+    public function getInstanceKey(): string
+    {
+        return 'swml_transfer_' . $this->getToolName('transfer_call');
+    }
+
+    /**
+     * Parameter schema for the SWML Transfer skill.
+     *
+     * Mirrors Python `SWMLTransferSkill.get_parameter_schema` (skill.py:30).
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'transfers' => [
+                'type' => 'object',
+                'description' => 'Transfer configurations mapping patterns to destinations',
+                'required' => true,
+                'additionalProperties' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'url' => [
+                            'type' => 'string',
+                            'description' => 'SWML endpoint URL for agent transfer',
+                        ],
+                        'address' => [
+                            'type' => 'string',
+                            'description' => 'Phone number or SIP address for direct connect',
+                        ],
+                        'message' => [
+                            'type' => 'string',
+                            'description' => 'Message to say before transferring',
+                            'default' => 'Transferring you now...',
+                        ],
+                        'return_message' => [
+                            'type' => 'string',
+                            'description' => 'Message when returning from transfer',
+                            'default' => 'The transfer is complete. How else can I help you?',
+                        ],
+                        'post_process' => [
+                            'type' => 'boolean',
+                            'description' => 'Whether to process message with AI before saying',
+                            'default' => true,
+                        ],
+                        'final' => [
+                            'type' => 'boolean',
+                            'description' => 'Whether transfer is permanent (true) or temporary (false)',
+                            'default' => true,
+                        ],
+                        'from_addr' => [
+                            'type' => 'string',
+                            'description' => 'Caller ID for connect action (optional)',
+                        ],
+                    ],
+                ],
+            ],
+            'description' => [
+                'type' => 'string',
+                'description' => 'Description for the transfer tool',
+                'default' => 'Transfer call based on pattern matching',
+                'required' => false,
+            ],
+            'parameter_name' => [
+                'type' => 'string',
+                'description' => 'Name of the parameter that accepts the transfer type',
+                'default' => 'transfer_type',
+                'required' => false,
+            ],
+            'parameter_description' => [
+                'type' => 'string',
+                'description' => 'Description for the transfer type parameter',
+                'default' => 'The type of transfer to perform',
+                'required' => false,
+            ],
+            'default_message' => [
+                'type' => 'string',
+                'description' => 'Message when no pattern matches',
+                'default' => 'Please specify a valid transfer type.',
+                'required' => false,
+            ],
+            'default_post_process' => [
+                'type' => 'boolean',
+                'description' => 'Whether to process default message with AI',
+                'default' => false,
+                'required' => false,
+            ],
+            'required_fields' => [
+                'type' => 'object',
+                'description' => 'Additional required fields to collect before transfer',
+                'default' => [],
+                'required' => false,
+                'additionalProperties' => [
+                    'type' => 'string',
+                    'description' => 'Field description',
+                ],
+            ],
+        ]);
+        return $schema;
+    }
+
     public function setup(): bool
     {
         if (empty($this->params['transfers']) || !is_array($this->params['transfers'])) {

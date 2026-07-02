@@ -85,6 +85,32 @@ class WebSearch extends SkillBase
         return true;
     }
 
+    /**
+     * Speech-recognition hints for this skill.
+     *
+     * Mirrors Python `WebSearchSkill.get_hints` (skill.py:932): no hints
+     * provided.
+     *
+     * @return list<string>
+     */
+    public function getHints(): array
+    {
+        return [];
+    }
+
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `WebSearchSkill.get_instance_key` (skill.py:785): the
+     * search_engine_id and tool_name together differentiate instances.
+     */
+    public function getInstanceKey(): string
+    {
+        $searchEngineId = $this->paramString('search_engine_id', 'default');
+        $toolName = $this->getToolName('web_search');
+        return 'web_search_' . $searchEngineId . '_' . $toolName;
+    }
+
     public function setup(): bool
     {
         if (empty($this->params['api_key']) || empty($this->params['search_engine_id'])) {

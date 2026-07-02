@@ -1049,20 +1049,21 @@ class ContextsTest extends TestCase
         $this->assertSame([], $builder->validate());
     }
 
-    public function testCreateSimpleContextFreeFunctionReturnsContext(): void
+    public function testCreateSimpleContextReturnsContext(): void
     {
-        // Python's signalwire.core.contexts.create_simple_context(name) is
-        // a module-level helper that returns a Context (not a builder).
-        // PHP exposes the same as a namespaced function.
-        $ctx = \SignalWire\Contexts\create_simple_context('greeting');
+        // Python's signalwire.core.contexts.create_simple_context(name) is a
+        // module-level helper returning a Context. PHP (PSR-4, no module-level
+        // free functions) hosts it as the static Context::createSimpleContext,
+        // projected to the module name via FREE_FUNCTION_PROJECTIONS.
+        $ctx = Context::createSimpleContext('greeting');
         $this->assertInstanceOf(Context::class, $ctx);
         $this->assertSame('greeting', $ctx->getName());
     }
 
-    public function testCreateSimpleContextFreeFunctionDefaultName(): void
+    public function testCreateSimpleContextDefaultName(): void
     {
         // Default name is "default" (matches Python).
-        $ctx = \SignalWire\Contexts\create_simple_context();
+        $ctx = Context::createSimpleContext();
         $this->assertSame('default', $ctx->getName());
     }
 

@@ -1127,6 +1127,20 @@ class SkillsTest extends TestCase
 
         $this->assertCount(18, $skillNames);
 
+        // A few skills validate their required config in the constructor
+        // (mirroring Python's __init__ which raises ValueError): supply the
+        // minimal valid config so construction succeeds. Others accept an
+        // empty config and validate later in setup().
+        $ctorConfig = [
+            'api_ninjas_trivia'    => ['api_key' => 'x'],
+            'weather_api'          => ['api_key' => 'x'],
+            'play_background_file'  => [
+                'files' => [
+                    ['key' => 'hold', 'url' => 'https://example.com/hold.mp3', 'description' => 'Hold music'],
+                ],
+            ],
+        ];
+
         foreach ($skillNames as $name) {
             $className = $registry->getFactory($name);
             $this->assertNotNull($className, "Factory for '{$name}' should not be null");
@@ -1138,8 +1152,8 @@ class SkillsTest extends TestCase
             );
 
             // Instantiate -- some may require env vars for setup(), but
-            // the constructor itself must not throw.
-            $instance = new $className($agent);
+            // the constructor itself must not throw when given valid config.
+            $instance = new $className($agent, $ctorConfig[$name] ?? []);
             $this->assertInstanceOf(
                 \SignalWire\Skills\SkillBase::class,
                 $instance,
@@ -1153,5 +1167,326 @@ class SkillsTest extends TestCase
             $this->assertIsArray($instance->getRequiredEnvVars());
             $this->assertIsBool($instance->supportsMultipleInstances());
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Skill-interface method tests (item I: get_parameter_schema /
+    //  get_instance_key / get_hints / get_tools / search_wiki + registry)
+    // ══════════════════════════════════════════════════════════════════════
+
+    public function testTriviaParameterSchemaMergesApiKeyAndCategories(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k']);
+        $props = $skill->getParameterSchema()['properties'];
+
+        // base props preserved
+        $this->assertArrayHasKey('swaig_fields', $props);
+        // skill-specific props merged
+        $this->assertArrayHasKey('api_key', $props);
+        $this->assertTrue($props['api_key']['required']);
+        $this->assertTrue($props['api_key']['hidden']);
+        $this->assertSame('API_NINJAS_KEY', $props['api_key']['env_var']);
+        $this->assertArrayHasKey('categories', $props);
+        $this->assertSame('array', $props['categories']['type']);
+    }
+
+    public function testTriviaGetInstanceKeyDistinctPerToolName(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k']);
+        $b = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k', 'tool_name' => 'quiz']);
+
+        $this->assertSame('api_ninjas_trivia_get_trivia', $a->getInstanceKey());
+        $this->assertSame('api_ninjas_trivia_quiz', $b->getInstanceKey());
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+    }
+
+    public function testTriviaGetToolsBuildsDataMapWebhook(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'secret']);
+        $tools = $skill->getTools();
+
+        $this->assertCount(1, $tools);
+        $this->assertSame('get_trivia', $tools[0]['function']);
+        $this->assertArrayHasKey('data_map', $tools[0]);
+        $this->assertSame(
+            'secret',
+            $tools[0]['data_map']['webhooks'][0]['headers']['X-Api-Key'],
+        );
+        $this->assertContains('category', $tools[0]['argument']['required']);
+    }
+
+    public function testTriviaConstructorRejectsMissingApiKey(): void
+    {
+        $agent = $this->makeAgent();
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, []);
+    }
+
+    public function testTriviaConstructorRejectsInvalidCategory(): void
+    {
+        $agent = $this->makeAgent();
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, [
+            'api_key'    => 'k',
+            'categories' => ['not_a_real_category'],
+        ]);
+    }
+
+    public function testWeatherGetToolsAndSchemaAndCtor(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\WeatherApi($agent, [
+            'api_key'          => 'wkey',
+            'temperature_unit' => 'celsius',
+        ]);
+
+        $props = $skill->getParameterSchema()['properties'];
+        $this->assertArrayHasKey('temperature_unit', $props);
+        $this->assertSame(['fahrenheit', 'celsius'], $props['temperature_unit']['enum']);
+
+        $tools = $skill->getTools();
+        $this->assertCount(1, $tools);
+        $this->assertSame('get_weather', $tools[0]['function']);
+        // celsius unit selected -> temp_c template used
+        $this->assertStringContainsString('temp_c', $tools[0]['data_map']['webhooks'][0]['output']['response']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\WeatherApi($agent, ['api_key' => 'k', 'temperature_unit' => 'kelvin']);
+    }
+
+    public function testPlayBackgroundFileToolsAndInstanceKeyAndCtor(): void
+    {
+        $agent = $this->makeAgent();
+        $files = [
+            ['key' => 'hold', 'url' => 'https://x/h.mp3', 'description' => 'Hold music'],
+        ];
+        $skill = new \SignalWire\Skills\Builtin\PlayBackgroundFile($agent, ['files' => $files]);
+
+        $this->assertSame('play_background_file_play_background_file', $skill->getInstanceKey());
+
+        $props = $skill->getParameterSchema()['properties'];
+        $this->assertArrayHasKey('files', $props);
+        $this->assertTrue($props['files']['required']);
+
+        $tools = $skill->getTools();
+        $this->assertCount(1, $tools);
+        $enum = $tools[0]['argument']['properties']['action']['enum'];
+        $this->assertContains('start_hold', $enum);
+        $this->assertContains('stop', $enum);
+
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\PlayBackgroundFile($agent, ['files' => []]);
+    }
+
+    public function testDataSphereInstanceKeyHintsAndSchema(): void
+    {
+        $agent = $this->makeAgent();
+        $cfg = ['space_name' => 's', 'project_id' => 'p', 'token' => 't', 'document_id' => 'd'];
+        $a = new \SignalWire\Skills\Builtin\Datasphere($agent, $cfg);
+        $b = new \SignalWire\Skills\Builtin\Datasphere($agent, $cfg + ['tool_name' => 'kb']);
+
+        $this->assertSame('datasphere_search_knowledge', $a->getInstanceKey());
+        $this->assertSame('datasphere_kb', $b->getInstanceKey());
+        $this->assertSame([], $a->getHints());
+
+        $props = $a->getParameterSchema()['properties'];
+        foreach (['space_name', 'project_id', 'token', 'document_id', 'count', 'distance'] as $k) {
+            $this->assertArrayHasKey($k, $props, "datasphere schema omits {$k}");
+        }
+    }
+
+    public function testDataSphereServerlessSchemaAndInstanceKey(): void
+    {
+        $agent = $this->makeAgent();
+        $cfg = ['space_name' => 's', 'project_id' => 'p', 'token' => 't', 'document_id' => 'd'];
+        $skill = new \SignalWire\Skills\Builtin\DatasphereServerless($agent, $cfg);
+
+        $this->assertSame('datasphere_serverless_search_knowledge', $skill->getInstanceKey());
+        $this->assertSame([], $skill->getHints());
+        $this->assertArrayHasKey('document_id', $skill->getParameterSchema()['properties']);
+    }
+
+    public function testDatetimeAndMathSchemasAreBaseOnly(): void
+    {
+        $agent = $this->makeAgent();
+        $dt = new \SignalWire\Skills\Builtin\Datetime($agent);
+        $math = new \SignalWire\Skills\Builtin\Math($agent);
+
+        // Both inherit only the base schema (no custom props beyond base three).
+        $dtProps = array_keys($dt->getParameterSchema()['properties']);
+        $mathProps = array_keys($math->getParameterSchema()['properties']);
+        sort($dtProps);
+        sort($mathProps);
+        $this->assertSame(['skip_prompt', 'swaig_fields', 'tool_name'], $dtProps);
+        $this->assertSame(['skip_prompt', 'swaig_fields', 'tool_name'], $mathProps);
+
+        $this->assertSame([], $dt->getHints());
+        $this->assertSame([], $math->getHints());
+    }
+
+    public function testJokeSchemaMergesApiKey(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\Joke($agent);
+        $props = $skill->getParameterSchema()['properties'];
+        $this->assertArrayHasKey('api_key', $props);
+        $this->assertSame('get_joke', $props['tool_name']['default']);
+        $this->assertSame([], $skill->getHints());
+    }
+
+    public function testGoogleMapsSchemaHasApiKeyAndToolNames(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\GoogleMaps($agent, ['api_key' => 'k']);
+        $props = $skill->getParameterSchema()['properties'];
+        $this->assertSame('lookup_address', $props['lookup_tool_name']['default']);
+        $this->assertSame('compute_route', $props['route_tool_name']['default']);
+    }
+
+    public function testInfoGathererInstanceKeyAndSchema(): void
+    {
+        $agent = $this->makeAgent();
+        $questions = [['key_name' => 'name', 'question_text' => 'Your name?']];
+        $plain = new \SignalWire\Skills\Builtin\InfoGatherer($agent, ['questions' => $questions]);
+        $prefixed = new \SignalWire\Skills\Builtin\InfoGatherer($agent, ['questions' => $questions, 'prefix' => 'intake']);
+
+        $this->assertSame('info_gatherer', $plain->getInstanceKey());
+        $this->assertSame('info_gatherer_intake', $prefixed->getInstanceKey());
+        $this->assertArrayHasKey('questions', $plain->getParameterSchema()['properties']);
+    }
+
+    public function testClaudeSkillsInstanceKeyDistinctPerPath(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => '/a']);
+        $b = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => '/b']);
+
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+        $this->assertStringStartsWith('claude_skills_', $a->getInstanceKey());
+        $this->assertArrayHasKey('skills_path', $a->getParameterSchema()['properties']);
+    }
+
+    public function testNativeVectorSearchInterfaceMethods(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\NativeVectorSearch($agent, ['remote_url' => 'http://x']);
+        $b = new \SignalWire\Skills\Builtin\NativeVectorSearch($agent, ['remote_url' => 'http://x', 'tool_name' => 'kb']);
+
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+        $this->assertStringStartsWith('native_vector_search_', $a->getInstanceKey());
+        $this->assertSame([], $a->getGlobalData());
+        $this->assertSame([], $a->getPromptSections());
+        // cleanup is a no-op; must not throw
+        $a->cleanup();
+
+        $props = $a->getParameterSchema()['properties'];
+        $this->assertArrayHasKey('remote_url', $props);
+        $this->assertArrayHasKey('exclude_patterns', $props);
+        // exclude_patterns default matches Python's glob set (byte-identical)
+        $this->assertSame(
+            ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
+            $props['exclude_patterns']['default'],
+        );
+    }
+
+    public function testSpiderInterfaceMethods(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\Spider($agent, []);
+
+        $this->assertSame('spider_spider', $skill->getInstanceKey());
+        $skill->cleanup(); // no-op, must not throw
+        $props = $skill->getParameterSchema()['properties'];
+        $this->assertArrayHasKey('max_depth', $props);
+        $this->assertSame(['fast_text', 'clean_text', 'full_text', 'html', 'custom'], $props['extract_type']['enum']);
+    }
+
+    public function testSwmlTransferInstanceKeyAndSchema(): void
+    {
+        $agent = $this->makeAgent();
+        $cfg = ['transfers' => ['/sales/' => ['url' => 'https://x/sales']]];
+        $a = new \SignalWire\Skills\Builtin\SwmlTransfer($agent, $cfg);
+        $b = new \SignalWire\Skills\Builtin\SwmlTransfer($agent, $cfg + ['tool_name' => 'route']);
+
+        $this->assertSame('swml_transfer_transfer_call', $a->getInstanceKey());
+        $this->assertSame('swml_transfer_route', $b->getInstanceKey());
+        $this->assertArrayHasKey('transfers', $a->getParameterSchema()['properties']);
+    }
+
+    public function testWebSearchInstanceKeyAndHints(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\WebSearch($agent, ['api_key' => 'k', 'search_engine_id' => 'cx1']);
+        $b = new \SignalWire\Skills\Builtin\WebSearch($agent, ['api_key' => 'k', 'search_engine_id' => 'cx2']);
+
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+        $this->assertSame('web_search_cx1_web_search', $a->getInstanceKey());
+        $this->assertSame([], $a->getHints());
+    }
+
+    public function testWikipediaSchemaHintsAndSearchWiki(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\WikipediaSearch($agent);
+
+        $props = $skill->getParameterSchema()['properties'];
+        $this->assertArrayHasKey('num_results', $props);
+        $this->assertSame(1, $props['num_results']['default']);
+        $this->assertSame([], $skill->getHints());
+
+        // search_wiki returns a string; empty query short-circuits with an error.
+        $this->assertSame('Error: No search query provided.', $skill->searchWiki('   '));
+    }
+
+    public function testRegistryDiscoverAndGetSkillClassRoundTrip(): void
+    {
+        $registry = SkillRegistry::instance();
+
+        $discovered = $registry->discoverSkills();
+        $this->assertNotEmpty($discovered);
+        $names = array_column($discovered, 'name');
+        $this->assertContains('datetime', $names);
+        $this->assertContains('web_search', $names);
+
+        // Round-trip: every discovered skill resolves to a loadable class.
+        foreach ($names as $name) {
+            $class = $registry->getSkillClass($name);
+            $this->assertNotNull($class, "getSkillClass('{$name}') returned null");
+            $this->assertTrue(class_exists($class));
+            $this->assertTrue(is_subclass_of($class, \SignalWire\Skills\SkillBase::class));
+        }
+
+        // Unknown skill -> null.
+        $this->assertNull($registry->getSkillClass('no_such_skill_xyz'));
+    }
+
+    public function testRegistryListAllSkillSources(): void
+    {
+        $registry = SkillRegistry::instance();
+        $sources = $registry->listAllSkillSources();
+
+        $this->assertArrayHasKey('built-in', $sources);
+        $this->assertArrayHasKey('external_paths', $sources);
+        $this->assertArrayHasKey('entry_points', $sources);
+        $this->assertArrayHasKey('registered', $sources);
+        $this->assertContains('datetime', $sources['built-in']);
+
+        // A directly-registered non-builtin appears under 'registered'.
+        $registry->registerSkill('my_custom', 'Some\\Custom\\Class');
+        $sources = $registry->listAllSkillSources();
+        $this->assertContains('my_custom', $sources['registered']);
+        $this->assertNotContains('my_custom', $sources['built-in']);
+    }
+
+    public function testRegistryConstructorIsPublicAndInstanceKeyDistinctForBaseSkills(): void
+    {
+        // Constructor is public (mirrors Python's plain-class registry) while
+        // instance() still returns one shared singleton.
+        $fresh = new SkillRegistry();
+        $this->assertInstanceOf(SkillRegistry::class, $fresh);
+        $this->assertSame(SkillRegistry::instance(), SkillRegistry::instance());
     }
 }
