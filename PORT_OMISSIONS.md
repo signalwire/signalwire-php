@@ -212,65 +212,8 @@ signalwire.core.swml_builder.SWMLBuilder.__getattr__: impossible: Python dynamic
 signalwire.core.swml_service.SWMLService.__getattr__: impossible: Python dynamic-attribute protocol (__getattr__); PHP intercepts via the __call magic method (auto-vivified verbs) but the reference records __getattr__ as a Python-protocol member with no static member to enumerate — the verb dispatch capability is present. TS also omits this dunder as impossible.
 signalwire.list_skills: Python top-level helper; PHP exposes `SkillRegistry::listSkills`.
 signalwire.list_skills_with_params: PHP-class-method: PHP exposes this as a static method on the SignalWire facade class (signalwire.SignalWire.<name>); functionally equivalent to Python's module-level free function. Surface emitter doesn't lift static methods to module-level
-signalwire.livewire.Agent: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.llm_node: approved: 2026-07 user sign-off — LiveKit-specific pipeline node override; Go livewire shim delegates to the SWML AI verb
-signalwire.livewire.Agent.on_enter: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.on_exit: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.on_user_turn_completed: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.session: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.stt_node: approved: 2026-07 user sign-off — LiveKit-specific pipeline node override; Go livewire shim delegates to the SWML AI verb
-signalwire.livewire.Agent.tts_node: approved: 2026-07 user sign-off — LiveKit-specific pipeline node override; Go livewire shim delegates to the SWML AI verb
-signalwire.livewire.Agent.update_instructions: approved: 2026-07 user sign-off — LiveKit runtime instruction mutation; Go exposes AgentSession.UpdateInstructions instead of on Agent
-signalwire.livewire.Agent.update_tools: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentHandoff: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentHandoff.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentServer: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentServer.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentServer.rtc_session: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.generate_reply: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.history: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.interrupt: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.say: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.start: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.update_agent: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.AgentSession.userdata: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.ChatContext: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.ChatContext.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.ChatContext.append: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.InferenceLLM: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.InferenceLLM.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.InferenceSTT: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.InferenceSTT.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.InferenceTTS: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.InferenceTTS.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.JobContext: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.JobContext.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.JobContext.connect: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.JobContext.wait_for_participant: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.JobProcess: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.JobProcess.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Room: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.RunContext: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.RunContext.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.RunContext.userdata: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs. (RunContext belongs to the not-yet-built livewire subsystem — deferred to the livewire turn, consistent with the RunContext / RunContext.__init__ entries above.)
-signalwire.livewire.StopResponse: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.ToolError: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.function_tool: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.CartesiaTTS: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.CartesiaTTS.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.DeepgramSTT: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.DeepgramSTT.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.ElevenLabsTTS: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.ElevenLabsTTS.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.OpenAILLM: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.OpenAILLM.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.SileroVAD: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.SileroVAD.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.plugins.SileroVAD.load: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.run_app: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
+signalwire.livewire.function_tool: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4 file-per-class), so it is hosted as the static method LiveWire::functionTool (Livewire/LiveWire.php), surfaced via FREE_FUNCTION_PROJECTIONS. PHP has no function decorators, so a tool is the ['name','description','parameters','handler'] descriptor array Agent/AgentSession accept. Mirrors the LoggingConfig / SignalWire host precedent. See PORT_ADDITIONS.md.
+signalwire.livewire.run_app: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4 file-per-class), so it is hosted as the static method LiveWire::runApp (Livewire/LiveWire.php), surfaced via FREE_FUNCTION_PROJECTIONS. Mirrors the LoggingConfig / SignalWire host precedent. See PORT_ADDITIONS.md.
 signalwire.mcp_gateway.gateway_service.MCPGateway: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
 signalwire.mcp_gateway.gateway_service.MCPGateway.__init__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
 signalwire.mcp_gateway.gateway_service.MCPGateway.run: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.

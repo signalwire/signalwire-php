@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 7aa9480d1874b27b051e4f6ed0722db0b75d2420",
+  "generated_from": "signalwire-php @ 1177827178d48c937c3908e8cfc40ef1472a6063",
   "modules": {
     "signalwire": {
       "classes": {
@@ -947,6 +947,96 @@
         "UserInputAction": [],
         "UserSWAIGFunction": [],
         "Webhook": []
+      },
+      "functions": []
+    },
+    "signalwire.livewire": {
+      "classes": {
+        "Agent": [
+          "__init__",
+          "llm_node",
+          "on_enter",
+          "on_exit",
+          "on_user_turn_completed",
+          "session",
+          "stt_node",
+          "tools",
+          "tts_node",
+          "update_instructions",
+          "update_tools"
+        ],
+        "AgentHandoff": [
+          "__init__"
+        ],
+        "AgentServer": [
+          "__init__",
+          "get_entrypoint",
+          "rtc_session"
+        ],
+        "AgentSession": [
+          "__init__",
+          "generate_reply",
+          "get_sw_agent",
+          "history",
+          "interrupt",
+          "say",
+          "start",
+          "update_agent",
+          "userdata"
+        ],
+        "ChatContext": [
+          "__init__",
+          "append"
+        ],
+        "InferenceLLM": [
+          "__init__"
+        ],
+        "InferenceSTT": [
+          "__init__"
+        ],
+        "InferenceTTS": [
+          "__init__"
+        ],
+        "JobContext": [
+          "__init__",
+          "connect",
+          "wait_for_participant"
+        ],
+        "JobProcess": [
+          "__init__"
+        ],
+        "LiveWire": [
+          "function_tool",
+          "run_app"
+        ],
+        "Room": [],
+        "RunContext": [
+          "__init__",
+          "userdata"
+        ],
+        "StopResponse": [],
+        "ToolError": []
+      },
+      "functions": []
+    },
+    "signalwire.livewire.plugins": {
+      "classes": {
+        "CartesiaTTS": [
+          "__init__"
+        ],
+        "DeepgramSTT": [
+          "__init__"
+        ],
+        "ElevenLabsTTS": [
+          "__init__"
+        ],
+        "OpenAILLM": [
+          "__init__"
+        ],
+        "SileroVAD": [
+          "__init__",
+          "load"
+        ]
       },
       "functions": []
     },

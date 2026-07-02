@@ -555,6 +555,16 @@ METHOD_ALIASES: dict[str, str] = {
     # Python ``SWMLService.schema_utils`` is a public attribute exposed
     # via PHP's ``getSchemaUtils()`` getter. Strip the get_ prefix.
     "get_schema_utils": "schema_utils",
+    # LiveWire @property accessors — Python exposes session/userdata/history as
+    # @property (getter+setter); PHP uses explicit getX()/setX() methods.
+    # Project the PHP accessors onto the bare Python property names (getter and
+    # setter fold to the same set member). No collision: getSessionMetadata /
+    # setSessionMetadata snake to get_session_metadata, not get_session.
+    "get_session": "session",
+    "set_session": "session",
+    "get_userdata": "userdata",
+    "set_userdata": "userdata",
+    "get_history": "history",
 }
 
 
@@ -719,6 +729,19 @@ def _swaig_payload_subdir(file_relative: Path) -> str | None:
 
 def _module_path_for_class(name: str, file_relative: Path) -> str:
     """Map a PHP class to its Python-canonical module path."""
+    # LiveWire subsystem routes by PATH, winning over CLASS_MODULE_MAP. This is
+    # required because a livewire class name collides with a top-level SDK class
+    # (SignalWire\Livewire\AgentServer vs SignalWire\Server\AgentServer →
+    # signalwire.agent_server; a name-keyed map cannot tell them apart). The
+    # Plugins/ subdir → signalwire.livewire.plugins; everything else directly
+    # under Livewire/ → signalwire.livewire.
+    _lw = file_relative.as_posix()
+    _lw_idx = _lw.find("SignalWire/Livewire/")
+    if _lw_idx != -1:
+        tail = _lw[_lw_idx + len("SignalWire/Livewire/"):]
+        if tail.startswith("Plugins/"):
+            return "signalwire.livewire.plugins"
+        return "signalwire.livewire"
     # Generated wire-type files route by PATH (their <Sub> subdir → the oracle
     # <ns>_types_generated module), winning over CLASS_MODULE_MAP so a type name
     # that recurs across namespaces / collides with an SDK class name lands in the

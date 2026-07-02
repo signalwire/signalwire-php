@@ -218,6 +218,15 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.agent.tools.type_inference", "infer_schema"),
     ("SignalWire\\SWAIG\\TypeInference", "createTypedHandlerWrapper"):
         ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
+    # LiveWire package-level helpers — Python ships function_tool / run_app as
+    # module-level free functions in signalwire.livewire; PHP has no module-level
+    # free functions (PSR-4 file-per-class), so they are hosted as static methods
+    # on the LiveWire facade class and projected onto the canonical module-level
+    # names. Mirrors the LoggingConfig / SignalWire host precedent.
+    ("SignalWire\\Livewire\\LiveWire", "functionTool"):
+        ("signalwire.livewire", "function_tool"),
+    ("SignalWire\\Livewire\\LiveWire", "runApp"):
+        ("signalwire.livewire", "run_app"),
     # Top-level SignalWire\SignalWire class hosts package-level helpers
     # (RestClient, register_skill, add_skill_directory,
     # list_skills_with_params). Project each onto the canonical
