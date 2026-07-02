@@ -13,7 +13,6 @@ array.
 $client->fabric()->...           // Fabric API (AI agents, SWML, subscribers, etc.)
 $client->calling()->...          // REST call control commands
 $client->phoneNumbers()->...     // Phone number management
-$client->compat()->...           // Twilio-compatible LAML API
 $client->video()->...            // Video rooms, sessions, recordings
 $client->datasphere()->...       // Documents and semantic search
 $client->registry()->...         // 10DLC brands, campaigns, orders, numbers

@@ -8,7 +8,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\CrudResource;
 use SignalWire\REST\HttpClient;
-use SignalWire\REST\Namespaces\Compat;
 use SignalWire\REST\Namespaces\Generated\Calling;
 use SignalWire\REST\Namespaces\Generated\FabricNamespace as Fabric;
 use SignalWire\REST\RestClient;
@@ -248,9 +247,6 @@ class RestClientTest extends TestCase
         // Calling
         $this->assertInstanceOf(Calling::class, $client->calling());
 
-        // Compat namespace
-        $this->assertInstanceOf(Compat::class, $client->compat());
-
         // The remaining namespaces are returned as objects (some are
         // CrudResource subclasses, others are bespoke namespace classes
         // mirroring the Python SDK's per-resource objects).  We don't pin
@@ -290,7 +286,6 @@ class RestClientTest extends TestCase
         // Direct CrudResource namespaces still expose getBasePath() at the
         // top level.
         $this->assertSame('/api/relay/rest/phone_numbers', $client->phoneNumbers()->getBasePath());
-        $this->assertSame('/api/laml/2010-04-01/Accounts/proj-id', $client->compat()->getAccountBase());
         $this->assertSame('/api/relay/rest/addresses', $client->addresses()->getBasePath());
         $this->assertSame('/api/relay/rest/queues', $client->queues()->getBasePath());
         $this->assertSame('/api/relay/rest/recordings', $client->recordings()->getBasePath());
@@ -482,24 +477,5 @@ class RestClientTest extends TestCase
         $prop = new \ReflectionProperty($calling, 'http');
         $prop->setAccessible(true);
         $this->assertSame($client->getHttp(), $prop->getValue($calling));
-    }
-
-    // =================================================================
-    // Compat namespace includes projectId in path
-    // =================================================================
-
-    #[Test]
-    public function compatPathIncludesProjectId(): void
-    {
-        $client = new RestClient('my-proj', 't', 'h');
-
-        $this->assertStringContainsString(
-            'my-proj',
-            $client->compat()->getAccountBase()
-        );
-        $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/my-proj',
-            $client->compat()->getAccountBase()
-        );
     }
 }

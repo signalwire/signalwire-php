@@ -199,24 +199,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "ProjectNamespace": "signalwire.rest.namespaces._client_tree_generated",
     "DatasphereNamespace": "signalwire.rest.namespaces._client_tree_generated",
 
-    # Compat namespace + sub-resources stay HAND-written (not spec-derived),
-    # collapsing onto `signalwire.rest.namespaces.compat` to match Python's
-    # CompatNamespace/sub-class layout.
-    "Compat": "signalwire.rest.namespaces.compat",
-    "CompatNamespace": "signalwire.rest.namespaces.compat",
-    "CompatAccounts": "signalwire.rest.namespaces.compat",
-    "CompatCalls": "signalwire.rest.namespaces.compat",
-    "CompatMessages": "signalwire.rest.namespaces.compat",
-    "CompatFaxes": "signalwire.rest.namespaces.compat",
-    "CompatConferences": "signalwire.rest.namespaces.compat",
-    "CompatPhoneNumbers": "signalwire.rest.namespaces.compat",
-    "CompatApplications": "signalwire.rest.namespaces.compat",
-    "CompatLamlBins": "signalwire.rest.namespaces.compat",
-    "CompatQueues": "signalwire.rest.namespaces.compat",
-    "CompatRecordings": "signalwire.rest.namespaces.compat",
-    "CompatTranscriptions": "signalwire.rest.namespaces.compat",
-    "CompatTokens": "signalwire.rest.namespaces.compat",
-
     # POM (Prompt Object Model) — typed standalone classes
     "PromptObjectModel": "signalwire.pom.pom",
     "Section": "signalwire.pom.pom",
@@ -385,10 +367,7 @@ CLASS_RENAME_MAP: dict[str, str] = {
     # oracle canonical names (scripts/generate_rest.py emits `class PhoneNumbers`,
     # `class FabricNamespace`, `class Calling`, …), so they need NO rename — the
     # CLASS_MODULE_MAP above routes them to the right `_resources_generated` /
-    # `_client_tree_generated` module. Only the still-hand `Compat` container is
-    # renamed to the Python-canonical `CompatNamespace`; its sub-resources keep
-    # their PHP names (which match Python).
-    "Compat": "CompatNamespace",
+    # `_client_tree_generated` module, so they need NO rename.
     # Datasphere is special — same short name used by both a REST skill and a
     # REST namespace container. The REST container class is `DatasphereNamespace`
     # (no rename needed). The bare `Datasphere` short name is the skill, renamed
@@ -506,14 +485,6 @@ METHOD_ALIASES: dict[str, str] = {
     # Python ``SWMLService.schema_utils`` is a public attribute exposed
     # via PHP's ``getSchemaUtils()`` getter. Strip the get_ prefix.
     "get_schema_utils": "schema_utils",
-    # Compat sub-resource accessors. Python exposes ``compat.calls`` etc. as
-    # plain attributes; PHP wraps them in getter methods (``calls()`` is the
-    # PHP idiom). Project the PHP method names onto the same surface so the
-    # cross-language audit treats them as the same symbol. ``get_account_base``
-    # / ``get_account_sid`` / ``get_http`` are PHP-only debugging accessors;
-    # the surface diff already tolerates extras, so leave them in place
-    # rather than aliasing them onto Python attributes that don't exist.
-    # The Compat class is mapped by name above (Compat -> CompatNamespace).
 }
 
 
@@ -767,9 +738,7 @@ REST_IMPLICIT_BASE_METHODS: dict[str, set[str]] = {
     # ReadResource base and are not recorded on the subclass).
 }
 
-# Only project onto classes that live in the generated resource module tree —
-# the hand Compat sub-resources also extend CrudResource but the oracle records
-# their full method set directly (they are not generated subclasses).
+# Only project onto classes that live in the generated resource module tree.
 _GENERATED_NS_MARKER = "REST/Namespaces/Generated/"
 
 

@@ -40,7 +40,6 @@ $client->calling->dial(
 - Full Fabric API: resource types with CRUD + addresses, tokens, and generic resources
 - Datasphere: document management and semantic search
 - Video: rooms, sessions, recordings, conferences, tokens, streams
-- Compatibility API: full Twilio-compatible LAML surface
 - Phone number management, 10DLC registry, MFA, logs, and more
 - Lightweight HTTP via cURL
 - Array returns -- raw data, no wrapper objects to learn
@@ -51,7 +50,6 @@ $client->calling->dial(
 - [Client Reference](docs/client-reference.md) -- RestClient constructor, namespaces, error handling
 - [Fabric Resources](docs/fabric.md) -- managing AI agents, SWML scripts, subscribers, call flows, and more
 - [Calling Commands](docs/calling.md) -- REST-based call control (dial, play, record, collect, AI, etc.)
-- [Compatibility API](docs/compat.md) -- Twilio-compatible LAML endpoints
 - [All Namespaces](docs/namespaces.md) -- phone numbers, video, datasphere, logs, registry, and more
 
 ## Examples
@@ -61,7 +59,6 @@ $client->calling->dial(
 | [rest_10dlc_registration.php](examples/rest_10dlc_registration.php) | 10DLC brand and campaign compliance registration |
 | [rest_calling_ivr_and_ai.php](examples/rest_calling_ivr_and_ai.php) | IVR input, AI operations, live transcription, tap, stream |
 | [rest_calling_play_and_record.php](examples/rest_calling_play_and_record.php) | Media operations: play, record, transcribe, denoise |
-| [rest_compat_laml.php](examples/rest_compat_laml.php) | Twilio-compatible LAML migration |
 | [rest_datasphere_search.php](examples/rest_datasphere_search.php) | Upload document, run semantic search |
 | [rest_fabric_conferences_and_routing.php](examples/rest_fabric_conferences_and_routing.php) | Conferences, cXML resources, generic routing, tokens |
 | [rest_fabric_subscribers_and_sip.php](examples/rest_fabric_subscribers_and_sip.php) | Provision SIP-enabled users on Fabric |
