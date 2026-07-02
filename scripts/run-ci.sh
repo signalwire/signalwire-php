@@ -278,6 +278,17 @@ run_gate "GEN-FRESH-RELAY" "generated RELAY-protocol tree matches relay-protocol
 run_gate "GEN-FRESH-SWAIG" "generated SWAIG-payload tree matches swaig-specs/*.yaml (--check)" \
     python3 scripts/generate_swaig_payloads.py --check
 
+# Gate 4f: GEN-FRESH (REST tests) — the committed generated full-mock REST
+# wire-test suite (tests/Rest/Generated/*GeneratedTest.php) must still match what
+# scripts/generate_rest_tests.py produces. That generator's INDEPENDENT oracle is
+# the route-registry (scripts/route_registry.php + scripts/rest_test_plan.php,
+# captured from the real client) joined to the spec operationIds — so a spec
+# change, an SDK route/param change, or a hand-edit that isn't reflected in the
+# committed tests fails here. Read-only (--check never writes). Mirrors go's
+# generate-rest-tests --check / ts's generate-rest-tests.ts --check. Item E.
+run_gate "GEN-FRESH-REST-TESTS" "generated REST wire-test suite matches the oracle (--check)" \
+    python3 scripts/generate_rest_tests.py --check
+
 # Gate 5: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
