@@ -115,6 +115,12 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # core/datamap
     "DataMap": "signalwire.core.data_map",
 
+    # core/config + security + POM builder + web (item I — config/security/web cluster)
+    "ConfigLoader": "signalwire.core.config_loader",
+    "SecurityConfig": "signalwire.core.security_config",
+    "PomBuilder": "signalwire.core.pom_builder",
+    "WebService": "signalwire.web.web_service",
+
     # core/security
     "SessionManager": "signalwire.core.security.session_manager",
     "WebhookValidator": "signalwire.core.security.webhook_validator",
@@ -975,9 +981,32 @@ def _parse_file(
 
         # Track braces (very simple — sufficient because PHP files are
         # one-class-per-file in this SDK except Action.php and Adapter.php
-        # which open all classes at the top level)
-        opens = line.count("{")
-        closes = line.count("}")
+        # which open all classes at the top level). Count braces OUTSIDE of
+        # quoted strings only: a string/regex literal like
+        # `'/\$\{([^}|]+)(?:\|([^}]*))?\}/'` carries unbalanced `{`/`}` that
+        # would desync brace-depth and prematurely close the class scope
+        # (dropping later public methods). Reuse the same single/double-quote
+        # tracking used above for comment stripping.
+        opens = 0
+        closes = 0
+        _bin_s = _bin_d = False
+        _bi = 0
+        _bn = len(line)
+        while _bi < _bn:
+            _bc = line[_bi]
+            if _bc == "\\" and (_bin_s or _bin_d):
+                _bi += 2
+                continue
+            if _bc == "'" and not _bin_d:
+                _bin_s = not _bin_s
+            elif _bc == '"' and not _bin_s:
+                _bin_d = not _bin_d
+            elif not _bin_s and not _bin_d:
+                if _bc == "{":
+                    opens += 1
+                elif _bc == "}":
+                    closes += 1
+            _bi += 1
         for _ in range(opens):
             brace_depth += 1
             if cur_class is not None and cur_class_brace == -1:

@@ -286,6 +286,11 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
         "media": "list<string>",
         "tags": "list<string>",
     },
+    # PomBuilder::fromSections takes a list of section dicts; PHP's bare `array`
+    # erases the concrete element type the oracle records (list<dict<string,any>>).
+    ("SignalWire\\POM\\PomBuilder", "fromSections"): {
+        "sections": "list<dict<string,any>>",
+    },
 }
 
 
@@ -440,10 +445,17 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             # — producing a spurious param-count drift vs the reference's `cls`.
             # Inject the `cls` receiver for this classmethod-analog so the two
             # line up (the diff already reconciles cls<->self). Scoped to the
-            # relay.event module so no genuine PHP @staticmethod is affected.
+            # specific (module, method) classmethod-factory pairs the oracle
+            # records with a `cls` receiver, so no genuine PHP @staticmethod is
+            # affected:
+            #   - relay.event  from_payload  (typed RELAY event factory)
+            #   - pom_builder  from_sections (PomBuilder classmethod factory)
+            _classmethod_factories = {
+                ("signalwire.relay.event", "from_payload"),
+                ("signalwire.core.pom_builder", "from_sections"),
+            }
             if (
-                method_canonical == "from_payload"
-                and mod == "signalwire.relay.event"
+                (mod, method_canonical) in _classmethod_factories
                 and m.get("is_static", False)
                 and not (sig.get("params") and sig["params"][0].get("kind") in ("self", "cls"))
             ):

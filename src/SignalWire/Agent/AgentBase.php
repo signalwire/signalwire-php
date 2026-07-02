@@ -119,6 +119,12 @@ class AgentBase extends Service implements AgentInterface
     /** @var list<array<string, mixed>> */
     protected array $functionIncludes;
 
+    // ── MCP servers ─────────────────────────────────────────────────────
+    /** @var list<array<string, mixed>> External MCP servers for tool discovery. */
+    protected array $mcpServers = [];
+    /** Whether this agent exposes its tools as an MCP server endpoint. */
+    protected bool $mcpServerEnabled = false;
+
     // ── Session / context / skills ──────────────────────────────────────
     protected SessionManager $sessionManager;
     protected ?ContextBuilder $contextBuilder;
@@ -231,6 +237,10 @@ class AgentBase extends Service implements AgentInterface
 
         // Function includes
         $this->functionIncludes = [];
+
+        // MCP servers
+        $this->mcpServers = [];
+        $this->mcpServerEnabled = false;
 
         // Session / context / skills
         $this->sessionManager = new SessionManager();
@@ -981,6 +991,111 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
+     * Add an external MCP server for tool discovery and invocation.
+     *
+     * Tools are discovered via the MCP protocol at session start and registered
+     * as SWAIG functions; resources are optionally fetched into global_data.
+     * Mirrors Python's ``AIConfigMixin.add_mcp_server`` (projected onto the
+     * ai_config_mixin path by the surface enumerator).
+     *
+     * @param array<string, string>|null $headers      Optional HTTP headers.
+     * @param array<string, string>|null $resourceVars Variables for URI templates.
+     *
+     * @return $this
+     */
+    public function addMcpServer(
+        string $url,
+        ?array $headers = null,
+        bool $resources = false,
+        ?array $resourceVars = null
+    ): self {
+        $server = ['url' => $url];
+        if ($headers !== null && $headers !== []) {
+            $server['headers'] = $headers;
+        }
+        if ($resources) {
+            $server['resources'] = true;
+        }
+        if ($resourceVars !== null && $resourceVars !== []) {
+            $server['resource_vars'] = $resourceVars;
+        }
+        $this->mcpServers[] = $server;
+        return $this;
+    }
+
+    /**
+     * Expose this agent's tools as an MCP server endpoint at ``/mcp``.
+     *
+     * Mirrors Python's ``AIConfigMixin.enable_mcp_server`` (projected onto the
+     * ai_config_mixin path by the surface enumerator).
+     *
+     * @return $this
+     */
+    public function enableMcpServer(): self
+    {
+        $this->mcpServerEnabled = true;
+        return $this;
+    }
+
+    /**
+     * Whether the MCP server endpoint is enabled.
+     */
+    public function isMcpServerEnabled(): bool
+    {
+        return $this->mcpServerEnabled;
+    }
+
+    /**
+     * The configured external MCP servers (read-only copy).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getMcpServers(): array
+    {
+        return $this->mcpServers;
+    }
+
+    /**
+     * Enable debug routes for testing and development.
+     *
+     * Debug routes are registered by the request router; this method exists for
+     * API compatibility and returns ``$this`` for chaining. Mirrors Python's
+     * ``WebMixin.enable_debug_routes`` (projected onto the web_mixin path).
+     *
+     * @return $this
+     */
+    public function enableDebugRoutes(): self
+    {
+        return $this;
+    }
+
+    /**
+     * Register signal handlers for graceful shutdown (e.g. Kubernetes SIGTERM).
+     *
+     * Uses PHP's pcntl signal handling when available; a no-op otherwise (the
+     * ext-pcntl extension is optional and absent under most SAPIs). Mirrors
+     * Python's ``WebMixin.setup_graceful_shutdown``.
+     */
+    public function setupGracefulShutdown(): void
+    {
+        if (!function_exists('pcntl_signal')) {
+            return;
+        }
+
+        $handler = function (int $signo): void {
+            $this->logger->info("shutdown_signal_received: {$signo}");
+            exit(0);
+        };
+
+        // SIGTERM = 15 (Kubernetes), SIGINT = 2 (Ctrl+C). Reference the named
+        // constants when defined, falling back to the POSIX numbers.
+        $sigterm = defined('SIGTERM') ? SIGTERM : 15;
+        $sigint = defined('SIGINT') ? SIGINT : 2;
+        pcntl_signal($sigterm, $handler);
+        pcntl_signal($sigint, $handler);
+    }
+
+    /**
      * @param array<string,mixed> $params
      */
     public function setPromptLlmParams(array $params): self
@@ -1544,6 +1659,8 @@ class AgentBase extends Service implements AgentInterface
         $clone->answerConfig       = $this->deepCopyArray($this->answerConfig);
         $clone->swaigQueryParams   = $this->deepCopyArray($this->swaigQueryParams);
         $clone->functionIncludes   = $this->deepCopyArray($this->functionIncludes);
+        $clone->mcpServers         = $this->deepCopyArray($this->mcpServers);
+        $clone->mcpServerEnabled   = $this->mcpServerEnabled;
 
         // Deep-copy objects
         $clone->sessionManager = clone $this->sessionManager;
@@ -1604,6 +1721,11 @@ class AgentBase extends Service implements AgentInterface
         // Includes
         if (!empty($this->functionIncludes)) {
             $swaig['includes'] = $this->functionIncludes;
+        }
+
+        // MCP servers
+        if (!empty($this->mcpServers)) {
+            $swaig['mcp_servers'] = $this->mcpServers;
         }
 
         return $swaig;

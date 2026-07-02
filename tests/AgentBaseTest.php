@@ -1453,6 +1453,72 @@ class AgentBaseTest extends TestCase
     /**
      * Extract the AI verb config from a rendered SWML document array.
      */
+    // ------------------------------------------------------------------
+    // MCP servers + web/serverless mixin methods (item I cluster)
+    // ------------------------------------------------------------------
+
+    public function testAddMcpServerEmitsIntoSwaig(): void
+    {
+        $agent = $this->makeAgent();
+        $result = $agent
+            ->addMcpServer('https://mcp.example.com', ['Authorization' => 'Bearer sk-x'], true, ['caller_id' => '${caller_id_number}'])
+            ->defineTool('noop', 'noop', [], fn () => new FunctionResult('ok'));
+        $this->assertSame($agent, $result);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayHasKey('mcp_servers', $ai['SWAIG']);
+        $server = $ai['SWAIG']['mcp_servers'][0];
+        $this->assertSame('https://mcp.example.com', $server['url']);
+        $this->assertSame(['Authorization' => 'Bearer sk-x'], $server['headers']);
+        $this->assertTrue($server['resources']);
+        $this->assertSame(['caller_id' => '${caller_id_number}'], $server['resource_vars']);
+    }
+
+    public function testGetMcpServersAndEnableFlag(): void
+    {
+        $agent = $this->makeAgent();
+        $this->assertSame([], $agent->getMcpServers());
+        $this->assertFalse($agent->isMcpServerEnabled());
+
+        $agent->addMcpServer('https://a.example.com');
+        $this->assertCount(1, $agent->getMcpServers());
+
+        $this->assertSame($agent, $agent->enableMcpServer());
+        $this->assertTrue($agent->isMcpServerEnabled());
+    }
+
+    public function testEnableDebugRoutesReturnsSelf(): void
+    {
+        $agent = $this->makeAgent();
+        $this->assertSame($agent, $agent->enableDebugRoutes());
+    }
+
+    public function testSetupGracefulShutdownReturnsVoidWithoutThrowing(): void
+    {
+        $agent = $this->makeAgent();
+        // No-op when ext-pcntl is absent; must complete and return null (void).
+        $result = $agent->setupGracefulShutdown();
+        $this->assertNull($result);
+        // Agent remains usable afterwards (SWML still renders).
+        $swml = $agent->renderSwml();
+        $this->assertArrayHasKey('sections', $swml);
+    }
+
+    public function testMcpServersPreservedThroughCloneForRequest(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addMcpServer('https://mcp.example.com')->enableMcpServer();
+
+        $clone = $agent->cloneForRequest();
+        $this->assertCount(1, $clone->getMcpServers());
+        $this->assertTrue($clone->isMcpServerEnabled());
+
+        // Mutating the clone must not affect the original (deep copy).
+        $clone->addMcpServer('https://other.example.com');
+        $this->assertCount(1, $agent->getMcpServers());
+        $this->assertCount(2, $clone->getMcpServers());
+    }
+
     private function extractAiVerb(array $swml): array
     {
         $main = $swml['sections']['main'];

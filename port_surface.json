@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ b7525331059ed81b340a423668525bdc6a853034",
+  "generated_from": "signalwire-php @ 7aa9480d1874b27b051e4f6ed0722db0b75d2420",
   "modules": {
     "signalwire": {
       "classes": {
@@ -105,6 +105,7 @@
           "add_hints",
           "add_internal_filler",
           "add_language",
+          "add_mcp_server",
           "add_pattern_hint",
           "add_post_ai_verb",
           "add_post_answer_verb",
@@ -122,16 +123,20 @@
           "create_tool_token",
           "define_contexts",
           "enable_debug_events",
+          "enable_debug_routes",
+          "enable_mcp_server",
           "enable_sip_routing",
           "get_contexts",
           "get_dynamic_config_callback",
           "get_language_params",
+          "get_mcp_servers",
           "get_post_prompt",
           "get_prompt",
           "get_raw_prompt",
           "get_signing_key",
           "handle_serverless_request",
           "has_skill",
+          "is_mcp_server_enabled",
           "list_skills",
           "list_tool_names",
           "on_debug_event",
@@ -163,6 +168,7 @@
           "set_prompt_text",
           "set_pronunciations",
           "set_web_hook_url",
+          "setup_graceful_shutdown",
           "update_global_data",
           "validate_tool_token"
         ]
@@ -179,6 +185,22 @@
           "verify_api_key",
           "verify_basic_auth",
           "verify_bearer_token"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.config_loader": {
+      "classes": {
+        "ConfigLoader": [
+          "__init__",
+          "find_config_file",
+          "get",
+          "get_config",
+          "get_config_file",
+          "get_section",
+          "has_config",
+          "merge_with_env",
+          "substitute_vars"
         ]
       },
       "functions": []
@@ -376,9 +398,11 @@
           "add_hints",
           "add_internal_filler",
           "add_language",
+          "add_mcp_server",
           "add_pattern_hint",
           "add_pronunciation",
           "enable_debug_events",
+          "enable_mcp_server",
           "get_language_params",
           "set_function_includes",
           "set_global_data",
@@ -473,13 +497,33 @@
       "classes": {
         "WebMixin": [
           "as_router",
+          "enable_debug_routes",
           "manual_set_proxy_url",
           "on_request",
           "on_swml_request",
           "register_routing_callback",
           "run",
           "serve",
-          "set_dynamic_config_callback"
+          "set_dynamic_config_callback",
+          "setup_graceful_shutdown"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.pom_builder": {
+      "classes": {
+        "PomBuilder": [
+          "__init__",
+          "add_section",
+          "add_subsection",
+          "add_to_section",
+          "from_sections",
+          "get_section",
+          "has_section",
+          "render_markdown",
+          "render_xml",
+          "to_dict",
+          "to_json"
         ]
       },
       "functions": []
@@ -517,10 +561,16 @@
       "classes": {
         "SessionManager": [
           "__init__",
+          "activate_session",
           "create_session",
           "create_tool_token",
+          "debug_token",
+          "end_session",
           "generate_token",
+          "get_session_metadata",
           "get_token_expiry_secs",
+          "set_debug_mode",
+          "set_session_metadata",
           "validate_token",
           "validate_tool_token"
         ]
@@ -541,6 +591,23 @@
         "WebhookValidator": [
           "validate_request",
           "validate_webhook_signature"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.security_config": {
+      "classes": {
+        "SecurityConfig": [
+          "__init__",
+          "get_basic_auth",
+          "get_cors_config",
+          "get_security_headers",
+          "get_server_tls_options",
+          "get_url_scheme",
+          "load_from_env",
+          "log_config",
+          "should_allow_host",
+          "validate_ssl_config"
         ]
       },
       "functions": []
@@ -3268,6 +3335,19 @@
       "classes": {
         "UrlValidator": [
           "validate_url"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.web.web_service": {
+      "classes": {
+        "WebService": [
+          "__init__",
+          "add_directory",
+          "handle_request",
+          "remove_directory",
+          "start",
+          "stop"
         ]
       },
       "functions": []

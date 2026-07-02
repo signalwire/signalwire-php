@@ -1049,6 +1049,15 @@
               ],
               "returns": "optional<callable<list<any>,any>>"
             },
+            "get_mcp_servers": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "get_signing_key": {
               "params": [
                 {
@@ -1057,6 +1066,15 @@
                 }
               ],
               "returns": "optional<string>"
+            },
+            "is_mcp_server_enabled": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
             },
             "list_tool_names": {
               "params": [
@@ -1298,6 +1316,142 @@
                 }
               ],
               "returns": "bool"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.config_loader": {
+      "classes": {
+        "ConfigLoader": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "config_paths",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
+            },
+            "find_config_file": {
+              "params": [
+                {
+                  "name": "service_name",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "additional_paths",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<string>"
+            },
+            "get": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "key_path",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "default",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<any>"
+            },
+            "get_config": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_config_file": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
+            },
+            "get_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "section",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "has_config": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "merge_with_env": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "env_prefix",
+                  "type": "string",
+                  "required": false,
+                  "default": "SWML_"
+                }
+              ],
+              "returns": "any"
+            },
+            "substitute_vars": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "value",
+                  "type": "optional<any>",
+                  "required": true
+                },
+                {
+                  "name": "max_depth",
+                  "type": "int",
+                  "required": false,
+                  "default": 10
+                }
+              ],
+              "returns": "optional<any>"
             }
           }
         }
@@ -4182,6 +4336,38 @@
               ],
               "returns": "any"
             },
+            "add_mcp_server": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "headers",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "resources",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "resource_vars",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "any"
+            },
             "add_pattern_hint": {
               "params": [
                 {
@@ -4232,6 +4418,15 @@
                   "type": "string",
                   "required": false,
                   "default": "all"
+                }
+              ],
+              "returns": "any"
+            },
+            "enable_mcp_server": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
                 }
               ],
               "returns": "any"
@@ -4906,6 +5101,15 @@
               ],
               "returns": "class:signalwire.swml.SWMLService"
             },
+            "enable_debug_routes": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "manual_set_proxy_url": {
               "params": [
                 {
@@ -5012,6 +5216,226 @@
                 }
               ],
               "returns": "any"
+            },
+            "setup_graceful_shutdown": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.pom_builder": {
+      "classes": {
+        "PomBuilder": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "add_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "bullets",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "numbered",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "numbered_bullets",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "subsections",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "any"
+            },
+            "add_subsection": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "parent_title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "bullets",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "any"
+            },
+            "add_to_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "body",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "bullet",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "bullets",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "any"
+            },
+            "from_sections": {
+              "params": [
+                {
+                  "name": "cls",
+                  "kind": "cls"
+                },
+                {
+                  "name": "sections",
+                  "type": "list<dict<string,any>>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "get_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "optional<class:signalwire.pom.pom.Section>"
+            },
+            "has_section": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
+            "pom": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.pom.pom.PromptObjectModel"
+            },
+            "render_markdown": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "render_xml": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "to_dict": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "to_json": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }
@@ -6642,6 +7066,20 @@
               ],
               "returns": "void"
             },
+            "activate_session": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "call_id",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
             "create_session": {
               "params": [
                 {
@@ -6676,6 +7114,34 @@
               ],
               "returns": "string"
             },
+            "debug_token": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "token",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "end_session": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "call_id",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
             "generate_token": {
               "params": [
                 {
@@ -6695,6 +7161,20 @@
               ],
               "returns": "string"
             },
+            "get_session_metadata": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "call_id",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "optional<any>"
+            },
             "get_token_expiry_secs": {
               "params": [
                 {
@@ -6703,6 +7183,44 @@
                 }
               ],
               "returns": "int"
+            },
+            "set_debug_mode": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "enabled",
+                  "type": "bool",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "set_session_metadata": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "call_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "key",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "value",
+                  "type": "optional<any>",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             },
             "validate_token": {
               "params": [
@@ -6863,6 +7381,258 @@
             }
           ],
           "returns": "bool"
+        }
+      }
+    },
+    "signalwire.core.security_config": {
+      "classes": {
+        "SecurityConfig": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "config_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "service_name",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
+            },
+            "allowed_hosts": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "basic_auth_password": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "basic_auth_user": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "cors_origins": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "domain": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "get_basic_auth": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_cors_config": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_security_headers": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "is_https",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                }
+              ],
+              "returns": "any"
+            },
+            "get_server_tls_options": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_url_scheme": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "hsts_max_age": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "load_from_env": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "log_config": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "service_name",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "max_request_size": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "rate_limit": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "request_timeout": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "should_allow_host": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "host",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
+            "ssl_cert_path": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "ssl_enabled": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "ssl_key_path": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "ssl_verify_mode": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "use_hsts": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "validate_ssl_config": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            }
+          }
         }
       }
     },
@@ -85026,6 +85796,249 @@
             }
           ],
           "returns": "bool"
+        }
+      }
+    },
+    "signalwire.web.web_service": {
+      "classes": {
+        "WebService": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "port",
+                  "type": "int",
+                  "required": false,
+                  "default": 8002
+                },
+                {
+                  "name": "directories",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "config_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "enable_directory_browsing",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "allowed_extensions",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "blocked_extensions",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "max_file_size",
+                  "type": "int",
+                  "required": false,
+                  "default": 104857600
+                },
+                {
+                  "name": "enable_cors",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                }
+              ],
+              "returns": "void"
+            },
+            "add_directory": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "route",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "directory",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "allowed_extensions": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "blocked_extensions": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "directories": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "enable_cors": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "enable_directory_browsing": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "handle_request": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "method",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "path",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "request_headers",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "any"
+            },
+            "max_file_size": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "port": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "remove_directory": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "route",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
+            "security": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.core.security_config.SecurityConfig"
+            },
+            "start": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "host",
+                  "type": "string",
+                  "required": false,
+                  "default": "0.0.0.0"
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "ssl_cert",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "ssl_key",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
+            },
+            "stop": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            }
+          }
         }
       }
     }
