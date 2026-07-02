@@ -249,6 +249,26 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
 }
 
 
+# Param-type remaps for parameters whose concrete element type PHP reflection
+# erases. PHP's only list type is the bare ``array``, which reflects as the
+# canonical ``any`` — but the Python reference types these RELAY message-event
+# constructor params concretely as ``list[str]`` (the `@param list<string>`
+# PHPDoc records the same intent, invisible to reflection). This is a
+# rename/remap (it re-establishes the concrete identity so a real future change
+# still surfaces as drift), NOT an omission (which would blind the whole param).
+# Keyed by (PHP fully-qualified class, PHP method name) -> {param_name: type}.
+PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
+    ("SignalWire\\Relay\\Event\\MessageReceiveEvent", "__construct"): {
+        "media": "list<string>",
+        "tags": "list<string>",
+    },
+    ("SignalWire\\Relay\\Event\\MessageStateEvent", "__construct"): {
+        "media": "list<string>",
+        "tags": "list<string>",
+    },
+}
+
+
 def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None = None) -> tuple[dict, list]:
     if rest_sidecar is None:
         rest_sidecar = {}
@@ -392,6 +412,31 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             except TypeTranslationError as e:
                 failures.append(str(e))
                 continue
+            # Classmethod-factory receiver: the Python reference declares the
+            # typed RELAY event factory `from_payload` as a @classmethod, so it
+            # carries a `cls` receiver. PHP expresses the same factory as a
+            # `static` method (no implicit receiver), which build_signature
+            # (correctly, for a genuine @staticmethod) records with no receiver
+            # — producing a spurious param-count drift vs the reference's `cls`.
+            # Inject the `cls` receiver for this classmethod-analog so the two
+            # line up (the diff already reconciles cls<->self). Scoped to the
+            # relay.event module so no genuine PHP @staticmethod is affected.
+            if (
+                method_canonical == "from_payload"
+                and mod == "signalwire.relay.event"
+                and m.get("is_static", False)
+                and not (sig.get("params") and sig["params"][0].get("kind") in ("self", "cls"))
+            ):
+                sig["params"] = [{"name": "cls", "kind": "cls"}] + sig.get("params", [])
+            # Concrete-collection param remap: re-establish a param's concrete
+            # element type where PHP's bare ``array`` erased it (see
+            # PARAM_TYPE_REMAPS). Matched on the reflected param name.
+            remap = PARAM_TYPE_REMAPS.get((full_php, native))
+            if remap:
+                for prm in sig.get("params", []):
+                    new_type = remap.get(prm.get("name", ""))
+                    if new_type is not None:
+                        prm["type"] = new_type
             # §5 unfold: a generated REST operation/command/set method takes its
             # wire fields as named PHP params (options-struct idiom); PHP
             # reflection can't recover keyword kind / element types / the open

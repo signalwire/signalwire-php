@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ aec52849aae2b50baeb3a18d066ecf4c0c06b34a",
+  "generated_from": "signalwire-php @ 299e98f75d7f6ce27a6af13783797c22579ab604",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1073,6 +1073,76 @@
     },
     "signalwire.relay.event": {
       "classes": {
+        "CallReceiveEvent": [
+          "__init__",
+          "from_payload",
+          "get_call_state",
+          "get_context",
+          "get_device",
+          "get_direction",
+          "get_node_id",
+          "get_project_id",
+          "get_segment_id",
+          "get_tag"
+        ],
+        "CallStateEvent": [
+          "__init__",
+          "from_payload",
+          "get_call_state",
+          "get_device",
+          "get_direction",
+          "get_end_reason"
+        ],
+        "CallingErrorEvent": [
+          "__init__",
+          "from_payload",
+          "get_code",
+          "get_message"
+        ],
+        "CollectEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_final",
+          "get_result",
+          "get_state"
+        ],
+        "ConferenceEvent": [
+          "__init__",
+          "from_payload",
+          "get_conference_id",
+          "get_name",
+          "get_status"
+        ],
+        "ConnectEvent": [
+          "__init__",
+          "from_payload",
+          "get_connect_state",
+          "get_peer"
+        ],
+        "DenoiseEvent": [
+          "__init__",
+          "from_payload",
+          "get_denoised"
+        ],
+        "DetectEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_detect"
+        ],
+        "DialEvent": [
+          "__init__",
+          "from_payload",
+          "get_call",
+          "get_dial_state",
+          "get_tag"
+        ],
+        "EchoEvent": [
+          "__init__",
+          "from_payload",
+          "get_state"
+        ],
         "Event": [
           "__init__",
           "dial_state",
@@ -1086,6 +1156,127 @@
           "get_timestamp",
           "parse",
           "to_dict"
+        ],
+        "FaxEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_fax"
+        ],
+        "HoldEvent": [
+          "__init__",
+          "from_payload",
+          "get_state"
+        ],
+        "MessageReceiveEvent": [
+          "__init__",
+          "from_payload",
+          "get_body",
+          "get_context",
+          "get_direction",
+          "get_from_number",
+          "get_media",
+          "get_message_id",
+          "get_message_state",
+          "get_segments",
+          "get_tags",
+          "get_to_number"
+        ],
+        "MessageStateEvent": [
+          "__init__",
+          "from_payload",
+          "get_body",
+          "get_context",
+          "get_direction",
+          "get_from_number",
+          "get_media",
+          "get_message_id",
+          "get_message_state",
+          "get_reason",
+          "get_segments",
+          "get_tags",
+          "get_to_number"
+        ],
+        "PayEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_state"
+        ],
+        "PlayEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_state"
+        ],
+        "QueueEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_position",
+          "get_queue_id",
+          "get_queue_name",
+          "get_size",
+          "get_status"
+        ],
+        "RecordEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_duration",
+          "get_record",
+          "get_size",
+          "get_state",
+          "get_url"
+        ],
+        "ReferEvent": [
+          "__init__",
+          "from_payload",
+          "get_sip_notify_response_code",
+          "get_sip_refer_response_code",
+          "get_sip_refer_to",
+          "get_state"
+        ],
+        "RelayEvent": [
+          "__init__",
+          "from_payload",
+          "get_call_id",
+          "get_event_type",
+          "get_params",
+          "get_timestamp",
+          "parse_event"
+        ],
+        "SendDigitsEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_state"
+        ],
+        "StreamEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_name",
+          "get_state",
+          "get_url"
+        ],
+        "TapEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_device",
+          "get_state",
+          "get_tap"
+        ],
+        "TranscribeEvent": [
+          "__init__",
+          "from_payload",
+          "get_control_id",
+          "get_duration",
+          "get_recording_id",
+          "get_size",
+          "get_state",
+          "get_url"
         ]
       },
       "functions": []
