@@ -98,6 +98,34 @@ class AgentServer
     }
 
     /**
+     * Register a routing callback across all registered agents.
+     *
+     * Mirrors Python `AgentServer.register_global_routing_callback(callback_fn,
+     * path)`: normalizes the path and installs the callback on every agent at
+     * that path, so unified routing logic applies uniformly. New agents
+     * registered after this call are not retroactively updated (matching the
+     * reference, which iterates the current agent set).
+     *
+     * @param callable $callbackFn fn(array $requestData, array $headers): ?string
+     * @param string   $path       Path to register the callback at.
+     */
+    public function registerGlobalRoutingCallback(callable $callbackFn, string $path): void
+    {
+        // Normalize the path (leading slash, no trailing slash).
+        if (!str_starts_with($path, '/')) {
+            $path = "/{$path}";
+        }
+        $path = rtrim($path, '/');
+
+        foreach ($this->agents as $agent) {
+            // Service::registerRoutingCallback takes (path, callback).
+            $agent->registerRoutingCallback($path, $callbackFn);
+        }
+
+        $this->logger->info("Registered global routing callback at {$path} on all agents");
+    }
+
+    /**
      * Unregister an agent from a route.
      */
     public function unregister(string $route): self

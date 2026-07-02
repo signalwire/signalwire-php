@@ -352,10 +352,10 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        $this->assertSame([], $manager->listSkills());
+        $this->assertSame([], $manager->listLoadedSkills());
 
         $manager->loadSkill('datetime', ['skip_prompt' => true]);
-        $this->assertSame(['datetime'], $manager->listSkills());
+        $this->assertSame(['datetime'], $manager->listLoadedSkills());
     }
 
     public function testSkillManagerHasSkillTrueAndFalse(): void

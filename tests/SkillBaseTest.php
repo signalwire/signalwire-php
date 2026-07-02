@@ -14,6 +14,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Skills\SkillBase;
+use SignalWire\SWAIG\FunctionResult;
 
 /**
  * Behavioral parity tests for the SkillBase.define_tool / SkillBase.validate_packages
@@ -173,5 +174,90 @@ class SkillBaseTest extends TestCase
             }
         };
         $this->assertFalse($missing->validatePackages());
+    }
+
+    // ------------------------------------------------------------------
+    // get_skill_data / update_skill_data (item I) — namespaced global_data
+    // ------------------------------------------------------------------
+
+    private function dataSkill(AgentBase $agent, array $params = []): SkillBase
+    {
+        return new class ($agent, $params) extends SkillBase {
+            public function setup(): bool
+            {
+                return true;
+            }
+
+            public function registerTools(): void
+            {
+            }
+
+            public function getName(): string
+            {
+                return 'stateful';
+            }
+
+            public function getDescription(): string
+            {
+                return 'Stateful skill';
+            }
+        };
+    }
+
+    public function testGetSkillDataReadsNamespacedState(): void
+    {
+        $skill = $this->dataSkill($this->agent(), ['prefix' => 'ns1']);
+
+        $rawData = ['global_data' => [
+            'skill:ns1' => ['count' => 3, 'last' => 'x'],
+            'other'     => ['ignored' => true],
+        ]];
+
+        $data = $skill->getSkillData($rawData);
+        $this->assertSame(['count' => 3, 'last' => 'x'], $data);
+    }
+
+    public function testGetSkillDataReturnsEmptyWhenAbsent(): void
+    {
+        $skill = $this->dataSkill($this->agent(), ['prefix' => 'ns2']);
+        $this->assertSame([], $skill->getSkillData(['global_data' => []]));
+        $this->assertSame([], $skill->getSkillData([]));
+    }
+
+    public function testUpdateSkillDataWrapsUnderNamespace(): void
+    {
+        $skill = $this->dataSkill($this->agent(), ['prefix' => 'ns3']);
+        $result = new FunctionResult('ok');
+
+        $returned = $skill->updateSkillData($result, ['count' => 5]);
+        $this->assertSame($result, $returned);
+
+        $arr = $result->toArray();
+        $update = null;
+        foreach ($arr['action'] ?? [] as $action) {
+            if (isset($action['set_global_data'])) {
+                $update = $action['set_global_data'];
+            }
+        }
+        $this->assertNotNull($update);
+        $this->assertSame(['skill:ns3' => ['count' => 5]], $update);
+    }
+
+    public function testSkillNamespaceFallsBackToInstanceKey(): void
+    {
+        // No prefix -> namespace derives from the instance key (skill name).
+        $skill = $this->dataSkill($this->agent());
+        $result = new FunctionResult('ok');
+        $skill->updateSkillData($result, ['a' => 1]);
+
+        $arr = $result->toArray();
+        $update = null;
+        foreach ($arr['action'] ?? [] as $action) {
+            if (isset($action['set_global_data'])) {
+                $update = $action['set_global_data'];
+            }
+        }
+        $this->assertNotNull($update);
+        $this->assertArrayHasKey('skill:stateful', $update);
     }
 }

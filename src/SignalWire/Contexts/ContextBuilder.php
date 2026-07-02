@@ -619,6 +619,24 @@ class Context
         $this->name = $name;
     }
 
+    /**
+     * Create a simple single Context.
+     *
+     * Mirrors Python's module-level `create_simple_context(name="default")`
+     * free function, which returns a standalone {@see Context}. PHP (PSR-4,
+     * file-per-class) cannot declare an autoloadable module-level free
+     * function, so it is hosted here as a static factory on Context and
+     * projected onto the canonical
+     * `signalwire.core.contexts.create_simple_context` via
+     * FREE_FUNCTION_PROJECTIONS.
+     *
+     * @param string $name Context name (defaults to "default").
+     */
+    public static function createSimpleContext(string $name = 'default'): self
+    {
+        return new self($name);
+    }
+
     public function getName(): string
     {
         return $this->name;
@@ -1395,20 +1413,4 @@ class ContextBuilder
         $builder->addContext($name);
         return $builder;
     }
-}
-
-// ── Module-level helper ─────────────────────────────────────────────────────
-
-/**
- * Helper function to create a simple single Context.
- *
- * Mirrors Python's signalwire.core.contexts.create_simple_context — returns a
- * standalone Context (NOT a builder). Use ContextBuilder::createSimpleContext
- * if you want a fully-populated builder.
- *
- * @param string $name Context name (defaults to "default").
- */
-function create_simple_context(string $name = 'default'): Context
-{
-    return new Context($name);
 }

@@ -68,6 +68,12 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # core/agent
     "AgentBase": "signalwire.core.agent_base",
 
+    # prefab: Amazon Bedrock voice-to-voice agent. Lives under
+    # src/SignalWire/Agents/ (PSR-4) and routes by name to the oracle module
+    # so its methods surface under signalwire.agents.bedrock rather than the
+    # path-derived signalwire.agents.bedrock_agent.
+    "BedrockAgent": "signalwire.agents.bedrock",
+
     # core/swml
     "Service": "signalwire.core.swml_service",  # PHP `Service` -> Python `SWMLService`
     "Document": "signalwire.core.swml_builder",
@@ -237,12 +243,14 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # relay
     "Client": "signalwire.relay.client",   # PHP `Relay\Client` -> Python `RelayClient`
+    "RelayError": "signalwire.relay.client",  # RELAY-protocol error, oracle module signalwire.relay.client
     "Call": "signalwire.relay.call",
     "Message": "signalwire.relay.message",
     "Action": "signalwire.relay.call",
     "PlayAction": "signalwire.relay.call",
     "RecordAction": "signalwire.relay.call",
     "CollectAction": "signalwire.relay.call",
+    "StandaloneCollectAction": "signalwire.relay.call",
     "DetectAction": "signalwire.relay.call",
     "FaxAction": "signalwire.relay.call",
     "TapAction": "signalwire.relay.call",
@@ -565,6 +573,11 @@ METHOD_ALIASES: dict[str, str] = {
     "get_userdata": "userdata",
     "set_userdata": "userdata",
     "get_history": "history",
+    # Python ``Call.pass_`` carries a trailing underscore because ``pass`` is a
+    # Python keyword; PHP has no such clash and names the method ``pass()``.
+    # Project the PHP name onto the canonical ``pass_`` (only Call declares a
+    # ``pass`` method — no collision applying globally).
+    "pass": "pass_",
 }
 
 

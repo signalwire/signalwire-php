@@ -284,6 +284,21 @@ class Message
         return $this->result;
     }
 
+    /**
+     * The terminal result (RELAY event) once the message is done, or null if
+     * it has not yet reached a terminal state.
+     *
+     * Mirrors Python's ``Message.result`` @property: returns the stored
+     * terminal result only when {@see isDone()} is true, else null (unlike
+     * {@see getResult()}, which always returns the raw stored value).
+     *
+     * @return mixed
+     */
+    public function result()
+    {
+        return $this->completed ? $this->result : null;
+    }
+
     // ------------------------------------------------------------------
     // Resolution
     // ------------------------------------------------------------------

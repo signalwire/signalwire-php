@@ -177,52 +177,104 @@ class ConciergeAgent extends AgentBase
             $this->promptAddSection('Special Instructions', '', $this->specialInstructions);
         }
 
-        // Tool: check_availability
-        $capturedVenueName = $this->venueName;
+        // Tool: check_availability — dispatches to the named handler method.
         $this->defineTool(
             name: 'check_availability',
-            description: 'Check availability for a service or amenity',
+            description: 'Check availability for a service on a specific date and time',
             parameters: [
-                'service' => ['type' => 'string', 'description' => 'Service or amenity to check'],
-                'date'    => ['type' => 'string', 'description' => 'Date to check (optional)'],
+                'service' => ['type' => 'string', 'description' => 'The service to check availability for'],
+                'date'    => ['type' => 'string', 'description' => 'The date to check (optional)'],
+                'time'    => ['type' => 'string', 'description' => 'The time to check (optional)'],
             ],
-            handler: function (array $args, array $rawData) use ($capturedVenueName): FunctionResult {
-                $service = $args['service'] ?? '';
-                $date    = $args['date'] ?? '';
-                $response = "Checking availability for {$service} at {$capturedVenueName}";
-                if ($date !== '') {
-                    $response .= " on {$date}";
-                }
-                return new FunctionResult($response);
-            },
+            handler: fn (array $args, array $rawData): FunctionResult => $this->checkAvailability($args, $rawData),
         );
 
-        // Tool: get_directions
-        $capturedAmenities = $this->amenities;
+        // Tool: get_directions — dispatches to the named handler method.
         $this->defineTool(
             name: 'get_directions',
-            description: 'Get directions to a service or amenity within the venue',
+            description: 'Get directions to a specific location or amenity',
             parameters: [
-                'destination' => ['type' => 'string', 'description' => 'The amenity or area to get directions to'],
+                'location' => ['type' => 'string', 'description' => 'The location or amenity to get directions to'],
             ],
-            handler: function (array $args, array $rawData) use ($capturedVenueName, $capturedAmenities): FunctionResult {
-                $destination = $args['destination'] ?? '';
-                $destinationLower = strtolower($destination);
-
-                foreach ($capturedAmenities as $amenityName => $info) {
-                    if (strtolower($amenityName) === $destinationLower) {
-                        $location = $info['location'] ?? 'location not specified';
-                        return new FunctionResult(
-                            "The {$amenityName} at {$capturedVenueName} is located at: {$location}",
-                        );
-                    }
-                }
-
-                return new FunctionResult(
-                    "Directions to {$destination} at {$capturedVenueName}: please ask the front desk for assistance.",
-                );
-            },
+            handler: fn (array $args, array $rawData): FunctionResult => $this->getDirections($args, $rawData),
         );
+    }
+
+    /**
+     * Check availability for a service on a specific date and time.
+     *
+     * Mirrors Python `ConciergeAgent.check_availability`. In a real deployment
+     * this would connect to a booking system; here it validates the requested
+     * service against the configured list.
+     *
+     * @param array<string, mixed> $args
+     * @param array<string, mixed> $rawData
+     */
+    public function checkAvailability(array $args, array $rawData): FunctionResult
+    {
+        $service = strtolower(is_string($args['service'] ?? null) ? $args['service'] : '');
+        $date    = is_string($args['date'] ?? null) ? $args['date'] : '';
+        $time    = is_string($args['time'] ?? null) ? $args['time'] : '';
+
+        $lowerServices = array_map('strtolower', $this->services);
+        if (in_array($service, $lowerServices, true)) {
+            return new FunctionResult(
+                "Yes, {$service} is available on {$date} at {$time}. Would you like to make a reservation?"
+            );
+        }
+
+        $available = implode(', ', $this->services);
+        return new FunctionResult(
+            "I'm sorry, we don't offer {$service} at {$this->venueName}. "
+            . "Our available services are: {$available}."
+        );
+    }
+
+    /**
+     * Provide directions to a specific location or amenity.
+     *
+     * Mirrors Python `ConciergeAgent.get_directions`.
+     *
+     * @param array<string, mixed> $args
+     * @param array<string, mixed> $rawData
+     */
+    public function getDirections(array $args, array $rawData): FunctionResult
+    {
+        $location = strtolower(is_string($args['location'] ?? null) ? $args['location'] : '');
+
+        if (isset($this->amenities[$location]) && isset($this->amenities[$location]['location'])) {
+            $amenityLocation = $this->amenities[$location]['location'];
+            return new FunctionResult(
+                "The {$location} is located at {$amenityLocation}. "
+                . "From the main entrance, follow the signs to {$amenityLocation}."
+            );
+        }
+
+        return new FunctionResult(
+            "I don't have specific directions to {$location}. "
+            . "You can ask our staff at the front desk for assistance."
+        );
+    }
+
+    /**
+     * Process the interaction summary.
+     *
+     * Mirrors Python `ConciergeAgent.on_summary`: logs the structured or
+     * free-form summary. Subclasses can override to persist the interaction.
+     *
+     * @param array<string,mixed>|string|null $summary
+     * @param array<string,mixed>|null        $rawData
+     */
+    public function onSummary(array|string|null $summary, ?array $rawData = null): void
+    {
+        if ($summary === null || $summary === '') {
+            return;
+        }
+        if (is_array($summary)) {
+            $this->logger->info('Concierge interaction summary: ' . json_encode($summary, JSON_PRETTY_PRINT));
+        } else {
+            $this->logger->info("Concierge interaction summary: {$summary}");
+        }
     }
 
     public function getVenueName(): string

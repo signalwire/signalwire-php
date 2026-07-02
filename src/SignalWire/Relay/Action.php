@@ -406,6 +406,45 @@ class CollectAction extends Action
 }
 
 /**
+ * Handle for a standalone ``calling.collect`` operation (a collect without an
+ * accompanying play).
+ *
+ * Mirrors Python's ``StandaloneCollectAction``: unlike {@see CollectAction}
+ * (which backs ``play_and_collect`` and shares a control_id across the play
+ * and collect phases), this handle backs a bare ``calling.collect`` and uses
+ * the ``collect`` command prefix for its stop/start-input-timers sub-commands.
+ */
+class StandaloneCollectAction extends CollectAction
+{
+    /**
+     * Construct a standalone-collect action handle.
+     *
+     * Declared explicitly (rather than inheriting {@see Action::__construct})
+     * so the surface enumerator records this subclass's ``__init__`` — the
+     * Python reference records ``StandaloneCollectAction.__init__`` as its own
+     * member. Forwards to the base constructor and pins the standalone-collect
+     * stop method.
+     */
+    public function __construct(string $controlId, string $callId, string $nodeId, object $client)
+    {
+        parent::__construct($controlId, $callId, $nodeId, $client);
+        $this->setStopMethod('calling.collect.stop');
+    }
+
+    /**
+     * Start the initial_timeout timer on an active standalone collect.
+     *
+     * Mirrors Python's ``StandaloneCollectAction.start_input_timers`` (which
+     * sends the ``collect.start_input_timers`` command). Same wire sub-command
+     * as {@see CollectAction::startInputTimers}.
+     */
+    public function startInputTimers(): void
+    {
+        $this->executeSubcommand('calling.collect.start_input_timers');
+    }
+}
+
+/**
  * Handle for calling.detect operations (fax-tone, digit, machine, etc.).
  */
 class DetectAction extends Action

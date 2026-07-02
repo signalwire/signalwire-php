@@ -358,7 +358,7 @@ class Service implements RequestHandlerLike
      */
     public function fullValidationEnabled(): bool
     {
-        return $this->getSchemaUtils()->isFullValidationAvailable();
+        return $this->getSchemaUtils()->fullValidationAvailable();
     }
 
     /**

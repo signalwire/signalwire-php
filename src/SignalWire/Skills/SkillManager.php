@@ -92,9 +92,13 @@ class SkillManager
     }
 
     /**
+     * List the instance keys of currently loaded skills.
+     *
+     * Mirrors Python `SkillManager.list_loaded_skills()`.
+     *
      * @return list<string>
      */
-    public function listSkills(): array
+    public function listLoadedSkills(): array
     {
         return array_keys($this->loadedSkills);
     }

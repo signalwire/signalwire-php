@@ -16,6 +16,8 @@ use SignalWire\Relay\Event;
 use SignalWire\Relay\FaxAction;
 use SignalWire\Relay\Message;
 use SignalWire\Relay\PlayAction;
+use SignalWire\Relay\RelayError;
+use SignalWire\Relay\StandaloneCollectAction;
 use SignalWire\Relay\RecordAction;
 use SignalWire\Relay\RelayClientLike;
 
@@ -1034,5 +1036,71 @@ class RelayTest extends TestCase
         // Ensure uniqueness
         $uuid2 = $method->invoke($client);
         $this->assertNotSame($uuid, $uuid2);
+    }
+
+    // ------------------------------------------------------------------
+    // StandaloneCollectAction (item I — relay tail)
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function standaloneCollectActionSendsCollectStartInputTimers(): void
+    {
+        $client = $this->makeMockClient();
+        $action = new StandaloneCollectAction('ctrl-sc', 'call-1', 'node-1', $client);
+
+        $action->startInputTimers();
+
+        $this->assertCount(1, $client->executed);
+        $this->assertSame('calling.collect.start_input_timers', $client->executed[0]['method']);
+        $this->assertSame('ctrl-sc', $client->executed[0]['params']['control_id']);
+    }
+
+    #[Test]
+    public function standaloneCollectActionUsesCollectStopMethod(): void
+    {
+        $client = $this->makeMockClient();
+        $action = new StandaloneCollectAction('ctrl-sc2', 'call-1', 'node-1', $client);
+
+        // The constructor pins the standalone-collect stop method.
+        $this->assertSame('calling.collect.stop', $action->getStopMethod());
+    }
+
+    // ------------------------------------------------------------------
+    // Message.result (item I — relay tail)
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function messageResultIsNullBeforeCompletion(): void
+    {
+        $message = new Message(['message_id' => 'm-1', 'state' => 'queued']);
+        $this->assertNull($message->result());
+        $this->assertFalse($message->isDone());
+    }
+
+    #[Test]
+    public function messageResultReturnsTerminalResultAfterResolve(): void
+    {
+        $message = new Message(['message_id' => 'm-2']);
+        $event = new Event('messaging.state', ['message_state' => 'delivered']);
+        $message->resolve($event);
+
+        $this->assertTrue($message->isDone());
+        $this->assertSame($event, $message->result());
+    }
+
+    // ------------------------------------------------------------------
+    // RelayError (item I — relay tail)
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function relayErrorCarriesCodeAndFormattedMessage(): void
+    {
+        $err = new RelayError(-32601, 'Method not found');
+
+        $this->assertSame(-32601, $err->relayCode);
+        $this->assertSame('Method not found', $err->relayMessage);
+        $this->assertSame(-32601, $err->getCode());
+        $this->assertSame('RELAY error -32601: Method not found', $err->getMessage());
+        $this->assertInstanceOf(\RuntimeException::class, $err);
     }
 }

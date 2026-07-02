@@ -525,4 +525,58 @@ class CallConvenienceMockTest extends TestCase
         $this->assertFalse($call->waitForAnswered(0.3));
         $this->assertSame(Constants::CALL_STATE_CREATED, $call->state);
     }
+
+    #[Test]
+    public function waitForEndedResolvesOnPushedStateEvent(): void
+    {
+        $call = $this->createdInboundCall('call-wfd-fwd');
+        // wait_for_ended pumps readOnce() until the terminal ended state.
+        $this->mock->push(self::stateFrame('call-wfd-fwd', 'ended'));
+        $this->assertTrue($call->waitForEnded(5.0));
+        $this->assertSame(Constants::CALL_STATE_ENDED, $call->state);
+    }
+
+    #[Test]
+    public function waitForEndedReturnsFalseOnTimeout(): void
+    {
+        $call = $this->createdInboundCall('call-wfd-to');
+        $this->assertFalse($call->waitForEnded(0.3));
+        $this->assertSame(Constants::CALL_STATE_CREATED, $call->state);
+    }
+
+    #[Test]
+    public function waitForResolvesOnMatchingEvent(): void
+    {
+        $call = $this->createdInboundCall('call-wf-evt');
+        // wait_for(eventType) captures the first matching event, pumping
+        // readOnce() internally until it arrives.
+        $this->mock->push(self::stateFrame('call-wf-evt', 'ringing'));
+        $event = $call->waitFor('calling.call.state', null, 5.0);
+        $this->assertNotNull($event);
+        $this->assertSame('calling.call.state', $event->getEventType());
+    }
+
+    #[Test]
+    public function waitForHonoursPredicate(): void
+    {
+        $call = $this->createdInboundCall('call-wf-pred');
+        // Push ringing then answered; the predicate only matches answered.
+        $this->mock->push(self::stateFrame('call-wf-pred', 'ringing'));
+        $this->mock->push(self::stateFrame('call-wf-pred', 'answered'));
+        $event = $call->waitFor(
+            'calling.call.state',
+            fn ($e) => ($e->getParams()['call_state'] ?? null) === 'answered',
+            5.0,
+        );
+        $this->assertNotNull($event);
+        $this->assertSame('answered', $event->getParams()['call_state'] ?? null);
+    }
+
+    #[Test]
+    public function waitForReturnsNullOnTimeout(): void
+    {
+        $call = $this->createdInboundCall('call-wf-to');
+        // No matching event pushed; the short timeout elapses -> null.
+        $this->assertNull($call->waitFor('calling.call.state', null, 0.3));
+    }
 }

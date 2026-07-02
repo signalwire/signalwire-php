@@ -1,12 +1,13 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 1177827178d48c937c3908e8cfc40ef1472a6063",
+  "generated_from": "signalwire-php @ 4aa677d121576af07894e1885b2121b7e4ecb8d2",
   "modules": {
     "signalwire": {
       "classes": {
         "SignalWire": [
           "add_skill_directory",
           "get_logger",
+          "list_skills",
           "list_skills_with_params",
           "register_skill",
           "rest_client"
@@ -28,12 +29,28 @@
           "handle_request",
           "is_sip_routing_enabled",
           "register",
+          "register_global_routing_callback",
           "register_sip_username",
           "run",
           "serve",
           "serve_static_files",
           "setup_sip_routing",
           "unregister"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.agents.bedrock": {
+      "classes": {
+        "BedrockAgent": [
+          "__init__",
+          "render_swml",
+          "set_inference_params",
+          "set_llm_model",
+          "set_llm_temperature",
+          "set_post_prompt_llm_params",
+          "set_prompt_llm_params",
+          "set_voice"
         ]
       },
       "functions": []
@@ -113,6 +130,7 @@
           "add_pronunciation",
           "add_skill",
           "add_swaig_query_params",
+          "auto_map_sip_usernames",
           "build_ai_verb",
           "clear_post_ai_verbs",
           "clear_post_answer_verbs",
@@ -128,8 +146,10 @@
           "enable_sip_routing",
           "get_contexts",
           "get_dynamic_config_callback",
+          "get_full_url",
           "get_language_params",
           "get_mcp_servers",
+          "get_name",
           "get_post_prompt",
           "get_prompt",
           "get_raw_prompt",
@@ -167,6 +187,7 @@
           "set_prompt_pom",
           "set_prompt_text",
           "set_pronunciations",
+          "set_summary_callback",
           "set_web_hook_url",
           "setup_graceful_shutdown",
           "update_global_data",
@@ -216,6 +237,7 @@
           "add_step",
           "add_system_bullets",
           "add_system_section",
+          "create_simple_context",
           "get_initial_step",
           "get_name",
           "get_step",
@@ -626,10 +648,12 @@
           "get_parameter_schema",
           "get_prompt_sections",
           "get_required_env_vars",
+          "get_skill_data",
           "get_version",
           "register_tools",
           "setup",
           "supports_multiple_instances",
+          "update_skill_data",
           "validate_env_vars",
           "validate_packages"
         ]
@@ -642,7 +666,7 @@
           "__init__",
           "get_skill",
           "has_skill",
-          "list_skills",
+          "list_loaded_skills",
           "load_skill",
           "unload_skill"
         ]
@@ -1090,9 +1114,12 @@
       "classes": {
         "ConciergeAgent": [
           "__init__",
+          "check_availability",
           "get_amenities",
+          "get_directions",
           "get_services",
-          "get_venue_name"
+          "get_venue_name",
+          "on_summary"
         ]
       },
       "functions": []
@@ -1102,7 +1129,9 @@
         "FAQBotAgent": [
           "__init__",
           "get_faqs",
-          "get_suggest_related"
+          "get_suggest_related",
+          "on_summary",
+          "search_faqs"
         ]
       },
       "functions": []
@@ -1111,7 +1140,11 @@
       "classes": {
         "InfoGathererAgent": [
           "__init__",
-          "get_questions"
+          "get_questions",
+          "on_swml_request",
+          "set_question_callback",
+          "start_questions",
+          "submit_answer"
         ]
       },
       "functions": []
@@ -1121,7 +1154,8 @@
         "ReceptionistAgent": [
           "__init__",
           "get_departments",
-          "get_greeting"
+          "get_greeting",
+          "on_summary"
         ]
       },
       "functions": []
@@ -1131,7 +1165,10 @@
         "SurveyAgent": [
           "__init__",
           "get_survey_name",
-          "get_survey_questions"
+          "get_survey_questions",
+          "log_response",
+          "on_summary",
+          "validate_response"
         ]
       },
       "functions": []
@@ -1190,7 +1227,7 @@
           "live_transcribe",
           "live_translate",
           "on",
-          "pass",
+          "pass_",
           "pay",
           "play",
           "play_and_collect",
@@ -1214,7 +1251,9 @@
           "transfer",
           "unhold",
           "user_event",
+          "wait_for",
           "wait_for_answered",
+          "wait_for_ended",
           "wait_for_ending",
           "wait_for_ringing"
         ],
@@ -1250,6 +1289,10 @@
           "get_url",
           "pause",
           "resume"
+        ],
+        "StandaloneCollectAction": [
+          "__init__",
+          "start_input_timers"
         ],
         "StreamAction": [
           "get_stop_method"
@@ -1296,6 +1339,9 @@
           "send_ack",
           "send_message",
           "unreceive"
+        ],
+        "RelayError": [
+          "__init__"
         ]
       },
       "functions": []
@@ -1558,6 +1604,7 @@
           "on",
           "on_completed",
           "resolve",
+          "result",
           "wait"
         ]
       },
@@ -1697,12 +1744,6 @@
         "SignalwirePingResult": [],
         "SignalwireReauthenticateParams": [],
         "SignalwireReauthenticateResult": []
-      },
-      "functions": []
-    },
-    "signalwire.relay.relay_error": {
-      "classes": {
-        "RelayError": []
       },
       "functions": []
     },
@@ -3402,13 +3443,13 @@
         ],
         "SchemaUtils": [
           "__init__",
+          "full_validation_available",
           "generate_method_body",
           "generate_method_signature",
           "get_all_verb_names",
           "get_verb_parameters",
           "get_verb_properties",
           "get_verb_required_properties",
-          "is_full_validation_available",
           "load_schema",
           "validate_document",
           "validate_verb"

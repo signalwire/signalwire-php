@@ -906,7 +906,9 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
 
         $receivedSummary = null;
-        $agent->onSummary(function (string $summary, array $data, array $headers) use (&$receivedSummary): void {
+        // The overridable on_summary(summary, raw_data) handler is the canonical
+        // contract; setSummaryCallback is the PHP-additive registrar convenience.
+        $agent->setSummaryCallback(function ($summary, array $data, array $headers) use (&$receivedSummary): void {
             $receivedSummary = $summary;
         });
 
@@ -983,7 +985,7 @@ class AgentBaseTest extends TestCase
         $this->assertSame($agent, $agent->clearPostAnswerVerbs());
         $this->assertSame($agent, $agent->clearPostAiVerbs());
         $this->assertSame($agent, $agent->setDynamicConfigCallback(fn () => null));
-        $this->assertSame($agent, $agent->onSummary(fn () => null));
+        $this->assertSame($agent, $agent->setSummaryCallback(fn () => null));
         $this->assertSame($agent, $agent->defineTool('t', 'd', [], fn () => null));
         $this->assertSame($agent, $agent->registerSwaigFunction(['function' => 'f']));
         $this->assertSame($agent, $agent->defineTools([]));

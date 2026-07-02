@@ -286,4 +286,60 @@ abstract class SkillBase
         $toolName = $this->params['tool_name'] ?? null;
         return is_string($toolName) && $toolName !== '' ? $toolName : $default;
     }
+
+    /**
+     * Get the namespaced key for this skill instance's global_data.
+     *
+     * Mirrors Python `SkillBase._get_skill_namespace`: uses the `prefix`
+     * param when set, otherwise falls back to the instance key, so multiple
+     * skill instances store state in global_data without collisions.
+     */
+    private function getSkillNamespace(): string
+    {
+        $prefix = $this->params['prefix'] ?? null;
+        if (is_string($prefix) && $prefix !== '') {
+            return "skill:{$prefix}";
+        }
+        return 'skill:' . $this->getInstanceKey();
+    }
+
+    /**
+     * Read this skill instance's namespaced data from raw_data global_data.
+     *
+     * Mirrors Python `SkillBase.get_skill_data(raw_data)`. Returns the skill's
+     * namespaced state, or an empty array if not present.
+     *
+     * @param array<string,mixed> $rawData The raw_data dict passed to SWAIG
+     *        function handlers, expected to contain a `global_data` key.
+     * @return array<string,mixed>
+     */
+    public function getSkillData(array $rawData): array
+    {
+        $namespace = $this->getSkillNamespace();
+        $globalData = $rawData['global_data'] ?? [];
+        if (!is_array($globalData)) {
+            return [];
+        }
+        $scoped = $globalData[$namespace] ?? [];
+        return is_array($scoped) ? $scoped : [];
+    }
+
+    /**
+     * Write this skill instance's namespaced data into a FunctionResult.
+     *
+     * Mirrors Python `SkillBase.update_skill_data(result, data)`: wraps `data`
+     * under the skill's namespace key and calls
+     * {@see \SignalWire\SWAIG\FunctionResult::updateGlobalData}. Returns the
+     * same FunctionResult for chaining.
+     *
+     * @param array<string,mixed> $data The skill state to store under the namespace.
+     */
+    public function updateSkillData(
+        \SignalWire\SWAIG\FunctionResult $result,
+        array $data
+    ): \SignalWire\SWAIG\FunctionResult {
+        $namespace = $this->getSkillNamespace();
+        $result->updateGlobalData([$namespace => $data]);
+        return $result;
+    }
 }

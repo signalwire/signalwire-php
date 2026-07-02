@@ -324,6 +324,77 @@ class Call
     }
 
     /**
+     * Wait for a specific event on this call, optionally filtered by a
+     * predicate, pumping inbound frames via ``$client->readOnce()``.
+     *
+     * Mirrors Python's async ``Call.wait_for(event_type, predicate, timeout)``
+     * and TS ``Call.waitFor``; the PHP port is synchronous (single-threaded),
+     * so instead of awaiting a future it drives the same read loop
+     * {@see waitForState}/{@see Action::wait} use until a matching event
+     * arrives. A one-shot listener captures the first matching {@see Event}.
+     *
+     * @param string                     $eventType The event type to wait for.
+     * @param (callable(Event): bool)|null $predicate Optional filter — only an
+     *        event for which this returns true resolves the wait.
+     * @param int|float|null             $timeout   Seconds to wait; null uses
+     *        the 30s default.
+     * @return Event|null The first matching event, or null on timeout.
+     */
+    public function waitFor(
+        string $eventType,
+        ?callable $predicate = null,
+        int|float|null $timeout = null
+    ): ?Event {
+        $matched = null;
+        $listener = function (Event $event, Call $call) use (
+            &$matched,
+            $eventType,
+            $predicate
+        ): void {
+            if ($matched !== null) {
+                return;
+            }
+            if ($event->getEventType() !== $eventType) {
+                return;
+            }
+            if ($predicate === null || $predicate($event)) {
+                $matched = $event;
+            }
+        };
+
+        $this->onEventCallbacks[] = $listener;
+        try {
+            $deadline = microtime(true) + ($timeout ?? 30);
+            while ($matched === null && microtime(true) < $deadline) {
+                $this->client->readOnce();
+            }
+        } finally {
+            // Remove the one-shot listener.
+            foreach ($this->onEventCallbacks as $i => $cb) {
+                if ($cb === $listener) {
+                    unset($this->onEventCallbacks[$i]);
+                }
+            }
+            $this->onEventCallbacks = array_values($this->onEventCallbacks);
+        }
+
+        return $matched;
+    }
+
+    /**
+     * Wait for the call to reach the terminal ``ended`` state, pumping inbound
+     * frames until it does. Mirrors Python's ``Call.wait_for_ended(timeout)``
+     * / TS ``Call.waitForEnded``.
+     *
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return bool True once the call has ended; false on timeout.
+     */
+    public function waitForEnded(int|float|null $timeout = null): bool
+    {
+        return $this->waitForState(Constants::CALL_STATE_ENDED, $timeout);
+    }
+
+    /**
      * Mark every outstanding action as completed.  Called when the call
      * enters a terminal state (ended).
      */

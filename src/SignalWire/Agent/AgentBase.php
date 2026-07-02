@@ -1257,7 +1257,7 @@ class AgentBase extends Service implements AgentInterface
         if ($this->skillManager === null) {
             return [];
         }
-        return $this->skillManager->listSkills();
+        return $this->skillManager->listLoadedSkills();
     }
 
     public function hasSkill(SkillName|string $name): bool
@@ -1318,7 +1318,38 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
-    public function onSummary(callable $callback): self
+    /**
+     * Lifecycle handler invoked when a post-prompt summary is received.
+     *
+     * Mirrors Python `AgentBase.on_summary(summary, raw_data)` and the TS
+     * `AgentBase.onSummary(summary, rawData)` overridable hook: the default
+     * implementation is a no-op, and subclasses (e.g. the prefab agents)
+     * override it to log or persist the interaction summary. The base
+     * dispatcher ({@see handlePostPrompt}) calls this method with the parsed
+     * summary and the full raw POST payload.
+     *
+     * @param array<string,mixed>|string|null $summary Parsed summary object
+     *        (array when the post-prompt requested structured output, string
+     *        for free-form), or null if no summary was extracted.
+     * @param array<string,mixed>|null        $rawData Full raw post-prompt
+     *        payload received from the platform, or null.
+     */
+    public function onSummary(array|string|null $summary, ?array $rawData = null): void
+    {
+        // Default implementation does nothing; subclasses override.
+    }
+
+    /**
+     * Register a callback invoked when a post-prompt summary is received.
+     *
+     * PHP-additive convenience (recorded in PORT_ADDITIONS.md): where the
+     * canonical contract is to override {@see onSummary}, this lets a caller
+     * install a summary handler without subclassing. Both the registered
+     * callback and the overridable {@see onSummary} method run.
+     *
+     * @param callable $callback fn(mixed $summary, array $rawData, array $headers): void
+     */
+    public function setSummaryCallback(callable $callback): self
     {
         $this->summaryCallback = $callback;
         return $this;
@@ -1347,6 +1378,67 @@ class AgentBase extends Service implements AgentInterface
             $this->setParam('sip_route', $route);
         }
         return $this;
+    }
+
+    /**
+     * Automatically register common SIP usernames derived from this agent's
+     * name and route.
+     *
+     * Mirrors Python `AgentBase.auto_map_sip_usernames()`: registers a
+     * username from the cleaned agent name, one from the cleaned route (if
+     * different), and a vowel-stripped variant of the name when it is long
+     * enough. Returns `$this` for chaining.
+     */
+    public function autoMapSipUsernames(): self
+    {
+        // Register username based on agent name.
+        $cleanName = preg_replace('/[^a-z0-9_]/', '', strtolower($this->name)) ?? '';
+        if ($cleanName !== '') {
+            $this->registerSipUsername($cleanName);
+        }
+
+        // Register username based on route (without slashes/punctuation).
+        $cleanRoute = preg_replace('/[^a-z0-9_]/', '', strtolower($this->route)) ?? '';
+        if ($cleanRoute !== '' && $cleanRoute !== $cleanName) {
+            $this->registerSipUsername($cleanRoute);
+        }
+
+        // Register a vowel-stripped variation when the name is long enough.
+        if (strlen($cleanName) > 3) {
+            $noVowels = preg_replace('/[aeiou]/', '', $cleanName) ?? $cleanName;
+            if ($noVowels !== $cleanName && strlen($noVowels) > 2) {
+                $this->registerSipUsername($noVowels);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get this agent's name.
+     *
+     * Mirrors Python `AgentBase.get_name()`. Declared on AgentBase (in
+     * addition to the inherited {@see Service::getName}) so the surface
+     * enumerator records it on the agent_base module per the oracle.
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * Get the full URL for this agent's endpoint.
+     *
+     * Mirrors Python `AgentBase.get_full_url(include_auth)`. Declared on
+     * AgentBase so the surface records it on the agent_base module; delegates
+     * to the parent {@see Service::getFullUrl} URL builder (which honours the
+     * manual/env proxy base, host, port, and route).
+     *
+     * @param bool $includeAuth Whether to embed basic-auth credentials.
+     */
+    public function getFullUrl(bool $includeAuth = false): string
+    {
+        return parent::getFullUrl($includeAuth);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1562,12 +1654,19 @@ class AgentBase extends Service implements AgentInterface
      */
     protected function handlePostPrompt(?array $requestData, array $headers): array
     {
-        if ($this->summaryCallback !== null && $requestData !== null) {
+        if ($requestData !== null) {
             $postPromptData = $requestData['post_prompt_data'] ?? null;
             $raw = is_array($postPromptData) ? ($postPromptData['raw'] ?? null) : null;
-            $summary = $raw ?? $requestData['summary'] ?? '';
+            $summaryRaw = $raw ?? $requestData['summary'] ?? '';
+            /** @var array<string,mixed>|string|null $summary */
+            $summary = (is_array($summaryRaw) || is_string($summaryRaw)) ? $summaryRaw : null;
 
-            ($this->summaryCallback)($summary, $requestData, $headers);
+            // Invoke the overridable lifecycle handler (Python/TS parity), then
+            // the optionally-registered convenience callback.
+            $this->onSummary($summary, $requestData);
+            if ($this->summaryCallback !== null) {
+                ($this->summaryCallback)($summary, $requestData, $headers);
+            }
         }
 
         return $this->jsonResponse(200, ['status' => 'ok']);

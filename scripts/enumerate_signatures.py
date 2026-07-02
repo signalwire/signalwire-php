@@ -240,6 +240,18 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire", "add_skill_directory"),
     ("SignalWire\\SignalWire", "list_skills_with_params"):
         ("signalwire", "list_skills_with_params"),
+    ("SignalWire\\SignalWire", "list_skills"):
+        ("signalwire", "list_skills"),
+    # Context / DataMap module-level factory helpers — Python ships them as
+    # module-level free functions; PHP (PSR-4 file-per-class) hosts them as
+    # static factories on the Context / DataMap classes and projects onto the
+    # canonical module-level names.
+    ("SignalWire\\Contexts\\Context", "createSimpleContext"):
+        ("signalwire.core.contexts", "create_simple_context"),
+    ("SignalWire\\DataMap\\DataMap", "createSimpleApiTool"):
+        ("signalwire.core.data_map", "create_simple_api_tool"),
+    ("SignalWire\\DataMap\\DataMap", "createExpressionTool"):
+        ("signalwire.core.data_map", "create_expression_tool"),
     # Webhook signature validation — Python ships them as module-level free
     # functions (signalwire.core.security.webhook_validator); PHP groups
     # both static methods on a WebhookValidator final class for PSR-4 + IDE

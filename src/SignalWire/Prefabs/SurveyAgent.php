@@ -110,85 +110,147 @@ class SurveyAgent extends AgentBase
         }
         $this->promptAddSection('Survey Questions', '', $qBullets);
 
-        // Tool: validate_response
-        $capturedQuestions = $this->surveyQuestions;
+        // Tool: validate_response — dispatches to the named handler method.
         $this->defineTool(
             name: 'validate_response',
-            description: 'Validate a survey response against the question type constraints',
+            description: 'Validate if a response meets the requirements for a specific question',
             parameters: [
                 'question_id' => ['type' => 'string', 'description' => 'ID of the question'],
-                'answer'      => ['type' => 'string', 'description' => 'The response to validate'],
+                'response'    => ['type' => 'string', 'description' => 'The response to validate'],
             ],
-            handler: function (array $args, array $rawData) use ($capturedQuestions): FunctionResult {
-                $questionId = $args['question_id'] ?? '';
-                $answer     = $args['answer'] ?? '';
+            handler: fn (array $args, array $rawData): FunctionResult => $this->validateResponse($args, $rawData),
+        );
 
-                // Find the question
-                $question = null;
-                foreach ($capturedQuestions as $q) {
-                    if ($q['id'] === $questionId) {
-                        $question = $q;
+        // Tool: log_response — dispatches to the named handler method.
+        $this->defineTool(
+            name: 'log_response',
+            description: 'Log a validated response to a survey question',
+            parameters: [
+                'question_id' => ['type' => 'string', 'description' => 'ID of the question'],
+                'response'    => ['type' => 'string', 'description' => 'The validated response'],
+            ],
+            handler: fn (array $args, array $rawData): FunctionResult => $this->logResponse($args, $rawData),
+        );
+    }
+
+    /**
+     * Validate a survey response against the question's type constraints.
+     *
+     * Mirrors Python `SurveyAgent.validate_response`.
+     *
+     * @param array<string, mixed> $args
+     * @param array<string, mixed> $rawData
+     */
+    public function validateResponse(array $args, array $rawData): FunctionResult
+    {
+        $questionId = is_string($args['question_id'] ?? null) ? $args['question_id'] : '';
+        $response   = is_string($args['response'] ?? null) ? $args['response'] : '';
+
+        $question = null;
+        foreach ($this->surveyQuestions as $q) {
+            if ($q['id'] === $questionId) {
+                $question = $q;
+                break;
+            }
+        }
+
+        if ($question === null) {
+            return new FunctionResult("Error: Question with ID '{$questionId}' not found.");
+        }
+
+        $message = "Response to '{$questionId}' is valid.";
+
+        switch ($question['type']) {
+            case 'rating':
+                $scale = $question['scale'] ?? 5;
+                $trimmed = trim($response);
+                if ($trimmed === '' || !ctype_digit(ltrim($trimmed, '-'))) {
+                    $message = "Invalid rating. Please provide a number between 1 and {$scale}.";
+                } else {
+                    $rating = (int) $trimmed;
+                    if ($rating < 1 || $rating > $scale) {
+                        $message = "Invalid rating. Please provide a number between 1 and {$scale}.";
+                    }
+                }
+                break;
+
+            case 'multiple_choice':
+                $choices = $question['choices'] ?? [];
+                $lowerResponse = strtolower(trim($response));
+                $match = false;
+                foreach ($choices as $choice) {
+                    if (strtolower($choice) === $lowerResponse) {
+                        $match = true;
                         break;
                     }
                 }
-
-                if ($question === null) {
-                    return new FunctionResult("Unknown question ID: {$questionId}");
+                if (!$match) {
+                    $choiceList = implode(', ', $choices);
+                    $message = "Invalid choice. Please select one of: {$choiceList}.";
                 }
+                break;
 
-                $type = $question['type'];
-
-                switch ($type) {
-                    case 'rating':
-                        $scale = $question['scale'] ?? 5;
-                        $val = (int) $answer;
-                        if ($val < 1 || $val > $scale) {
-                            return new FunctionResult("Invalid rating. Please provide a number between 1 and {$scale}.");
-                        }
-                        return new FunctionResult("Valid rating: {$val}/{$scale}");
-
-                    case 'multiple_choice':
-                        $choices = $question['choices'] ?? [];
-                        $lowerAnswer = strtolower(trim($answer));
-                        foreach ($choices as $choice) {
-                            if (strtolower(trim($choice)) === $lowerAnswer) {
-                                return new FunctionResult("Valid choice: {$choice}");
-                            }
-                        }
-                        $choiceList = implode(', ', $choices);
-                        return new FunctionResult("Invalid choice. Valid options are: {$choiceList}");
-
-                    case 'yes_no':
-                        $normalized = strtolower(trim($answer));
-                        if (in_array($normalized, ['yes', 'no', 'y', 'n'], true)) {
-                            return new FunctionResult("Valid response: {$normalized}");
-                        }
-                        return new FunctionResult('Please respond with yes or no.');
-
-                    case 'open_ended':
-                    default:
-                        if (trim($answer) === '') {
-                            return new FunctionResult('Please provide a non-empty response.');
-                        }
-                        return new FunctionResult("Response accepted: {$answer}");
+            case 'yes_no':
+                $normalized = strtolower(trim($response));
+                if (!in_array($normalized, ['yes', 'no', 'y', 'n'], true)) {
+                    $message = "Please answer with 'yes' or 'no'.";
                 }
-            },
-        );
+                break;
 
-        // Tool: log_response
-        $this->defineTool(
-            name: 'log_response',
-            description: 'Log a validated survey response',
-            parameters: [
-                'question_id' => ['type' => 'string', 'description' => 'ID of the question'],
-                'answer'      => ['type' => 'string', 'description' => 'The validated answer'],
-            ],
-            handler: function (array $args, array $rawData): FunctionResult {
-                $questionId = $args['question_id'] ?? '';
-                $answer     = $args['answer'] ?? '';
-                return new FunctionResult("Survey answer for {$questionId}: {$answer}");
-            },
-        );
+            case 'open_ended':
+                $required = $question['required'] ?? true;
+                if (trim($response) === '' && $required) {
+                    $message = 'A response is required for this question.';
+                }
+                break;
+        }
+
+        return new FunctionResult($message);
+    }
+
+    /**
+     * Log a validated response to a survey question.
+     *
+     * Mirrors Python `SurveyAgent.log_response`: in a real deployment this
+     * would persist the response; here it acknowledges receipt.
+     *
+     * @param array<string, mixed> $args
+     * @param array<string, mixed> $rawData
+     */
+    public function logResponse(array $args, array $rawData): FunctionResult
+    {
+        $questionId = is_string($args['question_id'] ?? null) ? $args['question_id'] : '';
+
+        $questionText = '';
+        foreach ($this->surveyQuestions as $q) {
+            if ($q['id'] === $questionId) {
+                $questionText = $q['text'];
+                break;
+            }
+        }
+
+        return new FunctionResult("Response to '{$questionText}' has been recorded.");
+    }
+
+    /**
+     * Process the survey results summary.
+     *
+     * Mirrors Python `SurveyAgent.on_summary`: logs survey completion.
+     * Subclasses can override to store responses or trigger follow-ups.
+     *
+     * @param array<string,mixed>|string|null $summary
+     * @param array<string,mixed>|null        $rawData
+     */
+    public function onSummary(array|string|null $summary, ?array $rawData = null): void
+    {
+        if ($summary === null || $summary === '') {
+            return;
+        }
+        if (is_array($summary)) {
+            $this->logger->info('Survey completed: ' . json_encode($summary, JSON_PRETTY_PRINT));
+        } else {
+            $this->logger->info("Survey summary (unstructured): {$summary}");
+        }
     }
 
     /**

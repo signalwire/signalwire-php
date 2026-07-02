@@ -443,80 +443,98 @@ class DataMapTest extends TestCase
 
     public function testCreateSimpleApiTool(): void
     {
-        $result = DataMap::createSimpleApiTool(
+        // Oracle-shape factory: returns a configured DataMap builder.
+        $dataMap = DataMap::createSimpleApiTool(
             'lookup_user',
-            'Look up user by ID',
+            'https://api.example.com/users',
+            'User: ${response.name}',
             [
-                ['name' => 'user_id', 'type' => 'string', 'description' => 'User ID', 'required' => true],
-                ['name' => 'format', 'type' => 'string', 'description' => 'Format', 'enum' => ['json', 'xml']],
+                'user_id' => ['type' => 'string', 'description' => 'User ID', 'required' => true],
+                'format'  => ['type' => 'string', 'description' => 'Format'],
             ],
             'GET',
-            'https://api.example.com/users',
-            ['response' => 'User: ${name}'],
             ['Authorization' => 'Bearer secret']
         );
 
+        $this->assertInstanceOf(DataMap::class, $dataMap);
+        $result = $dataMap->toSwaigFunction();
+
         $this->assertSame('lookup_user', $result['function']);
-        $this->assertSame('Look up user by ID', $result['purpose']);
         $this->assertSame(['user_id'], $result['argument']['required']);
         $this->assertArrayHasKey('format', $result['argument']['properties']);
-        $this->assertSame(['json', 'xml'], $result['argument']['properties']['format']['enum']);
         $this->assertSame('GET', $result['data_map']['webhooks'][0]['method']);
         $this->assertSame('https://api.example.com/users', $result['data_map']['webhooks'][0]['url']);
         $this->assertSame(['Authorization' => 'Bearer secret'], $result['data_map']['webhooks'][0]['headers']);
-        $this->assertSame(['response' => 'User: ${name}'], $result['data_map']['webhooks'][0]['output']);
+        // Output derives from the response_template FunctionResult.
+        $this->assertSame('User: ${response.name}', $result['data_map']['webhooks'][0]['output']['response']);
     }
 
-    public function testCreateSimpleApiToolWithoutHeaders(): void
+    public function testCreateSimpleApiToolWithoutParametersOrHeaders(): void
     {
-        $result = DataMap::createSimpleApiTool(
+        $dataMap = DataMap::createSimpleApiTool(
             'simple',
-            'Simple tool',
-            [],
-            'GET',
             'https://example.com',
             'done'
         );
 
+        $result = $dataMap->toSwaigFunction();
         $this->assertSame('simple', $result['function']);
         $this->assertArrayNotHasKey('argument', $result);
         $this->assertArrayNotHasKey('headers', $result['data_map']['webhooks'][0]);
+        $this->assertSame('GET', $result['data_map']['webhooks'][0]['method']);
+    }
+
+    public function testCreateSimpleApiToolWithBodyAndErrorKeys(): void
+    {
+        $dataMap = DataMap::createSimpleApiTool(
+            'create_user',
+            'https://api.example.com/users',
+            'Created ${response.id}',
+            null,
+            'POST',
+            null,
+            ['name' => '${args.name}'],
+            ['error', 'message']
+        );
+
+        $result = $dataMap->toSwaigFunction();
+        $this->assertSame('POST', $result['data_map']['webhooks'][0]['method']);
+        $this->assertSame(['name' => '${args.name}'], $result['data_map']['webhooks'][0]['body']);
+        $this->assertSame(['error', 'message'], $result['data_map']['webhooks'][0]['error_keys']);
     }
 
     // ── createExpressionTool ─────────────────────────────────────────────
 
     public function testCreateExpressionTool(): void
     {
-        $result = DataMap::createExpressionTool(
+        $dataMap = DataMap::createExpressionTool(
             'route_call',
-            'Route the call based on department',
             [
-                ['name' => 'dept', 'type' => 'string', 'description' => 'Department', 'required' => true],
+                '${args.dept}' => ['/sales/', new FunctionResult('Routing to sales')],
+                '${args.dept}_support' => ['/support/', new FunctionResult('Routing to support')],
             ],
             [
-                ['string' => '${args.dept}', 'pattern' => '/sales/', 'output' => ['response' => 'Routing to sales']],
-                ['string' => '${args.dept}', 'pattern' => '/support/', 'output' => ['response' => 'Routing to support'], 'nomatch_output' => ['response' => 'Unknown']],
+                'dept' => ['type' => 'string', 'description' => 'Department', 'required' => true],
             ]
         );
 
+        $this->assertInstanceOf(DataMap::class, $dataMap);
+        $result = $dataMap->toSwaigFunction();
+
         $this->assertSame('route_call', $result['function']);
-        $this->assertSame('Route the call based on department', $result['purpose']);
         $this->assertSame(['dept'], $result['argument']['required']);
         $this->assertCount(2, $result['data_map']['expressions']);
         $this->assertSame('/sales/', $result['data_map']['expressions'][0]['pattern']);
-        $this->assertArrayNotHasKey('nomatch_output', $result['data_map']['expressions'][0]);
-        $this->assertSame(['response' => 'Unknown'], $result['data_map']['expressions'][1]['nomatch_output']);
     }
 
     public function testCreateExpressionToolNoParams(): void
     {
-        $result = DataMap::createExpressionTool(
+        $dataMap = DataMap::createExpressionTool(
             'test',
-            'Test',
-            [],
-            [['string' => 'x', 'pattern' => '/y/', 'output' => 'z']]
+            ['x' => ['/y/', new FunctionResult('z')]]
         );
 
+        $result = $dataMap->toSwaigFunction();
         $this->assertArrayNotHasKey('argument', $result);
         $this->assertCount(1, $result['data_map']['expressions']);
     }
