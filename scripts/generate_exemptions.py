@@ -173,9 +173,11 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.auth_handler.",
-        "Python AuthHandler class wraps uvicorn middleware. PHP's basic "
-        "auth is enforced inline in Service::handle_request via "
-        "`hash_equals` (timing-safe).",
+        "PHP ships the AuthHandler class (Security\\AuthHandler) with the "
+        "verify_api_key / verify_basic_auth / verify_bearer_token / "
+        "get_auth_info surface; only the framework-coupled Python entrypoints "
+        "(flask_decorator, get_fastapi_dependency) are omitted — PHP ships a "
+        "framework-agnostic native middleware() instead (see PORT_ADDITIONS.md).",
     ),
     (
         "signalwire.core.config_loader.",
@@ -224,9 +226,10 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.swaig_function.",
-        "Python SWAIGFunction DTO; PHP stores tool metadata as plain "
-        "associative arrays via `Service::define_tool` and serializes "
-        "directly — no dedicated DTO class.",
+        "PHP ships the SwaigFunction class (SWAIG\\SwaigFunction) with the "
+        "execute / to_swaig / validate_args surface; only the Python "
+        "`__call__` dunder (a thin handler passthrough) is omitted — PHP "
+        "callers invoke execute() which is the capability.",
     ),
     (
         "signalwire.core.swml_builder.",
@@ -242,8 +245,9 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.swml_renderer.",
-        "SWML rendering is owned by PHP's Document class directly "
-        "(Document::render / Document::render_pretty).",
+        "PHP ships the SwmlRenderer class (SWML\\SwmlRenderer) with "
+        "render_swml / render_function_response_swml, delegating to the "
+        "Service Document model.",
     ),
     (
         "signalwire.core.swml_service.SWMLService.add_section",
@@ -366,9 +370,22 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.logging_config.",
-        "Python logging bootstrap helpers; PHP uses its own Logger class "
-        "(monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL "
-        "env var.",
+        "idiomatic_divergence: Python ships these as module-level free "
+        "functions; PHP has no module-level free functions (PSR-4 "
+        "file-per-class), so they are hosted as static methods on the "
+        "LoggingConfig class (configureLogging / getLogger / "
+        "resetLoggingConfiguration / stripControlChars / getExecutionMode) and "
+        "projected to the module-level Python names via the enumerator's "
+        "FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.",
+    ),
+    (
+        "signalwire.core.agent.tools.type_inference.",
+        "idiomatic_divergence: Python ships infer_schema / "
+        "create_typed_handler_wrapper as module-level free functions; PHP has "
+        "no module-level free functions (PSR-4), so they are hosted as static "
+        "methods on the TypeInference class (SWAIG\\TypeInference) using native "
+        "Reflection and projected to the module-level Python names via "
+        "FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.",
     ),
 
     # --- REST namespaces: PHP merges Python's per-resource classes ---

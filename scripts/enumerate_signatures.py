@@ -198,6 +198,26 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.logging_config", "get_execution_mode"),
     ("SignalWire\\Logging\\LoggingConfig", "isServerlessMode"):
         ("signalwire.utils", "is_serverless_mode"),
+    # Central logging helpers — Python ships them as module-level free
+    # functions in signalwire.core.logging_config; PHP hosts them as static
+    # methods on the LoggingConfig class (PSR-4) and projects to the canonical
+    # snake_case names.
+    ("SignalWire\\Logging\\LoggingConfig", "configureLogging"):
+        ("signalwire.core.logging_config", "configure_logging"),
+    ("SignalWire\\Logging\\LoggingConfig", "getLogger"):
+        ("signalwire.core.logging_config", "get_logger"),
+    ("SignalWire\\Logging\\LoggingConfig", "resetLoggingConfiguration"):
+        ("signalwire.core.logging_config", "reset_logging_configuration"),
+    ("SignalWire\\Logging\\LoggingConfig", "stripControlChars"):
+        ("signalwire.core.logging_config", "strip_control_chars"),
+    # Runtime schema-inference helpers — Python ships them as module-level free
+    # functions in signalwire.core.agent.tools.type_inference; PHP hosts them as
+    # static methods on a TypeInference class (PSR-4) and projects to the
+    # canonical snake_case names.
+    ("SignalWire\\SWAIG\\TypeInference", "inferSchema"):
+        ("signalwire.core.agent.tools.type_inference", "infer_schema"),
+    ("SignalWire\\SWAIG\\TypeInference", "createTypedHandlerWrapper"):
+        ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
     # Top-level SignalWire\SignalWire class hosts package-level helpers
     # (RestClient, register_skill, add_skill_directory,
     # list_skills_with_params). Project each onto the canonical

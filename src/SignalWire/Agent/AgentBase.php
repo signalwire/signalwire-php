@@ -1472,6 +1472,58 @@ class AgentBase extends Service implements AgentInterface
      *
      * Arrays and objects are deeply copied; callbacks are preserved by reference.
      */
+    /**
+     * Handle a serverless-environment invocation (CGI, Lambda, Cloud
+     * Functions, Azure). Parity with the Python reference
+     * `signalwire.core.mixins.serverless_mixin.ServerlessMixin.handle_serverless_request`:
+     * detect (or accept an override for) the execution mode and dispatch to the
+     * matching platform handler, returning a platform-appropriate response.
+     *
+     * Delegates the per-platform request extraction + response shaping to
+     * {@see \SignalWire\Serverless\Adapter}, which reads the event/request and
+     * drives this agent's handleRequest(). For 'server' mode it starts the
+     * built-in server (no return).
+     *
+     * @param array<string,mixed>|null $event   Serverless event (Lambda/Azure API-gateway payload).
+     * @param object|null $context Serverless context object (Lambda/Cloud Functions).
+     * @param string|null $mode Override execution mode ('cgi'/'lambda'/'gcf'/'azure'/'server').
+     * @return array<string,mixed>|null Platform response array (Lambda/Azure), or null when
+     *   the handler writes directly to the output stream (CGI/GCF) or starts the server.
+     */
+    public function handleServerlessRequest(
+        ?array $event = null,
+        ?object $context = null,
+        ?string $mode = null,
+    ): ?array {
+        $resolved = $mode === null
+            ? \SignalWire\Serverless\Adapter::detectMode()
+            : \SignalWire\Serverless\ExecutionMode::coerce($mode);
+
+        switch ($resolved) {
+            case \SignalWire\Serverless\ExecutionMode::Lambda:
+                return \SignalWire\Serverless\Adapter::handleLambda(
+                    $this,
+                    $event ?? [],
+                    $context ?? new \stdClass(),
+                );
+
+            case \SignalWire\Serverless\ExecutionMode::Azure:
+                return \SignalWire\Serverless\Adapter::handleAzure($this, $event ?? []);
+
+            case \SignalWire\Serverless\ExecutionMode::Gcf:
+                \SignalWire\Serverless\Adapter::handleGcf($this);
+                return null;
+
+            case \SignalWire\Serverless\ExecutionMode::Cgi:
+                \SignalWire\Serverless\Adapter::handleCgi($this);
+                return null;
+
+            case \SignalWire\Serverless\ExecutionMode::Server:
+                $this->run();
+                return null;
+        }
+    }
+
     public function cloneForRequest(): static
     {
         $clone = clone $this;

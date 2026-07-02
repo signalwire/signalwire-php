@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 299e98f75d7f6ce27a6af13783797c22579ab604",
+  "generated_from": "signalwire-php @ ee8b06aff34085c1cb1eaf555ed73480f3b90653",
   "modules": {
     "signalwire": {
       "classes": {
@@ -55,6 +55,7 @@
     "signalwire.core.agent.prompt.manager": {
       "classes": {
         "PromptManager": [
+          "__init__",
           "define_contexts",
           "get_contexts",
           "get_post_prompt",
@@ -74,12 +75,22 @@
     "signalwire.core.agent.tools.registry": {
       "classes": {
         "ToolRegistry": [
+          "__init__",
           "define_tool",
           "get_all_functions",
           "get_function",
           "has_function",
           "register_swaig_function",
           "remove_function"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.agent.tools.type_inference": {
+      "classes": {
+        "TypeInference": [
+          "create_typed_handler_wrapper",
+          "infer_schema"
         ]
       },
       "functions": []
@@ -119,6 +130,7 @@
           "get_prompt",
           "get_raw_prompt",
           "get_signing_key",
+          "handle_serverless_request",
           "has_skill",
           "list_skills",
           "list_tool_names",
@@ -154,6 +166,20 @@
           "set_web_hook_url",
           "update_global_data",
           "validate_tool_token"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.auth_handler": {
+      "classes": {
+        "AuthHandler": [
+          "__init__",
+          "get_auth_info",
+          "middleware",
+          "validate",
+          "verify_api_key",
+          "verify_basic_auth",
+          "verify_bearer_token"
         ]
       },
       "functions": []
@@ -408,7 +434,9 @@
     },
     "signalwire.core.mixins.serverless_mixin": {
       "classes": {
-        "ServerlessMixin": []
+        "ServerlessMixin": [
+          "handle_serverless_request"
+        ]
       },
       "functions": []
     },
@@ -522,6 +550,7 @@
         "SkillBase": [
           "__init__",
           "cleanup",
+          "define_tool",
           "get_description",
           "get_global_data",
           "get_hints",
@@ -534,7 +563,8 @@
           "register_tools",
           "setup",
           "supports_multiple_instances",
-          "validate_env_vars"
+          "validate_env_vars",
+          "validate_packages"
         ]
       },
       "functions": []
@@ -561,6 +591,17 @@
       },
       "functions": []
     },
+    "signalwire.core.swaig_function": {
+      "classes": {
+        "SWAIGFunction": [
+          "__init__",
+          "execute",
+          "to_swaig",
+          "validate_args"
+        ]
+      },
+      "functions": []
+    },
     "signalwire.core.swaig_request_generated": {
       "classes": {
         "SwaigArgument": [],
@@ -584,6 +625,15 @@
           "render_pretty",
           "reset",
           "to_dict"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.core.swml_renderer": {
+      "classes": {
+        "SwmlRenderer": [
+          "render_function_response_swml",
+          "render_swml"
         ]
       },
       "functions": []
@@ -798,8 +848,12 @@
     "signalwire.logging.logging_config": {
       "classes": {
         "LoggingConfig": [
+          "configure_logging",
           "get_execution_mode",
-          "is_serverless_mode"
+          "get_logger",
+          "is_serverless_mode",
+          "reset_logging_configuration",
+          "strip_control_chars"
         ]
       },
       "functions": []

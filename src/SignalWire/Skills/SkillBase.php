@@ -216,15 +216,69 @@ abstract class SkillBase
     }
 
     /**
+     * Define a SWAIG tool on the owning agent, automatically merging this
+     * skill's swaig_fields into the definition. Skills should use this instead
+     * of calling $agent->defineTool() directly. Mirrors Python's
+     * `SkillBase.define_tool` (core/skill_base.py:59) and TS's
+     * `SkillBase.defineTool`.
+     *
      * @param array<string,mixed> $parameters
      */
-    protected function defineTool(string $name, string $description, array $parameters, callable $handler): void
+    public function defineTool(string $name, string $description, array $parameters, callable $handler): void
     {
         if (!empty($this->swaigFields)) {
             $parameters = array_merge($parameters, $this->swaigFields);
         }
 
         $this->agent->defineTool($name, $description, $parameters, $handler);
+    }
+
+    /**
+     * Check that every required Composer/PHP package (or extension) declared by
+     * this skill is available in the current runtime. Returns false and logs
+     * the missing names when any are absent. Mirrors Python's
+     * `SkillBase.validate_packages` (core/skill_base.py:114) and TS's
+     * `SkillBase.validatePackages`.
+     *
+     * PHP has no runtime `import` of arbitrary packages the way Python's
+     * importlib does; a declared requirement is satisfied when the named
+     * class/interface/function exists (autoloadable) or the named extension is
+     * loaded — the PHP-idiomatic notion of "the package is installed".
+     */
+    public function validatePackages(): bool
+    {
+        $missing = [];
+        foreach ($this->getRequiredPackages() as $package) {
+            if (!self::packageAvailable($package)) {
+                $missing[] = $package;
+            }
+        }
+        if ($missing !== []) {
+            \SignalWire\Logging\LoggingConfig::getLogger('signalwire.skills.' . $this->getName())
+                ->error('Missing required packages: ' . implode(', ', $missing));
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Required package identifiers for this skill. Override in subclasses.
+     * Each entry may be a class/interface/function name (autoload check) or a
+     * loaded-extension name.
+     *
+     * @return list<string>
+     */
+    protected function getRequiredPackages(): array
+    {
+        return [];
+    }
+
+    private static function packageAvailable(string $package): bool
+    {
+        return class_exists($package)
+            || interface_exists($package)
+            || function_exists($package)
+            || extension_loaded($package);
     }
 
     protected function getToolName(string $default): string

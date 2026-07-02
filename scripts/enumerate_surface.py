@@ -81,6 +81,22 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # core/swaig
     "FunctionResult": "signalwire.core.function_result",
+    "SwaigFunction": "signalwire.core.swaig_function",  # PHP `SwaigFunction` -> Python `SWAIGFunction`
+    # Runtime schema-inference helpers. Python ships them as module-level free
+    # functions (signalwire.core.agent.tools.type_inference.infer_schema /
+    # create_typed_handler_wrapper); PHP hosts them as static methods on a
+    # TypeInference class (PSR-4) routed to the same module. The static methods
+    # project to the module-level Python free-function names via
+    # enumerate_signatures.py FREE_FUNCTION_PROJECTIONS; the surface diff
+    # reconciles them as OMISSIONS (host noted) + the TypeInference class as an
+    # ADDITION (mirrors the SecurityUtils / UrlValidator host precedent).
+    "TypeInference": "signalwire.core.agent.tools.type_inference",
+
+    # core/auth
+    "AuthHandler": "signalwire.core.auth_handler",
+
+    # core/swml renderer (standalone renderer the Python reference records)
+    "SwmlRenderer": "signalwire.core.swml_renderer",
 
     # core/contexts
     "Context": "signalwire.core.contexts",
@@ -334,6 +350,7 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ("signalwire.core.agent.prompt.manager", "PromptManager"): (
         "AgentBase",
         [
+            "__init__",
             "define_contexts", "get_contexts", "get_post_prompt", "get_prompt",
             "get_raw_prompt",
             "prompt_add_section", "prompt_add_subsection", "prompt_add_to_section",
@@ -360,7 +377,7 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ),
     ("signalwire.core.agent.tools.registry", "ToolRegistry"): (
         "SWMLService",
-        ["define_tool", "register_swaig_function",
+        ["__init__", "define_tool", "register_swaig_function",
          "has_function", "get_function", "get_all_functions",
          "remove_function"],
     ),
@@ -383,6 +400,10 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
 CLASS_RENAME_MAP: dict[str, str] = {
     "Service": "SWMLService",
     "Client": "RelayClient",
+    # PHP StudlyCaps `SwaigFunction` -> Python canonical `SWAIGFunction`
+    # (acronym-cased). A pure spelling/identity difference — reconciled in the
+    # adapter rename table, never an omission (RULES.md §4).
+    "SwaigFunction": "SWAIGFunction",
     # Internal duck-type contracts (the TS RelayClientLike pattern) fold onto
     # the canonical concrete class they abstract, so any signature that
     # references one as a param/return type compares against the Python-

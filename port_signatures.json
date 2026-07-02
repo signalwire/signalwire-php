@@ -429,6 +429,74 @@
       "classes": {
         "PromptManager": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "route",
+                  "type": "string",
+                  "required": false,
+                  "default": "/"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "auto_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "use_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "signing_key",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
+            },
             "define_contexts": {
               "params": [
                 {
@@ -613,6 +681,50 @@
       "classes": {
         "ToolRegistry": {
           "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "route",
+                  "type": "string",
+                  "required": false,
+                  "default": "/"
+                },
+                {
+                  "name": "host",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "port",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_user",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth_password",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
+            },
             "define_tool": {
               "params": [
                 {
@@ -717,78 +829,39 @@
         }
       }
     },
+    "signalwire.core.agent.tools.type_inference": {
+      "functions": {
+        "create_typed_handler_wrapper": {
+          "params": [
+            {
+              "name": "func",
+              "type": "callable<list<any>,any>",
+              "required": true
+            },
+            {
+              "name": "has_raw_data",
+              "type": "bool",
+              "required": true
+            }
+          ],
+          "returns": "callable<list<any>,any>"
+        },
+        "infer_schema": {
+          "params": [
+            {
+              "name": "func",
+              "type": "callable<list<any>,any>",
+              "required": true
+            }
+          ],
+          "returns": "any"
+        }
+      }
+    },
     "signalwire.core.agent_base": {
       "classes": {
         "AgentBase": {
           "methods": {
-            "__init__": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "name",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "route",
-                  "type": "string",
-                  "required": false,
-                  "default": "/"
-                },
-                {
-                  "name": "host",
-                  "type": "optional<string>",
-                  "required": false,
-                  "default": null
-                },
-                {
-                  "name": "port",
-                  "type": "optional<int>",
-                  "required": false,
-                  "default": null
-                },
-                {
-                  "name": "basic_auth_user",
-                  "type": "optional<string>",
-                  "required": false,
-                  "default": null
-                },
-                {
-                  "name": "basic_auth_password",
-                  "type": "optional<string>",
-                  "required": false,
-                  "default": null
-                },
-                {
-                  "name": "auto_answer",
-                  "type": "bool",
-                  "required": false,
-                  "default": true
-                },
-                {
-                  "name": "record_call",
-                  "type": "bool",
-                  "required": false,
-                  "default": false
-                },
-                {
-                  "name": "use_pom",
-                  "type": "bool",
-                  "required": false,
-                  "default": true
-                },
-                {
-                  "name": "signing_key",
-                  "type": "optional<string>",
-                  "required": false,
-                  "default": null
-                }
-              ],
-              "returns": "void"
-            },
             "add_answer_verb": {
               "params": [
                 {
@@ -1099,6 +1172,132 @@
                 }
               ],
               "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.auth_handler": {
+      "classes": {
+        "AuthHandler": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "bearer_token",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "api_key",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "basic_auth",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "api_key_header",
+                  "type": "string",
+                  "required": false,
+                  "default": "X-Api-Key"
+                }
+              ],
+              "returns": "void"
+            },
+            "get_auth_info": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "middleware": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "optional",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                }
+              ],
+              "returns": "callable<list<any>,any>"
+            },
+            "validate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "headers",
+                  "type": "any",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
+            "verify_api_key": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "key",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
+            "verify_basic_auth": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "username",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "password",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
+            },
+            "verify_bearer_token": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "token",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "bool"
             }
           }
         }
@@ -3847,9 +4046,37 @@
         }
       },
       "functions": {
+        "configure_logging": {
+          "params": [],
+          "returns": "void"
+        },
         "get_execution_mode": {
           "params": [],
           "returns": "string"
+        },
+        "get_logger": {
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "class:signalwire.core.logging_config.Logger"
+        },
+        "reset_logging_configuration": {
+          "params": [],
+          "returns": "void"
+        },
+        "strip_control_chars": {
+          "params": [
+            {
+              "name": "event_dict",
+              "type": "any",
+              "required": true
+            }
+          ],
+          "returns": "any"
         }
       }
     },
@@ -4434,6 +4661,41 @@
                 }
               ],
               "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.mixins.serverless_mixin": {
+      "classes": {
+        "ServerlessMixin": {
+          "methods": {
+            "handle_serverless_request": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "event",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "context",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "mode",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "optional<any>"
             }
           }
         }
@@ -6628,6 +6890,35 @@
               ],
               "returns": "void"
             },
+            "define_tool": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "parameters",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "handler",
+                  "type": "callable<list<any>,any>",
+                  "required": true
+                }
+              ],
+              "returns": "void"
+            },
             "get_description": {
               "params": [
                 {
@@ -6744,6 +7035,15 @@
                 }
               ],
               "returns": "any"
+            },
+            "validate_packages": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
             }
           }
         }
@@ -6998,6 +7298,266 @@
                 }
               ],
               "returns": "bool"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.swaig_function": {
+      "classes": {
+        "SWAIGFunction": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "handler",
+                  "type": "callable<list<any>,any>",
+                  "required": true
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "parameters",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "secure",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "fillers",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "wait_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "wait_file_loops",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "webhook_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "required",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "is_typed_handler",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "extra_fields",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "void"
+            },
+            "description": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "execute": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "args",
+                  "type": "any",
+                  "required": true
+                },
+                {
+                  "name": "raw_data",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "any"
+            },
+            "extra_fields": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "fillers": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "is_external": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "is_typed_handler": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "parameters": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "required": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "secure": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "to_swaig": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "base_url",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "token",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "call_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "include_auth",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                }
+              ],
+              "returns": "any"
+            },
+            "validate_args": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "args",
+                  "type": "any",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "wait_file": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "wait_file_loops": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "int"
+            },
+            "webhook_url": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }
@@ -7479,6 +8039,143 @@
                 }
               ],
               "returns": "any"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.core.swml_renderer": {
+      "classes": {
+        "SwmlRenderer": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "render_function_response_swml": {
+              "params": [
+                {
+                  "name": "response_text",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "service",
+                  "type": "class:signalwire.swml.SWMLService",
+                  "required": true
+                },
+                {
+                  "name": "actions",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "format",
+                  "type": "string",
+                  "required": false,
+                  "default": "json"
+                }
+              ],
+              "returns": "string"
+            },
+            "render_swml": {
+              "params": [
+                {
+                  "name": "prompt",
+                  "type": "union<any,string>",
+                  "required": true
+                },
+                {
+                  "name": "service",
+                  "type": "class:signalwire.swml.SWMLService",
+                  "required": true
+                },
+                {
+                  "name": "post_prompt",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "post_prompt_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "swaig_functions",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "startup_hook_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "hangup_hook_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "prompt_is_pom",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "params",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "add_answer",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "record_call",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "record_format",
+                  "type": "string",
+                  "required": false,
+                  "default": "mp4"
+                },
+                {
+                  "name": "record_stereo",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "format",
+                  "type": "string",
+                  "required": false,
+                  "default": "json"
+                },
+                {
+                  "name": "default_webhook_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "string"
             }
           }
         }
