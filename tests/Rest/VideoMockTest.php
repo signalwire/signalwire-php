@@ -47,7 +47,7 @@ class VideoMockTest extends TestCase
     {
         $body = $this->client->video()->rooms()->createStream(
             'room-1',
-            ['url' => 'rtmp://example.com/live']
+            'rtmp://example.com/live'
         );
         $this->assertIsArray($body);
 
@@ -239,7 +239,7 @@ class VideoMockTest extends TestCase
         // VideoStreams.update sends PUT.
         $body = $this->client->video()->streams()->update(
             'stream-2',
-            ['url' => 'rtmp://example.com/new']
+            'rtmp://example.com/new'
         );
         $this->assertIsArray($body);
 

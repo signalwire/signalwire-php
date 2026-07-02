@@ -534,7 +534,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function cxmlApplicationsUpdateSuccess(): void
     {
-        $body = $this->client->fabric()->cxmlApplications()->update('ca-1', ['name' => 'x']);
+        $body = $this->client->fabric()->cxmlApplications()->update('ca-1', extras: ['name' => 'x']);
         $this->assertIsArray($body);
         $this->assertSuccessJournal('PUT', '/api/fabric/resources/cxml_applications/ca-1', 'fabric.update_cxml_application');
     }
@@ -544,7 +544,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.update_cxml_application', 404, ['error' => 'nf']);
         try {
-            $this->client->fabric()->cxmlApplications()->update('ca-1', ['name' => 'x']);
+            $this->client->fabric()->cxmlApplications()->update('ca-1', extras: ['name' => 'x']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());
@@ -1508,7 +1508,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function subscribersCreateSipEndpointSuccess(): void
     {
-        $body = $this->client->fabric()->subscribers()->createSipEndpoint('sub-1', ['username' => 'u']);
+        $body = $this->client->fabric()->subscribers()->createSipEndpoint('sub-1', 'u', 'pw');
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/resources/subscribers/sub-1/sip_endpoints', 'fabric.create_subscriber_sip_endpoint');
     }
@@ -1518,7 +1518,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.create_subscriber_sip_endpoint', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->subscribers()->createSipEndpoint('sub-1', ['username' => 'u']);
+            $this->client->fabric()->subscribers()->createSipEndpoint('sub-1', 'u', 'pw');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1550,7 +1550,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function subscribersUpdateSipEndpointSuccess(): void
     {
-        $body = $this->client->fabric()->subscribers()->updateSipEndpoint('sub-1', 'ep-1', ['username' => 'x']);
+        $body = $this->client->fabric()->subscribers()->updateSipEndpoint('sub-1', 'ep-1', username: 'x');
         $this->assertIsArray($body);
         $this->assertSuccessJournal('PATCH', '/api/fabric/resources/subscribers/sub-1/sip_endpoints/ep-1', 'fabric.update_subscriber_sip_endpoint');
     }
@@ -1560,7 +1560,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.update_subscriber_sip_endpoint', 404, ['error' => 'nf']);
         try {
-            $this->client->fabric()->subscribers()->updateSipEndpoint('sub-1', 'ep-1', ['username' => 'x']);
+            $this->client->fabric()->subscribers()->updateSipEndpoint('sub-1', 'ep-1', username: 'x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());
@@ -1940,7 +1940,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function resourcesAssignPhoneRouteSuccess(): void
     {
-        $body = $this->client->fabric()->resources()->assignPhoneRoute('res-1', ['resource_id' => 'r-2']);
+        $body = $this->client->fabric()->resources()->assignPhoneRoute('res-1', 'pr-1', 'handler', extras: ['resource_id' => 'r-2']);
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/resources/res-1/phone_routes', 'fabric.assign_resource_phone_route');
     }
@@ -1950,7 +1950,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.assign_resource_phone_route', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->resources()->assignPhoneRoute('res-1', ['resource_id' => 'r-2']);
+            $this->client->fabric()->resources()->assignPhoneRoute('res-1', 'pr-1', 'handler', extras: ['resource_id' => 'r-2']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1961,7 +1961,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function resourcesAssignDomainApplicationSuccess(): void
     {
-        $body = $this->client->fabric()->resources()->assignDomainApplication('res-1', ['domain' => 'd.test']);
+        $body = $this->client->fabric()->resources()->assignDomainApplication('res-1', 'da-1', extras: ['domain' => 'd.test']);
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/resources/res-1/domain_applications', 'fabric.assign_resource_domain_application');
     }
@@ -1971,7 +1971,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.assign_resource_domain_application', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->resources()->assignDomainApplication('res-1', ['domain' => 'd.test']);
+            $this->client->fabric()->resources()->assignDomainApplication('res-1', 'da-1', extras: ['domain' => 'd.test']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -2032,7 +2032,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function tokensCreateSubscriberTokenSuccess(): void
     {
-        $body = $this->client->fabric()->tokens()->createSubscriberToken(['reference' => 'r']);
+        $body = $this->client->fabric()->tokens()->createSubscriberToken('r');
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/subscribers/tokens', 'fabric.create_subscriber_token');
     }
@@ -2042,7 +2042,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.create_subscriber_token', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->tokens()->createSubscriberToken(['reference' => 'r']);
+            $this->client->fabric()->tokens()->createSubscriberToken('r');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -2053,7 +2053,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function tokensRefreshSubscriberTokenSuccess(): void
     {
-        $body = $this->client->fabric()->tokens()->refreshSubscriberToken(['refresh_token' => 'rt']);
+        $body = $this->client->fabric()->tokens()->refreshSubscriberToken('rt');
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/subscribers/tokens/refresh', 'fabric.refresh_subscriber_token');
     }
@@ -2063,7 +2063,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.refresh_subscriber_token', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->tokens()->refreshSubscriberToken(['refresh_token' => 'rt']);
+            $this->client->fabric()->tokens()->refreshSubscriberToken('rt');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -2074,7 +2074,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function tokensCreateInviteTokenSuccess(): void
     {
-        $body = $this->client->fabric()->tokens()->createInviteToken(['email' => 'i@e.com']);
+        $body = $this->client->fabric()->tokens()->createInviteToken('addr-1', extras: ['email' => 'i@e.com']);
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/subscriber/invites', 'fabric.create_subscriber_invite_token');
     }
@@ -2084,7 +2084,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.create_subscriber_invite_token', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->tokens()->createInviteToken(['email' => 'i@e.com']);
+            $this->client->fabric()->tokens()->createInviteToken('addr-1', extras: ['email' => 'i@e.com']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -2095,7 +2095,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function tokensCreateGuestTokenSuccess(): void
     {
-        $body = $this->client->fabric()->tokens()->createGuestToken(['allowed_addresses' => ['a-1']]);
+        $body = $this->client->fabric()->tokens()->createGuestToken(['a-1']);
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/guests/tokens', 'fabric.create_subscriber_guest_token');
     }
@@ -2105,7 +2105,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.create_subscriber_guest_token', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->tokens()->createGuestToken(['allowed_addresses' => ['a-1']]);
+            $this->client->fabric()->tokens()->createGuestToken(['a-1']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -2116,7 +2116,7 @@ class FabricCoverageMockTest extends TestCase
     #[Test]
     public function tokensCreateEmbedTokenSuccess(): void
     {
-        $body = $this->client->fabric()->tokens()->createEmbedToken(['allowed_addresses' => ['a-1']]);
+        $body = $this->client->fabric()->tokens()->createEmbedToken('tok-1', extras: ['allowed_addresses' => ['a-1']]);
         $this->assertIsArray($body);
         $this->assertSuccessJournal('POST', '/api/fabric/embeds/tokens', 'fabric.create_embeds_token');
     }
@@ -2126,7 +2126,7 @@ class FabricCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.create_embeds_token', 422, ['error' => 'bad']);
         try {
-            $this->client->fabric()->tokens()->createEmbedToken(['allowed_addresses' => ['a-1']]);
+            $this->client->fabric()->tokens()->createEmbedToken('tok-1', extras: ['allowed_addresses' => ['a-1']]);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());

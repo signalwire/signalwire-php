@@ -90,7 +90,18 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function createAddressSuccess(): void
     {
-        $body = $this->client->addresses()->create(['name' => 'HQ']);
+        $body = $this->client->addresses()->create(
+            label: 'HQ',
+            country: 'US',
+            firstName: 'Ada',
+            lastName: 'Lovelace',
+            streetNumber: '1',
+            streetName: 'Main St',
+            city: 'Springfield',
+            state: 'IL',
+            postalCode: '62701',
+            extras: ['name' => 'HQ'],
+        );
         $this->assertIsArray($body);
         $j = $this->assertSuccess('POST', self::ADDR, 'relay-rest.create_address');
         $this->assertSame('POST', $j->method);
@@ -101,7 +112,17 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.create_address', 422, ['error' => 'name required']);
         try {
-            $this->client->addresses()->create([]);
+            $this->client->addresses()->create(
+                label: 'HQ',
+                country: 'US',
+                firstName: 'Ada',
+                lastName: 'Lovelace',
+                streetNumber: '1',
+                streetName: 'Main St',
+                city: 'Springfield',
+                state: 'IL',
+                postalCode: '62701',
+            );
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -654,7 +675,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function createNumberGroupMembershipSuccess(): void
     {
-        $body = $this->client->numberGroups()->addMembership('ng-1', ['phone_number_id' => 'pn-1']);
+        $body = $this->client->numberGroups()->addMembership('ng-1', 'pn-1');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('POST', self::NG . '/ng-1/number_group_memberships', 'relay-rest.create_number_group_membership');
         $this->assertSame('POST', $j->method);
@@ -665,7 +686,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.create_number_group_membership', 422, ['error' => 'bad']);
         try {
-            $this->client->numberGroups()->addMembership('ng-1', []);
+            $this->client->numberGroups()->addMembership('ng-1', 'pn-1');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -874,7 +895,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function validateVerificationCodeSuccess(): void
     {
-        $body = $this->client->verifiedCallers()->submitVerification('vc-1', ['verification_code' => '123456']);
+        $body = $this->client->verifiedCallers()->submitVerification('vc-1', '123456');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('PUT', self::VC . '/vc-1/verification', 'relay-rest.validate_verification_code');
         $this->assertSame('PUT', $j->method);
@@ -885,7 +906,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.validate_verification_code', 422, ['error' => 'wrong code']);
         try {
-            $this->client->verifiedCallers()->submitVerification('vc-1', ['verification_code' => '000000']);
+            $this->client->verifiedCallers()->submitVerification('vc-1', '000000');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1050,7 +1071,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function updateCampaignSuccess(): void
     {
-        $body = $this->client->registry()->campaigns()->update('camp-1', ['description' => 'x']);
+        $body = $this->client->registry()->campaigns()->update('camp-1', extras: ['description' => 'x']);
         $this->assertIsArray($body);
         $j = $this->assertSuccess('PUT', self::REG . '/campaigns/camp-1', 'relay-rest.update_campaign');
         $this->assertSame('PUT', $j->method);
@@ -1061,7 +1082,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.update_campaign', 404, ['error' => 'nope']);
         try {
-            $this->client->registry()->campaigns()->update('missing', ['description' => 'x']);
+            $this->client->registry()->campaigns()->update('missing', extras: ['description' => 'x']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());
@@ -1206,7 +1227,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function requestMfaCallSuccess(): void
     {
-        $body = $this->client->mfa()->call(['to' => '+15551230000']);
+        $body = $this->client->mfa()->call('+15551230000');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('POST', self::MFA . '/call', 'relay-rest.request_mfa_call');
         $this->assertSame('POST', $j->method);
@@ -1217,7 +1238,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.request_mfa_call', 422, ['error' => 'to required']);
         try {
-            $this->client->mfa()->call([]);
+            $this->client->mfa()->call('+15551230000');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1230,7 +1251,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function requestMfaSmsSuccess(): void
     {
-        $body = $this->client->mfa()->sms(['to' => '+15551230000']);
+        $body = $this->client->mfa()->sms('+15551230000');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('POST', self::MFA . '/sms', 'relay-rest.request_mfa_sms');
         $this->assertSame('POST', $j->method);
@@ -1241,7 +1262,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.request_mfa_sms', 422, ['error' => 'to required']);
         try {
-            $this->client->mfa()->sms([]);
+            $this->client->mfa()->sms('+15551230000');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1254,7 +1275,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function verifyMfaTokenSuccess(): void
     {
-        $body = $this->client->mfa()->verify('mfa-1', ['token' => '123456']);
+        $body = $this->client->mfa()->verify('mfa-1', '123456');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('POST', self::MFA . '/mfa-1/verify', 'relay-rest.verify_mfa_token');
         $this->assertSame('POST', $j->method);
@@ -1265,7 +1286,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.verify_mfa_token', 422, ['error' => 'bad token']);
         try {
-            $this->client->mfa()->verify('mfa-1', ['token' => '000000']);
+            $this->client->mfa()->verify('mfa-1', '000000');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1330,7 +1351,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function updateShortCodeSuccess(): void
     {
-        $body = $this->client->shortCodes()->update('sc-1', ['friendly_name' => 'promo']);
+        $body = $this->client->shortCodes()->update('sc-1', 'promo', 'handler', extras: ['friendly_name' => 'promo']);
         $this->assertIsArray($body);
         $j = $this->assertSuccess('PUT', self::SC . '/sc-1', 'relay-rest.update_short_code');
         $this->assertSame('PUT', $j->method);
@@ -1341,7 +1362,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.update_short_code', 404, ['error' => 'nope']);
         try {
-            $this->client->shortCodes()->update('missing', ['friendly_name' => 'x']);
+            $this->client->shortCodes()->update('missing', 'promo', 'handler', extras: ['friendly_name' => 'x']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(404, $e->getStatusCode());
@@ -1458,7 +1479,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function updateSipProfileSuccess(): void
     {
-        $body = $this->client->sipProfile()->update(['domain' => 'acme']);
+        $body = $this->client->sipProfile()->update(extras: ['domain' => 'acme']);
         $this->assertIsArray($body);
         $j = $this->assertSuccess('PUT', self::SIP, 'relay-rest.update_sip_profile');
         $this->assertSame('PUT', $j->method);
@@ -1469,7 +1490,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.update_sip_profile', 422, ['error' => 'bad']);
         try {
-            $this->client->sipProfile()->update(['domain' => '']);
+            $this->client->sipProfile()->update(extras: ['domain' => '']);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
@@ -1514,7 +1535,7 @@ class RelayRestCoverageMockTest extends TestCase
     #[Test]
     public function createImportedPhoneNumberSuccess(): void
     {
-        $body = $this->client->importedNumbers()->create(['number' => '+15551230000']);
+        $body = $this->client->importedNumbers()->create('+15551230000', 'longcode');
         $this->assertIsArray($body);
         $j = $this->assertSuccess('POST', self::IMPORTED, 'relay-rest.create_imported_phone_number');
         $this->assertSame('POST', $j->method);
@@ -1525,7 +1546,7 @@ class RelayRestCoverageMockTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.create_imported_phone_number', 422, ['error' => 'bad']);
         try {
-            $this->client->importedNumbers()->create([]);
+            $this->client->importedNumbers()->create('+15551230000', 'longcode');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(422, $e->getStatusCode());
