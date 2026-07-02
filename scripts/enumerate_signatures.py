@@ -38,6 +38,7 @@ from enumerate_surface import (  # type: ignore
     CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES,
     camel_to_snake, _module_path_for_class, _translate_class,
     _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
+    _SWML_VERBS_MODULE,
 )
 
 
@@ -277,6 +278,15 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         if "\\REST\\Namespaces\\Generated\\Types\\" in f"{ns}\\":
             sub = ns.rsplit("\\", 1)[-1]
             types_mod = _TYPES_SUB_TO_MODULE.get(sub)
+        # Generated SWML-verbs config classes (SignalWire\SWML\Generated\...) route
+        # by PATH to the single oracle module signalwire.core.swml_verbs_generated —
+        # same rationale as the Types route: a config type name collides with an SDK
+        # builder (DataMap/Section/Document) or recurs as a REST wire type
+        # (AIObject/Cond), so path MUST win over CLASS_MODULE_MAP. Reserved-keyword
+        # names the generator suffixed with `_` (Goto_/…) rename back to the bare leaf.
+        elif ns == "SignalWire\\SWML\\Generated":
+            types_mod = _SWML_VERBS_MODULE
+        # (types_mod, when set, wins below over CLASS_MODULE_MAP.)
         # FQN_CLASS_MODULE_MAP wins when set — disambiguates short-name
         # collisions between e.g. REST namespace classes and skills.
         full_php_for_lookup = f"{ns}\\{php_name}" if ns else php_name

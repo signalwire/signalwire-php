@@ -560,6 +560,32 @@ def _types_subdir(file_relative: Path) -> str | None:
     return sub or None
 
 
+# ---------------------------------------------------------------------------
+# Generated SWML-verbs CONFIG surface (item D2 — core.swml_verbs_generated).
+#
+# scripts/generate_swml_verbs.py emits one method-less PHP data class per
+# schema.json $defs OBJECT schema (133) + one <Verb>Config class per flattened
+# SWMLMethod verb (22) = 155, into src/SignalWire/SWML/Generated/<Name>.php. The
+# Python reference records these as the 155 method-less type definitions in
+# signalwire.core.swml_verbs_generated. Routing is BY FILE PATH (not class name):
+# 125 of the 155 leaf names ALSO exist as REST wire types (AIObject/Cond/Section/
+# DataMap …), and several collide with existing SDK class names (Document/DataMap/
+# Section), so the path-based route MUST win over CLASS_MODULE_MAP for these files
+# — exactly like the REST Types routing above (§H item 3). The module string ends
+# in ``.swml_verbs_generated`` so the SURFACE-DIFF gen-type leaf fold recognises it
+# and collapses the cross-module duplicates (this module ↔ every <ns>_types_generated
+# copy) to one gen-type.<Leaf> on both the reference and the port.
+# ---------------------------------------------------------------------------
+_SWML_VERBS_DIR_MARKER = "SWML/Generated/"
+_SWML_VERBS_MODULE = "signalwire.core.swml_verbs_generated"
+
+
+def _is_swml_verbs_file(file_relative: Path) -> bool:
+    """True when ``file_relative`` is a generated SWML-verbs config file
+    (src/SignalWire/SWML/Generated/<Name>.php)."""
+    return _SWML_VERBS_DIR_MARKER in file_relative.as_posix()
+
+
 def _module_path_for_class(name: str, file_relative: Path) -> str:
     """Map a PHP class to its Python-canonical module path."""
     # Generated wire-type files route by PATH (their <Sub> subdir → the oracle
@@ -569,6 +595,11 @@ def _module_path_for_class(name: str, file_relative: Path) -> str:
     sub = _types_subdir(file_relative)
     if sub is not None and sub in _TYPES_SUB_TO_MODULE:
         return _TYPES_SUB_TO_MODULE[sub]
+    # Generated SWML-verbs config files route by PATH to the single oracle module
+    # signalwire.core.swml_verbs_generated (same rationale as the REST Types route
+    # — name recurrence/collision means path MUST win over CLASS_MODULE_MAP).
+    if _is_swml_verbs_file(file_relative):
+        return _SWML_VERBS_MODULE
     if name in CLASS_MODULE_MAP:
         return CLASS_MODULE_MAP[name]
     # Fallback: derive from file path. e.g. src/SignalWire/Foo/Bar.php
@@ -594,10 +625,14 @@ def _translate_class(name: str) -> str:
 
 def _translate_class_in_file(name: str, file_relative: Path) -> str:
     """Class-name translation aware of the file's location. For a generated wire-
-    type file, a reserved-keyword class name generate_rest.py suffixed with ``_``
-    (Goto_/Return_/Switch_/Unset_) is renamed back to the bare oracle leaf; scoped
-    to Types/ files so a non-type class of the same spelling is unaffected."""
-    if _types_subdir(file_relative) is not None and name in _TYPES_RESERVED_UNRENAME:
+    type file OR a generated SWML-verbs config file, a reserved-keyword class name
+    the generator suffixed with ``_`` (Goto_/Return_/Switch_/Unset_) is renamed
+    back to the bare oracle leaf; scoped to those generated files so a non-type
+    class of the same spelling is unaffected."""
+    in_generated_type_file = (
+        _types_subdir(file_relative) is not None or _is_swml_verbs_file(file_relative)
+    )
+    if in_generated_type_file and name in _TYPES_RESERVED_UNRENAME:
         return _TYPES_RESERVED_UNRENAME[name]
     return _translate_class(name)
 
