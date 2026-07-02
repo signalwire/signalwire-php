@@ -71,6 +71,7 @@ signalwire.core.agent_base.AgentBase.set_global_data: PHP idiomatic getter / exp
 signalwire.core.agent_base.AgentBase.set_internal_fillers: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_language_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_languages: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
+signalwire.core.agent_base.AgentBase.set_multilingual: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access. (The parity copy is projected onto the ai_config_mixin path — see enumerate_surface MIXIN_PROJECTIONS.)
 signalwire.core.agent_base.AgentBase.set_native_functions: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_param: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
@@ -117,6 +118,8 @@ signalwire.core.security.session_manager.SessionManager.get_token_expiry_secs: i
 signalwire.core.security.webhook_middleware.WebhookMiddleware: PHP-idiom: PHP has no FastAPI/PSR-15 dominant framework, so webhook validation ships as a callable middleware class (`process(method, url, headers, rawBody, next): [status, headers, body]`) wired into Service::handleRequest. Functional parity with Python's `make_webhook_validation_dependency` FastAPI factory.
 signalwire.core.security.webhook_middleware.WebhookMiddleware.__init__: PHP-idiom: WebhookMiddleware constructor takes the signing key — see WebhookMiddleware entry above.
 signalwire.core.security.webhook_middleware.WebhookMiddleware.process: PHP-idiom: invocation method on the callable middleware class — see WebhookMiddleware entry above.
+signalwire.core.skill_base.SkillBase.get_name: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase; Python's SkillBase declares SKILL_NAME as a class attribute rather than a get_name() accessor.
+signalwire.core.skill_base.SkillBase.get_description: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase; Python's SkillBase declares SKILL_DESCRIPTION as a class attribute rather than a get_description() accessor.
 signalwire.core.skill_base.SkillBase.get_required_env_vars: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.get_version: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.supports_multiple_instances: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
@@ -503,3 +506,38 @@ signalwire.rest.namespaces._client_tree_generated.VideoNamespace.rooms: PHP-idio
 signalwire.rest.namespaces._client_tree_generated.VideoNamespace.streams: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
 signalwire.rest.namespaces.calling_resources_generated.Calling.get_base_path: PHP-idiom getter: explicit getBasePath() on the generated command-dispatch resource; Python exposes the base path as a class-level attribute. Same data, different access shape.
 signalwire.rest._base.FabricResource.__init__: PHP reflection synthesizes a constructor entry on every concrete class (inherited from CrudWithAddresses); Python's FabricResource is an empty intermediate base that inherits __init__ without redeclaring it.
+
+# --- Changeset item H: concrete RELAY action-control methods (PHP flattens the abstract mixin chain) ---
+# Python factors the call-action controls into an abstract mixin chain
+# (StoppableAction -> PausableAction -> VolumeAction -> concrete PlayAction/
+# RecordAction/...), so pause/resume/volume live on the abstract bases. PHP gives
+# each concrete action its own pause/resume/volume method where the caller
+# actually invokes them (src/SignalWire/Relay/Action.php), and does not model the
+# abstract bases as PHP classes (excused in PORT_OMISSIONS.md). The surface gate
+# (no structural skip) needs these flattened concrete-action methods documented
+# here. Mirrors the go/TS port precedent.
+signalwire.relay.call.PlayAction.pause: concrete-action control method; Python emits pause on the PausableAction mixin base it inherits
+signalwire.relay.call.PlayAction.resume: concrete-action control method; Python emits resume on the PausableAction mixin base it inherits
+signalwire.relay.call.PlayAction.volume: concrete-action control method; Python emits volume on the VolumeAction mixin base it inherits
+signalwire.relay.call.RecordAction.pause: concrete-action control method; Python emits pause on the PausableAction mixin base it inherits
+signalwire.relay.call.RecordAction.resume: concrete-action control method; Python emits resume on the PausableAction mixin base it inherits
+
+# --- MCP-gateway skill: ported from Python source the oracle does not surface ---
+# The Python SDK source ships signalwire/skills/mcp_gateway/skill.py (class
+# MCPGatewaySkill(SkillBase)), but python_surface.json (the oracle) does NOT
+# surface it — the skill module fails to import under the enumerator (optional MCP
+# deps), so griffe drops it. §I.1 signs off the MCP-gateway SERVICE subsystem as
+# Python-only-not-ported; PHP nonetheless ships the built-in gateway *skill*
+# (src/SignalWire/Skills/Builtin/McpGateway.php), which maps 1:1 to the real
+# Python skill class. It is therefore a real reference symbol (backed by Python
+# source), not invented surface — recorded as a PHP addition because the oracle
+# doesn't carry it. FLAGGED for human review (see report §g).
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill: ports the Python source skill signalwire.skills.mcp_gateway.skill.MCPGatewaySkill (present in Python source, not surfaced by the oracle); PHP ships it as a built-in skill (McpGateway.php)
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_global_data: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_hints: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_prompt_sections: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.register_tools: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.setup: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
+
+# --- Skill override methods PHP declares that the reference skill does not ---
+signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.

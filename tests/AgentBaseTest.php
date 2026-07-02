@@ -326,6 +326,37 @@ class AgentBaseTest extends TestCase
     }
 
     // ------------------------------------------------------------------
+    // 12a2. setMultilingual (ASR-driven Mode B).
+    //
+    //       Mirrors Python AIConfigMixin.set_multilingual + the go/TS ports:
+    //       stores the config, empty config is a no-op, and the AI verb
+    //       renders a top-level "multilingual" object.
+    // ------------------------------------------------------------------
+
+    public function testSetMultilingualStoresAndChains(): void
+    {
+        $agent = $this->makeAgent();
+        $ret = $agent->setMultilingual(['start_language' => 'en-US', 'min_switch_words' => 2]);
+
+        $this->assertSame($agent, $ret, 'setMultilingual should return $this for chaining');
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(
+            ['start_language' => 'en-US', 'min_switch_words' => 2],
+            $ai['multilingual'],
+        );
+    }
+
+    public function testSetMultilingualEmptyIsNoop(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setMultilingual([]);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayNotHasKey('multilingual', $ai);
+    }
+
+    // ------------------------------------------------------------------
     // 12b. Per-language params: addLanguage(params=...),
     //      setLanguageParams, getLanguageParams.
     //

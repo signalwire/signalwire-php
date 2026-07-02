@@ -4098,6 +4098,20 @@
               ],
               "returns": "any"
             },
+            "set_multilingual": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "config",
+                  "type": "any",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
             "set_native_functions": {
               "params": [
                 {

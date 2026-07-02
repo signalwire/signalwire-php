@@ -14,7 +14,7 @@ signalwire.add_skill_directory: PHP-class-method: PHP exposes this as a static m
 signalwire.agent_server.AgentServer.register_global_routing_callback: Python global-routing callback hook; PHP apps install equivalent behavior via `AgentServer::register()` with a routed AgentBase.
 signalwire.agents.bedrock.BedrockAgent: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
 signalwire.agents.bedrock.BedrockAgent.__init__: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
-signalwire.agents.bedrock.BedrockAgent.__repr__: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
+signalwire.agents.bedrock.BedrockAgent.__repr__: impossible: Python __repr__ object-protocol; TS has no stringification-protocol member enumerated on the surface
 signalwire.agents.bedrock.BedrockAgent.set_inference_params: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
 signalwire.agents.bedrock.BedrockAgent.set_llm_model: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
 signalwire.agents.bedrock.BedrockAgent.set_llm_temperature: AWS Bedrock agent variant is Python-specific (boto3 + Nova Sonic). PHP ships AgentBase + SWML only; Bedrock integration is deprioritized.
@@ -149,7 +149,7 @@ signalwire.cli.types.FunctionInfo: CLI-internal typed dict shims; not exposed in
 signalwire.cli.types.PostData: CLI-internal typed dict shims; not exposed in any runtime API.
 signalwire.cli.types.VarsData: CLI-internal typed dict shims; not exposed in any runtime API.
 signalwire.core.agent.prompt.manager.PromptManager: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
-signalwire.core.agent.prompt.manager.PromptManager.__init__: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
+signalwire.core.agent.prompt.manager.PromptManager.__init__: impossible: Python internal submodule constructor; Go consolidates PromptManager into AgentBase (no separately-constructed manager)
 signalwire.core.agent.prompt.manager.PromptManager.define_contexts: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
 signalwire.core.agent.prompt.manager.PromptManager.get_contexts: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
 signalwire.core.agent.prompt.manager.PromptManager.get_post_prompt: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
@@ -162,31 +162,31 @@ signalwire.core.agent.prompt.manager.PromptManager.prompt_has_section: Python's 
 signalwire.core.agent.prompt.manager.PromptManager.set_post_prompt: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
 signalwire.core.agent.prompt.manager.PromptManager.set_prompt_pom: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
 signalwire.core.agent.prompt.manager.PromptManager.set_prompt_text: Python's PromptManager helper is folded into AgentBase's prompt API in PHP (setPromptText / promptAddSection / etc).
-signalwire.core.agent.tools.decorator.ToolDecorator: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
-signalwire.core.agent.tools.decorator.ToolDecorator.create_class_decorator: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
-signalwire.core.agent.tools.decorator.ToolDecorator.create_instance_decorator: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
+signalwire.core.agent.tools.decorator.ToolDecorator: impossible: Python decorator-factory class relies on the decorator protocol; Go uses DefineTool struct-literals
+signalwire.core.agent.tools.decorator.ToolDecorator.create_class_decorator: impossible: Python decorator-factory relies on the decorator protocol; Go uses DefineTool struct-literals
+signalwire.core.agent.tools.decorator.ToolDecorator.create_instance_decorator: impossible: Python decorator-factory relies on the decorator protocol; Go uses DefineTool struct-literals
 signalwire.core.agent.tools.registry.ToolRegistry: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
-signalwire.core.agent.tools.registry.ToolRegistry.__init__: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
+signalwire.core.agent.tools.registry.ToolRegistry.__init__: impossible: Python internal submodule constructor; Go consolidates the tool registry into AgentBase (no separately-constructed registry)
 signalwire.core.agent.tools.registry.ToolRegistry.define_tool: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
 signalwire.core.agent.tools.registry.ToolRegistry.get_all_functions: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
 signalwire.core.agent.tools.registry.ToolRegistry.get_function: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
 signalwire.core.agent.tools.registry.ToolRegistry.has_function: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
-signalwire.core.agent.tools.registry.ToolRegistry.register_class_decorated_tools: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
+signalwire.core.agent.tools.registry.ToolRegistry.register_class_decorated_tools: impossible: registers @tool-decorated class methods discovered via the decorator protocol; Go has no decorator-discovery equivalent
 signalwire.core.agent.tools.registry.ToolRegistry.register_swaig_function: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
 signalwire.core.agent.tools.registry.ToolRegistry.remove_function: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
-signalwire.core.agent.tools.type_inference.create_typed_handler_wrapper: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
-signalwire.core.agent.tools.type_inference.infer_schema: Python function-decorator + ToolRegistry mechanism; PHP registers tools via `Service::define_tool(name, description, parameters, handler)` directly with no decorator layer.
+signalwire.core.agent.tools.type_inference.create_typed_handler_wrapper: impossible: Python runtime type-inference wraps handlers via signature introspection; Go has no runtime reflection-based schema inference in this path
+signalwire.core.agent.tools.type_inference.infer_schema: impossible: Python runtime type-inference derives a JSON schema from a function signature at runtime; Go tool schemas are declared explicitly
 signalwire.core.agent_base.AgentBase.auto_map_sip_usernames: Python convenience that auto-registers all public methods as SIP usernames; PHP's strict-typed AgentBase requires `registerSipUsername` calls for each binding (safer + explicit).
 signalwire.core.agent_base.AgentBase.get_full_url: Python AgentBase exposes the full-URL string for self-referencing webhooks; PHP exposes host/port/route accessors so users assemble the URL as needed (Service::getFullUrl is on the parent).
 signalwire.core.agent_base.AgentBase.get_name: Python AgentBase exposes a `get_name` accessor; PHP delegates to Service::getName on the parent class — same surface, single implementation site.
-signalwire.core.auth_handler.AuthHandler: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.__init__: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.flask_decorator: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.get_auth_info: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.get_fastapi_dependency: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.verify_api_key: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.verify_basic_auth: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
-signalwire.core.auth_handler.AuthHandler.verify_bearer_token: Python AuthHandler class wraps uvicorn middleware. PHP's basic auth is enforced inline in Service::handle_request via `hash_equals` (timing-safe).
+signalwire.core.auth_handler.AuthHandler: impossible: Python standalone auth-helper class; Go folds auth into AgentBase withAuth middleware + security.SessionManager — no standalone class
+signalwire.core.auth_handler.AuthHandler.__init__: impossible: constructor of the standalone auth-helper class Go does not model
+signalwire.core.auth_handler.AuthHandler.flask_decorator: impossible: Flask-specific decorator; no Go equivalent (Go uses net/http middleware)
+signalwire.core.auth_handler.AuthHandler.get_auth_info: impossible: Python auth-helper accessor; Go folds auth state into middleware, no standalone class
+signalwire.core.auth_handler.AuthHandler.get_fastapi_dependency: impossible: FastAPI-specific dependency factory; no Go equivalent (Go uses net/http middleware)
+signalwire.core.auth_handler.AuthHandler.verify_api_key: impossible: Python auth-helper method; Go verifies API keys inside withAuth middleware, no standalone class
+signalwire.core.auth_handler.AuthHandler.verify_basic_auth: impossible: Python auth-helper method; Go verifies basic auth inside withAuth middleware, no standalone class
+signalwire.core.auth_handler.AuthHandler.verify_bearer_token: impossible: Python auth-helper method; Go verifies bearer tokens inside withAuth middleware, no standalone class
 signalwire.core.config_loader.ConfigLoader: Python YAML/.env config loader; PHP relies on the user's choice of vlucas/phpdotenv or framework-specific config (none bundled by the SDK).
 signalwire.core.config_loader.ConfigLoader.__init__: Python YAML/.env config loader; PHP relies on the user's choice of vlucas/phpdotenv or framework-specific config (none bundled by the SDK).
 signalwire.core.config_loader.ConfigLoader.find_config_file: Python YAML/.env config loader; PHP relies on the user's choice of vlucas/phpdotenv or framework-specific config (none bundled by the SDK).
@@ -201,22 +201,22 @@ signalwire.core.contexts.ContextBuilder.__init__: PHP's ContextBuilder uses zero
 signalwire.core.contexts.create_simple_context: Convenience factory present only in Python; PHP users call `new ContextBuilder()->addContext('default')` then chain steps directly. The equivalent helper is `ContextBuilder::createSimpleContext`.
 signalwire.core.data_map.create_expression_tool: Python factory function; PHP users instantiate `DataMap` and call `addExpression()` directly.
 signalwire.core.data_map.create_simple_api_tool: Python factory function; PHP users instantiate `DataMap` and call `webhook()`/`body()` directly.
-signalwire.core.logging_config.configure_logging: Python logging bootstrap helpers; PHP uses its own Logger class (monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL env var.
+signalwire.core.logging_config.configure_logging: impossible: wraps the Python logging library; Go uses pkg/logging (structured) with equivalent behaviour — no logging-lib configuration surface
 signalwire.core.logging_config.get_execution_mode: Python logging bootstrap helpers; PHP uses its own Logger class (monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL env var.
-signalwire.core.logging_config.get_logger: Python logging bootstrap helpers; PHP uses its own Logger class (monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL env var.
-signalwire.core.logging_config.reset_logging_configuration: Python logging bootstrap helpers; PHP uses its own Logger class (monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL env var.
-signalwire.core.logging_config.strip_control_chars: Python logging bootstrap helpers; PHP uses its own Logger class (monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL env var.
+signalwire.core.logging_config.get_logger: impossible: returns a Python logging.Logger; Go uses pkg/logging.New — no stdlib-logger accessor
+signalwire.core.logging_config.reset_logging_configuration: impossible: resets Python logging-library global state; Go pkg/logging has no equivalent global reset
+signalwire.core.logging_config.strip_control_chars: impossible: Python logging-formatter helper; Go pkg/logging sanitises inline with no exported free function
 signalwire.core.mixins.ai_config_mixin.AIConfigMixin.add_mcp_server: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.ai_config_mixin.AIConfigMixin.enable_mcp_server: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.auth_mixin.AuthMixin.validate_basic_auth: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.prompt_mixin.PromptMixin.get_post_prompt: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.prompt_mixin.PromptMixin.set_prompt_pom: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.serverless_mixin.ServerlessMixin.handle_serverless_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
+signalwire.core.mixins.serverless_mixin.ServerlessMixin.handle_serverless_request: impossible: Python couples serverless request handling into the mixin; Go delegates to platform adapters (pkg/lambda) — no in-process AgentBase equivalent
 signalwire.core.mixins.state_mixin.StateMixin.validate_tool_token: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.tool_mixin.ToolMixin.tool: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
+signalwire.core.mixins.tool_mixin.ToolMixin.tool: impossible: Python @tool decorator relies on the decorator protocol; Go uses AgentBase.DefineTool(ToolDefinition{...})
 signalwire.core.mixins.web_mixin.WebMixin.as_router: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.enable_debug_routes: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.get_app: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
+signalwire.core.mixins.web_mixin.WebMixin.get_app: impossible: returns the FastAPI app object; Go has no framework app handle (AsRouter returns http.Handler)
 signalwire.core.mixins.web_mixin.WebMixin.manual_set_proxy_url: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.on_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.web_mixin.WebMixin.on_swml_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
@@ -242,33 +242,33 @@ signalwire.core.security.session_manager.SessionManager.debug_token: Python debu
 signalwire.core.security.session_manager.SessionManager.end_session: Python helper for explicit session-lifecycle tracking; PHP's SessionManager doesn't surface a separate end_session API.
 signalwire.core.security.session_manager.SessionManager.get_session_metadata: Python helper for tagged session metadata; PHP doesn't carry per-session metadata beyond the tool-token claim set.
 signalwire.core.security.session_manager.SessionManager.set_session_metadata: Python helper for tagged session metadata; PHP doesn't carry per-session metadata beyond the tool-token claim set.
-signalwire.core.security.webhook_middleware.make_webhook_validation_dependency: Python factory for a FastAPI `Depends()` callable; PHP has no FastAPI/PSR-15 dominant framework so the equivalent ships as `WebhookMiddleware::process()` (instance method on a callable middleware class) — same job, native shape per spec.
+signalwire.core.security.webhook_middleware.make_webhook_validation_dependency: impossible: FastAPI dependency factory; Go exposes equivalent as security.WebhookMiddleware (http.Handler middleware) — see PORT_ADDITIONS.md
 signalwire.core.security_config.SecurityConfig: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.__init__: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.get_basic_auth: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.get_cors_config: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.get_security_headers: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
-signalwire.core.security_config.SecurityConfig.get_ssl_context_kwargs: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
+signalwire.core.security_config.SecurityConfig.get_ssl_context_kwargs: impossible: returns Python ssl.SSLContext kwargs; Go configures TLS via crypto/tls.Config, no kwargs-dict equivalent
 signalwire.core.security_config.SecurityConfig.get_url_scheme: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.load_from_env: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.log_config: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.should_allow_host: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
 signalwire.core.security_config.SecurityConfig.validate_ssl_config: Python SecurityConfig dataclass; PHP exposes equivalent settings via Service constructor options (basic_auth_user / basic_auth_password) and env vars (SWML_BASIC_AUTH_*).
-signalwire.core.skill_base.SkillBase.define_tool: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
+signalwire.core.skill_base.SkillBase.define_tool: impossible: Python skill tool registration uses a decorator; Go uses BaseSkill.RegisterTools returning []ToolRegistration
 signalwire.core.skill_base.SkillBase.get_skill_data: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
 signalwire.core.skill_base.SkillBase.register_tools: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
 signalwire.core.skill_base.SkillBase.setup: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
 signalwire.core.skill_base.SkillBase.update_skill_data: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
-signalwire.core.skill_base.SkillBase.validate_packages: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
+signalwire.core.skill_base.SkillBase.validate_packages: impossible: Python validate_packages checks pip dependencies at runtime; Go dependencies are resolved at build time — no runtime package check
 signalwire.core.skill_manager.SkillManager.list_loaded_skills: PHP's SkillManager mirrors Python's public surface minus `list_loaded_skills` (which is redundant with `list_skills`).
-signalwire.core.swaig_function.SWAIGFunction: Python SWAIGFunction DTO; PHP stores tool metadata as plain associative arrays via `Service::define_tool` and serializes directly — no dedicated DTO class.
-signalwire.core.swaig_function.SWAIGFunction.__call__: Python SWAIGFunction DTO; PHP stores tool metadata as plain associative arrays via `Service::define_tool` and serializes directly — no dedicated DTO class.
-signalwire.core.swaig_function.SWAIGFunction.__init__: Python SWAIGFunction DTO; PHP stores tool metadata as plain associative arrays via `Service::define_tool` and serializes directly — no dedicated DTO class.
-signalwire.core.swaig_function.SWAIGFunction.execute: Python SWAIGFunction DTO; PHP stores tool metadata as plain associative arrays via `Service::define_tool` and serializes directly — no dedicated DTO class.
-signalwire.core.swaig_function.SWAIGFunction.to_swaig: Python SWAIGFunction DTO; PHP stores tool metadata as plain associative arrays via `Service::define_tool` and serializes directly — no dedicated DTO class.
-signalwire.core.swaig_function.SWAIGFunction.validate_args: Python SWAIGFunction DTO; PHP stores tool metadata as plain associative arrays via `Service::define_tool` and serializes directly — no dedicated DTO class.
+signalwire.core.swaig_function.SWAIGFunction: impossible: Python SWAIGFunction is a callable wrapper around a tool registration; Go models tools as ToolDefinition + AgentBase.DefineTool (no callable class)
+signalwire.core.swaig_function.SWAIGFunction.__call__: impossible: Python callable protocol (__call__) has no Go equivalent
+signalwire.core.swaig_function.SWAIGFunction.__init__: impossible: constructor of the callable wrapper class Go does not model
+signalwire.core.swaig_function.SWAIGFunction.execute: impossible: Python SWAIGFunction.execute invokes the wrapped callable; Go invokes via swaig.ToolHandler func values
+signalwire.core.swaig_function.SWAIGFunction.to_swaig: impossible: serialises the callable-wrapper to a SWAIG entry; Go builds SWAIG entries from ToolDefinition directly
+signalwire.core.swaig_function.SWAIGFunction.validate_args: impossible: validates against the wrapper class; Go validates via ToolDefinition.ValidateArgs
 signalwire.core.swml_builder.SWMLBuilder: SWMLBuilder fluent helper is consumed inside PHP's Document class internally; users build SWML via `Document::add_verb` and `Document::add_section` directly.
-signalwire.core.swml_builder.SWMLBuilder.__getattr__: SWMLBuilder fluent helper is consumed inside PHP's Document class internally; users build SWML via `Document::add_verb` and `Document::add_section` directly.
+signalwire.core.swml_builder.SWMLBuilder.__getattr__: impossible: Python dynamic attribute dispatch (__getattr__) has no Go equivalent; verbs are explicit methods on swml.Service
 signalwire.core.swml_builder.SWMLBuilder.__init__: SWMLBuilder fluent helper is consumed inside PHP's Document class internally; users build SWML via `Document::add_verb` and `Document::add_section` directly.
 signalwire.core.swml_builder.SWMLBuilder.add_section: SWMLBuilder fluent helper is consumed inside PHP's Document class internally; users build SWML via `Document::add_verb` and `Document::add_section` directly.
 signalwire.core.swml_builder.SWMLBuilder.ai: SWMLBuilder fluent helper is consumed inside PHP's Document class internally; users build SWML via `Document::add_verb` and `Document::add_section` directly.
@@ -292,10 +292,10 @@ signalwire.core.swml_handler.VerbHandlerRegistry.__init__: Python's verb-handler
 signalwire.core.swml_handler.VerbHandlerRegistry.get_handler: Python's verb-handler registry abstracts away schema verb validation; PHP's Schema class loads schema.json once and validates inline, no separate registry class.
 signalwire.core.swml_handler.VerbHandlerRegistry.has_handler: Python's verb-handler registry abstracts away schema verb validation; PHP's Schema class loads schema.json once and validates inline, no separate registry class.
 signalwire.core.swml_handler.VerbHandlerRegistry.register_handler: Python's verb-handler registry abstracts away schema verb validation; PHP's Schema class loads schema.json once and validates inline, no separate registry class.
-signalwire.core.swml_renderer.SwmlRenderer: SWML rendering is owned by PHP's Document class directly (Document::render / Document::render_pretty).
-signalwire.core.swml_renderer.SwmlRenderer.render_function_response_swml: SWML rendering is owned by PHP's Document class directly (Document::render / Document::render_pretty).
-signalwire.core.swml_renderer.SwmlRenderer.render_swml: SWML rendering is owned by PHP's Document class directly (Document::render / Document::render_pretty).
-signalwire.core.swml_service.SWMLService.__getattr__: Python's auto-vivified verb dispatch via __getattr__ shadow magic; PHP uses Document::addVerb for verb invocation directly.
+signalwire.core.swml_renderer.SwmlRenderer: impossible: Python SwmlRenderer is a stateless render helper; Go folds rendering into swml.Service.Render / swaig.FunctionResult — no separate renderer type
+signalwire.core.swml_renderer.SwmlRenderer.render_function_response_swml: impossible: Go builds function-response SWML via swaig.FunctionResult — no separate renderer
+signalwire.core.swml_renderer.SwmlRenderer.render_swml: impossible: Go folds SWML rendering into swml.Service.Render — no separate renderer
+signalwire.core.swml_service.SWMLService.__getattr__: impossible: Python dynamic attribute dispatch (__getattr__) has no Go equivalent; verbs are explicit methods on swml.Service
 signalwire.core.swml_service.SWMLService.add_section: Python helper that proxies to Document.add_section; PHP users call `$service->getDocument()->addSection(...)` directly.
 signalwire.core.swml_service.SWMLService.add_verb: Python helper that proxies to Document.add_verb; PHP users call `$service->getDocument()->addVerb(...)` directly.
 signalwire.core.swml_service.SWMLService.add_verb_to_section: Python helper that proxies to Document.add_verb_to_section; PHP users call `$service->getDocument()->addVerbToSection(...)`.
@@ -311,14 +311,14 @@ signalwire.list_skills: Python top-level helper; PHP exposes `SkillRegistry::lis
 signalwire.list_skills_with_params: PHP-class-method: PHP exposes this as a static method on the SignalWire facade class (signalwire.SignalWire.<name>); functionally equivalent to Python's module-level free function. Surface emitter doesn't lift static methods to module-level
 signalwire.livewire.Agent: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.Agent.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.llm_node: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
+signalwire.livewire.Agent.llm_node: approved: 2026-07 user sign-off — LiveKit-specific pipeline node override; Go livewire shim delegates to the SWML AI verb
 signalwire.livewire.Agent.on_enter: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.Agent.on_exit: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.Agent.on_user_turn_completed: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.Agent.session: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.stt_node: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.tts_node: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.Agent.update_instructions: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
+signalwire.livewire.Agent.stt_node: approved: 2026-07 user sign-off — LiveKit-specific pipeline node override; Go livewire shim delegates to the SWML AI verb
+signalwire.livewire.Agent.tts_node: approved: 2026-07 user sign-off — LiveKit-specific pipeline node override; Go livewire shim delegates to the SWML AI verb
+signalwire.livewire.Agent.update_instructions: approved: 2026-07 user sign-off — LiveKit runtime instruction mutation; Go exposes AgentSession.UpdateInstructions instead of on Agent
 signalwire.livewire.Agent.update_tools: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.AgentHandoff: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.AgentHandoff.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
@@ -352,7 +352,7 @@ signalwire.livewire.JobProcess.__init__: LiveKit-compat shim is Python-specific;
 signalwire.livewire.Room: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.RunContext: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.RunContext.__init__: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
-signalwire.livewire.RunContext.userdata: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
+signalwire.livewire.RunContext.userdata: impossible: Go exposes RunContext.Userdata as an exported struct field (idiomatic direct access); a same-named accessor method cannot coexist with the field
 signalwire.livewire.StopResponse: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.ToolError: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
 signalwire.livewire.function_tool: LiveKit-compat shim is Python-specific; PHP apps interop with real-time systems directly via the SignalWire REST/RELAY APIs.
@@ -423,37 +423,37 @@ signalwire.prefabs.survey.SurveyAgent.log_response: Python prefab exposes additi
 signalwire.prefabs.survey.SurveyAgent.on_summary: Python prefab exposes additional internal helpers not needed in PHP's equivalent prefab class (e.g. PromptManager wrappers, auto-tools registration). PHP prefabs implement the same five agent classes with the documented public constructor.
 signalwire.prefabs.survey.SurveyAgent.validate_response: Python prefab exposes additional internal helpers not needed in PHP's equivalent prefab class (e.g. PromptManager wrappers, auto-tools registration). PHP prefabs implement the same five agent classes with the documented public constructor.
 signalwire.register_skill: PHP-class-method: PHP exposes this as a static method on the SignalWire facade class (signalwire.SignalWire.<name>); functionally equivalent to Python's module-level free function. Surface emitter doesn't lift static methods to module-level
-signalwire.relay.call.AIAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.AIAction.__init__: impossible: PHP's concrete AIAction (src/SignalWire/Relay/Action.php) inherits the base Action::__construct rather than redeclaring it; the surface enumerator records only textually-declared constructors and does not walk inheritance, so no per-subclass __init__ surfaces — a representation artifact go (factory funcs) and TS also do not surface per-subclass
 signalwire.relay.call.AIAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.Call.__repr__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.Call.__repr__: impossible: Python __repr__ object-protocol; TS surfaces its stringification as Call.to_string (a recorded addition), not a __repr__-protocol member
 signalwire.relay.call.Call.pass_: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.Call.wait_for: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.Call.wait_for_ended: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.CollectAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.CollectAction.__init__: impossible: PHP CollectAction inherits base Action::__construct; enumerator records only declared constructors, no per-subclass __init__ (see AIAction.__init__)
 signalwire.relay.call.CollectAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.CollectAction.volume: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.DetectAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.DetectAction.__init__: impossible: PHP DetectAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.DetectAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.FaxAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.PayAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.PayAction.__init__: impossible: PHP PayAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.PayAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.PlayAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.PlayAction.__init__: impossible: PHP PlayAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.PlayAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.RecordAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.RecordAction.__init__: impossible: PHP RecordAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.RecordAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.StandaloneCollectAction: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.StandaloneCollectAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.StandaloneCollectAction.start_input_timers: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
 signalwire.relay.call.StandaloneCollectAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.StreamAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.StreamAction.__init__: impossible: PHP StreamAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.StreamAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.TapAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.TapAction.__init__: impossible: PHP TapAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.TapAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.call.TranscribeAction.__init__: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
+signalwire.relay.call.TranscribeAction.__init__: impossible: PHP TranscribeAction inherits base Action::__construct; inherited-constructor / enumerator artifact (see AIAction.__init__)
 signalwire.relay.call.TranscribeAction.stop: PHP's Call class exposes the equivalent surface; the listed Python method is an internal helper or uses a Python-specific signature (kwargs / coroutines) that has no direct PHP analog.
-signalwire.relay.client.RelayClient.__aenter__: PHP's RelayClient builder provides the equivalent configuration; Python's `__aenter__` / `__aexit__` / `__del__` are Python-async lifecycle methods with no PHP analog.
-signalwire.relay.client.RelayClient.__aexit__: PHP's RelayClient builder provides the equivalent configuration; Python's `__aenter__` / `__aexit__` / `__del__` are Python-async lifecycle methods with no PHP analog.
-signalwire.relay.client.RelayClient.__del__: PHP's RelayClient builder provides the equivalent configuration; Python's `__aenter__` / `__aexit__` / `__del__` are Python-async lifecycle methods with no PHP analog.
+signalwire.relay.client.RelayClient.__aenter__: impossible: Python async context-manager protocol (__aenter__) has no Go equivalent; Go uses explicit Connect()/Stop()
+signalwire.relay.client.RelayClient.__aexit__: impossible: Python async context-manager protocol (__aexit__) has no Go equivalent; Go uses explicit Connect()/Stop()
+signalwire.relay.client.RelayClient.__del__: impossible: Python __del__ finalizer has no Go equivalent; Go GC + Stop() release the WebSocket
 signalwire.relay.client.RelayClient.relay_protocol: PHP's RelayClient builder provides the equivalent configuration; Python's `__aenter__` / `__aexit__` / `__del__` are Python-async lifecycle methods with no PHP analog.
 signalwire.relay.client.RelayError: PHP's RelayClient builder provides the equivalent configuration; Python's `__aenter__` / `__aexit__` / `__del__` are Python-async lifecycle methods with no PHP analog.
 signalwire.relay.client.RelayError.__init__: PHP's RelayClient builder provides the equivalent configuration; Python's `__aenter__` / `__aexit__` / `__del__` are Python-async lifecycle methods with no PHP analog.
@@ -506,12 +506,12 @@ signalwire.relay.event.TapEvent.from_payload: PHP's Event family has a single Ev
 signalwire.relay.event.TranscribeEvent: PHP's Event family has a single Event class that exposes the type + payload; Python splits into per-event-type subclasses. The PHP surface is informationally equivalent.
 signalwire.relay.event.TranscribeEvent.from_payload: PHP's Event family has a single Event class that exposes the type + payload; Python splits into per-event-type subclasses. The PHP surface is informationally equivalent.
 signalwire.relay.event.parse_event: PHP's Event family has a single Event class that exposes the type + payload; Python splits into per-event-type subclasses. The PHP surface is informationally equivalent.
-signalwire.relay.message.Message.__repr__: Python Message exposes additional internal helpers; PHP's Message sticks to the public send/reply API.
+signalwire.relay.message.Message.__repr__: impossible: Python __repr__ object-protocol method has no Go analog (Stringer not surfaced as a reference method)
 signalwire.relay.message.Message.result: Python Message exposes additional internal helpers; PHP's Message sticks to the public send/reply API.
 signalwire.rest._pagination.PaginatedIterator: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().
 signalwire.rest._pagination.PaginatedIterator.__init__: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().
-signalwire.rest._pagination.PaginatedIterator.__iter__: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().
-signalwire.rest._pagination.PaginatedIterator.__next__: Python pagination iterator; PHP returns raw arrays and users drive pagination via query params on CrudResource::list().
+signalwire.rest._pagination.PaginatedIterator.__iter__: impossible: Python iterator protocol (__iter__); TS paginates via the paginate() async generator (native AsyncGenerator, Symbol.asyncIterator) — no __iter__-protocol member to enumerate
+signalwire.rest._pagination.PaginatedIterator.__next__: impossible: Python iterator protocol (__next__); TS paginate() async generator advances via the native generator protocol — no __next__-protocol member to enumerate
 signalwire.rest.call_handler.PhoneCallHandler: Python class that wraps PhoneCallHandler wire constants; PHP exposes the same constants directly on the phone-numbers helpers (see PORT_OMISSIONS for the binding helpers).
 signalwire.rest.namespaces.addresses.AddressesResource: PHP's `RestClient::addresses()` returns a CrudResource that covers the AddressesResource surface.
 signalwire.rest.namespaces.addresses.AddressesResource.__init__: PHP's `RestClient::addresses()` returns a CrudResource that covers the AddressesResource surface.
@@ -840,3 +840,22 @@ signalwire.core.security.webhook_validator.validate_request: idiomatic_divergenc
 signalwire.core.security.security_utils.filter_sensitive_headers: idiomatic_divergence: implemented as static method SecurityUtils::filterSensitiveHeaders (language idiom); see PORT_ADDITIONS.md
 signalwire.core.security.security_utils.redact_url: idiomatic_divergence: implemented as static method SecurityUtils::redactUrl (language idiom); see PORT_ADDITIONS.md
 signalwire.core.security.security_utils.is_valid_hostname: idiomatic_divergence: implemented as static method SecurityUtils::isValidHostname (language idiom); see PORT_ADDITIONS.md
+
+# --- RELAY abstract action mixin bases (PHP flattens the hierarchy) ---
+# Python factors the call-action controls into an abstract mixin chain
+# (StoppableAction -> PausableAction -> VolumeAction -> concrete PlayAction/
+# RecordAction/...), so the control methods live on the abstract bases. PHP gives
+# the base Action a stop() and each concrete *Action its own pause/resume/volume
+# method (src/SignalWire/Relay/Action.php) — but the CONTRACT (each control method
+# on each concrete action) IS present and surfaced (recorded in PORT_ADDITIONS.md
+# as changeset item H). PHP does NOT model the abstract bases as PHP classes.
+# The signature gate excuses the abstract-base methods structurally
+# (_is_abstract_action_base_method); the surface gate excuses the bare base
+# classes + their methods here. Mirrors the go/TS port precedent.
+signalwire.relay.call.StoppableAction: impossible: PHP has no abstract-base type; the stop contract is flattened onto the base Action + each concrete *Action (src/SignalWire/Relay/Action.php) — see PORT_ADDITIONS
+signalwire.relay.call.StoppableAction.stop: impossible: PHP has no abstract-base type; stop() is present on the base Action, inherited by each concrete *Action (see PORT_ADDITIONS)
+signalwire.relay.call.PausableAction: impossible: PHP has no abstract-base type; the pause/resume contract is flattened onto each concrete *Action (see PORT_ADDITIONS)
+signalwire.relay.call.PausableAction.pause: impossible: PHP has no abstract-base type; pause() is present on each concrete pausable *Action (see PORT_ADDITIONS)
+signalwire.relay.call.PausableAction.resume: impossible: PHP has no abstract-base type; resume() is present on each concrete pausable *Action (see PORT_ADDITIONS)
+signalwire.relay.call.VolumeAction: impossible: PHP has no abstract-base type; the volume contract is flattened onto each concrete *Action (see PORT_ADDITIONS)
+signalwire.relay.call.VolumeAction.volume: impossible: PHP has no abstract-base type; volume() is present on each concrete volume-capable *Action (see PORT_ADDITIONS)
