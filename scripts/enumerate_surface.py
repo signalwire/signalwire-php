@@ -222,6 +222,35 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "TranscribeAction": "signalwire.relay.call",
     "AIAction": "signalwire.relay.call",
     "Event": "signalwire.relay.event",
+    # Typed RELAY event hierarchy (signalwire.relay.event) — the base
+    # RelayEvent + 23 per-event-type subclasses, each one its own PSR-4 file
+    # under src/SignalWire/Relay/Event/. Routed by name to the oracle module
+    # (CLASS_MODULE_MAP wins over the file-path fallback, which would otherwise
+    # derive signalwire.relay.event.<snake> from the Relay/Event/ subdir).
+    "RelayEvent": "signalwire.relay.event",
+    "CallStateEvent": "signalwire.relay.event",
+    "CallReceiveEvent": "signalwire.relay.event",
+    "PlayEvent": "signalwire.relay.event",
+    "RecordEvent": "signalwire.relay.event",
+    "CollectEvent": "signalwire.relay.event",
+    "ConnectEvent": "signalwire.relay.event",
+    "DetectEvent": "signalwire.relay.event",
+    "FaxEvent": "signalwire.relay.event",
+    "TapEvent": "signalwire.relay.event",
+    "StreamEvent": "signalwire.relay.event",
+    "SendDigitsEvent": "signalwire.relay.event",
+    "DialEvent": "signalwire.relay.event",
+    "ReferEvent": "signalwire.relay.event",
+    "DenoiseEvent": "signalwire.relay.event",
+    "PayEvent": "signalwire.relay.event",
+    "QueueEvent": "signalwire.relay.event",
+    "EchoEvent": "signalwire.relay.event",
+    "TranscribeEvent": "signalwire.relay.event",
+    "HoldEvent": "signalwire.relay.event",
+    "ConferenceEvent": "signalwire.relay.event",
+    "CallingErrorEvent": "signalwire.relay.event",
+    "MessageReceiveEvent": "signalwire.relay.event",
+    "MessageStateEvent": "signalwire.relay.event",
     # Constants/WebSocket are port-internal — fall through to native translation.
 
     # prefabs
