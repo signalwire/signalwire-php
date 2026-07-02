@@ -71,6 +71,13 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # core/swml
     "Service": "signalwire.core.swml_service",  # PHP `Service` -> Python `SWMLService`
     "Document": "signalwire.core.swml_builder",
+    # SWML fluent builder + verb-handler registry (Python swml_builder /
+    # swml_handler single-file modules; PSR-4 splits each class into its own
+    # file under SWML/). Class names already match the oracle verbatim.
+    "SWMLBuilder": "signalwire.core.swml_builder",
+    "SWMLVerbHandler": "signalwire.core.swml_handler",
+    "AIVerbHandler": "signalwire.core.swml_handler",
+    "VerbHandlerRegistry": "signalwire.core.swml_handler",
     # PHP's Schema is a singleton sidecar; canonical SchemaUtils ships
     # under signalwire\Utils\SchemaUtils and projects to the Python
     # canonical name.  The legacy Schema mapping is kept as a port-only

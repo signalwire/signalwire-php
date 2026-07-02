@@ -213,6 +213,7 @@ signalwire.core.swml_builder.Document.render: PHP idiomatic accessor / mutation 
 signalwire.core.swml_builder.Document.render_pretty: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.
 signalwire.core.swml_builder.Document.reset: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.
 signalwire.core.swml_builder.Document.to_dict: PHP idiomatic accessor / mutation method on the Document class; Python users build the same SWML through SWMLBuilder.
+signalwire.core.swml_builder.SWMLBuilder.__call: PHP magic-method dispatcher that auto-vivifies the remaining schema verb names (denoise, goto, record, sleep, …) onto the builder, delegating to Service::addVerb. This is the PHP analog of Python SWMLBuilder's runtime `__getattr__` verb dispatch (recorded impossible in PORT_OMISSIONS); the explicit answer/hangup/play/ai/say/add_section/build/render/reset methods match the oracle verbatim.
 signalwire.core.swml_service.SWMLService.__call: PHP magic-method dispatcher that routes auto-vivified verb names (answer, hangup, play, etc) to Document::addVerb. Python uses `__getattr__` instead.
 signalwire.core.swml_service.SWMLService.define_tool: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_service.SWMLService.define_tools: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference

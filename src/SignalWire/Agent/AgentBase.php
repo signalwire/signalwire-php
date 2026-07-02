@@ -125,7 +125,8 @@ class AgentBase extends Service implements AgentInterface
     protected ?SkillManager $skillManager;
 
     // ── Proxy override ──────────────────────────────────────────────────
-    protected ?string $manualProxyUrl = null;
+    // $manualProxyUrl + manualSetProxyUrl() now live on the base Service
+    // (SWMLService parity); AgentBase inherits both.
 
     // ── Webhook signature validation ────────────────────────────────────
     /**
@@ -1184,14 +1185,8 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
-    /**
-     * Manually override the proxy URL used for SWAIG webhook construction.
-     */
-    public function manualSetProxyUrl(string $url): self
-    {
-        $this->manualProxyUrl = rtrim($url, '/');
-        return $this;
-    }
+    // manualSetProxyUrl() is inherited from the base Service (SWMLService
+    // parity); AgentBase does not override it.
 
     /**
      * @param array<string,string> $params

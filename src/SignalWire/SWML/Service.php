@@ -29,6 +29,26 @@ class Service implements RequestHandlerLike
     protected array $routingCallbacks = [];
 
     /**
+     * Registry of specialized verb handlers (e.g. the "ai" verb). Mirrors
+     * Python SWMLService's `self.verb_registry`. Consulted by add_verb /
+     * add_verb_to_section before falling back to schema validation.
+     */
+    protected VerbHandlerRegistry $verbRegistry;
+
+    /**
+     * Manually-set proxy base URL for webhook URL generation. Lives on the
+     * base Service (Python SWMLService/WebMixin parity) so both a plain
+     * SWMLService and AgentBase share one field; getProxyUrlBase() reads it.
+     */
+    protected ?string $manualProxyUrl = null;
+
+    /**
+     * Whether the web server is running. Flipped off by stop(); mirrors
+     * Python SWMLService's `self._running`.
+     */
+    protected bool $running = false;
+
+    /**
      * SWAIG tool registry — lifted from AgentBase so any Service (sidecar,
      * non-agent verb host, etc.) can register and dispatch SWAIG functions.
      *
@@ -67,6 +87,7 @@ class Service implements RequestHandlerLike
                 : 3000;
         }
         $this->document = new Document();
+        $this->verbRegistry = new VerbHandlerRegistry();
         $this->logger = Logger::getLogger('swml_service');
 
         // Auth: explicit > env > auto-generated
@@ -223,6 +244,154 @@ class Service implements RequestHandlerLike
     public function registerRoutingCallback(string $path, callable $callback): void
     {
         $this->routingCallbacks[$path] = $callback;
+    }
+
+    // ------------------------------------------------------------------
+    // SWML document mutation (Python SWMLService parity)
+    // ------------------------------------------------------------------
+
+    /**
+     * Add a verb to the main section of the current document.
+     *
+     * Consults the verb-handler registry first (e.g. the "ai" verb), falling
+     * back to schema-based validation for standard verbs. Raises
+     * {@see \SignalWire\Utils\SchemaValidationError} on an invalid config.
+     * Mirrors Python's `SWMLService.add_verb()`.
+     *
+     * @param array<string, mixed>|int $config Verb config, or a direct integer
+     *                                          for verbs like `sleep`.
+     * @return bool True if the verb was added, false if the config was rejected
+     *              as the wrong type (non-array for a non-direct-value verb).
+     */
+    public function addVerb(string $verbName, array|int $config): bool
+    {
+        return $this->addVerbToSection('main', $verbName, $config);
+    }
+
+    /**
+     * Add a new section to the document.
+     *
+     * Mirrors Python's `SWMLService.add_section()`: returns true if created,
+     * false if the section already existed.
+     */
+    public function addSection(string $sectionName): bool
+    {
+        return $this->document->addSection($sectionName);
+    }
+
+    /**
+     * Add a verb to a specific named section (auto-creating it if missing).
+     *
+     * Consults the verb-handler registry first, falling back to schema
+     * validation; raises {@see \SignalWire\Utils\SchemaValidationError} on an
+     * invalid config. Mirrors Python's `SWMLService.add_verb_to_section()`.
+     *
+     * @param array<string, mixed>|int $config
+     */
+    public function addVerbToSection(string $sectionName, string $verbName, array|int $config): bool
+    {
+        // Make sure the section exists.
+        if (!$this->document->hasSection($sectionName)) {
+            $this->document->addSection($sectionName);
+        }
+
+        // Special case for verbs that take a direct integer value (like sleep).
+        if ($verbName === 'sleep' && is_int($config)) {
+            $this->document->addVerbToSection($sectionName, $verbName, $config);
+            return true;
+        }
+
+        if (!is_array($config)) {
+            $this->logger->warn(
+                "invalid_config_type: verb=\"{$verbName}\" section=\"{$sectionName}\" "
+                . 'expected=array got=int. Only the sleep verb accepts a direct integer.'
+            );
+            return false;
+        }
+
+        // Handler-based validation takes priority over schema validation.
+        $handler = $this->verbRegistry->getHandler($verbName);
+        if ($handler !== null) {
+            [$isValid, $errors] = $handler->validateConfig($config);
+        } else {
+            [$isValid, $errors] = $this->getSchemaUtils()->validateVerb($verbName, $config);
+        }
+
+        if (!$isValid) {
+            throw new \SignalWire\Utils\SchemaValidationError($verbName, $errors);
+        }
+
+        $this->document->addVerbToSection($sectionName, $verbName, $config);
+        return true;
+    }
+
+    /**
+     * Reset the current document to an empty state.
+     * Mirrors Python's `SWMLService.reset_document()`.
+     */
+    public function resetDocument(): void
+    {
+        $this->document->reset();
+    }
+
+    /**
+     * Render the current SWML document as a JSON string.
+     * Mirrors Python's `SWMLService.render_document()`.
+     */
+    public function renderDocument(): string
+    {
+        return $this->document->render();
+    }
+
+    /**
+     * Register a custom verb handler.
+     * Mirrors Python's `SWMLService.register_verb_handler()`.
+     */
+    public function registerVerbHandler(SWMLVerbHandler $handler): void
+    {
+        $this->verbRegistry->registerHandler($handler);
+    }
+
+    /**
+     * Whether full JSON Schema validation is enabled.
+     * Mirrors Python's `@property full_validation_enabled`.
+     */
+    public function fullValidationEnabled(): bool
+    {
+        return $this->getSchemaUtils()->isFullValidationAvailable();
+    }
+
+    /**
+     * Return this service as a mountable request handler.
+     *
+     * Python returns a FastAPI `APIRouter`; PHP has no framework router, so the
+     * Service itself (which implements {@see RequestHandlerLike} via
+     * handleRequest) is the mountable unit. Mirrors Python's
+     * `SWMLService.as_router()` — callers mount the returned handler into their
+     * framework and dispatch through it.
+     */
+    public function asRouter(): RequestHandlerLike
+    {
+        return $this;
+    }
+
+    /**
+     * Manually override the proxy base URL used for webhook URL generation.
+     * Mirrors Python's `SWMLService.manual_set_proxy_url()`.
+     */
+    public function manualSetProxyUrl(string $url): static
+    {
+        $this->manualProxyUrl = rtrim($url, '/');
+        return $this;
+    }
+
+    /**
+     * Stop the web server.
+     * Mirrors Python's `SWMLService.stop()` — flips the running flag off.
+     */
+    public function stop(): void
+    {
+        $this->running = false;
     }
 
     // ------------------------------------------------------------------
@@ -755,13 +924,9 @@ class Service implements RequestHandlerLike
      */
     public function getProxyUrlBase(array $headers = []): string
     {
-        // 0. Manually-set proxy URL takes priority (manualSetProxyUrl on
-        //    AgentBase). Subclasses that override the proxy URL set
-        //    $this->manualProxyUrl; check via property_exists for safety.
-        if (property_exists($this, 'manualProxyUrl')
-            && is_string($this->manualProxyUrl ?? null)
-            && $this->manualProxyUrl !== ''
-        ) {
+        // 0. Manually-set proxy URL takes priority (manualSetProxyUrl, on the
+        //    base Service — shared by AgentBase).
+        if (is_string($this->manualProxyUrl) && $this->manualProxyUrl !== '') {
             return $this->manualProxyUrl;
         }
 
