@@ -274,7 +274,8 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
             "enable_debug_events", "enable_mcp_server",
             "get_language_params",
             "set_function_includes", "set_global_data", "set_internal_fillers",
-            "set_language_params", "set_languages", "set_native_functions",
+            "set_language_params", "set_languages", "set_multilingual",
+            "set_native_functions",
             "set_param", "set_params",
             "set_post_prompt_llm_params", "set_prompt_llm_params",
             "set_pronunciations", "update_global_data",
@@ -455,7 +456,13 @@ RE_USE_TRAIT = re.compile(
     r"^\s*use\s+([A-Z]\w*)\s*;"
 )
 RE_PUBLIC_METHOD = re.compile(
-    r"^\s*public\s+(?:static\s+)?function\s+(\w+)\s*\("
+    # Matches `public function`, `public static function`, and
+    # `abstract public function` (the abstract methods on an abstract base —
+    # e.g. SkillBase::setup / registerTools — are part of the class's public
+    # surface: every concrete subclass implements them, and go/TS surface the
+    # corresponding SkillBase.setup / register_tools members). PHP also allows
+    # the modifiers in either order (`public abstract`), so accept both.
+    r"^\s*(?:abstract\s+)?public\s+(?:abstract\s+)?(?:static\s+)?function\s+(\w+)\s*\("
 )
 
 
@@ -802,16 +809,35 @@ def _parse_file(
             if "@internal" in line[start:end]:
                 internal_pending = True
             line = line[:start] + line[end + 2:]
-        # Strip line comments
-        ls_idx = line.find("//")
-        if ls_idx != -1:
-            line = line[:ls_idx]
-        # Strip # comments (PHP allows them)
-        hash_idx = line.find("#")
-        if hash_idx != -1:
-            # avoid stripping inside strings
-            line_stripped = line[:hash_idx]
-            line = line_stripped
+        # Strip line comments (`//` and PHP's `#`), but ONLY when the marker is
+        # NOT inside a quoted string — otherwise a regex/URL literal like
+        # `'#^https?://#i'` truncates the line and drops the trailing `{`,
+        # which desyncs brace-depth and prematurely closes the class scope
+        # (dropping later public methods, e.g. skill getHints()). Scan
+        # character-by-character tracking single/double-quote state.
+        _in_s = _in_d = False
+        _cut = -1
+        _j = 0
+        _n = len(line)
+        while _j < _n:
+            _ch = line[_j]
+            if _ch == "\\" and (_in_s or _in_d):
+                _j += 2
+                continue
+            if _ch == "'" and not _in_d:
+                _in_s = not _in_s
+            elif _ch == '"' and not _in_s:
+                _in_d = not _in_d
+            elif not _in_s and not _in_d:
+                if _ch == "#":
+                    _cut = _j
+                    break
+                if _ch == "/" and _j + 1 < _n and line[_j + 1] == "/":
+                    _cut = _j
+                    break
+            _j += 1
+        if _cut != -1:
+            line = line[:_cut]
 
         # Class declaration
         m_class = RE_CLASS.match(line)

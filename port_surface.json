@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ d3aaf7c9dfcea6f9211b6e1126acd4073a5142c1",
+  "generated_from": "signalwire-php @ aec52849aae2b50baeb3a18d066ecf4c0c06b34a",
   "modules": {
     "signalwire": {
       "classes": {
@@ -140,6 +140,7 @@
           "set_internal_fillers",
           "set_language_params",
           "set_languages",
+          "set_multilingual",
           "set_native_functions",
           "set_param",
           "set_params",
@@ -359,6 +360,7 @@
           "set_internal_fillers",
           "set_language_params",
           "set_languages",
+          "set_multilingual",
           "set_native_functions",
           "set_param",
           "set_params",
@@ -520,13 +522,17 @@
         "SkillBase": [
           "__init__",
           "cleanup",
+          "get_description",
           "get_global_data",
           "get_hints",
           "get_instance_key",
+          "get_name",
           "get_parameter_schema",
           "get_prompt_sections",
           "get_required_env_vars",
           "get_version",
+          "register_tools",
+          "setup",
           "supports_multiple_instances",
           "validate_env_vars"
         ]
@@ -2640,18 +2646,13 @@
       },
       "functions": []
     },
-    "signalwire.skills.builtin.__module__": {
-      "classes": {},
-      "functions": [
-        "get_hints",
-        "get_prompt_sections"
-      ]
-    },
     "signalwire.skills.claude_skills.skill": {
       "classes": {
         "ClaudeSkillsSkill": [
           "get_description",
+          "get_hints",
           "get_name",
+          "get_prompt_sections",
           "register_tools",
           "setup",
           "supports_multiple_instances"
@@ -2838,6 +2839,7 @@
       "classes": {
         "SpiderSkill": [
           "get_description",
+          "get_hints",
           "get_name",
           "register_tools",
           "setup",
@@ -2850,7 +2852,9 @@
       "classes": {
         "SWMLTransferSkill": [
           "get_description",
+          "get_hints",
           "get_name",
+          "get_prompt_sections",
           "register_tools",
           "setup",
           "supports_multiple_instances"

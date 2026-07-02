@@ -56,6 +56,13 @@ class AgentBase extends Service implements AgentInterface
      * @var list<array<string,mixed>>
      */
     protected array $languages;
+    /**
+     * ASR-driven multilingual (Mode B) config, emitted as the top-level
+     * `multilingual` object on the AI verb. See setMultilingual().
+     *
+     * @var array<string,mixed>
+     */
+    protected array $multilingual;
     /** @var list<array{replace: string, with: string, ignore?: string}> */
     protected array $pronunciations;
 
@@ -189,6 +196,7 @@ class AgentBase extends Service implements AgentInterface
 
         // Languages / pronunciations
         $this->languages      = [];
+        $this->multilingual   = [];
         $this->pronunciations = [];
 
         // Params / data
@@ -708,6 +716,28 @@ class AgentBase extends Service implements AgentInterface
     public function setLanguages(array $languages): self
     {
         $this->languages = $languages;
+        return $this;
+    }
+
+    /**
+     * Configure ASR-driven multilingual mode (Mode B).
+     *
+     * Emits a top-level `multilingual` object on the AI verb. The recognizer
+     * runs in code-switching mode and the agent answers in whatever language
+     * the caller actually spoke — the model does not pick the language. This is
+     * mutually exclusive with setLanguages(); if both are set the server uses
+     * `multilingual` and ignores `languages`.
+     *
+     * Python parity: AIConfigMixin.set_multilingual(config).
+     *
+     * @param array<string,mixed> $config The multilingual config object
+     *   (languages, allowed, start_language, min_switch_words, fillers, etc.).
+     */
+    public function setMultilingual(array $config): self
+    {
+        if ($config !== []) {
+            $this->multilingual = $config;
+        }
         return $this;
     }
 
@@ -1343,6 +1373,11 @@ class AgentBase extends Service implements AgentInterface
             $ai['languages'] = $this->languages;
         }
 
+        // ── Multilingual (ASR-driven mode; top-level multilingual object) ─
+        if (!empty($this->multilingual)) {
+            $ai['multilingual'] = $this->multilingual;
+        }
+
         // ── Pronunciations ──────────────────────────────────────────────
         if (!empty($this->pronunciations)) {
             $ai['pronounce'] = $this->pronunciations;
@@ -1448,6 +1483,7 @@ class AgentBase extends Service implements AgentInterface
         $clone->hints              = $this->hints;
         $clone->patternHints       = $this->patternHints;
         $clone->languages          = $this->deepCopyArray($this->languages);
+        $clone->multilingual       = $this->deepCopyArray($this->multilingual);
         $clone->pronunciations     = $this->deepCopyArray($this->pronunciations);
         $clone->params             = $this->deepCopyArray($this->params);
         $clone->globalData         = $this->deepCopyArray($this->globalData);
