@@ -291,13 +291,17 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
 
 
 # Param-type remaps for parameters whose concrete element type PHP reflection
-# erases. PHP's only list type is the bare ``array``, which reflects as the
-# canonical ``any`` — but the Python reference types these RELAY message-event
-# constructor params concretely as ``list[str]`` (the `@param list<string>`
-# PHPDoc records the same intent, invisible to reflection). This is a
-# rename/remap (it re-establishes the concrete identity so a real future change
-# still surfaces as drift), NOT an omission (which would blind the whole param).
-# Keyed by (PHP fully-qualified class, PHP method name) -> {param_name: type}.
+# erases. PHP's only list/map type is the bare ``array``, which reflects as the
+# canonical ``any`` — but the Python reference types these params concretely
+# (``list<string>``, ``list<dict<string,any>>``, ``dict<string,list<string>>``,
+# ``optional<list<string>>``, …). The concrete element type IS documented on the
+# PHP method via a PHPDoc ``@param list<string> $x`` generic (phpstan L9 reads it),
+# but PHP *reflection* — the source `signature_dump.php` uses — cannot see PHPDoc,
+# so it drops to ``array``→``any``. This table re-establishes the exact concrete
+# type the PHPDoc already records. It is a rename/remap (a real future change to
+# the element type still surfaces as drift), NOT an omission (which would blind
+# the whole param). The keys mirror the ``@param`` generics on the source method.
+# Keyed by (PHP fully-qualified class, PHP method name) -> {snake_param_name: type}.
 PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\Relay\\Event\\MessageReceiveEvent", "__construct"): {
         "media": "list<string>",
@@ -312,6 +316,129 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\POM\\PomBuilder", "fromSections"): {
         "sections": "list<dict<string,any>>",
     },
+    # --- AgentBase: AI-config / prompt / skill mixin params (projected onto the
+    # AIConfigMixin/PromptMixin/PromptManager/SkillMixin targets by MIXIN_PROJECTIONS
+    # after this remap runs, so tightening here clears every projected copy too). ---
+    ("SignalWire\\Agent\\AgentBase", "setPromptPom"): {
+        "pom": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addSwaigQueryParams"): {
+        "params": "dict<string,string>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addHints"): {
+        "hints": "list<string>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setFunctionIncludes"): {
+        "includes": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setInternalFillers"): {
+        "fillers": "dict<string,dict<string,list<string>>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setLanguages"): {
+        "languages": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setNativeFunctions"): {
+        "functions": "list<string>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setPronunciations"): {
+        "pronunciations": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addSkill"): {
+        "params": "optional<dict<string,any>>",
+    },
+    # --- Contexts.Context / Contexts.Step: bullet/filler/context/step lists. ---
+    ("SignalWire\\Contexts\\Context", "addBullets"): {"bullets": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "addSystemBullets"): {"bullets": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "setValidContexts"): {"contexts": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "setValidSteps"): {"steps": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "setEnterFillers"): {
+        "enter_fillers": "dict<string,list<string>>",
+    },
+    ("SignalWire\\Contexts\\Context", "setExitFillers"): {
+        "exit_fillers": "dict<string,list<string>>",
+    },
+    ("SignalWire\\Contexts\\Context", "addEnterFiller"): {"fillers": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "addExitFiller"): {"fillers": "list<string>"},
+    ("SignalWire\\Contexts\\Step", "addBullets"): {"bullets": "list<string>"},
+    ("SignalWire\\Contexts\\Step", "setValidContexts"): {"contexts": "list<string>"},
+    ("SignalWire\\Contexts\\Step", "setValidSteps"): {"steps": "list<string>"},
+    # --- DataMap: error-key lists, enum, webhook headers/require_args, expressions. ---
+    ("SignalWire\\DataMap\\DataMap", "errorKeys"): {"keys": "list<string>"},
+    ("SignalWire\\DataMap\\DataMap", "globalErrorKeys"): {"keys": "list<string>"},
+    ("SignalWire\\DataMap\\DataMap", "parameter"): {"enum": "optional<list<string>>"},
+    ("SignalWire\\DataMap\\DataMap", "webhook"): {
+        "headers": "optional<dict<string,string>>",
+        "require_args": "optional<list<string>>",
+    },
+    ("SignalWire\\DataMap\\DataMap", "webhookExpressions"): {
+        "expressions": "list<dict<string,any>>",
+    },
+    # --- FunctionResult: action/hint/media/tag/toggle lists. ---
+    ("SignalWire\\SWAIG\\FunctionResult", "addActions"): {
+        "actions": "list<dict<string,any>>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "addDynamicHints"): {
+        "hints": "list<union<dict<string,any>,string>>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "createPaymentPrompt"): {
+        "actions": "list<dict<string,string>>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "sendSms"): {
+        "media": "optional<list<string>>",
+        "tags": "optional<list<string>>",
+    },
+    # --- ToolMixin.on_function_call (projected from Service::onFunctionCall). ---
+    ("SignalWire\\SWML\\Service", "onFunctionCall"): {
+        "raw_data": "optional<dict<string,any>>",
+    },
+    # --- SkillBase constructor params dict. ---
+    ("SignalWire\\Skills\\SkillBase", "__construct"): {
+        "params": "optional<dict<string,any>>",
+    },
+    # --- POM Section.add_bullets. ---
+    ("SignalWire\\POM\\Section", "addBullets"): {"bullets": "list<string>"},
+    # --- RelayClient.receive / unreceive context lists. ---
+    ("SignalWire\\Relay\\Client", "receive"): {"contexts": "list<string>"},
+    ("SignalWire\\Relay\\Client", "unreceive"): {"contexts": "list<string>"},
+    # --- SchemaValidationError errors list. ---
+    ("SignalWire\\Utils\\SchemaValidationError", "__construct"): {
+        "errors": "list<string>",
+    },
+}
+
+
+# Return-type remaps for methods whose concrete return element type PHP
+# reflection erases (bare ``array`` → ``any``) but the Python reference types
+# concretely. Same rationale as PARAM_TYPE_REMAPS: the ``@return`` generic on
+# the PHP source records the exact shape (phpstan L9 reads it), PHP reflection
+# cannot. Re-establishing the concrete return here keeps a real future change
+# surfacing as drift. Keyed by (PHP fully-qualified class, PHP method name) ->
+# canonical return type string.
+RETURN_TYPE_REMAPS: dict[tuple[str, str], str] = {
+    # (No method return remaps currently needed — the AgentServer.agents /
+    # SkillManager.loaded_skills Python public-dict attributes are kept as
+    # private-field+accessor idiom in PHP, excused in PORT_OMISSIONS exactly
+    # like go, rather than surfaced as a public accessor method. See the
+    # PORT_OMISSIONS entries for those two symbols.)
+}
+
+
+# Property-type remaps for GENERATED wire-type class fields whose schema $ref is
+# a scalar string-Literal TypeAlias (ConversationRole, StringFormat). The
+# reference SIGNATURE oracle (griffe) records the field type as the named alias
+# (``class:…ConversationRole``) even though the alias itself is a scalar that the
+# SURFACE oracle deliberately drops (so no PHP class is — or may be — emitted for
+# it: surfacing one would break SURFACE-DIFF). PHP keeps the runtime property as
+# a plain ``?string`` (the wire value IS a string constrained to the literal set)
+# and records the canonical named-alias type HERE — exactly mirroring go's
+# ``gen:"class:…ConversationRole"`` struct tag on a ``type ConversationRole string``
+# field (go likewise does not surface the alias as a public type). Annotation-only:
+# no new class, no surface change, no runtime change. Keyed by (PHP FQCN, property).
+PROPERTY_TYPE_REMAPS: dict[tuple[str, str], str] = {
+    ("SignalWire\\SWML\\Generated\\ConversationMessage", "role"):
+        "class:signalwire.core.swml_verbs_generated.ConversationRole",
+    ("SignalWire\\SWML\\Generated\\StringProperty", "format"):
+        "class:signalwire.core.swml_verbs_generated.StringFormat",
 }
 
 
@@ -490,6 +617,11 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
                     new_type = remap.get(prm.get("name", ""))
                     if new_type is not None:
                         prm["type"] = new_type
+            # Concrete-collection return remap: re-establish the return element
+            # type where PHP's bare ``array`` erased it (see RETURN_TYPE_REMAPS).
+            ret_remap = RETURN_TYPE_REMAPS.get((full_php, native))
+            if ret_remap is not None:
+                sig["returns"] = ret_remap
             # §5 unfold: a generated REST operation/command/set method takes its
             # wire fields as named PHP params (options-struct idiom); PHP
             # reflection can't recover keyword kind / element types / the open
@@ -508,7 +640,19 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         if not is_freefn_only_class:
             for p in type_entry.get("properties", []):
                 pname = p.get("name", "")
-                snake = camel_to_snake(pname)
+                # Path-routed generated wire-type classes (types_mod set: the
+                # REST Types / SWML-verbs / RELAY-proto / SWAIG-payload modules)
+                # carry the EXACT wire-key field name on their PHP property
+                # ($SWAIG, $allOf, $oneOf, $anyOf, $numberedBullets, …). The
+                # reference oracle (griffe over the generated TypedDicts) records
+                # those field names verbatim — NOT snake-folded — so a blanket
+                # camel_to_snake would mangle them (SWAIG→swaig, allOf→all_of)
+                # into a spurious missing-port drift. Preserve verbatim for these
+                # generated classes; hand-written SDK classes still snake-fold.
+                if types_mod is not None:
+                    snake = pname
+                else:
+                    snake = camel_to_snake(pname)
                 method_canonical = METHOD_ALIASES.get(snake, snake)
                 if method_canonical in methods_out:
                     continue
@@ -518,6 +662,9 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
                 except TypeTranslationError as e:
                     failures.append(str(e))
                     continue
+                prop_remap = PROPERTY_TYPE_REMAPS.get((full_php, pname))
+                if prop_remap is not None:
+                    ret = prop_remap
                 params_out = []
                 if not p.get("is_static", False):
                     params_out.append({"name": "self", "kind": "self"})

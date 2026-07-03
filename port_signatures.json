@@ -895,7 +895,7 @@
                 },
                 {
                   "name": "pom",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -1188,7 +1188,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "any",
+                  "type": "dict<string,string>",
                   "required": true
                 }
               ],
@@ -1783,7 +1783,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1802,7 +1802,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1821,7 +1821,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -1903,7 +1903,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2042,7 +2042,7 @@
                 },
                 {
                   "name": "enter_fillers",
-                  "type": "any",
+                  "type": "dict<string,list<string>>",
                   "required": true
                 }
               ],
@@ -2056,7 +2056,7 @@
                 },
                 {
                   "name": "exit_fillers",
-                  "type": "any",
+                  "type": "dict<string,list<string>>",
                   "required": true
                 }
               ],
@@ -2168,7 +2168,7 @@
                 },
                 {
                   "name": "contexts",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2182,7 +2182,7 @@
                 },
                 {
                   "name": "steps",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2483,7 +2483,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2771,7 +2771,7 @@
                 },
                 {
                   "name": "contexts",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2785,7 +2785,7 @@
                 },
                 {
                   "name": "steps",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2871,7 +2871,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2943,7 +2943,7 @@
                 },
                 {
                   "name": "keys",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -2992,7 +2992,7 @@
                 },
                 {
                   "name": "enum",
-                  "type": "any",
+                  "type": "optional<list<string>>",
                   "required": false,
                   "default": []
                 }
@@ -3054,7 +3054,7 @@
                 },
                 {
                   "name": "headers",
-                  "type": "any",
+                  "type": "optional<dict<string,string>>",
                   "required": false,
                   "default": []
                 },
@@ -3072,7 +3072,7 @@
                 },
                 {
                   "name": "require_args",
-                  "type": "any",
+                  "type": "optional<list<string>>",
                   "required": false,
                   "default": []
                 }
@@ -3087,7 +3087,7 @@
                 },
                 {
                   "name": "expressions",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -3217,7 +3217,7 @@
                 },
                 {
                   "name": "actions",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -3231,7 +3231,7 @@
                 },
                 {
                   "name": "hints",
-                  "type": "any",
+                  "type": "list<union<dict<string,any>,string>>",
                   "required": true
                 }
               ],
@@ -3311,7 +3311,7 @@
                 },
                 {
                   "name": "actions",
-                  "type": "any",
+                  "type": "list<dict<string,string>>",
                   "required": true
                 },
                 {
@@ -3932,13 +3932,13 @@
                 },
                 {
                   "name": "media",
-                  "type": "any",
+                  "type": "optional<list<string>>",
                   "required": false,
                   "default": []
                 },
                 {
                   "name": "tags",
-                  "type": "any",
+                  "type": "optional<list<string>>",
                   "required": false,
                   "default": []
                 },
@@ -4576,7 +4576,7 @@
                 },
                 {
                   "name": "hints",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -4701,10 +4701,10 @@
                   "required": true
                 },
                 {
-                  "name": "ignore",
-                  "type": "string",
+                  "name": "ignore_case",
+                  "type": "bool",
                   "required": false,
-                  "default": ""
+                  "default": false
                 }
               ],
               "returns": "any"
@@ -4717,9 +4717,9 @@
                 },
                 {
                   "name": "level",
-                  "type": "string",
+                  "type": "int",
                   "required": false,
-                  "default": "all"
+                  "default": 1
                 }
               ],
               "returns": "any"
@@ -4755,7 +4755,7 @@
                 },
                 {
                   "name": "includes",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -4783,7 +4783,7 @@
                 },
                 {
                   "name": "fillers",
-                  "type": "any",
+                  "type": "dict<string,dict<string,list<string>>>",
                   "required": true
                 }
               ],
@@ -4816,7 +4816,7 @@
                 },
                 {
                   "name": "languages",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -4844,7 +4844,7 @@
                 },
                 {
                   "name": "functions",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -4919,7 +4919,7 @@
                 },
                 {
                   "name": "pronunciations",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -5139,7 +5139,7 @@
                 },
                 {
                   "name": "pom",
-                  "type": "any",
+                  "type": "list<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -5215,7 +5215,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "any",
+                  "type": "optional<dict<string,any>>",
                   "required": false,
                   "default": []
                 }
@@ -5366,7 +5366,7 @@
                 },
                 {
                   "name": "raw_data",
-                  "type": "any",
+                  "type": "optional<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -5747,6 +5747,24 @@
       "classes": {
         "PostPrompt": {
           "methods": {
+            "SWMLCall": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "SWMLVars": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -6000,24 +6018,6 @@
               "returns": "string"
             },
             "swaig_log": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swml_call": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swml_vars": {
               "params": [
                 {
                   "name": "self",
@@ -7955,7 +7955,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "any",
+                  "type": "optional<dict<string,any>>",
                   "required": false,
                   "default": []
                 }
@@ -10087,7 +10087,7 @@
                 },
                 {
                   "name": "raw_data",
-                  "type": "any",
+                  "type": "optional<dict<string,any>>",
                   "required": true
                 }
               ],
@@ -10338,6 +10338,15 @@
         },
         "AIObject": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -10411,15 +10420,6 @@
               "returns": "any"
             },
             "pronounce": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swaig": {
               "params": [
                 {
                   "name": "self",
@@ -11604,7 +11604,7 @@
               ],
               "returns": "void"
             },
-            "all_of": {
+            "allOf": {
               "params": [
                 {
                   "name": "self",
@@ -11639,6 +11639,15 @@
         },
         "AmazonBedrockObject": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -11692,15 +11701,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "swaig": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -11737,7 +11737,7 @@
               ],
               "returns": "void"
             },
-            "any_of": {
+            "anyOf": {
               "params": [
                 {
                   "name": "self",
@@ -13536,7 +13536,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "string"
+              "returns": "class:signalwire.core.swml_verbs_generated.ConversationRole"
             }
           }
         },
@@ -15489,7 +15489,7 @@
               ],
               "returns": "void"
             },
-            "one_of": {
+            "oneOf": {
               "params": [
                 {
                   "name": "self",
@@ -16453,7 +16453,7 @@
               ],
               "returns": "any"
             },
-            "numbered_bullets": {
+            "numberedBullets": {
               "params": [
                 {
                   "name": "self",
@@ -16520,7 +16520,7 @@
               ],
               "returns": "any"
             },
-            "numbered_bullets": {
+            "numberedBullets": {
               "params": [
                 {
                   "name": "self",
@@ -17545,6 +17545,15 @@
         },
         "SWMLAction": {
           "methods": {
+            "SWML": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -17553,15 +17562,6 @@
                 }
               ],
               "returns": "void"
-            },
-            "swml": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -18252,7 +18252,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "string"
+              "returns": "class:signalwire.core.swml_verbs_generated.StringFormat"
             },
             "nullable": {
               "params": [
@@ -20604,7 +20604,7 @@
                 },
                 {
                   "name": "bullets",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -23752,7 +23752,7 @@
                 },
                 {
                   "name": "contexts",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -23862,7 +23862,7 @@
                 },
                 {
                   "name": "contexts",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],
@@ -28129,6 +28129,15 @@
         },
         "CallingAmazonBedrockParams": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -28202,15 +28211,6 @@
               "returns": "string"
             },
             "prompt": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swaig": {
               "params": [
                 {
                   "name": "self",
@@ -37581,6 +37581,15 @@
         },
         "AIObject": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -37654,15 +37663,6 @@
               "returns": "any"
             },
             "pronounce": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swaig": {
               "params": [
                 {
                   "name": "self",
@@ -38847,7 +38847,7 @@
               ],
               "returns": "void"
             },
-            "all_of": {
+            "allOf": {
               "params": [
                 {
                   "name": "self",
@@ -38882,6 +38882,15 @@
         },
         "AmazonBedrockObject": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -38935,15 +38944,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "swaig": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -38980,7 +38980,7 @@
               ],
               "returns": "void"
             },
-            "any_of": {
+            "anyOf": {
               "params": [
                 {
                   "name": "self",
@@ -44233,7 +44233,7 @@
               ],
               "returns": "void"
             },
-            "one_of": {
+            "oneOf": {
               "params": [
                 {
                   "name": "self",
@@ -44682,7 +44682,7 @@
               ],
               "returns": "any"
             },
-            "numbered_bullets": {
+            "numberedBullets": {
               "params": [
                 {
                   "name": "self",
@@ -44749,7 +44749,7 @@
               ],
               "returns": "any"
             },
-            "numbered_bullets": {
+            "numberedBullets": {
               "params": [
                 {
                   "name": "self",
@@ -45313,6 +45313,15 @@
         },
         "SWMLAction": {
           "methods": {
+            "SWML": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -45321,15 +45330,6 @@
                 }
               ],
               "returns": "void"
-            },
-            "swml": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -49310,6 +49310,15 @@
         },
         "AIAgent": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -49401,15 +49410,6 @@
               "returns": "any"
             },
             "pronounce": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swaig": {
               "params": [
                 {
                   "name": "self",
@@ -49453,6 +49453,15 @@
         },
         "AIAgentCreateRequest": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -49544,15 +49553,6 @@
               "returns": "any"
             },
             "pronounce": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swaig": {
               "params": [
                 {
                   "name": "self",
@@ -49743,6 +49743,15 @@
         },
         "AIAgentUpdateRequest": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -49841,15 +49850,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "swaig": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -49877,6 +49877,15 @@
         },
         "AIObject": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -49950,15 +49959,6 @@
               "returns": "any"
             },
             "pronounce": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "swaig": {
               "params": [
                 {
                   "name": "self",
@@ -51465,7 +51465,7 @@
               ],
               "returns": "void"
             },
-            "all_of": {
+            "allOf": {
               "params": [
                 {
                   "name": "self",
@@ -51500,6 +51500,15 @@
         },
         "AmazonBedrockObject": {
           "methods": {
+            "SWAIG": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -51553,15 +51562,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "swaig": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -51598,7 +51598,7 @@
               ],
               "returns": "void"
             },
-            "any_of": {
+            "anyOf": {
               "params": [
                 {
                   "name": "self",
@@ -59262,7 +59262,7 @@
               ],
               "returns": "void"
             },
-            "one_of": {
+            "oneOf": {
               "params": [
                 {
                   "name": "self",
@@ -59858,7 +59858,7 @@
               ],
               "returns": "any"
             },
-            "numbered_bullets": {
+            "numberedBullets": {
               "params": [
                 {
                   "name": "self",
@@ -59925,7 +59925,7 @@
               ],
               "returns": "any"
             },
-            "numbered_bullets": {
+            "numberedBullets": {
               "params": [
                 {
                   "name": "self",
@@ -62402,6 +62402,15 @@
         },
         "SWMLAction": {
           "methods": {
+            "SWML": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "__init__": {
               "params": [
                 {
@@ -62410,15 +62419,6 @@
                 }
               ],
               "returns": "void"
-            },
-            "swml": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -88087,7 +88087,7 @@
                 },
                 {
                   "name": "errors",
-                  "type": "any",
+                  "type": "list<string>",
                   "required": true
                 }
               ],

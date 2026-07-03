@@ -509,6 +509,20 @@ class AgentBaseTest extends TestCase
         $this->assertCount(1, Shape::sub($ai, 'pronounce'));
         $this->assertSame('SW', Shape::at($ai, 'pronounce', 0, 'replace'));
         $this->assertSame('SignalWire', Shape::at($ai, 'pronounce', 0, 'with'));
+        // ignore_case omitted when false (Python parity)
+        $rule = Shape::arr(Shape::at($ai, 'pronounce', 0));
+        $this->assertArrayNotHasKey('ignore_case', $rule);
+        $this->assertArrayNotHasKey('ignore', $rule);
+    }
+
+    public function testAddPronunciationIgnoreCase(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addPronunciation('sw', 'SignalWire', ignoreCase: true);
+
+        // Wire parity with Python: emits `ignore_case: true` (bool), not `ignore`.
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertTrue(Shape::at($ai, 'pronounce', 0, 'ignore_case'));
     }
 
     public function testSetParam(): void
@@ -593,17 +607,19 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
         $agent->enableDebugEvents();
 
+        // Wire parity with Python: default level 1 emitted as the AI param
+        // `debug_webhook_level` (int), not a `debug_events` string.
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('all', Shape::at($ai, 'params', 'debug_events'));
+        $this->assertSame(1, Shape::at($ai, 'params', 'debug_webhook_level'));
     }
 
     public function testEnableDebugEventsCustomLevel(): void
     {
         $agent = $this->makeAgent();
-        $agent->enableDebugEvents('verbose');
+        $agent->enableDebugEvents(2);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('verbose', Shape::at($ai, 'params', 'debug_events'));
+        $this->assertSame(2, Shape::at($ai, 'params', 'debug_webhook_level'));
     }
 
     // ------------------------------------------------------------------

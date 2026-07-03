@@ -42,7 +42,7 @@ $agent->addPostAiVerb('play', [
 ]);
 
 // Enable debug events
-$agent->enableDebugEvents(true);
+$agent->enableDebugEvents(2);
 
 // Debug event handler
 $agent->onDebugEvent(function ($event) {

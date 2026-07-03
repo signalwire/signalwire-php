@@ -63,7 +63,7 @@ class AgentBase extends Service implements AgentInterface
      * @var array<string,mixed>
      */
     protected array $multilingual;
-    /** @var list<array{replace: string, with: string, ignore?: string}> */
+    /** @var list<array{replace: string, with: string, ignore_case?: bool}> */
     protected array $pronunciations;
 
     // ── Params / data ───────────────────────────────────────────────────
@@ -83,7 +83,7 @@ class AgentBase extends Service implements AgentInterface
      * @var array<int|string, mixed>
      */
     protected array $internalFillers;
-    protected ?string $debugEventsLevel;
+    protected ?int $debugEventsLevel;
 
     // ── LLM params ──────────────────────────────────────────────────────
     /** @var array<string,mixed> */
@@ -752,21 +752,26 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
-    public function addPronunciation(string $replace, string $with, string $ignore = ''): self
+    /**
+     * Add a pronunciation rule (mirrors Python add_pronunciation(replace,
+     * with_text, ignore_case: bool = False)). Emits the SWML wire key
+     * `ignore_case` (bool, only when true), NOT `ignore`.
+     */
+    public function addPronunciation(string $replace, string $with, bool $ignoreCase = false): self
     {
         $entry = [
             'replace' => $replace,
             'with'    => $with,
         ];
-        if ($ignore !== '') {
-            $entry['ignore'] = $ignore;
+        if ($ignoreCase) {
+            $entry['ignore_case'] = true;
         }
         $this->pronunciations[] = $entry;
         return $this;
     }
 
     /**
-     * @param list<array{replace: string, with: string, ignore?: string}> $pronunciations
+     * @param list<array{replace: string, with: string, ignore_case?: bool}> $pronunciations
      */
     public function setPronunciations(array $pronunciations): self
     {
@@ -938,7 +943,16 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
-    public function enableDebugEvents(string $level = 'all'): self
+    /**
+     * Enable the debug-event webhook for this agent.
+     *
+     * Mirrors Python's enable_debug_events(level: int = 1): the AI module POSTs
+     * real-time debug events to the agent's /debug_events endpoint. The level is
+     * the wire verbosity (1 = high-level events; 2+ = high-volume: every LLM
+     * request/response, conversation_add) and is emitted as the SWML AI param
+     * `debug_webhook_level` (int), NOT `debug_events`.
+     */
+    public function enableDebugEvents(int $level = 1): self
     {
         $this->debugEventsLevel = $level;
         return $this;
@@ -1558,7 +1572,7 @@ class AgentBase extends Service implements AgentInterface
             $mergedParams['internal_fillers'] = $this->internalFillers;
         }
         if ($this->debugEventsLevel !== null) {
-            $mergedParams['debug_events'] = $this->debugEventsLevel;
+            $mergedParams['debug_webhook_level'] = $this->debugEventsLevel;
         }
         if (!empty($mergedParams)) {
             $ai['params'] = $mergedParams;
