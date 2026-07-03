@@ -29,7 +29,6 @@ enum SkillName: string
     case InfoGatherer         = 'info_gatherer';
     case Joke                 = 'joke';
     case Math                 = 'math';
-    case McpGateway           = 'mcp_gateway';
     case NativeVectorSearch   = 'native_vector_search';
     case PlayBackgroundFile   = 'play_background_file';
     case Spider               = 'spider';

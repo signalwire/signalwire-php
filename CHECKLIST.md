@@ -145,9 +145,8 @@ Agents completing this checklist have historically left gaps by treating ambiguo
   - [ ] native_vector_search (search_knowledge — network mode only)
   - [ ] info_gatherer (start_questions + submit_answer — stateful)
   - [ ] claude_skills (SKILL.md file loading)
-  - [ ] mcp_gateway (MCP server bridge)
 - [ ] Tests: registry lists 17, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
-- [ ] **Skill upstream-call verification.** For each skill that names an upstream service (`weather_api`, `web_search`, `wikipedia_search`, `google_maps`, `spider`, `datasphere`, `api_ninjas_trivia`, `native_vector_search`, `claude_skills`, `mcp_gateway`), there is a test that drives the skill end-to-end against either (a) the live upstream gated by an env var (e.g. `SWSDK_LIVE_TESTS=1`) AND credentials, OR (b) a recorded HTTP cassette of a real upstream response. NO skill may pass its tests against a hardcoded fake response — the real transport must be exercised. `audit_skills_upstream.py` (Phase 13) validates this and fails any skill whose handler returns canned data without making a network call.
+- [ ] **Skill upstream-call verification.** For each skill that names an upstream service (`weather_api`, `web_search`, `wikipedia_search`, `google_maps`, `spider`, `datasphere`, `api_ninjas_trivia`, `native_vector_search`, `claude_skills`), there is a test that drives the skill end-to-end against either (a) the live upstream gated by an env var (e.g. `SWSDK_LIVE_TESTS=1`) AND credentials, OR (b) a recorded HTTP cassette of a real upstream response. NO skill may pass its tests against a hardcoded fake response — the real transport must be exercised. `audit_skills_upstream.py` (Phase 13) validates this and fails any skill whose handler returns canned data without making a network call.
 - [ ] Commit to git
 
 ## Phase 5: Prefab Agents
@@ -363,7 +362,6 @@ Port every one of these. Each must contain code examples in the target language,
 - [ ] swml_service_guide.md
 - [ ] web_service.md
 - [ ] cloud_functions_guide.md
-- [ ] mcp_gateway_reference.md
 - [ ] mcp_integration.md
 
 Skip: search_*.md (4 files), bedrock_agent.md, livekit_comparison.md, pipecat_comparison.md
@@ -443,7 +441,6 @@ Every Python example has a counterpart in the port. The list below is the minimu
 - [ ] lambda_agent.* (proves: AWS Lambda deployment)
 - [ ] kubernetes_ready_agent.* (proves: K8s deployment patterns)
 - [ ] mcp_agent.* (proves: MCP integration)
-- [ ] mcp_gateway_demo.* (proves: MCP gateway skill)
 - [ ] info_gatherer_example.* (proves: InfoGathererAgent prefab)
 - [ ] dynamic_info_gatherer_example.* (proves: dynamic InfoGatherer)
 - [ ] survey_agent_example.* (proves: SurveyAgent prefab)
@@ -535,7 +532,7 @@ Eight runnable programs in `porting-sdk/scripts/` close the gap. **All eight mus
 - [ ] **`scripts/audit_http_swml.py --root <port>` exits 0.** For each port's example services, binds a real socket, asserts `GET <route>` returns a valid SWML doc, asserts `POST <route>/swaig` with `{"function":"NAME","argument":{"parsed":[{...}]}}` actually invokes the registered handler and returns its real response (not canned `[]`). Catches dispatcher stubs.
 - [ ] **`scripts/audit_relay_handshake.py --root <port>` exits 0.** Stands up a local WS fixture on `127.0.0.1:0` that speaks JSON-RPC 2.0 and the `signalwire.connect` handshake. Drives the port's RELAY client at it. Asserts WSS upgrade arrives, `signalwire.connect` request is sent, auth response is parsed, contexts subscribe, an event the fixture pushes is dispatched to the client's callback. Catches stub WS transports (`// Stub: production would open WSS...`).
 - [ ] **`scripts/audit_rest_transport.py --root <port>` exits 0.** Stands up a local HTTP fixture on `127.0.0.1:0`. Drives every REST namespace's documented operations against it. Asserts the wire request shape (method, path, headers, query params, body) matches the documented contract, and the parsed response matches a recorded real-shape response. Proves transport + serialization, NOT third-party reachability.
-- [ ] **`scripts/audit_skills_dispatch.py --root <port>` exits 0.** For each skill that names an upstream service (Google CSE, Wikipedia, DataSphere, MCP gateway, etc.), drives the skill against a local HTTP fixture (no live credentials required) and asserts the skill's handler issued a real outbound HTTP request with the documented shape AND parsed a recorded response correctly. A skill whose handler returns canned data without contacting the fixture fails. Live testing against real upstreams is gated separately by an env var like `SWSDK_LIVE_TESTS=1`; the fixture-based audit is the always-on baseline.
+- [ ] **`scripts/audit_skills_dispatch.py --root <port>` exits 0.** For each skill that names an upstream service (Google CSE, Wikipedia, DataSphere, etc.), drives the skill against a local HTTP fixture (no live credentials required) and asserts the skill's handler issued a real outbound HTTP request with the documented shape AND parsed a recorded response correctly. A skill whose handler returns canned data without contacting the fixture fails. Live testing against real upstreams is gated separately by an env var like `SWSDK_LIVE_TESTS=1`; the fixture-based audit is the always-on baseline.
 - [ ] **`scripts/audit_test_parity.py --root <port>` exits 0.** Every Python test (minus skip list) has a behavior-equivalent in the port. Walks Python's `tests/` and the port's tests, maps by target symbol, fails on missing tests AND on tests whose body doesn't actually drive the symbol.
 - [ ] **`scripts/audit_example_parity.py --root <port>` exits 0.** Every Python example (minus skip list) has a port-equivalent with the same documented contract.
 - [ ] **`scripts/audit_no_cheat_tests.py --root <port>` exits 0.** No `assert true` / `expect(true).toBe(true)`, no empty / `pass`-bodied tests, no no-assertion tests, no tests that mock the very transport they exist to verify, no tests that only assert nullness (`assertNotNull(result)`) without checking response content. Allow-list in port's `INTENTIONAL_THIN_TESTS.md` for legit thin tests with rationale.

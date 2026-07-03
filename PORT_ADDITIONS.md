@@ -561,8 +561,6 @@ signalwire.skills.joke.skill.JokeSkill.get_description: idiomatic PHP surface ex
 signalwire.skills.joke.skill.JokeSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.math.skill.MathSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.math.skill.MathSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -664,23 +662,6 @@ signalwire.relay.call.PlayAction.resume: concrete-action control method; Python 
 signalwire.relay.call.PlayAction.volume: concrete-action control method; Python emits volume on the VolumeAction mixin base it inherits
 signalwire.relay.call.RecordAction.pause: concrete-action control method; Python emits pause on the PausableAction mixin base it inherits
 signalwire.relay.call.RecordAction.resume: concrete-action control method; Python emits resume on the PausableAction mixin base it inherits
-
-# --- MCP-gateway skill: ported from Python source the oracle does not surface ---
-# The Python SDK source ships signalwire/skills/mcp_gateway/skill.py (class
-# MCPGatewaySkill(SkillBase)), but python_surface.json (the oracle) does NOT
-# surface it — the skill module fails to import under the enumerator (optional MCP
-# deps), so griffe drops it. §I.1 signs off the MCP-gateway SERVICE subsystem as
-# Python-only-not-ported; PHP nonetheless ships the built-in gateway *skill*
-# (src/SignalWire/Skills/Builtin/McpGateway.php), which maps 1:1 to the real
-# Python skill class. It is therefore a real reference symbol (backed by Python
-# source), not invented surface — recorded as a PHP addition because the oracle
-# doesn't carry it. FLAGGED for human review (see report §g).
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill: ports the Python source skill signalwire.skills.mcp_gateway.skill.MCPGatewaySkill (present in Python source, not surfaced by the oracle); PHP ships it as a built-in skill (McpGateway.php)
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_global_data: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_hints: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_prompt_sections: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.register_tools: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.setup: member of the Python MCPGatewaySkill the oracle does not surface — see MCPGatewaySkill entry
 
 # --- Skill override methods PHP declares that the reference skill does not ---
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.

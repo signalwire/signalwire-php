@@ -80,9 +80,8 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.mcp_gateway.",
-        "MCP gateway server is not ported. PHP's AgentBase exposes the "
-        "client-side `mcp_gateway` skill; running the gateway service itself "
-        "is delegated to Python.",
+        "approved: Python-only MCP gateway subsystem, not ported to any SDK "
+        "— user, 2026-07 pass (§I.1)",
     ),
     (
         "signalwire.web.web_service.",
@@ -682,12 +681,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     (
         "signalwire.skills.datetime.",
         "PHP ships DateTimeSkill (get_current_time + get_current_date).",
-    ),
-    (
-        "signalwire.skills.mcp_gateway.",
-        "PHP's McpGatewaySkill proxies to a running gateway service; the "
-        "gateway server itself is not bundled (see signalwire.mcp_gateway "
-        "omission).",
     ),
     (
         "signalwire.skills.registry.",

@@ -25,7 +25,6 @@ class SkillRegistry
         'info_gatherer',
         'joke',
         'math',
-        'mcp_gateway',
         'native_vector_search',
         'play_background_file',
         'spider',

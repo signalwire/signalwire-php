@@ -115,9 +115,8 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
   - [x] native_vector_search (search_knowledge — network mode only)
   - [x] info_gatherer (start_questions + submit_answer — stateful)
   - [x] claude_skills (SKILL.md file loading)
-  - [x] mcp_gateway (MCP server bridge)
   - [x] custom_skills (user-defined tools from config)
-- [x] Tests: registry lists 18, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
+- [x] Tests: registry lists 17, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
 - [x] Commit to git
 
 ## Phase 5: Prefab Agents

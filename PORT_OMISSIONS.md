@@ -212,41 +212,41 @@ signalwire.list_skills: impossible: Python module-level free function; PHP has n
 signalwire.list_skills_with_params: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4 file-per-class), so it is hosted as the static method SignalWire::list_skills_with_params (SignalWire.php), surfaced via FREE_FUNCTION_PROJECTIONS. Mirrors the logging_config / livewire host precedent. See PORT_ADDITIONS.md.
 signalwire.livewire.function_tool: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4 file-per-class), so it is hosted as the static method LiveWire::functionTool (Livewire/LiveWire.php), surfaced via FREE_FUNCTION_PROJECTIONS. PHP has no function decorators, so a tool is the ['name','description','parameters','handler'] descriptor array Agent/AgentSession accept. Mirrors the LoggingConfig / SignalWire host precedent. See PORT_ADDITIONS.md.
 signalwire.livewire.run_app: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4 file-per-class), so it is hosted as the static method LiveWire::runApp (Livewire/LiveWire.php), surfaced via FREE_FUNCTION_PROJECTIONS. Mirrors the LoggingConfig / SignalWire host precedent. See PORT_ADDITIONS.md.
-signalwire.mcp_gateway.gateway_service.MCPGateway: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.gateway_service.MCPGateway.__init__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.gateway_service.MCPGateway.run: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.gateway_service.MCPGateway.shutdown: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.gateway_service.main: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient.__init__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient.call_method: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient.call_tool: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient.get_tools: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient.start: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPClient.stop: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.__init__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.create_client: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.get_service: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.get_service_tools: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.list_services: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.shutdown: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPManager.validate_services: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPService: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPService.__hash__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.mcp_manager.MCPService.__post_init__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.Session: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.Session.is_alive: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.Session.is_expired: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.Session.touch: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.__init__: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.close_session: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.create_session: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.get_service_session_count: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.get_session: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.list_sessions: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
-signalwire.mcp_gateway.session_manager.SessionManager.shutdown: MCP gateway server is not ported. PHP's AgentBase exposes the client-side `mcp_gateway` skill; running the gateway service itself is delegated to Python.
+signalwire.mcp_gateway.gateway_service.MCPGateway: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.gateway_service.MCPGateway.__init__: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.gateway_service.MCPGateway.run: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.gateway_service.MCPGateway.shutdown: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.gateway_service.main: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient.__init__: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient.call_method: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient.call_tool: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient.get_tools: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient.start: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPClient.stop: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.__init__: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.create_client: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.get_service: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.get_service_tools: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.list_services: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.shutdown: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPManager.validate_services: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPService: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPService.__hash__: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.mcp_manager.MCPService.__post_init__: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.Session: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.Session.is_alive: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.Session.is_expired: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.Session.touch: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.__init__: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.close_session: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.create_session: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.get_service_session_count: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.get_session: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.list_sessions: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
+signalwire.mcp_gateway.session_manager.SessionManager.shutdown: approved: Python-only MCP gateway subsystem, not ported to any SDK — user, 2026-07 pass (§I.1)
 # signalwire.pom.pom.* (PromptObjectModel + Section) is implemented as
 # typed PHP classes under SignalWire\POM\* — no longer omitted.
 signalwire.pom.pom_tool.detect_file_format: Standalone CLI tool (`pom-tool`) — PHP ships the data-model classes (PromptObjectModel / Section) but not the file-format-detect/load/render CLI shim.
@@ -539,7 +539,6 @@ signalwire.skills.joke.skill.JokeSkill.get_hints: PHP ships JokeSkill (DataMap-d
 signalwire.skills.joke.skill.JokeSkill.get_parameter_schema: PHP ships JokeSkill (DataMap-driven via API Ninjas).
 signalwire.skills.math.skill.MathSkill.get_hints: PHP ships MathSkill (safe-evaluator built on top of `eval()`-free expression parsing).
 signalwire.skills.math.skill.MathSkill.get_parameter_schema: PHP ships MathSkill (safe-evaluator built on top of `eval()`-free expression parsing).
-signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_parameter_schema: PHP's McpGatewaySkill proxies to a running gateway service; the gateway server itself is not bundled (see signalwire.mcp_gateway omission).
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.cleanup: PHP ships NativeVectorSearchSkill in network-only mode (remote_url required). Python adds local SQLite/pgvector backends and embedding helpers — see PORT_OMISSIONS top entry for the full rationale.
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_global_data: PHP ships NativeVectorSearchSkill in network-only mode (remote_url required). Python adds local SQLite/pgvector backends and embedding helpers — see PORT_OMISSIONS top entry for the full rationale.
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_instance_key: PHP ships NativeVectorSearchSkill in network-only mode (remote_url required). Python adds local SQLite/pgvector backends and embedding helpers — see PORT_OMISSIONS top entry for the full rationale.

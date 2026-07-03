@@ -85,7 +85,6 @@ php examples/simple_agent.php
 | File | Description |
 |------|-------------|
 | [mcp_agent.php](mcp_agent.php) | MCP client and server: expose tools, consume external MCP servers |
-| [mcp_gateway_demo.php](mcp_gateway_demo.php) | MCP Gateway skill connecting to MCP servers via gateway |
 
 ## Prefabs
 

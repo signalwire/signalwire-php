@@ -65,12 +65,12 @@ class SkillsTest extends TestCase
     //  Registry tests (8)
     // ══════════════════════════════════════════════════════════════════════
 
-    public function testRegistryListSkillsReturns18Skills(): void
+    public function testRegistryListSkillsReturns17Skills(): void
     {
         $registry = SkillRegistry::instance();
         $skills = $registry->listSkills();
 
-        $this->assertCount(18, $skills);
+        $this->assertCount(17, $skills);
     }
 
     public function testRegistryGetFactoryForKnownSkillReturnsClassName(): void
@@ -102,8 +102,9 @@ class SkillsTest extends TestCase
         $this->assertContains('my_custom', $skills);
     }
 
-    public function testRegistryAll18BuiltinNamesPresentInListSkills(): void
+    public function testRegistryAll17BuiltinNamesPresentInListSkills(): void
     {
+        // 17 built-ins: mcp_gateway is NOT ported (approved Python-only per §I.1).
         $expected = [
             'api_ninjas_trivia',
             'claude_skills',
@@ -115,7 +116,6 @@ class SkillsTest extends TestCase
             'info_gatherer',
             'joke',
             'math',
-            'mcp_gateway',
             'native_vector_search',
             'play_background_file',
             'spider',
@@ -1139,13 +1139,13 @@ class SkillsTest extends TestCase
     //  Individual skill instantiation test (1)
     // ══════════════════════════════════════════════════════════════════════
 
-    public function testAll18SkillsCanBeInstantiatedWithAgent(): void
+    public function testAll17SkillsCanBeInstantiatedWithAgent(): void
     {
         $agent = $this->makeAgent();
         $registry = SkillRegistry::instance();
         $skillNames = $registry->listSkills();
 
-        $this->assertCount(18, $skillNames);
+        $this->assertCount(17, $skillNames);
 
         // A few skills validate their required config in the constructor
         // (mirroring Python's __init__ which raises ValueError): supply the

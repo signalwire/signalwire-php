@@ -2,7 +2,7 @@
 
 ## Overview
 
-The SignalWire PHP SDK skills system supports integration with external services and custom skill providers. This guide covers connecting third-party APIs, MCP gateways, and custom skill definitions.
+The SignalWire PHP SDK skills system supports integration with external services and custom skill providers. This guide covers connecting third-party APIs and custom skill definitions.
 
 ## Google Custom Search
 
@@ -49,19 +49,6 @@ $agent->addSkill('spider', [
 ```
 
 Provides `scrape_web_page` for extracting content from web pages.
-
-## MCP Gateway Integration
-
-The MCP (Model Context Protocol) gateway skill connects to MCP-compatible servers, dynamically exposing their tools to the agent:
-
-```php
-$agent->addSkill('mcp_gateway', [
-    'gateway_url' => 'https://mcp.example.com/gateway',
-    'timeout'     => 30,
-]);
-```
-
-The gateway discovers available tools at startup and registers them as SWAIG functions. Tools are called through the gateway, which handles MCP protocol communication.
 
 ## Claude Skills
 

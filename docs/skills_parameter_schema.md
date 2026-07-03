@@ -174,21 +174,6 @@ $agent->addSkill('info_gatherer', [
 ]);
 ```
 
-## mcp_gateway
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `gateway_url` | string | Yes | - | MCP gateway endpoint URL |
-| `timeout` | int | No | 30 | Request timeout in seconds |
-
-**Tools provided**: Dynamic, based on MCP server capabilities
-
-```php
-$agent->addSkill('mcp_gateway', [
-    'gateway_url' => 'https://mcp.example.com/gateway',
-]);
-```
-
 ## custom_skills
 
 | Parameter | Type | Required | Default | Description |
