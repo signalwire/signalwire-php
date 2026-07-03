@@ -4,8 +4,14 @@
 # Same script invoked locally (`bash scripts/run-ci.sh`) AND by the
 # GitHub Actions workflow. No drift between local and CI behavior.
 #
+# The TEST / FMT / LINT gates go through the canonical entry-point scripts —
+# scripts/run-tests.sh (phpunit), scripts/run-format.sh (php-cs-fixer), and
+# scripts/run-lint.sh (phpstan L9) — which self-bootstrap their tool environment
+# (scripts/_env.sh) so they run identically here and from any CWD / bare shell.
+# See porting-sdk/RUN_LINT_FORMAT_SPEC.md.
+#
 # Gates (in order, fail-fast):
-#   1. vendor/bin/phpunit                 — language test runner
+#   1. scripts/run-tests.sh --parallel    — language test runner (paratest)
 #   2. signature regen                    — python adapter + signature_dump.php
 #   3. drift gate                         — porting-sdk diff_port_signatures.py
 #   4. surface-fresh gate                 — porting-sdk check_surface_freshness.py
@@ -26,8 +32,10 @@
 #                                           (byte-compare FunctionResult.toArray()
 #                                            vs Python to_dict() over the shared
 #                                            81-entry corpus; needs no mocks)
-#   7. fmt gate                           — php-cs-fixer (local: apply; CI: --dry-run)
-#   8. lint gate                          — phpstan level 9, zero findings (the floor)
+#   7. fmt gate                           — scripts/run-format.sh (php-cs-fixer;
+#                                           local: apply; CI: --check)
+#   8. lint gate                          — scripts/run-lint.sh (phpstan level 9,
+#                                           zero findings — the floor)
 #   9. doc-audit gate                     — porting-sdk audit_docs.py
 #  10. surface-diff gate                  — porting-sdk diff_port_surface.py
 #  11. skill-contract gate                — porting-sdk diff_skill_contracts.py
@@ -37,6 +45,13 @@ set -o pipefail
 
 PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT_NAME="signalwire-php"
+
+# Shared FMT/LINT/TEST tool-environment bootstrap (puts vendor/bin on PATH,
+# composer-installs on first miss). The run-{format,lint,tests}.sh scripts source
+# this same file, so the FMT/LINT/TEST env lives in ONE place and is identical
+# whether a gate runs here or standalone. See porting-sdk/RUN_LINT_FORMAT_SPEC.md.
+# shellcheck source=scripts/_env.sh
+source "$(cd "$(dirname "$0")" && pwd)/_env.sh"
 
 resolve_porting_sdk() {
     if [ -n "${PORTING_SDK:-}" ] && [ -d "$PORTING_SDK/scripts" ]; then
@@ -210,8 +225,13 @@ echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
 # shared mock servers once (see spawn_mocks) so workers probe-and-reuse rather
 # than each spawning (and killing) their own.
 if spawn_mocks; then
-    run_gate "TEST" "paratest -p $PARALLEL_PROCS (parallel)" \
-        vendor/bin/paratest --runner=WrapperRunner -p "$PARALLEL_PROCS" --no-coverage
+    # The canonical TEST entry point (scripts/run-tests.sh) runs the suite; its
+    # --parallel path uses paratest with PARATEST_PROCS. The mock servers are
+    # pre-spawned above and their ports exported, so each paratest worker
+    # probes-and-reuses the one shared mock (never spawns/kills its own).
+    PARATEST_PROCS="$PARALLEL_PROCS" \
+        run_gate "TEST" "run-tests.sh --parallel (paratest -p $PARALLEL_PROCS)" \
+        bash scripts/run-tests.sh --parallel
 else
     FAILED_GATES="$FAILED_GATES TEST"
 fi
@@ -375,31 +395,20 @@ run_gate "EMISSION" "diff_port_emission vs python to_dict()" \
         --dump-cmd "php scripts/emit_corpus.php" \
         --port-repo "$PORT_ROOT"
 
-# Gate 7: FMT — the language format gate (php: php-cs-fixer). Source-style only
-# and proven surface/emission-neutral (a reformat leaves port_signatures.json +
-# port_surface.json byte-identical modulo the generated_from git-sha, and
-# EMISSION 81/81 — verified during the FMT rollout). The .php-cs-fixer.php config
-# is scoped to formatting/whitespace/import-ordering so it cannot rewrite
-# identifiers, string contents, or array values. Mirrors the ruby/go FMT shape:
-#   * LOCAL ($CI unset)  → `fix`: reformats your working tree in place so you
-#     never hand-run it; notes if it changed files.
-#   * CI ($CI=true)      → `fix --dry-run --diff` (read-only): FAILS if any
+# Gate 7: FMT — the language format gate (php: php-cs-fixer). The gate body now
+# lives in the canonical entry point scripts/run-format.sh (self-bootstrapping,
+# any-CWD), which run-ci calls the same way a human/agent would:
+#   * LOCAL ($CI unset)  → `run-format.sh` (apply): reformats your working tree in
+#     place so you never hand-run the fixer; notes if it changed files.
+#   * CI ($CI=true)      → `run-format.sh --check` (read-only): FAILS if any
 #     unformatted source reached CI.
-# PHP_CS_FIXER_IGNORE_ENV=1 keeps php-cs-fixer from refusing on a newer PHP
-# runtime than it formally supports — the rule set used here is version-stable.
-fmt_gate() {
-    if [ -n "${CI:-}" ]; then
-        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run --diff
-    else
-        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix >/dev/null
-        if ! git diff --quiet 2>/dev/null; then
-            echo "    (FMT auto-applied formatting to your working tree — review & stage)"
-        fi
-        # A residual issue php-cs-fixer can't fix must still fail the gate.
-        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run
-    fi
-}
-run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
+# Source-style only and proven surface/emission-neutral (a reformat leaves
+# port_signatures.json + port_surface.json byte-identical modulo the generated_from
+# git-sha, and EMISSION 81/81). The .php-cs-fixer.php config is scoped to
+# formatting/whitespace/import-ordering so it cannot rewrite identifiers, string
+# contents, or array values. Mirrors the ruby/go FMT shape.
+run_gate "FMT" "run-format.sh (local: apply; CI: --check)" \
+    bash scripts/run-format.sh ${CI:+--check}
 
 # Gate 8: LINT — the language lint gate (php: phpstan level 9, zero findings).
 # This is the blocking quality floor: phpstan.neon analyses src/ + scripts/ at
@@ -429,8 +438,12 @@ run_gate "FMT" "php-cs-fixer (local: apply; CI: --dry-run --diff)" fmt_gate
 # the gate's result depends on the code, not the host php.ini. This is not a
 # suppression: no baseline, no @phpstan-ignore — the analysis still runs to
 # completion at level 9 and must report zero findings.
-run_gate "LINT" "phpstan level 9 zero findings (lint gate)" \
-    vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+# The gate body now lives in the canonical entry point scripts/run-lint.sh
+# (self-bootstrapping, any-CWD); run-ci calls it the same way a human/agent would.
+# It carries the --memory-limit=1G described above; phpstan.neon carries level 9 +
+# the src/scripts/tests paths + the phpstan-phpunit extension.
+run_gate "LINT" "run-lint.sh (phpstan level 9, zero findings)" \
+    bash scripts/run-lint.sh
 
 # Gate 9: DOC-AUDIT — every method/class referenced in docs/ + examples/ fenced
 # code blocks must resolve to a real symbol in the port surface (catches

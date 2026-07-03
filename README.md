@@ -238,17 +238,27 @@ Guides are also available in the [`docs/`](docs/) directory:
 | `SIGNALWIRE_LOG_LEVEL` | All | Logging level (`debug`, `info`, `warn`, `error`) |
 | `SIGNALWIRE_LOG_MODE` | All | Set to `off` to suppress all logging |
 
-## Testing
+## Testing, Formatting, and Linting
+
+Test / format / lint go through the canonical `scripts/run-*.sh` entry points.
+They self-bootstrap their tool environment (put `vendor/bin` on `PATH`,
+`composer install` if `vendor/` is missing) and run correctly from **any**
+directory, so you never have to invoke the raw tools by hand. `scripts/run-ci.sh`
+calls these same scripts, so local behavior matches CI.
 
 ```bash
-# Install dependencies
-composer install
+# Run the full test suite (canonical entry point; self-bootstraps, any CWD)
+bash scripts/run-tests.sh
 
-# Run the test suite
-composer test
+# Run a subset — pass a filter (phpunit --filter): a test name / class / regex
+bash scripts/run-tests.sh LoggerTest
 
-# Run with verbose output
-composer test:verbose
+# Format (php-cs-fixer): APPLY in place (default) / --check = verify-only (CI)
+bash scripts/run-format.sh
+bash scripts/run-format.sh --check
+
+# Lint (phpstan level 9, zero findings)
+bash scripts/run-lint.sh
 
 # Coverage (requires Xdebug or PCOV)
 XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-html coverage/

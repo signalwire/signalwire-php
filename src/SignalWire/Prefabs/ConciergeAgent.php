@@ -252,7 +252,7 @@ class ConciergeAgent extends AgentBase
 
         return new FunctionResult(
             "I don't have specific directions to {$location}. "
-            . "You can ask our staff at the front desk for assistance."
+            . 'You can ask our staff at the front desk for assistance.'
         );
     }
 
