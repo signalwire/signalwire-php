@@ -652,13 +652,30 @@ class RelayTest extends TestCase
     {
         $call = $this->makeCall();
 
+        // Real RELAY wire key is call_state (relay.c + mock_relay).
         $event = new Event('calling.call.state', [
             'call_id' => 'call-100',
-            'state' => 'ringing',
+            'call_state' => 'ringing',
         ]);
         $call->dispatchEvent($event);
 
         $this->assertSame('ringing', $call->state);
+    }
+
+    #[Test]
+    public function callDispatchEventIgnoresBareStateKey(): void
+    {
+        // A stray top-level ``state`` on a call.state event is NOT the
+        // call-state field (that belongs to control_id-routed component
+        // events) and must not move the call's state off its default.
+        $call = $this->makeCall();
+
+        $call->dispatchEvent(new Event('calling.call.state', [
+            'call_id' => 'call-100',
+            'state' => 'ringing',
+        ]));
+
+        $this->assertSame('created', $call->state);
     }
 
     #[Test]
@@ -674,7 +691,7 @@ class RelayTest extends TestCase
 
         $event = new Event('calling.call.state', [
             'call_id' => 'call-100',
-            'state' => 'ended',
+            'call_state' => 'ended',
             'end_reason' => 'hangup',
         ]);
         $call->dispatchEvent($event);
@@ -713,7 +730,7 @@ class RelayTest extends TestCase
             $received[] = $e->getEventType();
         });
 
-        $call->dispatchEvent(new Event('calling.call.state', ['state' => 'ringing']));
+        $call->dispatchEvent(new Event('calling.call.state', ['call_state' => 'ringing']));
 
         $this->assertSame(['calling.call.state'], $received);
     }
@@ -801,7 +818,7 @@ class RelayTest extends TestCase
             $log2[] = $e->getEventType();
         });
 
-        $call->dispatchEvent(new Event('calling.call.state', ['state' => 'answered']));
+        $call->dispatchEvent(new Event('calling.call.state', ['call_state' => 'answered']));
 
         $this->assertSame(['calling.call.state'], $log1);
         $this->assertSame(['calling.call.state'], $log2);
@@ -832,7 +849,7 @@ class RelayTest extends TestCase
         $call = $this->makeCall();
 
         $event = new Event('calling.call.state', [
-            'state' => 'ended',
+            'call_state' => 'ended',
             'end_reason' => 'busy',
         ]);
         $call->dispatchEvent($event);

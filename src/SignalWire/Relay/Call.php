@@ -64,7 +64,9 @@ class Call
         $this->device    = self::asStringKeyedArray($params['device']  ?? null);
         $this->peer      = self::asStringKeyedArray($params['peer']    ?? null);
         $this->context   = self::asNullableString($params['context']   ?? null);
-        $state           = $params['state'] ?? $params['call_state'] ?? null;
+        // Real RELAY wire key is ``call_state`` on the receive/state frame
+        // (mod_infrastructure relay.c + mock_relay), NOT ``state``.
+        $state           = $params['call_state'] ?? null;
         $this->state     = is_string($state) ? $state : 'created';
         $this->direction = self::asNullableString($params['direction'] ?? null);
 
@@ -119,8 +121,11 @@ class Call
 
         // ── call-level state events ──────────────────────────────────
         if ($eventType === 'calling.call.state') {
-            // Production wire uses ``call_state``; older fixtures use ``state``.
-            $newState = $params['state'] ?? $params['call_state'] ?? null;
+            // Real RELAY wire key is ``call_state`` (mod_infrastructure relay.c:
+            // relay_call_to_json emits ``call_state``; mock_relay emits the same).
+            // NOT ``state`` — that key belongs to control_id-routed component
+            // events (play/record/collect/…).
+            $newState = $params['call_state'] ?? null;
             if (is_string($newState)) {
                 $this->state = $newState;
             }
