@@ -205,4 +205,88 @@ class WebhookMiddlewareTest extends TestCase
             $this->assertStringNotContainsString(self::KEY, (string) $h);
         }
     }
+
+    // ------------------------------------------------------------------
+    // Decomposed framework-free validation core: WebhookMiddleware::validate.
+    // Contract (porting-sdk oracle + webhooks.md):
+    //   validate(method, url, headers, body, signingKey)
+    //     -> null            on pass (caller proceeds to its handler)
+    //     -> [status,h,body] on reject (send this, do NOT call handler)
+    // ------------------------------------------------------------------
+
+    public function testValidateReturnsNullOnValidSignature(): void
+    {
+        $result = WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Signature' => self::SIG_A],
+            self::RAW_BODY,
+            self::KEY,
+        );
+
+        $this->assertNull($result, 'A valid signature must return null (pass).');
+    }
+
+    public function testValidateReturns403TripleOnBadSignature(): void
+    {
+        $result = WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Signature' => 'wrong-signature'],
+            self::RAW_BODY,
+            self::KEY,
+        );
+
+        $this->assertIsArray($result, 'A bad signature must return a reject triple.');
+        [$status, , $body] = $result;
+        $this->assertSame(403, $status);
+        $this->assertSame('Forbidden', $body);
+        // The reject triple must never leak the key or the presented signature.
+        $this->assertStringNotContainsString(self::KEY, $body);
+        $this->assertStringNotContainsString('wrong-signature', $body);
+    }
+
+    public function testValidateReturns403TripleOnMissingHeader(): void
+    {
+        $result = WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            [],
+            self::RAW_BODY,
+            self::KEY,
+        );
+
+        $this->assertIsArray($result, 'A missing signature header must reject, not throw.');
+        [$status, , $body] = $result;
+        $this->assertSame(403, $status);
+        $this->assertSame('Forbidden', $body);
+    }
+
+    public function testValidateHonorsTwilioSignatureAlias(): void
+    {
+        $result = WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-Twilio-Signature' => self::SIG_A],
+            self::RAW_BODY,
+            self::KEY,
+        );
+
+        $this->assertNull(
+            $result,
+            'The X-Twilio-Signature alias must be honored by the decomposed core (cXML compat).',
+        );
+    }
+
+    public function testValidateEmptySigningKeyRaises(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Signature' => self::SIG_A],
+            self::RAW_BODY,
+            '',
+        );
+    }
 }

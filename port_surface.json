@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 8249281ae3d39745483be876617df9a65ff29aa8",
+  "generated_from": "signalwire-php @ 524ca600a0f9b310fbda8f8138618223b503ba0a",
   "modules": {
     "signalwire": {
       "classes": {
@@ -606,16 +606,16 @@
           "process"
         ]
       },
-      "functions": []
+      "functions": [
+        "validate"
+      ]
     },
     "signalwire.core.security.webhook_validator": {
-      "classes": {
-        "WebhookValidator": [
-          "validate_request",
-          "validate_webhook_signature"
-        ]
-      },
-      "functions": []
+      "classes": {},
+      "functions": [
+        "validate_request",
+        "validate_webhook_signature"
+      ]
     },
     "signalwire.core.security_config": {
       "classes": {

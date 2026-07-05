@@ -260,6 +260,17 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
     ("SignalWire\\Security\\WebhookValidator", "validateRequest"):
         ("signalwire.core.security.webhook_validator", "validate_request"),
+    # Decomposed framework-free validation core — Python ships it as the
+    # module-level free function signalwire.core.security.webhook_middleware.
+    # validate(method, url, headers, body, *, signing_key) -> optional triple.
+    # PHP hosts it as a static method on the WebhookMiddleware class (the same
+    # class whose object-shaped process() stays a PHP-idiom PORT_ADDITION) and
+    # projects it onto the canonical module-level `validate` name. The param
+    # kinds (keyword-only signing_key) + concrete element types PHP reflection
+    # erases are re-established via FREE_FUNCTION_PARAM_OVERRIDES /
+    # FREE_FUNCTION_RETURN_OVERRIDES below.
+    ("SignalWire\\Security\\WebhookMiddleware", "validate"):
+        ("signalwire.core.security.webhook_middleware", "validate"),
     # Security hygiene helpers — Python ships them as module-level free
     # functions (signalwire.core.security.security_utils); PHP groups the
     # three static methods on a SecurityUtils final class for PSR-4 + IDE
@@ -287,6 +298,33 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
         {"name": "kwargs", "kind": "var_keyword", "type": "dict<string,any>",
          "required": False, "default": {}},
     ],
+    # Decomposed webhook validation core. The Python reference declares
+    # signing_key keyword-only (`validate(method, url, headers, body, *,
+    # signing_key)`) and types headers as dict<string,string>; PHP reflection
+    # sees a trailing positional `string $signingKey` and erases the headers
+    # element type to bare `array` -> `any`. Re-establish the canonical
+    # kind+types so the projected free function reconciles EQUAL with the oracle.
+    ("signalwire.core.security.webhook_middleware", "validate"): [
+        {"name": "method", "type": "string", "required": True},
+        {"name": "url", "type": "string", "required": True},
+        {"name": "headers", "type": "dict<string,string>", "required": True},
+        {"name": "body", "type": "string", "required": True},
+        {"name": "signing_key", "kind": "keyword", "type": "string",
+         "required": True},
+    ],
+}
+
+
+# Return-type overrides for free-function projections whose PHP reflected
+# return type erases the concrete shape the oracle records (PHP's only
+# list/map type is bare ``array`` -> ``any``). Keyed by the PROJECTED
+# (target_module, target_function). Parallel to FREE_FUNCTION_PARAM_OVERRIDES.
+FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
+    # validate() returns None (pass) or a [status, headers, body] triple
+    # (reject); PHP's `?array` reflects as optional<any>. Re-establish the
+    # oracle's optional<tuple<int,dict<string,string>,string>>.
+    ("signalwire.core.security.webhook_middleware", "validate"):
+        "optional<tuple<int,dict<string,string>,string>>",
 }
 
 
@@ -588,6 +626,9 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
                 override = FREE_FUNCTION_PARAM_OVERRIDES.get((target_mod, target_fn))
                 if override is not None:
                     sig["params"] = [dict(p) for p in override]
+                ret_override = FREE_FUNCTION_RETURN_OVERRIDES.get((target_mod, target_fn))
+                if ret_override is not None:
+                    sig["returns"] = ret_override
                 free_functions_out.append((target_mod, target_fn, sig))
                 continue
 

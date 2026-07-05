@@ -322,6 +322,40 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
+# Surface free-function projection (mirrors enumerate_signatures.py's
+# FREE_FUNCTION_PROJECTIONS). Some PHP classes exist solely to HOST static
+# methods that the Python reference ships as module-level free functions
+# (PSR-4 forbids bare module functions). On the SURFACE side those hosted
+# methods must land in the target module's `functions` list — not as class
+# methods — so they reconcile EQUAL with the oracle's module-level functions
+# instead of being recorded as `impossible:` omissions + a host-class addition.
+#
+# Keyed by (PHP class name, snake_case method) -> (target_module, target_fn).
+# A method listed here is REMOVED from its host class's method set and emitted
+# as a module-level function. If EVERY public method of the host class is
+# projected, the empty class shell is dropped (no stray addition); a host that
+# still declares non-projected methods keeps its class shell (a PORT_ADDITION).
+SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
+    # Webhook signature validators — Python ships them as module-level free
+    # functions in signalwire.core.security.webhook_validator; PHP hosts both on
+    # the WebhookValidator final class (PSR-4 + IDE discoverability). Project to
+    # the canonical module-level names (parallel to the signature enumerator).
+    ("WebhookValidator", "validate_webhook_signature"):
+        ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
+    ("WebhookValidator", "validate_request"):
+        ("signalwire.core.security.webhook_validator", "validate_request"),
+    # Decomposed framework-free validation core — the SURFACE oracle records
+    # signalwire.core.security.webhook_middleware.validate as a module-level
+    # function (alongside make_webhook_validation_dependency). PHP hosts it as a
+    # static method on the WebhookMiddleware class (whose object-shaped
+    # __init__/process stay a PHP-idiom PORT_ADDITION); project `validate` to the
+    # module-level function so it reconciles EQUAL instead of being an omission.
+    ("WebhookMiddleware", "validate"):
+        ("signalwire.core.security.webhook_middleware", "validate"),
+}
+
+
+# ---------------------------------------------------------------------------
 # Mixin projection (mirrors C++ port).
 # Python's AgentBase / SWMLService surface is split across 9 mixin classes.
 # PHP flattens those onto AgentBase (extends Service). To make the diff line
@@ -1141,6 +1175,21 @@ def build_surface() -> dict:
                         all_trait_methods[trait]
                     )
         for cls, meth_set in methods.items():
+            # Free-function projection: lift hosted static methods to the target
+            # module's `functions` list (mirrors the signature enumerator) so a
+            # module-level Python free function reconciles EQUAL instead of being
+            # an `impossible:` omission. Remove them from the host class's set.
+            projected_here = {
+                m for m in meth_set
+                if (cls, m) in SURFACE_FREE_FUNCTION_PROJECTIONS
+            }
+            for m in projected_here:
+                target_mod, target_fn = SURFACE_FREE_FUNCTION_PROJECTIONS[(cls, m)]
+                modules[target_mod]["functions"].append(target_fn)
+            meth_set = {m for m in meth_set if m not in projected_here}
+            # If the host class had ONLY projected methods, drop the empty shell.
+            if not meth_set and projected_here:
+                continue
             # Route by the CURRENT file's path, not the first-seen defining file:
             # a class name can recur across files (the SWML `Document`/`Section`/
             # `DataMap` builders vs the same-named generated wire-type data classes
