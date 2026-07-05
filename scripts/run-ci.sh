@@ -34,6 +34,7 @@ set -u
 set -o pipefail
 
 PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+mkdir -p "$PORT_ROOT/.sw-tmp"  # repo-local CI scratch (never /tmp)
 PORT_NAME="signalwire-php"
 
 # Shared FMT/LINT/TEST tool-environment bootstrap (puts vendor/bin on PATH,
@@ -151,15 +152,15 @@ test_gate() {
 surface_fresh_gate() {
     (
         set -e
-        if git show HEAD:port_surface.json > /tmp/committed_surface.json 2>/dev/null; then
+        if git show HEAD:port_surface.json > "$PORT_ROOT/.sw-tmp/committed_surface.json" 2>/dev/null; then
             :
         else
-            cp port_surface.json /tmp/committed_surface.json
+            cp port_surface.json "$PORT_ROOT/.sw-tmp/committed_surface.json"
         fi
         python3 scripts/enumerate_surface.py
         rc=0
         python3 "$PORTING_SDK_DIR/scripts/check_surface_freshness.py" \
-            --committed /tmp/committed_surface.json \
+            --committed "$PORT_ROOT/.sw-tmp/committed_surface.json" \
             --fresh port_surface.json || rc=$?
         git checkout -- port_surface.json
         exit "$rc"
@@ -175,7 +176,7 @@ rest_coverage_gate() {
     local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
     PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}" \
         "$PYTHON_BIN" -m mock_signalwire --host 127.0.0.1 --port "$port" \
-        --log-level error >/tmp/rest_cov_mock_php.$$.log 2>&1 &
+        --log-level error >"$PORT_ROOT/.sw-tmp/rest_cov_mock_php.$$.log" 2>&1 &
     local mock_pid=$!
     # shellcheck disable=SC2064
     trap "kill $mock_pid 2>/dev/null" RETURN
@@ -219,8 +220,8 @@ spec_parity_gate() {
 # SURFACE-DIFF — diff the port's public surface against the Python reference.
 # Regenerate in place, diff, restore unconditionally.
 surface_diff_gate() {
-    git show HEAD:port_surface.json > /tmp/committed_surface_diff.json 2>/dev/null \
-        || cp "$PORT_ROOT/port_surface.json" /tmp/committed_surface_diff.json
+    git show HEAD:port_surface.json > "$PORT_ROOT/.sw-tmp/committed_surface_diff.json" 2>/dev/null \
+        || cp "$PORT_ROOT/port_surface.json" "$PORT_ROOT/.sw-tmp/committed_surface_diff.json"
     python3 scripts/enumerate_surface.py
     local regen_rc=$?
     if [ "$regen_rc" -ne 0 ]; then
