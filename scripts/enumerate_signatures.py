@@ -415,11 +415,23 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 # surfacing as drift. Keyed by (PHP fully-qualified class, PHP method name) ->
 # canonical return type string.
 RETURN_TYPE_REMAPS: dict[tuple[str, str], str] = {
-    # (No method return remaps currently needed — the AgentServer.agents /
-    # SkillManager.loaded_skills Python public-dict attributes are kept as
-    # private-field+accessor idiom in PHP, excused in PORT_OMISSIONS exactly
-    # like go, rather than surfaced as a public accessor method. See the
-    # PORT_OMISSIONS entries for those two symbols.)
+    # as_router() — Python's named "embed my routes in a host app" return type is
+    # ``signalwire.core.web.HostAppRouter``; the signature oracle records it as the
+    # return of both SWMLService.as_router and the projected WebMixin.as_router. PHP
+    # has no framework router: asRouter() returns the Service itself (which
+    # implements RequestHandlerLike — the mountable/dispatchable unit), so PHP
+    # reflection sees ``$this`` → the concrete Service class. Record the canonical
+    # named return type HERE so PHP reconciles EQUAL with Python's
+    # ``as_router() -> HostAppRouter`` contract. HostAppRouter is a signature-only
+    # named type (NOT in the surface oracle — it is deliberately not surfaced, exactly
+    # like the ConversationRole/StringFormat aliases in PROPERTY_TYPE_REMAPS), so
+    # referencing it here adds NO surface class and does not perturb SURFACE-DIFF.
+    # The remap is applied during class enumeration (before mixin projection), so the
+    # single entry flows to both SWMLService.as_router and WebMixin.as_router. Mirrors
+    # go, whose port_signatures.json records the same HostAppRouter return.
+    # Annotation-only: no new class, no surface change, no runtime change.
+    ("SignalWire\\SWML\\Service", "asRouter"):
+        "class:signalwire.core.web.HostAppRouter",
 }
 
 

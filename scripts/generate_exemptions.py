@@ -294,12 +294,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "and FPM lifecycles are managed externally.",
     ),
     (
-        "signalwire.core.swml_service.SWMLService.as_router",
-        "Python helper for FastAPI/Starlette router-mounting; PHP's web "
-        "framework integration is handled at the request level via "
-        "Service::handle_request.",
-    ),
-    (
         "signalwire.core.swml_service.SWMLService.manual_set_proxy_url",
         "Equivalent method exists on AgentBase (the class users typically "
         "instantiate); SWMLService consumers can construct with "
