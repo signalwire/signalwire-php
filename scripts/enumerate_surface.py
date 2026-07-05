@@ -610,6 +610,13 @@ METHOD_ALIASES: dict[str, str] = {
     # Project the PHP name onto the canonical ``pass_`` (only Call declares a
     # ``pass`` method — no collision applying globally).
     "pass": "pass_",
+    # Python ``SecurityConfig.get_ssl_context_kwargs`` returns a PRIMITIVE dict of
+    # TLS path strings ({ssl_certfile, ssl_keyfile}) — NOT an ssl.SSLContext object.
+    # PHP exposes the same primitive TLS config via ``getServerTlsOptions()``
+    # (stream-context ``ssl`` options {local_cert, local_pk}). Same capability, only
+    # the dict-key spelling / accessor name differs — a rename, not an omission.
+    # (Only SecurityConfig declares this method — no collision applying globally.)
+    "get_server_tls_options": "get_ssl_context_kwargs",
 }
 
 

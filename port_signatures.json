@@ -7822,7 +7822,7 @@
               ],
               "returns": "any"
             },
-            "get_server_tls_options": {
+            "get_ssl_context_kwargs": {
               "params": [
                 {
                   "name": "self",

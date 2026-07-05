@@ -100,6 +100,32 @@ final class SecurityConfigTest extends TestCase
         $this->assertSame([], $cfg->getServerTlsOptions());
     }
 
+    /**
+     * Reconciliation contract for get_ssl_context_kwargs: the TLS config exposes
+     * PRIMITIVE cert-path/key-path strings (not an SSLContext object), matching the
+     * oracle's primitive-dict shape. getServerTlsOptions is reconciled onto
+     * get_ssl_context_kwargs via the enumerator METHOD_ALIASES rename map.
+     */
+    public function testServerTlsOptionsAreCertKeyPathPrimitives(): void
+    {
+        $cert = tempnam(sys_get_temp_dir(), 'cert');
+        $key = tempnam(sys_get_temp_dir(), 'key');
+        putenv('SWML_SSL_ENABLED=true');
+        putenv("SWML_SSL_CERT_PATH={$cert}");
+        putenv("SWML_SSL_KEY_PATH={$key}");
+
+        $opts = (new SecurityConfig())->getServerTlsOptions();
+
+        // Both members are primitive path strings (the cert path and the key path).
+        $this->assertIsString($opts['local_cert']);
+        $this->assertIsString($opts['local_pk']);
+        $this->assertSame($cert, $opts['local_cert']);
+        $this->assertSame($key, $opts['local_pk']);
+
+        @unlink($cert);
+        @unlink($key);
+    }
+
     public function testSecurityHeaders(): void
     {
         $cfg = new SecurityConfig();

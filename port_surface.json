@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ c621e0e107f0d20d34cbb60a89b9bfe7d2a491b8",
+  "generated_from": "signalwire-php @ 1027627312a5055d0f253e31a4101a5c2fc08f50",
   "modules": {
     "signalwire": {
       "classes": {
@@ -624,7 +624,7 @@
           "get_basic_auth",
           "get_cors_config",
           "get_security_headers",
-          "get_server_tls_options",
+          "get_ssl_context_kwargs",
           "get_url_scheme",
           "load_from_env",
           "log_config",

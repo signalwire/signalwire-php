@@ -13,12 +13,14 @@ namespace SignalWire\Core;
  * ``signalwire.core.security_config.SecurityConfig`` (wire/semantic contract) and
  * TS's ``SslConfig`` (the shape oracle for the TLS-serving concern).
  *
- * PHP idiom note: Python's ``get_ssl_context_kwargs()`` returns kwargs for the
- * stdlib ``ssl.SSLContext`` — a Python-object shape with no cross-language
- * equivalent (TS omits it as impossible too). PHP ships the framework-native
- * replacement ``getServerTlsOptions()`` (PHP stream-context ``ssl`` options,
- * the shape ``stream_socket_server`` / a SAPI TLS front-end consumes), mirroring
- * TS's ``SslConfig.getServerOptions()`` — recorded in PORT_ADDITIONS.md.
+ * PHP idiom note: Python's ``get_ssl_context_kwargs()`` returns a PRIMITIVE dict
+ * of TLS path strings (``{ssl_certfile, ssl_keyfile}``) — not an ``ssl.SSLContext``
+ * object. PHP exposes the same primitive TLS config via ``getServerTlsOptions()``
+ * (the stream-context ``ssl`` option array ``{local_cert, local_pk}`` that
+ * ``stream_socket_server`` / a SAPI TLS front-end consumes), mirroring TS's
+ * ``SslConfig.getServerOptions()``. Same cert-path/key-path capability, PHP
+ * accessor/key spelling — reconciled onto ``get_ssl_context_kwargs`` via the
+ * enumerator's METHOD_ALIASES rename map (a rename, not an omission).
  *
  * Python parity: signalwire/signalwire/core/security_config.py
  */
@@ -260,12 +262,14 @@ class SecurityConfig
     }
 
     /**
-     * PHP-native TLS-serving options (the replacement for Python's
-     * ``get_ssl_context_kwargs``, which returns stdlib ``ssl.SSLContext`` kwargs
-     * with no cross-language equivalent). Returns the ``ssl`` stream-context
-     * option array a PHP TLS front-end (``stream_socket_server`` / a SAPI) needs,
-     * or an empty array when SSL is disabled or the config is invalid. Mirrors
-     * TS's ``SslConfig.getServerOptions()``. Recorded in PORT_ADDITIONS.md.
+     * PHP-native TLS-serving options — the ``get_ssl_context_kwargs`` analog.
+     * Python returns a primitive dict ``{ssl_certfile, ssl_keyfile}``; PHP returns
+     * the equivalent primitive stream-context ``ssl`` option array
+     * ``{local_cert, local_pk}`` that a PHP TLS front-end
+     * (``stream_socket_server`` / a SAPI) consumes, or an empty array when SSL is
+     * disabled or the config is invalid. Mirrors TS's
+     * ``SslConfig.getServerOptions()``. Reconciled onto the oracle name via the
+     * enumerator METHOD_ALIASES rename map.
      *
      * @return array<string, mixed>
      */
