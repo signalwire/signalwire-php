@@ -645,21 +645,6 @@ signalwire.rest.namespaces._client_tree_generated.VideoNamespace.streams: PHP-id
 signalwire.rest.namespaces.calling_resources_generated.Calling.get_base_path: PHP-idiom getter: explicit getBasePath() on the generated command-dispatch resource; Python exposes the base path as a class-level attribute. Same data, different access shape.
 signalwire.rest._base.FabricResource.__init__: PHP reflection synthesizes a constructor entry on every concrete class (inherited from CrudWithAddresses); Python's FabricResource is an empty intermediate base that inherits __init__ without redeclaring it.
 
-# --- Changeset item H: concrete RELAY action-control methods (PHP flattens the abstract mixin chain) ---
-# Python factors the call-action controls into an abstract mixin chain
-# (StoppableAction -> PausableAction -> VolumeAction -> concrete PlayAction/
-# RecordAction/...), so pause/resume/volume live on the abstract bases. PHP gives
-# each concrete action its own pause/resume/volume method where the caller
-# actually invokes them (src/SignalWire/Relay/Action.php), and does not model the
-# abstract bases as PHP classes (excused in PORT_OMISSIONS.md). The surface gate
-# (no structural skip) needs these flattened concrete-action methods documented
-# here. Mirrors the go/TS port precedent.
-signalwire.relay.call.PlayAction.pause: concrete-action control method; Python emits pause on the PausableAction mixin base it inherits
-signalwire.relay.call.PlayAction.resume: concrete-action control method; Python emits resume on the PausableAction mixin base it inherits
-signalwire.relay.call.PlayAction.volume: concrete-action control method; Python emits volume on the VolumeAction mixin base it inherits
-signalwire.relay.call.RecordAction.pause: concrete-action control method; Python emits pause on the PausableAction mixin base it inherits
-signalwire.relay.call.RecordAction.resume: concrete-action control method; Python emits resume on the PausableAction mixin base it inherits
-
 # --- Skill override methods PHP declares that the reference skill does not ---
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.
 

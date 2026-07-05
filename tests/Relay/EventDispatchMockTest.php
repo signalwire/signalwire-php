@@ -88,7 +88,7 @@ class EventDispatchMockTest extends TestCase
             ['format' => 'wav'],
             ['control_id' => 'ec-rec-pa-1'],
         );
-        $action->pause(['behavior' => 'continuous']);
+        $action->pause('continuous');
         $pauses = $this->mock->journal()->recv('calling.record.pause');
         $this->assertNotEmpty($pauses);
         $p = Shape::sub($pauses[count($pauses) - 1]->frame, 'params');

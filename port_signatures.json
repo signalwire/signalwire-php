@@ -21636,6 +21636,30 @@
               ],
               "returns": "void"
             },
+            "pause": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "behavior",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                }
+              ],
+              "returns": "void"
+            },
+            "resume": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
             "set_stop_method": {
               "params": [
                 {
@@ -21655,6 +21679,20 @@
                 {
                   "name": "self",
                   "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "volume": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "db",
+                  "type": "float",
+                  "required": true
                 }
               ],
               "returns": "void"
@@ -21856,6 +21894,12 @@
                 {
                   "name": "self",
                   "kind": "self"
+                },
+                {
+                  "name": "behavior",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -21959,10 +22003,10 @@
                   "kind": "self"
                 },
                 {
-                  "name": "extra",
-                  "type": "any",
+                  "name": "behavior",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": []
+                  "default": null
                 }
               ],
               "returns": "void"

@@ -393,6 +393,75 @@ class ActionsMockTest extends TestCase
         );
     }
 
+    #[Test]
+    public function playAndCollectPauseResumeVolumeJournal(): void
+    {
+        $call = $this->answeredInboundCall('call-pac-prv');
+        $action = $call->playAndCollect(
+            [['type' => 'silence', 'params' => ['duration' => 60]]],
+            ['digits' => ['max' => 1]],
+            ['control_id' => 'pac-prv'],
+        );
+        // CollectAction is a VolumeAction in the reference: pause/resume/volume
+        // route on the play_and_collect command prefix (derived from stop).
+        $action->pause();
+        $action->resume();
+        $action->volume(4.0);
+
+        $this->assertNotEmpty($this->mock->journal()->recv('calling.play_and_collect.pause'));
+        $this->assertNotEmpty($this->mock->journal()->recv('calling.play_and_collect.resume'));
+        $vols = $this->mock->journal()->recv('calling.play_and_collect.volume');
+        $this->assertNotEmpty($vols);
+        $vol = Shape::at($vols[count($vols) - 1]->frame, 'params', 'volume');
+        $this->assertIsNumeric($vol);
+        $this->assertEqualsWithDelta(4.0, (float) $vol, 0.0001);
+    }
+
+    #[Test]
+    public function recordPauseWithBehaviorJournalsBehavior(): void
+    {
+        $call = $this->answeredInboundCall('call-rec-beh');
+        $action = $call->record(
+            ['format' => 'wav'],
+            ['control_id' => 'rec-beh'],
+        );
+        // The optional behavior string mirrors Python's pause(behavior=None)
+        // and is sent on the wire only when non-empty.
+        $action->pause('continuous');
+        $paused = $this->mock->journal()->recv('calling.record.pause');
+        $this->assertNotEmpty($paused);
+        $this->assertSame(
+            'continuous',
+            Shape::at($paused[count($paused) - 1]->frame, 'params', 'behavior'),
+        );
+
+        // No behavior => key absent (params carry only the routing ids).
+        $action->pause();
+        $bare = $this->mock->journal()->recv('calling.record.pause');
+        $frame = Shape::sub($bare[count($bare) - 1]->frame, 'params');
+        $this->assertArrayNotHasKey('behavior', $frame);
+    }
+
+    #[Test]
+    public function concreteActionsExposeExpectedControlSurface(): void
+    {
+        // The reference projects the mixin controls onto each concrete action.
+        // Assert the exact control surface (and that RecordAction has NO volume).
+        $has = static fn (string $cls, string $m): bool => method_exists($cls, $m);
+
+        foreach (['stop', 'pause', 'resume', 'volume'] as $m) {
+            $this->assertTrue($has(PlayAction::class, $m), "PlayAction::$m");
+        }
+        foreach (['stop', 'pause', 'resume'] as $m) {
+            $this->assertTrue($has(RecordAction::class, $m), "RecordAction::$m");
+        }
+        $this->assertFalse($has(RecordAction::class, 'volume'), 'RecordAction must NOT expose volume');
+
+        foreach (['stop', 'pause', 'resume', 'volume', 'startInputTimers'] as $m) {
+            $this->assertTrue($has(CollectAction::class, $m), "CollectAction::$m");
+        }
+    }
+
     // ------------------------------------------------------------------
     // CollectAction (standalone)
     // ------------------------------------------------------------------

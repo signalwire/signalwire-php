@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 524ca600a0f9b310fbda8f8138618223b503ba0a",
+  "generated_from": "signalwire-php @ c621e0e107f0d20d34cbb60a89b9bfe7d2a491b8",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1086,7 +1086,8 @@
     "signalwire.relay.call": {
       "classes": {
         "AIAction": [
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ],
         "Action": [
           "__init__",
@@ -1171,25 +1172,33 @@
           "get_collect_result",
           "get_stop_method",
           "handle_event",
+          "pause",
+          "resume",
           "set_stop_method",
-          "start_input_timers"
+          "start_input_timers",
+          "stop",
+          "volume"
         ],
         "DetectAction": [
           "get_detect_result",
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ],
         "FaxAction": [
           "__init__",
           "get_fax_type",
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ],
         "PayAction": [
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ],
         "PlayAction": [
           "get_stop_method",
           "pause",
           "resume",
+          "stop",
           "volume"
         ],
         "RecordAction": [
@@ -1198,20 +1207,25 @@
           "get_stop_method",
           "get_url",
           "pause",
-          "resume"
+          "resume",
+          "stop"
         ],
         "StandaloneCollectAction": [
           "__init__",
-          "start_input_timers"
+          "start_input_timers",
+          "stop"
         ],
         "StreamAction": [
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ],
         "TapAction": [
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ],
         "TranscribeAction": [
-          "get_stop_method"
+          "get_stop_method",
+          "stop"
         ]
       },
       "functions": []

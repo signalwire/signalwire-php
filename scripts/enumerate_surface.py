@@ -1230,6 +1230,32 @@ def build_surface() -> dict:
     #     ReadResource base).
     _inject_extends(modules, files)
 
+    # RELAY concrete-action `stop` projection.
+    #
+    # The Python reference factors the call-action controls into a mixin chain
+    # (StoppableAction -> PausableAction -> VolumeAction -> concrete
+    # PlayAction/RecordAction/...) and PROJECTS `stop` onto every concrete
+    # action, so the oracle records `stop` on each of the 11 concrete actions.
+    # PHP flattens the chain: `stop()` lives on the base `Action` (driven by
+    # each subclass's `getStopMethod()` override) and every concrete action
+    # inherits it — i.e. each concrete action DOES expose `stop` at runtime.
+    # The enumerator records only own-body methods, so inject the inherited
+    # `stop` onto each concrete action to reconcile the flattening in emit
+    # (rule §2: idiom is reconciled in the enumerator, never by omission).
+    _RELAY_CONCRETE_ACTIONS = {
+        "PlayAction", "RecordAction", "CollectAction", "StandaloneCollectAction",
+        "DetectAction", "FaxAction", "TapAction", "StreamAction", "PayAction",
+        "TranscribeAction", "AIAction",
+    }
+    for cls in _RELAY_CONCRETE_ACTIONS:
+        module_path = CLASS_MODULE_MAP.get(cls)
+        if not module_path:
+            continue
+        translated = _translate_class(cls)
+        existing = set(modules[module_path]["classes"].get(translated, []))
+        existing.add("stop")
+        modules[module_path]["classes"][translated] = sorted(existing)
+
     # Apply mixin projections — pick matching methods off AgentBase / SWMLService
     # and emit them under each Python mixin module path so the diff lines up.
     # Mirrors the C++ port's mixin-projection pattern.

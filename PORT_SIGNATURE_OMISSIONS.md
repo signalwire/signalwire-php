@@ -176,10 +176,13 @@ signalwire.relay.call.Call.wait_for_ending: PHP-event-typing: PHP's waitForEndin
 signalwire.relay.call.Call.wait_for_ringing: PHP-event-typing: PHP's waitForRinging(timeout) returns bool (true once at/past ringing, false on timeout); Python returns a RelayEvent. Same lifecycle short-circuit, different return encoding — see Action.wait
 signalwire.relay.call.CollectAction.start_input_timers: PHP-return-typing: PHP returns void (the SDK does not surface the wire response); Python returns the dict reply. Same wire effect.
 signalwire.relay.call.FaxAction.__init__: PHP-construction: FaxAction inherits Action's PHP-shaped (controlId, callId, nodeId, client) constructor and adds an explicit fax_type discriminant; Python takes (call, control_id, method_prefix). Same construction surface.
+signalwire.relay.call.CollectAction.pause: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.play_and_collect.pause).
+signalwire.relay.call.CollectAction.resume: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.play_and_collect.resume).
+signalwire.relay.call.CollectAction.volume: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.play_and_collect.volume).
 signalwire.relay.call.PlayAction.pause: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.play.pause).
 signalwire.relay.call.PlayAction.resume: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.play.resume).
 signalwire.relay.call.PlayAction.volume: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.play.volume).
-signalwire.relay.call.RecordAction.pause: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.record.pause). PHP's extra=array merges Python's behavior=str + **kwargs into one bag.
+signalwire.relay.call.RecordAction.pause: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.record.pause).
 signalwire.relay.call.RecordAction.resume: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.record.resume).
 signalwire.relay.client.RelayClient.__init__: PHP-idiom-options-collapse: PHP's RelayClient constructor takes (options) array carrying project/token/jwt_token/host/contexts/max_active_calls; Python expands them as positional params. Same construction surface
 signalwire.relay.client.RelayClient.dial: PHP-idiom-options-trim: PHP's RelayClient.dial takes (devices, opts); Python expands tag/max_duration/dial_timeout as positional params (now nested under opts)

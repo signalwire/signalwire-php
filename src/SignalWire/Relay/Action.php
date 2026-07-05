@@ -279,9 +279,16 @@ class PlayAction extends Action
         return 'calling.play.stop';
     }
 
-    public function pause(): void
+    /**
+     * Pause playback.
+     *
+     * Mirrors Python's ``PausableAction.pause(behavior=None)``: the optional
+     * ``$behavior`` string is only sent on the wire when non-empty.
+     */
+    public function pause(?string $behavior = null): void
     {
-        $this->executeSubcommand('calling.play.pause');
+        $extra = ($behavior !== null && $behavior !== '') ? ['behavior' => $behavior] : [];
+        $this->executeSubcommand('calling.play.pause', $extra);
     }
 
     public function resume(): void
@@ -313,11 +320,15 @@ class RecordAction extends Action
     }
 
     /**
-     * @param array<string,mixed> $extra Additional params to merge onto
-     *   the wire (e.g. ``['behavior' => 'continuous']``).
+     * Pause the recording.
+     *
+     * Mirrors Python's ``PausableAction.pause(behavior=None)``: the optional
+     * ``$behavior`` string (e.g. ``'continuous'``) is only sent on the wire
+     * when non-empty.
      */
-    public function pause(array $extra = []): void
+    public function pause(?string $behavior = null): void
     {
+        $extra = ($behavior !== null && $behavior !== '') ? ['behavior' => $behavior] : [];
         $this->executeSubcommand('calling.record.pause', $extra);
     }
 
@@ -370,6 +381,47 @@ class CollectAction extends Action
     public function getStopMethod(): string
     {
         return $this->stopMethod;
+    }
+
+    /**
+     * The RELAY command prefix (e.g. ``calling.play_and_collect``) shared by
+     * this action's pause/resume/volume sub-commands. Derived from the stop
+     * method so play_and_collect vs standalone-collect route correctly, and so
+     * pause/resume/volume mirror Python's ``_command_prefix`` behaviour.
+     */
+    protected function commandPrefix(): string
+    {
+        $stop = $this->getStopMethod();
+        return str_ends_with($stop, '.stop') ? substr($stop, 0, -strlen('.stop')) : $stop;
+    }
+
+    /**
+     * Pause the collect.
+     *
+     * Mirrors Python's ``CollectAction`` (a ``VolumeAction``): the optional
+     * ``$behavior`` string is only sent on the wire when non-empty.
+     */
+    public function pause(?string $behavior = null): void
+    {
+        $extra = ($behavior !== null && $behavior !== '') ? ['behavior' => $behavior] : [];
+        $this->executeSubcommand($this->commandPrefix() . '.pause', $extra);
+    }
+
+    public function resume(): void
+    {
+        $this->executeSubcommand($this->commandPrefix() . '.resume');
+    }
+
+    /**
+     * Adjust the play volume of an active play_and_collect.
+     *
+     * @param float $db Volume adjustment in dB.
+     */
+    public function volume(float $db): void
+    {
+        $this->executeSubcommand($this->commandPrefix() . '.volume', [
+            'volume' => $db,
+        ]);
     }
 
     /**

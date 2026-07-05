@@ -626,25 +626,6 @@ signalwire.core.security.security_utils.filter_sensitive_headers: impossible: im
 signalwire.core.security.security_utils.redact_url: impossible: implemented as static method SecurityUtils::redactUrl (language idiom); see PORT_ADDITIONS.md PHP (PSR-4, file-per-class) cannot declare a module-level free function; the capability is present as the hosted static method (recorded in PORT_ADDITIONS).
 signalwire.core.security.security_utils.is_valid_hostname: impossible: implemented as static method SecurityUtils::isValidHostname (language idiom); see PORT_ADDITIONS.md PHP (PSR-4, file-per-class) cannot declare a module-level free function; the capability is present as the hosted static method (recorded in PORT_ADDITIONS).
 
-# --- RELAY abstract action mixin bases (PHP flattens the hierarchy) ---
-# Python factors the call-action controls into an abstract mixin chain
-# (StoppableAction -> PausableAction -> VolumeAction -> concrete PlayAction/
-# RecordAction/...), so the control methods live on the abstract bases. PHP gives
-# the base Action a stop() and each concrete *Action its own pause/resume/volume
-# method (src/SignalWire/Relay/Action.php) — but the CONTRACT (each control method
-# on each concrete action) IS present and surfaced (recorded in PORT_ADDITIONS.md
-# as changeset item H). PHP does NOT model the abstract bases as PHP classes.
-# The signature gate excuses the abstract-base methods structurally
-# (_is_abstract_action_base_method); the surface gate excuses the bare base
-# classes + their methods here. Mirrors the go/TS port precedent.
-signalwire.relay.call.StoppableAction: impossible: PHP has no abstract-base type; the stop contract is flattened onto the base Action + each concrete *Action (src/SignalWire/Relay/Action.php) — see PORT_ADDITIONS
-signalwire.relay.call.StoppableAction.stop: impossible: PHP has no abstract-base type; stop() is present on the base Action, inherited by each concrete *Action (see PORT_ADDITIONS)
-signalwire.relay.call.PausableAction: impossible: PHP has no abstract-base type; the pause/resume contract is flattened onto each concrete *Action (see PORT_ADDITIONS)
-signalwire.relay.call.PausableAction.pause: impossible: PHP has no abstract-base type; pause() is present on each concrete pausable *Action (see PORT_ADDITIONS)
-signalwire.relay.call.PausableAction.resume: impossible: PHP has no abstract-base type; resume() is present on each concrete pausable *Action (see PORT_ADDITIONS)
-signalwire.relay.call.VolumeAction: impossible: PHP has no abstract-base type; the volume contract is flattened onto each concrete *Action (see PORT_ADDITIONS)
-signalwire.relay.call.VolumeAction.volume: impossible: PHP has no abstract-base type; volume() is present on each concrete volume-capable *Action (see PORT_ADDITIONS)
-
 # --- LiveWire (LiveKit-agents compat shim) — PHP is not a LiveKit agents SDK language ---
 signalwire.livewire.Agent: approved: livewire is a LiveKit-agents compatibility shim — ported ONLY to languages LiveKit ships an agents SDK for (Python + Node/TS); not ported to PHP (user ruling, 2026-07)
 signalwire.livewire.Agent.__init__: approved: livewire is a LiveKit-agents compatibility shim — ported ONLY to languages LiveKit ships an agents SDK for (Python + Node/TS); not ported to PHP (user ruling, 2026-07)
