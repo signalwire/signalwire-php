@@ -279,7 +279,7 @@ sched_gate GEN-FRESH-RELAY desc="generated RELAY-protocol tree matches relay-pro
 sched_gate GEN-FRESH-SWAIG desc="generated SWAIG-payload tree matches swaig-specs/*.yaml (--check)" \
     -- python3 scripts/generate_swaig_payloads.py --check
 
-sched_gate GEN-FRESH-REST-TESTS desc="generated REST wire-test suite matches the oracle (--check)" \
+sched_gate GEN-FRESH-TESTS desc="generated REST wire-test suite matches the oracle (--check)" \
     -- python3 scripts/generate_rest_tests.py --check
 
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
