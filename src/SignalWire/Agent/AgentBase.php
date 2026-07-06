@@ -316,10 +316,14 @@ class AgentBase extends Service implements AgentInterface
     {
         $this->usePom = true;
 
+        // Match the POM Section serializer (POM\Section::toArray, and Python's
+        // pom Section.to_dict): an empty body is OMITTED, not emitted as "".
         $section = [
             'title'  => $title,
-            'body'   => $body,
         ];
+        if ($body !== '') {
+            $section['body'] = $body;
+        }
 
         if (!empty($bullets)) {
             $section['bullets'] = $bullets;
@@ -342,10 +346,11 @@ class AgentBase extends Service implements AgentInterface
                 if (!isset($section['subsections'])) {
                     $section['subsections'] = [];
                 }
-                $section['subsections'][] = [
-                    'title' => $title,
-                    'body'  => $body,
-                ];
+                $sub = ['title' => $title];
+                if ($body !== '') {
+                    $sub['body'] = $body;
+                }
+                $section['subsections'][] = $sub;
                 $found = true;
                 break;
             }
@@ -355,14 +360,13 @@ class AgentBase extends Service implements AgentInterface
         // Auto-create the parent section when missing (matching the
         // TypeScript reference, which calls addSection(parentTitle)).
         if (!$found) {
+            $sub = ['title' => $title];
+            if ($body !== '') {
+                $sub['body'] = $body;
+            }
             $this->pomSections[] = [
                 'title'       => $parentTitle,
-                'subsections' => [
-                    [
-                        'title' => $title,
-                        'body'  => $body,
-                    ],
-                ],
+                'subsections' => [$sub],
             ];
         }
 

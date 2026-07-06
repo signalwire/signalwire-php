@@ -243,7 +243,14 @@ class Service implements RequestHandlerLike
 
     public function registerRoutingCallback(string $path, callable $callback): void
     {
-        $this->routingCallbacks[$path] = $callback;
+        // Normalize the path for consistent lookup (Python parity: strip a
+        // trailing slash, ensure a single leading slash). "/sip/" -> "/sip",
+        // "voice" -> "/voice".
+        $normalized = rtrim($path, '/');
+        if (!str_starts_with($normalized, '/')) {
+            $normalized = '/' . $normalized;
+        }
+        $this->routingCallbacks[$normalized] = $callback;
     }
 
     // ------------------------------------------------------------------
@@ -723,15 +730,17 @@ class Service implements RequestHandlerLike
             return $this->jsonResponse(404, ['error' => 'Not found']);
         }
 
-        // Auth required for everything under the route
+        // Auth required for everything under the route.
+        // Python parity (SWMLService._handle_request_core): the framework-free
+        // core returns a bare (401, {"WWW-Authenticate": "Basic"}, JSON error)
+        // triple. Security headers / Content-Type are applied by the serving
+        // layer (WebService / AgentServer), mirroring Python's FastAPI
+        // add_security_headers middleware — NOT baked into this primitive.
         if (!$this->checkBasicAuth($headers)) {
             return [
                 401,
-                array_merge(
-                    ['Content-Type' => 'text/plain', 'WWW-Authenticate' => 'Basic realm="SignalWire SWML Service"'],
-                    $this->securityHeaders(),
-                ),
-                'Unauthorized',
+                ['WWW-Authenticate' => 'Basic'],
+                (string) json_encode(['error' => 'Unauthorized']),
             ];
         }
 
@@ -801,9 +810,12 @@ class Service implements RequestHandlerLike
             }
             if (is_string($route) && $route !== '') {
                 $this->logger->info("routing_request route={$route}");
+                // Python parity: bare (307, {"Location": route}, "") from the
+                // framework-free core; security headers are a serving-layer
+                // concern (WebService / AgentServer).
                 return [
                     307,
-                    array_merge(['Location' => $route], $this->securityHeaders()),
+                    ['Location' => $route],
                     '',
                 ];
             }
@@ -825,7 +837,14 @@ class Service implements RequestHandlerLike
     protected function handleSwmlRequest(string $method, ?array $requestData, array $headers): array
     {
         $swml = $this->renderSwml($requestData, $headers);
-        return $this->jsonResponse(200, $swml);
+        // Python parity: the framework-free core returns a bare (200, {}, body)
+        // triple for the served SWML document (no Content-Type / security
+        // headers — those belong to the serving/middleware layer).
+        $body = json_encode($swml, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($body === false) {
+            throw new \RuntimeException('json_encode failed');
+        }
+        return [200, [], $body];
     }
 
     /**
@@ -915,26 +934,26 @@ class Service implements RequestHandlerLike
             return null;
         }
 
-        // Look for SIP URI in common locations
+        // Only the call.to field is consulted (Python parity: it reads
+        // request_body["call"]["to"], catching KeyError/AttributeError -> None).
         $call = $requestBody['call'] ?? null;
-        $sipUri = (is_array($call) ? ($call['to'] ?? null) : null) ?? $requestBody['to'] ?? null;
-        if ($sipUri === null || !is_string($sipUri)) {
+        $toField = is_array($call) ? ($call['to'] ?? null) : null;
+        if (!is_string($toField)) {
             return null;
         }
 
-        // Extract username from sip:username@host
-        if (preg_match('/^sip:([^@]+)@/', $sipUri, $matches)) {
-            $username = $matches[1];
-        } else {
-            $username = $sipUri;
+        // SIP URIs "sip:username@domain" -> the part between "sip:" and "@".
+        if (str_starts_with($toField, 'sip:')) {
+            return explode('@', substr($toField, 4), 2)[0];
         }
 
-        // Validate format
-        if (strlen($username) > 64 || !preg_match('/^[a-zA-Z0-9._-]+$/', $username)) {
-            return null;
+        // TEL URIs "tel:+1234567890" -> the phone number after "tel:".
+        if (str_starts_with($toField, 'tel:')) {
+            return substr($toField, 4);
         }
 
-        return $username;
+        // Otherwise return the whole 'to' field verbatim.
+        return $toField;
     }
 
     // ------------------------------------------------------------------

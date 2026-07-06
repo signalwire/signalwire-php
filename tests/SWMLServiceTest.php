@@ -347,25 +347,23 @@ class SWMLServiceTest extends TestCase
     // HTTP Handling: Security Headers
     // ------------------------------------------------------------------
 
-    public function testSecurityHeadersOnAuth(): void
+    public function testHandleRequestCoreReturnsBareHeaders(): void
     {
+        // Python parity (SWMLService._handle_request_core): the framework-free
+        // dispatch core returns bare (200, {}, swml) / (401, {WWW-Authenticate},
+        // json) triples. Security headers are applied by the SERVING layer
+        // (WebService / AgentServer), mirroring Python's FastAPI
+        // add_security_headers middleware — NOT baked into this primitive.
         $svc = $this->makeService();
+
         [$status, $headers,] = $svc->handleRequest('GET', '/', $this->authHeader());
-
         $this->assertSame(200, $status);
-        $this->assertSame('nosniff', $headers['X-Content-Type-Options']);
-        $this->assertSame('DENY', $headers['X-Frame-Options']);
-        $this->assertSame('no-store', $headers['Cache-Control']);
-    }
+        $this->assertSame([], $headers, '200 SWML core response must carry no headers');
 
-    public function testSecurityHeadersOn401(): void
-    {
-        $svc = $this->makeService();
-        [, $headers,] = $svc->handleRequest('GET', '/');
-
-        $this->assertSame('nosniff', $headers['X-Content-Type-Options']);
-        $this->assertSame('DENY', $headers['X-Frame-Options']);
-        $this->assertSame('no-store', $headers['Cache-Control']);
+        [$status401, $headers401,] = $svc->handleRequest('GET', '/');
+        $this->assertSame(401, $status401);
+        $this->assertSame(['WWW-Authenticate'], array_keys($headers401));
+        $this->assertSame('Basic', $headers401['WWW-Authenticate']);
     }
 
     // ------------------------------------------------------------------
@@ -528,35 +526,33 @@ class SWMLServiceTest extends TestCase
         $this->assertSame('agent1', Service::extractSipUsername($body));
     }
 
-    public function testExtractSipUsernameFromTo(): void
+    public function testExtractSipUsernameTel(): void
     {
-        $body = ['to' => 'sip:myuser@host.com'];
-        $this->assertSame('myuser', Service::extractSipUsername($body));
+        // Python parity: a tel: URI returns the phone number after "tel:".
+        $body = ['call' => ['to' => 'tel:+15551234567']];
+        $this->assertSame('+15551234567', Service::extractSipUsername($body));
+    }
+
+    public function testExtractSipUsernamePlain(): void
+    {
+        // Neither sip: nor tel: -> the whole call.to field, verbatim.
+        $body = ['call' => ['to' => 'support']];
+        $this->assertSame('support', Service::extractSipUsername($body));
     }
 
     public function testExtractSipUsernameNull(): void
     {
+        // Only call.to is consulted (Python parity: no top-level `to` fallback).
         $this->assertNull(Service::extractSipUsername(null));
         $this->assertNull(Service::extractSipUsername([]));
+        $this->assertNull(Service::extractSipUsername(['to' => 'sip:x@host.com']));
     }
 
-    public function testExtractSipUsernameRejectsInvalid(): void
+    public function testExtractSipUsernameReturnsRawValue(): void
     {
-        // Invalid characters
-        $body = ['to' => 'sip:user;drop@host.com'];
-        $this->assertNull(Service::extractSipUsername($body));
-    }
-
-    public function testExtractSipUsernameTooLong(): void
-    {
-        $long = str_repeat('a', 65);
-        $body = ['to' => "sip:{$long}@host.com"];
-        $this->assertNull(Service::extractSipUsername($body));
-    }
-
-    public function testExtractSipUsernameValidChars(): void
-    {
-        $body = ['to' => 'sip:user.name-test_1@host.com'];
+        // Python parity: the extractor performs NO character/length validation —
+        // it returns the raw username between "sip:" and "@" as-is.
+        $body = ['call' => ['to' => 'sip:user.name-test_1@host.com']];
         $this->assertSame('user.name-test_1', Service::extractSipUsername($body));
     }
 

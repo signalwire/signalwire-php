@@ -14,15 +14,27 @@ class SessionManager
 
     /**
      * @param int $tokenExpirySecs Token lifetime in seconds (default 3600).
+     * @param string|null $secretKey Optional HMAC signing key. When null a
+     *        cryptographically-secure random key is generated. Mirrors Python's
+     *        ``SessionManager(token_expiry_secs, secret_key)`` — an explicit key
+     *        is required for cross-instance token interop (the same key must sign
+     *        and validate a token). The key is used verbatim as HMAC-SHA256 key
+     *        bytes, matching Python's ``self.secret_key.encode()``.
      *
      * @throws RuntimeException If secure random bytes cannot be generated.
      */
-    public function __construct(int $tokenExpirySecs = 3600)
+    public function __construct(int $tokenExpirySecs = 3600, ?string $secretKey = null)
     {
         $this->tokenExpirySecs = $tokenExpirySecs;
 
+        if ($secretKey !== null) {
+            $this->secret = $secretKey;
+            return;
+        }
+
         try {
-            $this->secret = random_bytes(32);
+            // token_hex(32) parity: a 64-char hex string used verbatim as the key.
+            $this->secret = bin2hex(random_bytes(32));
         } catch (\Exception $e) {
             throw new RuntimeException(
                 'Failed to generate cryptographically secure secret: ' . $e->getMessage(),

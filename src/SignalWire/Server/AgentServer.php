@@ -221,7 +221,9 @@ class AgentServer
     public function registerSipUsername(string $username, string $route): self
     {
         $route = $this->normalizeRoute($route);
-        $this->sipUsernameMapping[$username] = $route;
+        // Python parity: the mapping is keyed by the lowercased username (store
+        // AND lookup case-fold), so "Bob" and "bob" resolve to the same route.
+        $this->sipUsernameMapping[strtolower($username)] = $route;
         return $this;
     }
 

@@ -7404,6 +7404,12 @@
                   "type": "int",
                   "required": false,
                   "default": 3600
+                },
+                {
+                  "name": "secret_key",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
