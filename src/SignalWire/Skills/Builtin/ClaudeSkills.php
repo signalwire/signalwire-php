@@ -173,6 +173,14 @@ class ClaudeSkills extends SkillBase
 
     public function setup(): bool
     {
+        // Mirror Python `ClaudeSkillsSkill.setup` (skill.py:63): validate the
+        // declared package requirements before touching the load path.
+        if (!$this->validatePackages()) {
+            return false;
+        }
+
+        // Load-path validation: skills_path is required, must exist, and must
+        // be a directory (Python skill.py:72-89).
         $skillsPath = $this->params['skills_path'] ?? null;
         if (!is_string($skillsPath) || $skillsPath === '') {
             return false;

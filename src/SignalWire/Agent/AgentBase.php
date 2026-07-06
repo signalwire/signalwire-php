@@ -44,7 +44,14 @@ class AgentBase extends Service implements AgentInterface
     // ── Hints ───────────────────────────────────────────────────────────
     /** @var list<string> */
     protected array $hints;
-    /** @var list<string> */
+    /**
+     * Structured pattern hints. Each entry mirrors Python's
+     * ``AIConfigMixin.add_pattern_hint`` payload
+     * ``{hint, pattern, replace, ignore_case}`` and is merged into the
+     * rendered ``ai.hints`` array alongside the bare-string hints.
+     *
+     * @var list<array<string,mixed>>
+     */
     protected array $patternHints;
 
     // ── Languages / pronunciations ──────────────────────────────────────
@@ -644,15 +651,53 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
-    public function addPatternHint(string $pattern): self
-    {
-        $this->patternHints[] = $pattern;
+    /**
+     * Add a complex hint with pattern matching.
+     *
+     * Mirrors Python's ``AIConfigMixin.add_pattern_hint``: attaches a
+     * STRUCTURED hint (not a bare string) that is merged into the rendered
+     * SWML ``ai.hints`` array. All three of hint/pattern/replace must be
+     * non-empty for the hint to be recorded (Python parity).
+     *
+     * @param string $hint       The hint token to match.
+     * @param string $pattern    Regular-expression pattern.
+     * @param string $replace    Text to replace the matched hint with.
+     * @param bool   $ignoreCase Whether matching should ignore case.
+     */
+    public function addPatternHint(
+        string $hint,
+        string $pattern,
+        string $replace,
+        bool $ignoreCase = false,
+    ): self {
+        if ($hint !== '' && $pattern !== '' && $replace !== '') {
+            $this->patternHints[] = [
+                'hint'        => $hint,
+                'pattern'     => $pattern,
+                'replace'     => $replace,
+                'ignore_case' => $ignoreCase,
+            ];
+        }
         return $this;
     }
 
     /**
      * Add a language configuration to support multilingual conversations.
      *
+     * Mirrors Python's ``AIConfigMixin.add_language``: carries engine, model
+     * and fillers into the rendered SWML ``ai.languages`` entry, and parses
+     * the combined ``engine.voice:model`` voice string when engine/model are
+     * not given explicitly.
+     *
+     * @param string                   $voice           TTS voice. Either a
+     *     simple name, or the combined ``engine.voice:model`` format when
+     *     engine/model are not passed explicitly.
+     * @param list<string>|null        $speechFillers   Filler phrases for
+     *     natural speech.
+     * @param list<string>|null        $functionFillers Filler phrases spoken
+     *     during function calls.
+     * @param string|null              $engine          Explicit engine name.
+     * @param string|null              $model           Explicit model name.
      * @param array<string,mixed>|null $params Optional per-language
      *     params dict (engine-specific tuning, voice settings, etc.).
      *     Emitted as the language object's `params` key in SWML when
@@ -662,13 +707,54 @@ class AgentBase extends Service implements AgentInterface
         string $name,
         string $code,
         string $voice,
+        ?array $speechFillers = null,
+        ?array $functionFillers = null,
+        ?string $engine = null,
+        ?string $model = null,
         ?array $params = null,
     ): self {
         $language = [
-            'name'  => $name,
-            'code'  => $code,
-            'voice' => $voice,
+            'name' => $name,
+            'code' => $code,
         ];
+
+        // Handle voice formatting (either explicit params or combined string).
+        if ($engine !== null || $model !== null) {
+            $language['voice'] = $voice;
+            if ($engine !== null) {
+                $language['engine'] = $engine;
+            }
+            if ($model !== null) {
+                $language['model'] = $model;
+            }
+        } elseif (str_contains($voice, '.') && str_contains($voice, ':')) {
+            // Parse combined string format: "engine.voice:model".
+            [$engineVoice, $modelPart] = explode(':', $voice, 2);
+            if (str_contains($engineVoice, '.')) {
+                [$enginePart, $voicePart] = explode('.', $engineVoice, 2);
+                $language['voice']  = $voicePart;
+                $language['engine'] = $enginePart;
+                $language['model']  = $modelPart;
+            } else {
+                $language['voice'] = $voice;
+            }
+        } else {
+            $language['voice'] = $voice;
+        }
+
+        // Add fillers if provided.
+        if ($speechFillers !== null && $speechFillers !== []
+            && $functionFillers !== null && $functionFillers !== []) {
+            $language['speech_fillers']   = $speechFillers;
+            $language['function_fillers'] = $functionFillers;
+        } elseif (($speechFillers !== null && $speechFillers !== [])
+            || ($functionFillers !== null && $functionFillers !== [])) {
+            // Only one type provided -> deprecated combined "fillers" field.
+            $language['fillers'] = ($speechFillers !== null && $speechFillers !== [])
+                ? $speechFillers
+                : $functionFillers;
+        }
+
         // Per-language params (engine-specific tuning, voice settings,
         // etc.). Only emit the key when non-empty so we don't pollute
         // SWML with empty objects.

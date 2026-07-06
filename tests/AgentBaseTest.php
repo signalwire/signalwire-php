@@ -334,10 +334,13 @@ class AgentBaseTest extends TestCase
     public function testAddPatternHint(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPatternHint('\\d{3}-\\d{4}');
+        $agent->addPatternHint('SW', '\\bSW\\b', 'SignalWire');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertContains('\\d{3}-\\d{4}', Shape::sub($ai, 'hints'));
+        $this->assertContains(
+            ['hint' => 'SW', 'pattern' => '\\bSW\\b', 'replace' => 'SignalWire', 'ignore_case' => false],
+            Shape::sub($ai, 'hints'),
+        );
     }
 
     public function testAddLanguage(): void
@@ -1003,7 +1006,7 @@ class AgentBaseTest extends TestCase
         $this->assertSame($agent, $agent->promptAddToSection('S', 'more'));
         $this->assertSame($agent, $agent->addHint('hint'));
         $this->assertSame($agent, $agent->addHints(['h']));
-        $this->assertSame($agent, $agent->addPatternHint('p'));
+        $this->assertSame($agent, $agent->addPatternHint('p', 'pat', 'rep'));
         $this->assertSame($agent, $agent->addLanguage('En', 'en', 'v'));
         $this->assertSame($agent, $agent->addPronunciation('a', 'b'));
         $this->assertSame($agent, $agent->setParam('k', 'v'));

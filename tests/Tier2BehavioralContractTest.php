@@ -7,6 +7,7 @@ namespace SignalWire\Tests;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
+use SignalWire\Security\SessionManager;
 use SignalWire\Server\AgentServer;
 use SignalWire\Serverless\Adapter;
 use SignalWire\Skills\Builtin\InfoGatherer;
@@ -26,6 +27,8 @@ use SignalWire\Tests\Support\Shape;
  *   4. native_vector_search REMOTE HTTP (real POST, not a stub string)
  *   5. Serverless per-platform DISPATCH (lambda / cgi / gcf / azure)
  *   6. SIP routing DISPATCH over the served path (307 redirect)
+ *   7. Tool-token WIRE FORMAT + nonce parity (5 dot-fields, HMAC, constant-time)
+ *   8. AI/LLM structured add_pattern_hint / add_language (fillers/engine/model)
  */
 class Tier2BehavioralContractTest extends TestCase
 {
@@ -520,5 +523,206 @@ class Tier2BehavioralContractTest extends TestCase
         $this->assertSame('/support', $mapping['helpdesk']);
         // auto_map derived a username from the agent route.
         $this->assertArrayHasKey('support', $mapping, 'auto-mapped SIP username missing');
+    }
+
+    // ==================================================================
+    //  Contract 7 — Tool-token WIRE FORMAT + nonce parity
+    //  php mints the python 5-field token; this is the lock-in test.
+    // ==================================================================
+
+    /**
+     * Base64url-decode a php-minted token back to its raw dot-joined form
+     * (RFC 4648, no padding) — the SAME transform SessionManager applies. The
+     * contract asserts on this DECODED form (php base64url-wraps the wire token).
+     */
+    private function decodeToken(string $token): string
+    {
+        $base64 = \strtr($token, '-_', '+/');
+        $mod4 = \strlen($base64) % 4;
+        if ($mod4 !== 0) {
+            $base64 .= \str_repeat('=', 4 - $mod4);
+        }
+        $decoded = \base64_decode($base64, true);
+        $this->assertIsString($decoded, 'token was not valid base64url');
+        return $decoded;
+    }
+
+    public function testToolTokenHasFiveDotFieldsWithNonEmptyNonce(): void
+    {
+        $sm = new SessionManager();
+        $callId = $sm->createSession();
+
+        $decoded = $this->decodeToken($sm->generateToken('lookup', $callId));
+        $parts = \explode('.', $decoded);
+
+        // (1) exactly 5 dot-fields: call_id.function_name.expiry.nonce.signature
+        $this->assertCount(5, $parts, 'token is not the 5-field python wire format');
+        [$tCall, $tFn, $tExpiry, $tNonce, $tSig] = $parts;
+
+        $this->assertSame($callId, $tCall, 'call_id is not field 1 (python order)');
+        $this->assertSame('lookup', $tFn, 'function_name is not field 2 (python order)');
+        $this->assertMatchesRegularExpression('/^\d+$/', $tExpiry, 'expiry field is not an integer epoch');
+
+        // nonce = token_hex(8) => 16 lowercase hex chars, NON-EMPTY.
+        $this->assertNotSame('', $tNonce, 'nonce is empty (degraded 4-field token)');
+        $this->assertSame(16, \strlen($tNonce), 'nonce is not 16 hex chars (token_hex(8))');
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $tNonce, 'nonce is not lowercase hex');
+
+        // signature = HMAC-SHA256 hexdigest => 64 hex chars.
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $tSig, 'signature is not a SHA-256 hexdigest');
+    }
+
+    public function testTwoMintsSameTupleProduceDifferentNonces(): void
+    {
+        $sm = new SessionManager();
+        $callId = 'call_fixed';
+
+        $a = \explode('.', $this->decodeToken($sm->generateToken('fn', $callId)));
+        $b = \explode('.', $this->decodeToken($sm->generateToken('fn', $callId)));
+
+        $this->assertCount(5, $a);
+        $this->assertCount(5, $b);
+        // Same (function, call_id) — but the nonce (field 4) must differ, so the
+        // whole signature (field 5) differs too. A no-nonce stub would collide.
+        $this->assertNotSame($a[3], $b[3], 'two mints reused the same nonce (no per-mint randomness)');
+        $this->assertNotSame($a[4], $b[4], 'signatures collide across mints (nonce not mixed in)');
+    }
+
+    public function testPythonOracleFormatTokenValidatesInPort(): void
+    {
+        // Interop: a token in the exact python raw wire format
+        // `{call_id}.{function}.{expiry}.{nonce}.{sig}` — with the port's own
+        // HMAC secret — must validate. We obtain such a token by decoding a
+        // freshly minted one (proving the DECODED form IS the python format),
+        // then feed the re-encoded raw form back to validateToken.
+        $sm = new SessionManager();
+        $callId = $sm->createSession();
+        $token = $sm->generateToken('interop_fn', $callId);
+
+        $rawPythonFormat = $this->decodeToken($token);
+        $this->assertCount(5, \explode('.', $rawPythonFormat), 'decoded token is not python 5-field format');
+
+        // Re-encode the raw python-format string exactly as SessionManager does
+        // on the wire, and validate it.
+        $reEncoded = \rtrim(\strtr(\base64_encode($rawPythonFormat), '+/=', '-_ '), ' ');
+        $this->assertTrue(
+            $sm->validateToken($callId, 'interop_fn', $reEncoded),
+            'a python-oracle-format token did not validate in the port',
+        );
+    }
+
+    public function testTamperedSignatureFailsValidation(): void
+    {
+        $sm = new SessionManager();
+        $callId = $sm->createSession();
+        $token = $sm->generateToken('fn', $callId);
+
+        $raw = $this->decodeToken($token);
+        $parts = \explode('.', $raw);
+        // Flip the last hex char of the signature.
+        $sig = $parts[4];
+        $lastChar = $sig[\strlen($sig) - 1];
+        $parts[4] = \substr($sig, 0, -1) . ($lastChar === 'a' ? 'b' : 'a');
+
+        $tampered = \rtrim(\strtr(\base64_encode(\implode('.', $parts)), '+/=', '-_ '), ' ');
+        $this->assertFalse(
+            $sm->validateToken($callId, 'fn', $tampered),
+            'a signature-tampered token validated — HMAC not enforced',
+        );
+    }
+
+    public function testSignatureCompareIsConstantTime(): void
+    {
+        // Constant-time contract: the signature comparison must use PHP's
+        // timing-safe hash_equals(), not a short-circuiting === / strcmp that
+        // returns on the first mismatched byte. Assert on the SessionManager
+        // source that the signature check is hash_equals-based.
+        $ref = new \ReflectionClass(SessionManager::class);
+        $src = (string) \file_get_contents((string) $ref->getFileName());
+
+        $this->assertStringContainsString(
+            'hash_equals($expectedSignature, $tokenSignature)',
+            $src,
+            'signature comparison is not constant-time (hash_equals) — first-mismatch early return possible',
+        );
+        $this->assertStringNotContainsString(
+            '$tokenSignature === $expectedSignature',
+            $src,
+            'signature compared with === (non-constant-time)',
+        );
+    }
+
+    // ==================================================================
+    //  Contract 8 — AI/LLM structured add_pattern_hint / add_language
+    // ==================================================================
+
+    public function testAddPatternHintAttachesStructuredHintIntoSwml(): void
+    {
+        $agent = $this->makeAgent();
+        // Structured hint: {hint, pattern, replace, ignore_case} — a degraded
+        // bare-string impl drops pattern/replace/ignore_case.
+        $agent->addPatternHint('AI', '\\bAI\\b', 'artificial intelligence', true);
+
+        $ai = $agent->buildAiVerb();
+        $hints = Shape::sub($ai, 'hints');
+
+        // The rendered ai.hints must contain the full structured object.
+        $found = null;
+        foreach ($hints as $hint) {
+            if (\is_array($hint) && ($hint['hint'] ?? null) === 'AI') {
+                $found = $hint;
+                break;
+            }
+        }
+        $this->assertNotNull($found, 'structured pattern hint dropped — bare-string / degraded impl');
+        $this->assertSame('\\bAI\\b', $found['pattern'] ?? null, 'pattern field not carried into SWML');
+        $this->assertSame('artificial intelligence', $found['replace'] ?? null, 'replace field not carried into SWML');
+        $this->assertTrue($found['ignore_case'] ?? null, 'ignore_case flag not carried into SWML');
+    }
+
+    public function testAddLanguageCarriesEngineModelFillersIntoSwml(): void
+    {
+        $agent = $this->makeAgent();
+        // Explicit engine + model + both filler lists must all survive render.
+        $agent->addLanguage(
+            'English',
+            'en-US',
+            'josh',
+            speechFillers: ['um', 'let me think'],
+            functionFillers: ['one moment', 'checking'],
+            engine: 'elevenlabs',
+            model: 'eleven_turbo_v2_5',
+        );
+
+        $ai = $agent->buildAiVerb();
+        $languages = Shape::sub($ai, 'languages');
+        $this->assertCount(1, $languages);
+        $lang = Shape::arr($languages[0]);
+
+        $this->assertSame('English', $lang['name'] ?? null);
+        $this->assertSame('en-US', $lang['code'] ?? null);
+        $this->assertSame('josh', $lang['voice'] ?? null);
+        // engine + model carried (degraded impl drops these).
+        $this->assertSame('elevenlabs', $lang['engine'] ?? null, 'engine dropped from rendered language');
+        $this->assertSame('eleven_turbo_v2_5', $lang['model'] ?? null, 'model dropped from rendered language');
+        // Both filler lists present under speech_fillers / function_fillers.
+        $this->assertSame(['um', 'let me think'], $lang['speech_fillers'] ?? null, 'speech_fillers dropped');
+        $this->assertSame(['one moment', 'checking'], $lang['function_fillers'] ?? null, 'function_fillers dropped');
+    }
+
+    public function testAddLanguageParsesCombinedVoiceStringIntoEngineModel(): void
+    {
+        // Python parses the combined "engine.voice:model" format when engine/
+        // model are not passed explicitly. A degraded impl leaves it as a
+        // literal voice string.
+        $agent = $this->makeAgent();
+        $agent->addLanguage('English', 'en-US', 'elevenlabs.josh:eleven_turbo_v2_5');
+
+        $ai = $agent->buildAiVerb();
+        $lang = Shape::arr(Shape::sub($ai, 'languages')[0]);
+
+        $this->assertSame('josh', $lang['voice'] ?? null, 'combined voice not split — voice part wrong');
+        $this->assertSame('elevenlabs', $lang['engine'] ?? null, 'combined voice not split — engine not extracted');
+        $this->assertSame('eleven_turbo_v2_5', $lang['model'] ?? null, 'combined voice not split — model not extracted');
     }
 }

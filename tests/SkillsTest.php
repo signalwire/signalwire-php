@@ -1390,6 +1390,135 @@ class SkillsTest extends TestCase
         $this->assertArrayHasKey('skills_path', Shape::sub($a->getParameterSchema(), 'properties'));
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  Claude skills load-path validation + SKILL.md discovery + tool register
+    //  Mirrors Python `ClaudeSkillsSkill.setup` / `_discover_skills`
+    //  (skills/claude_skills/skill.py): validate the load path, walk it for
+    //  `<dir>/SKILL.md`, parse frontmatter, and register one SWAIG tool per
+    //  loadable skill.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Create a temporary skills root under sys_get_temp_dir with one valid
+     * skill directory (a `SKILL.md` with frontmatter). Returns the root path.
+     */
+    private function makeSkillsDir(): string
+    {
+        $root = \sys_get_temp_dir() . DIRECTORY_SEPARATOR
+            . 'sw_claude_skills_' . \bin2hex(\random_bytes(6));
+        \mkdir($root . DIRECTORY_SEPARATOR . 'greeter', 0777, true);
+        \file_put_contents(
+            $root . DIRECTORY_SEPARATOR . 'greeter' . DIRECTORY_SEPARATOR . 'SKILL.md',
+            "---\nname: greeter\ndescription: Greet the caller warmly\n---\n\nSay hello to \$ARGUMENTS.\n",
+        );
+        // A companion .md becomes a discovered section.
+        \file_put_contents(
+            $root . DIRECTORY_SEPARATOR . 'greeter' . DIRECTORY_SEPARATOR . 'formal.md',
+            "Use a formal register.\n",
+        );
+        // A directory WITHOUT SKILL.md must be ignored by discovery.
+        \mkdir($root . DIRECTORY_SEPARATOR . 'not_a_skill', 0777, true);
+        \file_put_contents(
+            $root . DIRECTORY_SEPARATOR . 'not_a_skill' . DIRECTORY_SEPARATOR . 'README.md',
+            "not a skill\n",
+        );
+        return $root;
+    }
+
+    private function rmrf(string $path): void
+    {
+        if (!\file_exists($path)) {
+            return;
+        }
+        if (\is_dir($path)) {
+            foreach (\scandir($path) ?: [] as $e) {
+                if ($e === '.' || $e === '..') {
+                    continue;
+                }
+                $this->rmrf($path . DIRECTORY_SEPARATOR . $e);
+            }
+            @\rmdir($path);
+        } else {
+            @\unlink($path);
+        }
+    }
+
+    public function testClaudeSkillsSetupRejectsInvalidLoadPath(): void
+    {
+        $agent = $this->makeAgent();
+
+        // Missing skills_path -> setup fails (load-path validation).
+        $noPath = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, []);
+        $this->assertFalse($noPath->setup(), 'setup accepted a missing skills_path');
+
+        // Non-existent directory -> setup fails.
+        $bogus = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sw_no_such_skills_' . \bin2hex(\random_bytes(6));
+        $missing = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => $bogus]);
+        $this->assertFalse($missing->setup(), 'setup accepted a non-existent skills_path');
+
+        // A file (not a directory) -> setup fails.
+        $file = \tempnam(\sys_get_temp_dir(), 'sw_skill_file_');
+        try {
+            $notDir = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => $file]);
+            $this->assertFalse($notDir->setup(), 'setup accepted a file as skills_path');
+        } finally {
+            @\unlink($file);
+        }
+    }
+
+    public function testClaudeSkillsDiscoversSkillMdAndRegistersDeclaredTool(): void
+    {
+        $root = $this->makeSkillsDir();
+        try {
+            $agent = $this->makeAgent();
+            $skill = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, [
+                'skills_path' => $root,
+                'skip_prompt' => true,
+            ]);
+
+            // Valid load path -> setup succeeds and discovers the SKILL.md dir.
+            $this->assertTrue($skill->setup(), 'setup failed on a valid skills_path with a SKILL.md');
+
+            // Registering tools must declare one SWAIG tool for the discovered
+            // skill (prefixed 'claude_' by default), reachable in the agent SWML.
+            $skill->registerTools();
+            $swml = $agent->renderSwml();
+
+            $aiVerb = null;
+            foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+                $verb = Shape::arr($verb);
+                if (isset($verb['ai'])) {
+                    $aiVerb = Shape::arr($verb['ai']);
+                    break;
+                }
+            }
+            $this->assertNotNull($aiVerb, 'no ai verb rendered after registering claude skill tools');
+            $swaig = Shape::sub($aiVerb, 'SWAIG');
+            $functionNames = array_map(
+                fn ($f) => Shape::at($f, 'function'),
+                Shape::sub($swaig, 'functions'),
+            );
+            // The declared tool for the 'greeter' SKILL.md must be registered.
+            $this->assertContains('claude_greeter', $functionNames, 'declared tool for discovered SKILL.md not registered');
+
+            // The companion 'formal.md' must be exposed as a selectable section.
+            $greeterFn = null;
+            foreach (Shape::sub($swaig, 'functions') as $fn) {
+                if (Shape::at($fn, 'function') === 'claude_greeter') {
+                    $greeterFn = Shape::arr($fn);
+                    break;
+                }
+            }
+            $this->assertNotNull($greeterFn);
+            // Rendered SWML uses the abbreviated SWAIG form: the arg schema is
+            // under 'argument' (not 'parameters').
+            $sectionEnum = Shape::sub($greeterFn, 'argument', 'properties', 'section', 'enum');
+            $this->assertContains('formal', $sectionEnum, 'companion .md not discovered as a section');
+        } finally {
+            $this->rmrf($root);
+        }
+    }
+
     public function testNativeVectorSearchInterfaceMethods(): void
     {
         $agent = $this->makeAgent();

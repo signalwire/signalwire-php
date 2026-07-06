@@ -4630,6 +4630,30 @@
                   "required": true
                 },
                 {
+                  "name": "speech_fillers",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "function_fillers",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "engine",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "model",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
                   "name": "params",
                   "type": "optional<any>",
                   "required": false,
@@ -4677,9 +4701,25 @@
                   "kind": "self"
                 },
                 {
+                  "name": "hint",
+                  "type": "string",
+                  "required": true
+                },
+                {
                   "name": "pattern",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "replace",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "ignore_case",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
                 }
               ],
               "returns": "any"
