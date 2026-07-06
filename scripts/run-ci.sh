@@ -62,6 +62,26 @@ PORTING_SDK_DIR="$(resolve_porting_sdk)" || {
     exit 2
 }
 
+# signalwire-python root for the Layer-D BEHAVIORAL-* oracle (imports the real
+# python SDK). Resolves the same way the EMISSION resolver does: explicit
+# $PYTHON_SDK wins, else the workspace-sibling of porting-sdk (CI + local).
+resolve_python_sdk() {
+    if [ -n "${PYTHON_SDK:-}" ] && [ -d "$PYTHON_SDK/signalwire" ]; then
+        echo "$PYTHON_SDK"
+        return 0
+    fi
+    if [ -d "$PORTING_SDK_DIR/../signalwire-python/signalwire" ]; then
+        (cd "$PORTING_SDK_DIR/../signalwire-python" && pwd)
+        return 0
+    fi
+    return 1
+}
+PYTHON_SDK_DIR="$(resolve_python_sdk)" || {
+    echo "FATAL: signalwire-python not found, clone it adjacent to porting-sdk" >&2
+    echo "       (expected $PORTING_SDK_DIR/../signalwire-python or \$PYTHON_SDK env var)" >&2
+    exit 2
+}
+
 # ── Mock-server lifecycle (for the PARALLEL test gate) ────────────────────
 # The mock-backed suites are session-isolated, so file parallelism is safe. We
 # spawn each mock ONCE here, wait for health, export the fixed ports so every
@@ -296,6 +316,31 @@ sched_gate EMISSION desc="diff_port_emission vs python to_dict()" \
     -- python3 "$PORTING_SDK_DIR/scripts/diff_port_emission.py" \
         --dump-cmd "php scripts/emit_corpus.php" \
         --port-repo "$PORT_ROOT"
+
+sched_gate BEHAVIORAL-WIRE desc="diff_port_wire vs python oracle (Layer D)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wire.py" \
+        --port php --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php scripts/wire_dump.php"
+
+sched_gate BEHAVIORAL-SWML desc="diff_port_swml vs python oracle (Layer D)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_swml.py" \
+        --port php --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php scripts/swml_dump.php"
+
+sched_gate BEHAVIORAL-STATE desc="diff_port_state vs python oracle (Layer D)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_state.py" \
+        --port php --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php scripts/state_dump.php"
+
+sched_gate BEHAVIORAL-HTTP desc="diff_port_http vs python oracle (Layer D)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_http.py" \
+        --port php --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php scripts/http_dump.php"
+
+sched_gate BEHAVIORAL-WIRE-RELAY desc="diff_port_wire_relay vs python oracle (Layer D)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wire_relay.py" \
+        --port php --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php scripts/wire_relay_dump.php"
 
 sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
     -- bash scripts/run-format.sh ${CI:+--check}
