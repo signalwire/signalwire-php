@@ -91,6 +91,16 @@ class AgentBase extends Service implements AgentInterface
     /** @var array<string,mixed> */
     protected array $postPromptLlmParams;
 
+    // ── SIP routing ─────────────────────────────────────────────────────
+    /**
+     * SIP usernames registered to this agent (lowercased), the consultable
+     * set the SIP routing callback checks. Mirrors Python
+     * `AgentBase._sip_usernames` (a set). Keyed by lowercase username → true.
+     *
+     * @var array<string, bool>
+     */
+    protected array $sipUsernames = [];
+
     // ── Verbs ───────────────────────────────────────────────────────────
     /** @var list<array{string, mixed}> */
     protected array $preAnswerVerbs;
@@ -1110,20 +1120,33 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
+     * Merge LLM parameters into the main prompt config.
+     *
+     * Mirrors Python `AIConfigMixin.set_prompt_llm_params`
+     * (ai_config_mixin.py:669): `self._prompt_llm_params.update(params)` —
+     * successive calls MERGE, so distinct keys accumulate rather than the
+     * latest call replacing the earlier ones.
+     *
      * @param array<string,mixed> $params
      */
     public function setPromptLlmParams(array $params): self
     {
-        $this->promptLlmParams = $params;
+        $this->promptLlmParams = array_merge($this->promptLlmParams, $params);
         return $this;
     }
 
     /**
+     * Merge LLM parameters into the post-prompt config.
+     *
+     * Mirrors Python `AIConfigMixin.set_post_prompt_llm_params`
+     * (ai_config_mixin.py:703): `self._post_prompt_llm_params.update(params)`
+     * — successive calls MERGE (see {@see setPromptLlmParams}).
+     *
      * @param array<string,mixed> $params
      */
     public function setPostPromptLlmParams(array $params): self
     {
-        $this->postPromptLlmParams = $params;
+        $this->postPromptLlmParams = array_merge($this->postPromptLlmParams, $params);
         return $this;
     }
 
@@ -1379,9 +1402,48 @@ class AgentBase extends Service implements AgentInterface
     //  SIP Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Enable SIP-based routing for this agent.
+     *
+     * Mirrors Python `AgentBase.enable_sip_routing(auto_map=True, path="/sip")`
+     * (agent_base.py:708). PHP's public method takes no args by idiom (the
+     * auto_map / path overrides go through AgentServer::setupSipRouting); it
+     * uses the reference defaults auto_map=true, path="/sip".
+     *
+     * Registers a routing callback at the SIP path that extracts the SIP
+     * username from the request body and consults this agent's registered
+     * usernames. When the username is registered to THIS agent the callback
+     * returns null (the agent already serves the route, no redirect); this is
+     * the reachable, consulted behavior — not a stored-but-ignored flag.
+     */
     public function enableSipRouting(): self
     {
         $this->setParam('sip_routing', true);
+
+        $path = '/sip';
+
+        // (body, headers) -> route|null. Inspects only the body (via
+        // extractSipUsername), matching Python's sip_routing_callback.
+        $callback = function (array $body, array $headers): ?string {
+            $sipUsername = self::extractSipUsername($body);
+            if ($sipUsername === null || $sipUsername === '') {
+                return null;
+            }
+            $this->logger->info("sip_username_extracted username={$sipUsername}");
+            if (isset($this->sipUsernames[strtolower($sipUsername)])) {
+                $this->logger->info("sip_username_matched username={$sipUsername}");
+                // Route is already handled by this agent — no redirect.
+                return null;
+            }
+            $this->logger->info("sip_username_not_matched username={$sipUsername}");
+            return null;
+        };
+
+        $this->registerRoutingCallback($path, $callback);
+
+        // auto_map defaults to true in the reference.
+        $this->autoMapSipUsernames();
+
         return $this;
     }
 
@@ -1391,6 +1453,9 @@ class AgentBase extends Service implements AgentInterface
         if ($route !== '') {
             $this->setParam('sip_route', $route);
         }
+        // Record the username in the consultable set so the SIP routing
+        // callback can match it (Python: self._sip_usernames.add(lower)).
+        $this->sipUsernames[strtolower($username)] = true;
         return $this;
     }
 

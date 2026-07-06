@@ -480,20 +480,42 @@ class SWMLServiceTest extends TestCase
     // Routing Callbacks
     // ------------------------------------------------------------------
 
-    public function testRoutingCallback(): void
+    public function testRoutingCallbackRedirectReturnsRoute(): void
     {
+        // Python contract (agent_base.py:1757): the routing callback is
+        // (body, headers) -> route|null. A route string yields a 307 redirect
+        // preserving method+body, with the returned route as the Location.
         $svc = $this->makeService();
         $called = false;
         $svc->registerRoutingCallback('/custom', function (?array $data, array $headers) use (&$called) {
             $called = true;
-            return ['custom' => 'response'];
+            return '/other-service';
+        });
+
+        [$status, $headers, $body] = $svc->handleRequest('POST', '/custom', $this->authHeader(), '{}');
+        $this->assertTrue($called);
+        $this->assertSame(307, $status);
+        $this->assertSame('/other-service', $headers['Location'] ?? null);
+        $this->assertSame('', $body);
+    }
+
+    public function testRoutingCallbackNullContinuesToSwml(): void
+    {
+        // When the callback declines (returns null), the request is served by
+        // this service — it renders and returns the SWML document (200).
+        $svc = $this->makeService();
+        $called = false;
+        $svc->registerRoutingCallback('/custom', function (?array $data, array $headers) use (&$called) {
+            $called = true;
+            return null;
         });
 
         [$status, , $body] = $svc->handleRequest('POST', '/custom', $this->authHeader(), '{}');
         $this->assertTrue($called);
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
-        $this->assertSame('response', Shape::at($decoded, 'custom'));
+        $this->assertIsArray($decoded);
+        $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
     }
 
     // ------------------------------------------------------------------

@@ -136,7 +136,6 @@ class InfoGatherer extends SkillBase
         $prefix = $this->paramString('prefix');
         $questions = $this->normalizeQuestions($this->paramArray('questions'));
         $completionMessage = $this->paramString('completion_message', 'All questions have been answered. Thank you!');
-        $namespace = $this->getInstanceKey();
 
         $startToolName = $prefix !== '' ? $prefix . '_start_questions' : 'start_questions';
         $submitToolName = $prefix !== '' ? $prefix . '_submit_answer' : 'submit_answer';
@@ -145,7 +144,7 @@ class InfoGatherer extends SkillBase
             $startToolName,
             'Start the question gathering process and get the first question',
             [],
-            function (array $args, array $rawData) use ($questions, $namespace): FunctionResult {
+            function (array $args, array $rawData) use ($questions): FunctionResult {
                 $result = new FunctionResult();
 
                 if (count($questions) === 0) {
@@ -156,12 +155,11 @@ class InfoGatherer extends SkillBase
                 $firstQuestion = self::asString($questions[0]['question_text'] ?? null, 'No question text.');
 
                 $result->setResponse('Starting questions. First question: ' . $firstQuestion);
-                $result->updateGlobalData([
-                    $namespace => [
-                        'questions' => $questions,
-                        'question_index' => 0,
-                        'answers' => [],
-                    ],
+                // Reset the state machine: index 0, no answers recorded yet.
+                $this->updateSkillData($result, [
+                    'questions' => $questions,
+                    'question_index' => 0,
+                    'answers' => [],
                 ]);
 
                 return $result;
@@ -170,7 +168,7 @@ class InfoGatherer extends SkillBase
 
         $this->defineTool(
             $submitToolName,
-            'Submit an answer to the current question',
+            'Submit an answer to the current question and move to the next one',
             [
                 'answer' => [
                     'type' => 'string',
@@ -181,27 +179,45 @@ class InfoGatherer extends SkillBase
                     'description' => 'Whether the user has confirmed this answer is correct',
                 ],
             ],
-            function (array $args, array $rawData) use ($questions, $namespace, $completionMessage): FunctionResult {
+            function (array $args, array $rawData) use ($questions, $completionMessage, $startToolName, $submitToolName): FunctionResult {
                 $result = new FunctionResult();
                 $answer = self::asString($args['answer'] ?? null);
                 $confirmed = (bool) ($args['confirmed_by_user'] ?? false);
 
-                // In a stateful environment, question_index and answers would come from global data.
-                // For this stub, we use the questions array directly.
-                $totalQuestions = count($questions);
+                // Read the live state machine out of global_data (namespaced),
+                // mirroring Python `_handle_submit_answer` (skill.py:214):
+                //   state = self.get_skill_data(raw_data)
+                //   questions / question_index / answers come from that state.
+                // Fall back to the configured questions + index 0 when the
+                // caller hasn't seeded state (start_questions not yet run).
+                $state = $this->getSkillData($rawData);
+                $stateQuestions = isset($state['questions']) && is_array($state['questions'])
+                    ? $this->normalizeQuestions($state['questions'])
+                    : $questions;
+                $indexRaw = $state['question_index'] ?? 0;
+                $questionIndex = is_int($indexRaw) ? $indexRaw
+                    : (is_numeric($indexRaw) ? (int) $indexRaw : 0);
+                $answers = isset($state['answers']) && is_array($state['answers'])
+                    ? array_values($state['answers'])
+                    : [];
 
-                // The current question index would normally come from global data
-                // For the handler, we track state via global data actions
-                $currentIndex = 0; // Will be managed by global data in runtime
+                $totalQuestions = count($stateQuestions);
 
                 if ($answer === '') {
                     $result->setResponse('Please provide an answer.');
                     return $result;
                 }
 
-                $currentQuestion = $questions[$currentIndex] ?? [];
+                if ($questionIndex >= $totalQuestions) {
+                    $result->setResponse('All questions have already been answered.');
+                    return $result;
+                }
+
+                $currentQuestion = $stateQuestions[$questionIndex] ?? [];
                 $needsConfirm = (bool) ($currentQuestion['confirm'] ?? false);
 
+                // Enforce confirmation without advancing the index or recording
+                // the answer — matches Python's early return on unconfirmed.
                 if ($needsConfirm && !$confirmed) {
                     $questionText = self::asString($currentQuestion['question_text'] ?? null);
                     $result->setResponse(
@@ -211,37 +227,35 @@ class InfoGatherer extends SkillBase
                     return $result;
                 }
 
-                $nextIndex = $currentIndex + 1;
+                // Append the new answer to the accumulated list and advance.
+                $answers[] = [
+                    'key_name' => self::asString($currentQuestion['key_name'] ?? null, 'q_' . $questionIndex),
+                    'answer' => $answer,
+                ];
+                $nextIndex = $questionIndex + 1;
 
                 if ($nextIndex >= $totalQuestions) {
                     $result->setResponse($completionMessage);
-                    $result->updateGlobalData([
-                        $namespace => [
-                            'questions' => $questions,
-                            'question_index' => $nextIndex,
-                            'answers' => [
-                                [
-                                    'key' => self::asString($currentQuestion['key_name'] ?? null, 'q_' . $currentIndex),
-                                    'answer' => $answer,
-                                ],
-                            ],
-                            'completed' => true,
-                        ],
+                    $result->toggleFunctions([
+                        $startToolName => false,
+                        $submitToolName => false,
+                    ]);
+                    $this->updateSkillData($result, [
+                        'questions' => $stateQuestions,
+                        'question_index' => $nextIndex,
+                        'answers' => $answers,
+                        'completed' => true,
                     ]);
                 } else {
-                    $nextQuestion = self::asString($questions[$nextIndex]['question_text'] ?? null, 'No question text.');
+                    $nextQuestion = self::asString(
+                        $stateQuestions[$nextIndex]['question_text'] ?? null,
+                        'No question text.'
+                    );
                     $result->setResponse('Answer recorded. Next question: ' . $nextQuestion);
-                    $result->updateGlobalData([
-                        $namespace => [
-                            'questions' => $questions,
-                            'question_index' => $nextIndex,
-                            'answers' => [
-                                [
-                                    'key' => self::asString($currentQuestion['key_name'] ?? null, 'q_' . $currentIndex),
-                                    'answer' => $answer,
-                                ],
-                            ],
-                        ],
+                    $this->updateSkillData($result, [
+                        'questions' => $stateQuestions,
+                        'question_index' => $nextIndex,
+                        'answers' => $answers,
                     ]);
                 }
 
@@ -255,16 +269,37 @@ class InfoGatherer extends SkillBase
      */
     public function getGlobalData(): array
     {
-        $namespace = $this->getInstanceKey();
         $questions = $this->normalizeQuestions($this->paramArray('questions'));
 
-        return [
-            $namespace => [
-                'questions' => $questions,
-                'question_index' => 0,
-                'answers' => [],
-            ],
-        ];
+        // Seed the initial state under the SAME namespaced key that
+        // getSkillData()/updateSkillData() read and write ("skill:<prefix>"
+        // or "skill:<instanceKey>"), mirroring Python get_global_data
+        // (skill.py:129) which uses _get_skill_namespace(). Using the bare
+        // instance key here would strand the seed where submit_answer never
+        // looks.
+        $result = new FunctionResult();
+        $this->updateSkillData($result, [
+            'questions' => $questions,
+            'question_index' => 0,
+            'answers' => [],
+        ]);
+
+        $actions = $result->toArray()['action'] ?? [];
+        if (is_array($actions)) {
+            foreach ($actions as $action) {
+                if (is_array($action) && isset($action['set_global_data']) && is_array($action['set_global_data'])) {
+                    $out = [];
+                    foreach ($action['set_global_data'] as $k => $v) {
+                        if (is_string($k)) {
+                            $out[$k] = $v;
+                        }
+                    }
+                    return $out;
+                }
+            }
+        }
+
+        return [];
     }
 
     /**

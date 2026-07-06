@@ -781,10 +781,34 @@ class Service implements RequestHandlerLike
             return $this->handlePostPrompt($requestData, $headers);
         }
 
-        // Check routing callbacks
+        // Check routing callbacks. Mirrors Python's routing-callback contract
+        // (agent_base.py:1757, swml_service.py:1063): the callback is
+        // (body, headers) -> route|null.
+        //   - returns a route string  -> 307 redirect preserving method+body,
+        //     with the Location header set to that route.
+        //   - returns null            -> the request is handled here; render
+        //     and serve the SWML document for this service (200).
+        // A stored-but-unconsulted mapping (returning the callback result as a
+        // 200 JSON blob) would never redirect and would fail the served-path
+        // SIP dispatch contract.
         if (isset($this->routingCallbacks[$subPath])) {
-            $result = ($this->routingCallbacks[$subPath])($requestData, $headers);
-            return $this->jsonResponse(200, $result);
+            $route = null;
+            try {
+                $route = ($this->routingCallbacks[$subPath])($requestData ?? [], $headers);
+            } catch (\Throwable $e) {
+                $this->logger->error("error_in_routing_callback: {$e->getMessage()}");
+                $route = null;
+            }
+            if (is_string($route) && $route !== '') {
+                $this->logger->info("routing_request route={$route}");
+                return [
+                    307,
+                    array_merge(['Location' => $route], $this->securityHeaders()),
+                    '',
+                ];
+            }
+            // Callback declined to redirect: serve this service's SWML.
+            return $this->handleSwmlRequest($method, $requestData, $headers);
         }
 
         return $this->jsonResponse(404, ['error' => 'Not found']);
