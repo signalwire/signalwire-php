@@ -352,6 +352,17 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
     # module-level function so it reconciles EQUAL instead of being an omission.
     ("WebhookMiddleware", "validate"):
         ("signalwire.core.security.webhook_middleware", "validate"),
+    # Runtime schema-inference helpers — Python ships infer_schema /
+    # create_typed_handler_wrapper as module-level free functions in
+    # signalwire.core.agent.tools.type_inference; PHP hosts them as static
+    # methods on the TypeInference final class (PSR-4). Project to the canonical
+    # module-level names so they reconcile EQUAL with the oracle (parallel to the
+    # signature enumerator's FREE_FUNCTION_PROJECTIONS). EVERY public method of
+    # TypeInference is projected, so the empty class shell is dropped.
+    ("TypeInference", "infer_schema"):
+        ("signalwire.core.agent.tools.type_inference", "infer_schema"),
+    ("TypeInference", "create_typed_handler_wrapper"):
+        ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
 }
 
 
@@ -1272,6 +1283,20 @@ def build_surface() -> dict:
             if cls_methods:
                 return set(cls_methods)
         return set()
+
+    # Inherited-method injection: `AgentBase extends Service` (→ SWMLService), so
+    # `handleRequest` — declared on Service — is a REAL inherited method on
+    # AgentBase at runtime. The Python reference records `handle_request` on BOTH
+    # AgentBase and SWMLService (it un-hid the HTTP request-dispatch entry point
+    # as a suggested-base method projected onto both concrete classes). The PHP
+    # enumerator records only own-body methods, so inject the inherited
+    # `handle_request` onto AgentBase to reconcile the flattening in the
+    # enumerator (rule §2: reconcile idiom in the enumerator, never by omission).
+    _ab_mod = "signalwire.core.agent_base"
+    if "handle_request" in _lookup_class_methods("SWMLService"):
+        _ab = set(modules[_ab_mod]["classes"].get("AgentBase", []))
+        _ab.add("handle_request")
+        modules[_ab_mod]["classes"]["AgentBase"] = sorted(_ab)
 
     agent_base_methods = _lookup_class_methods("AgentBase")
     swml_service_methods = _lookup_class_methods("SWMLService")

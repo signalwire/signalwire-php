@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 1027627312a5055d0f253e31a4101a5c2fc08f50",
+  "generated_from": "signalwire-php @ 3511c34fe7be2e967d80d164881f87787b659be4",
   "modules": {
     "signalwire": {
       "classes": {
@@ -104,13 +104,11 @@
       "functions": []
     },
     "signalwire.core.agent.tools.type_inference": {
-      "classes": {
-        "TypeInference": [
-          "create_typed_handler_wrapper",
-          "infer_schema"
-        ]
-      },
-      "functions": []
+      "classes": {},
+      "functions": [
+        "create_typed_handler_wrapper",
+        "infer_schema"
+      ]
     },
     "signalwire.core.agent_base": {
       "classes": {
@@ -154,6 +152,7 @@
           "get_prompt",
           "get_raw_prompt",
           "get_signing_key",
+          "handle_request",
           "handle_serverless_request",
           "has_skill",
           "is_mcp_server_enabled",

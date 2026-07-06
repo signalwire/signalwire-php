@@ -325,6 +325,13 @@ FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
     # oracle's optional<tuple<int,dict<string,string>,string>>.
     ("signalwire.core.security.webhook_middleware", "validate"):
         "optional<tuple<int,dict<string,string>,string>>",
+    # infer_schema() reflects a typed handler and returns the SWAIG schema
+    # tuple [parameters, required, description, is_typed, has_raw_data]. PHP's
+    # only tuple type is the bare ``array`` -> ``any``; the concrete shape is
+    # documented on TypeInference::inferSchema via the ``@return array{...}``
+    # generic. Re-establish the oracle's fixed schema-contract tuple.
+    ("signalwire.core.agent.tools.type_inference", "infer_schema"):
+        "tuple<dict<string,dict<string,any>>,list<string>,optional<string>,bool,bool>",
 }
 
 
@@ -353,6 +360,16 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     # erases the concrete element type the oracle records (list<dict<string,any>>).
     ("SignalWire\\POM\\PomBuilder", "fromSections"): {
         "sections": "list<dict<string,any>>",
+    },
+    # Service::handleRequest — the HTTP request-dispatch entry point (projected to
+    # SWMLService.handle_request). PHP reflection erases `array $headers` to bare
+    # `array`→`any`; the PHPDoc `@param array<string,string> $headers` records the
+    # concrete oracle type dict<string,string>. Re-establish it (the `body` param
+    # is a genuine string-vs-dict idiom divergence — the PHP entry point takes the
+    # raw wire body string and json_decodes it internally — documented in
+    # PORT_SIGNATURE_OMISSIONS.md, PHP-param-shape).
+    ("SignalWire\\SWML\\Service", "handleRequest"): {
+        "headers": "dict<string,string>",
     },
     # --- AgentBase: AI-config / prompt / skill mixin params (projected onto the
     # AIConfigMixin/PromptMixin/PromptManager/SkillMixin targets by MIXIN_PROJECTIONS

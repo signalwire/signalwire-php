@@ -38,6 +38,31 @@ class TypeInferenceTest extends TestCase
         $this->assertSame(['city'], $required);
     }
 
+    public function testInferSchemaFromTypedHandlerWithDocblockDescription(): void
+    {
+        // Two params (one required, one optional-with-default) + a docblock:
+        // parameters, required, and description must all come out right.
+        $handler =
+            /**
+             * Look up the weather for a city.
+             *
+             * @param string $city the city name
+             */
+            function (string $city, int $days = 5): string {
+                return "$city:$days";
+            };
+        [$params, $required, $description, $isTyped, $hasRawData] = TypeInference::inferSchema($handler);
+
+        $this->assertTrue($isTyped);
+        $this->assertFalse($hasRawData);
+        $this->assertSame(['city', 'days'], array_keys($params));
+        $this->assertSame(['type' => 'string'], $params['city']);
+        $this->assertSame(['type' => 'integer'], $params['days']);
+        // city has no default and is non-nullable -> required; days has a default.
+        $this->assertSame(['city'], $required);
+        $this->assertSame('Look up the weather for a city.', $description);
+    }
+
     public function testInferSchemaDetectsRawDataAndExcludesItFromSchema(): void
     {
         $handler = function (string $query, ?array $rawData = null): string {

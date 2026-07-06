@@ -1096,7 +1096,7 @@
               "required": true
             }
           ],
-          "returns": "any"
+          "returns": "tuple<dict<string,dict<string,any>>,list<string>,optional<string>,bool,bool>"
         }
       }
     },
@@ -10061,7 +10061,7 @@
                 },
                 {
                   "name": "headers",
-                  "type": "any",
+                  "type": "dict<string,string>",
                   "required": false,
                   "default": []
                 },
