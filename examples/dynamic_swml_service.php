@@ -8,21 +8,21 @@
 
 require 'vendor/autoload.php';
 
-use SignalWire\SWML\SWMLService;
+use SignalWire\SWML\Service as SWMLService;
 
 // --- Dynamic Greeting Service ---
 
 $greeting = new SWMLService(name: 'dynamic-greeting', route: '/greeting');
 
 // Default document
-$greeting->addAnswerVerb();
+$greeting->answer();
 $greeting->addVerb('play', ['url' => 'say:Hello, thank you for calling our service.']);
 $greeting->addVerb('prompt', [
     'play'       => 'say:Please press 1 for sales, 2 for support, or 3 to leave a message.',
     'max_digits' => 1,
     'terminators' => '#',
 ]);
-$greeting->addHangupVerb();
+$greeting->hangup();
 
 // Dynamic request handler
 $greeting->onRequest(function (?array $requestData) use ($greeting) {
@@ -31,7 +31,7 @@ $greeting->onRequest(function (?array $requestData) use ($greeting) {
     }
 
     $greeting->resetDocument();
-    $greeting->addAnswerVerb();
+    $greeting->answer();
 
     $callerName = $requestData['caller_name'] ?? null;
     if ($callerName) {
@@ -74,7 +74,7 @@ $greeting->onRequest(function (?array $requestData) use ($greeting) {
         ]);
     }
 
-    $greeting->addHangupVerb();
+    $greeting->hangup();
     return null;
 });
 

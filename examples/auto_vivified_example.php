@@ -11,12 +11,12 @@
 
 require 'vendor/autoload.php';
 
-use SignalWire\SWML\SWMLService;
+use SignalWire\SWML\Service as SWMLService;
 
 // --- Voicemail Service (auto-vivified) ---
 
 $voicemail = new SWMLService(name: 'voicemail', route: '/voicemail');
-$voicemail->addAnswerVerb();
+$voicemail->answer();
 $voicemail->play(['url' => "say:Hello, you've reached the voicemail service. Please leave a message after the beep."]);
 $voicemail->sleep(1000);
 $voicemail->play(['url' => 'https://example.com/beep.wav']);
@@ -29,12 +29,12 @@ $voicemail->record([
     'status_url'  => 'https://example.com/voicemail-status',
 ]);
 $voicemail->play(['url' => 'say:Thank you for your message. Goodbye!']);
-$voicemail->addHangupVerb();
+$voicemail->hangup();
 
 // --- IVR Menu Service ---
 
 $ivr = new SWMLService(name: 'ivr', route: '/ivr');
-$ivr->addAnswerVerb();
+$ivr->answer();
 
 $ivr->addSection('main_menu');
 $ivr->addVerbToSection('main_menu', 'prompt', [
@@ -70,7 +70,7 @@ $ivr->addVerb('transfer', ['dest' => 'main_menu']);
 // --- Call Transfer Service ---
 
 $transfer = new SWMLService(name: 'transfer', route: '/transfer');
-$transfer->addAnswerVerb();
+$transfer->answer();
 $transfer->play(['url' => "say:Thank you for calling. We'll connect you with the next available agent."]);
 $transfer->addVerb('connect', [
     'from'             => '+15551234567',
@@ -92,7 +92,7 @@ $transfer->record([
     'terminators' => '#',
 ]);
 $transfer->play(['url' => "say:Thank you. We'll get back to you soon."]);
-$transfer->addHangupVerb();
+$transfer->hangup();
 
 // --- Select and Run ---
 

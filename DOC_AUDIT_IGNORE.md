@@ -33,13 +33,11 @@ route: SWML route field name in JSON — not a method call
 
 These are SWML verbs from `schema.json` that the Document class
 auto-vivifies via `__call`. They appear in PHP examples as
-`$service->addHangupVerb()` etc; the call dispatches through
-Service::__call to Document::addVerb. The verb is real and runs;
+`$service->answer()` / `$service->hangup()` etc; the call dispatches
+through Service::__call to Document::addVerb. The verb is real and runs;
 audit_docs sees no explicit method declaration.
 
 addApplication: SWML <application> verb — auto-vivified by Document::__call
-addAnswerVerb: SWML <answer> verb — auto-vivified by Document
-addHangupVerb: SWML <hangup> verb — auto-vivified by Document
 connectWs: SWML <connect_ws> / <connect> verb — auto-vivified
 disconnectWs: SWML <disconnect_ws> / <disconnect> verb — auto-vivified
 addMcpServer: AgentBase MCP-server config helper — exposed via promptManager

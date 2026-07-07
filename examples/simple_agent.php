@@ -51,7 +51,7 @@ PROMPT);
 
 // --- Pronunciation and Hints ---
 
-$agent->addHints('SignalWire', 'SWML', 'SWAIG');
+$agent->addHints(['SignalWire', 'SWML', 'SWAIG']);
 $agent->addPronunciation('API', 'A P I', ignoreCase: false);
 $agent->addPronunciation('SIP', 'sip', ignoreCase: true);
 
@@ -113,7 +113,7 @@ $agent->defineTool(
 
 // --- Summary Callback ---
 
-$agent->onSummary(function ($summary, $rawData) {
+$agent->setSummaryCallback(function ($summary, $rawData) {
     if ($summary) {
         if (is_array($summary)) {
             echo "SUMMARY: " . json_encode($summary) . "\n";
@@ -125,8 +125,7 @@ $agent->onSummary(function ($summary, $rawData) {
 
 // --- Start the Agent ---
 
-$user = $agent->basicAuthUser();
-$pass = $agent->basicAuthPassword();
+[$user, $pass] = $agent->getBasicAuthCredentials();
 
 echo "Starting the agent. Press Ctrl+C to stop.\n";
 echo "Agent 'simple' is available at:\n";

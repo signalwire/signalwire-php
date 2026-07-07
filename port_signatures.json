@@ -19908,8 +19908,9 @@
                 },
                 {
                   "name": "questions",
-                  "type": "any",
-                  "required": true
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
                 },
                 {
                   "name": "route",

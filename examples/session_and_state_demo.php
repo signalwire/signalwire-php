@@ -49,7 +49,7 @@ Summarize the conversation as JSON:
 POST);
 
 // Summary callback
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "CONVERSATION SUMMARY:\n";
         if (is_array($summary)) {

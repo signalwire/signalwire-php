@@ -48,7 +48,7 @@ Provide a JSON summary of the interaction:
 }
 POST);
 
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "FAQ Bot summary: " . json_encode($summary) . "\n";
     }

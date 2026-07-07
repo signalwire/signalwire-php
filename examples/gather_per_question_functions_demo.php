@@ -96,42 +96,42 @@ $onboard
         'escalate_to_human',
         'lookup_existing_account',
     ])
-    ->setGatherInfo([
-        'output_key'        => 'customer',
-        'completion_action' => 'next_step',
-        'prompt'            => "I'll need to collect a few details to set up "
-                             . "your account. I'll ask one question at a time.",
-    ])
+    ->setGatherInfo(
+        output_key: 'customer',
+        completion_action: 'next_step',
+        prompt: "I'll need to collect a few details to set up "
+              . "your account. I'll ask one question at a time.",
+    )
     // Question 1: email — only validate_email + gather_submit
     // callable.
-    ->addGatherQuestion([
-        'key'       => 'email',
-        'question'  => "What's your email address?",
-        'confirm'   => true,
-        'functions' => ['validate_email'],
-    ])
+    ->addGatherQuestion(
+        key: 'email',
+        question: "What's your email address?",
+        confirm: true,
+        functions: ['validate_email'],
+    )
     // Question 2: zip — only geocode_zip + gather_submit callable.
-    ->addGatherQuestion([
-        'key'       => 'zip',
-        'question'  => "What's your ZIP code?",
-        'functions' => ['geocode_zip'],
-    ])
+    ->addGatherQuestion(
+        key: 'zip',
+        question: "What's your ZIP code?",
+        functions: ['geocode_zip'],
+    )
     // Question 3: age — only check_age_eligibility + gather_submit
     // callable.
-    ->addGatherQuestion([
-        'key'       => 'age',
-        'question'  => 'How old are you?',
-        'type'      => 'integer',
-        'functions' => ['check_age_eligibility'],
-    ])
+    ->addGatherQuestion(
+        key: 'age',
+        question: 'How old are you?',
+        type: 'integer',
+        functions: ['check_age_eligibility'],
+    )
     // Question 4: referral_source — no `functions` → only
     // gather_submit is callable. The model cannot validate, lookup,
     // escalate — nothing. This is the right pattern when a question
     // needs no tools.
-    ->addGatherQuestion([
-        'key'      => 'referral_source',
-        'question' => 'How did you hear about us?',
-    ]);
+    ->addGatherQuestion(
+        key: 'referral_source',
+        question: 'How did you hear about us?',
+    );
 
 // A simple confirmation step the gather auto-advances into.
 $ctx->addStep('confirm')

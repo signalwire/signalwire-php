@@ -31,8 +31,7 @@ $agent->promptAddSection(
 
 $agent->setPostPrompt('Summarise the questions and answers in a concise manner.');
 
-$user = $agent->basicAuthUser();
-$pass = $agent->basicAuthPassword();
+[$user, $pass] = $agent->getBasicAuthCredentials();
 
 echo "Starting Information Gathering Agent\n";
 echo "URL: http://localhost:3000/contact\n";

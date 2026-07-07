@@ -8,7 +8,7 @@
 
 require 'vendor/autoload.php';
 
-use SignalWire\SWML\SWMLService;
+use SignalWire\SWML\Service as SWMLService;
 use SignalWire\SWML\SWMLBuilder;
 
 // --- Example 1: Direct document manipulation ---
@@ -22,7 +22,7 @@ $service = new SWMLService(
     port:  3000,
 );
 
-$service->addAnswerVerb();
+$service->answer();
 $service->addVerb('play', [
     'url' => "say:Hello, you've reached our voicemail service. Please leave a message after the beep.",
 ]);
@@ -35,7 +35,7 @@ $service->addVerb('record', [
     'terminators' => '#',
 ]);
 $service->addVerb('play', ['url' => 'say:Thank you for your message. Goodbye!']);
-$service->addHangupVerb();
+$service->hangup();
 
 echo "Document built with " . count($service->getVerbs()) . " verbs\n\n";
 

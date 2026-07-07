@@ -42,7 +42,7 @@ class InfoGathererAgent extends AgentBase
      */
     public function __construct(
         string $name,
-        array $questions,
+        ?array $questions = null,
         string $route = '/info_gatherer',
         ?string $host = null,
         ?int $port = null,
@@ -66,6 +66,8 @@ class InfoGathererAgent extends AgentBase
             usePom: $usePom,
         );
 
+        // null (Python `questions=None`) => dynamic mode, same as an empty list.
+        $questions = $questions ?? [];
         $this->questions = $questions;
         // Non-empty question list => static mode; empty => dynamic (callback).
         $this->staticQuestions = $questions !== [] ? $questions : null;

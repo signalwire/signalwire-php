@@ -52,7 +52,7 @@ Return a JSON summary of the survey responses:
 }
 POST);
 
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "Survey results:\n";
         if (is_array($summary)) {
