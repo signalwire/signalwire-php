@@ -398,6 +398,40 @@ sched_gate META-CONSISTENT res=dayone desc="package metadata consistency" \
 sched_gate ARTIFACT-DENY res=dayone desc="no porting artifacts in the PUBLISHED package (authoritative listing)" \
     --fn dayone_artifact_deny
 
+# ---- expansion gates (GATE_EXPANSION_PLAN Tier 5 + release) -------------------
+# Blocking, non-report-only. Backlog burned to zero + allowlists approved
+# (2026-07-07), so these enforce so it can't re-rot. Modeled on the day-one wiring.
+#   GEN-TYPE-DEGENERACY — generated typed surface has no bare loose-alias escape
+#     hatches / no private type leaked into a public field (php: no generated-alias
+#     construct → skips clean).
+#   PUBLIC-JARGON — no porting-project internal jargon leaks into public phpDoc.
+#   GEN-IDIOM — the generated REST/payload tree is NOT lint-excluded (phpstan L9
+#     actually runs over it).
+#   RELEASE-FRESH — report-only for php: php has NO publish/release workflow, so
+#     there is no publish path to gate (absence is a flagged gap, not a RED). Wired
+#     report-only per the brief; flip off --report-only once php gains a publish wf.
+# ROUTE-COLLISION is NOT wired for php — see the note after this block.
+sched_gate GEN-TYPE-DEGENERACY res=dayone desc="generated typed surface: no loose-alias / private-type-in-public-field" \
+    -- python3 "$PORTING_SDK_DIR/scripts/gen_type_degeneracy.py" --port php --repo "$PORT_ROOT"
+sched_gate PUBLIC-JARGON res=dayone desc="no internal porting jargon in public phpDoc doc-comments" \
+    -- python3 "$PORTING_SDK_DIR/scripts/public_jargon.py" --port php --repo "$PORT_ROOT"
+sched_gate GEN-IDIOM res=dayone desc="generated code is NOT lint-excluded (phpstan runs over it)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/gen_idiom.py" --port php --repo "$PORT_ROOT"
+sched_gate RELEASE-FRESH res=dayone desc="release hygiene (report-only: php has no publish workflow to gate)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port php --repo "$PORT_ROOT" --report-only
+
+# ROUTE-COLLISION — NOT wired for php. The gate has no default registry command for
+# php, so standalone it exits 1 ("pass --registry-json with a pre-built registry").
+# php's scripts/route_registry.php (used by SPEC-PARITY) emits a compatible
+# {"routes":[{method,path_template,via}]} shape, so the gate CAN run when fed it —
+# but doing so currently reports 2 real ROUTE-SPLIT findings (callFlows /
+# conferenceRooms list_addresses / listAddresses dispatch to the SINGULAR
+# call_flow/conference_room addresses path, diverging from the plural collection
+# base — the L12 singular-vs-plural archetype). Wiring it blocking would require
+# either resolving those splits or a human-approved ROUTE_COLLISION_ALLOW.md entry;
+# per the wiring brief it is SKIPPED for php as a follow-up (registry-mechanism
+# decision + disposition of the 2 splits).
+
 sched_run
 rc=$?
 if [ "$rc" -eq 0 ]; then
