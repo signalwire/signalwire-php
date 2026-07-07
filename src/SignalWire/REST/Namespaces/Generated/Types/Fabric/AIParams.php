@@ -46,12 +46,6 @@ class AIParams
     /** @var array<string,mixed>|null */
     public ?array $asr_speaker_affinity = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $audible_debug = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $audible_latency = null;
-
     public ?string $background_file = null;
 
     /** @var array<string,mixed>|null */
@@ -79,9 +73,6 @@ class AIParams
 
     /** @var array<string,mixed>|null */
     public ?array $barge_functions = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $cache_mode = null;
 
     public ?string $conscience = null;
 
@@ -111,9 +102,6 @@ class AIParams
 
     /** @var array<string,mixed>|null */
     public ?array $end_of_speech_timeout = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $enable_accounting = null;
 
     /** @var array<string,mixed>|null */
     public ?array $enable_thinking = null;
@@ -165,7 +153,10 @@ class AIParams
 
     public ?string $interrupt_prompt = null;
 
-    /** @var array<string,mixed>|null */
+    /**
+     * @var array<string,mixed>|null
+     * @deprecated languages_enabled
+     */
     public ?array $languages_enabled = null;
 
     public ?string $local_tz = null;
@@ -246,9 +237,6 @@ class AIParams
     public ?array $turn_detection_timeout = null;
 
     public ?string $tts_number_format = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $verbose_logs = null;
 
     public ?string $video_listening_file = null;
 

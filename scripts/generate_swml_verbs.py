@@ -172,10 +172,13 @@ namespace SignalWire\\SWML\\Generated;
 """
 
 
-def _emit_class(php_name: str, properties: dict, defs: dict, source_desc: str) -> str:
+def _emit_class(psdk: Path, php_name: str, schema_name: str, properties: dict,
+                defs: dict, source_desc: str) -> str:
     """Emit one method-less PHP data class for an object/config schema. Property
     typing reuses generate_rest.php_property_type (pure idiom — the surface records
-    only the class name; types keep the DTO PHPStan-L9-clean)."""
+    only the class name; types keep the DTO PHPStan-L9-clean). SDK-surface policy
+    (hidden/deprecated) comes from the single x-sdk-overlay.yaml, matched by the
+    SPEC schema name (schema_name), NOT the emitted PHP class name."""
     lines: list[str] = []
     lines.append("/**")
     lines.append(f" * {php_name} — generated SWML verb config type ({source_desc}).")
@@ -188,15 +191,30 @@ def _emit_class(php_name: str, properties: dict, defs: dict, source_desc: str) -
     body: list[str] = []
     used: set[str] = set()
     for wire_key, psc in properties.items():
+        if GR.overlay_hidden(psdk, wire_key, schema_name):
+            # hidden: drop from the SDK surface entirely (still on the wire).
+            continue
         prop = GR.php_property_name(wire_key)
         while prop in used:
             prop += "_"
         used.add(prop)
         php_type, doc = GR.php_property_type(psc if isinstance(psc, dict) else {}, defs)
+        # Build ONE docblock (PHP/PHPStan honor only the block directly above the
+        # property): @var value-type, optional wire-key note, optional @deprecated.
+        tags: list[str] = []
         if doc is not None:
-            body.append(f"    /** @var {doc} */")
+            tags.append(f"@var {doc}")
         elif prop != wire_key:
-            body.append(f"    /** wire key: {wire_key} */")
+            tags.append(f"wire key: {wire_key}")
+        if GR.overlay_deprecated(psdk, wire_key, schema_name):
+            # deprecated: still emitted (back-compat), flagged idiomatically.
+            tags.append(f"@deprecated {wire_key}")
+        if len(tags) == 1:
+            body.append(f"    /** {tags[0]} */")
+        elif tags:
+            body.append("    /**")
+            body.extend(f"     * {t}" for t in tags)
+            body.append("     */")
         body.append(f"    public {php_type} ${prop} = null;")
         body.append("")
     if body and body[-1] == "":
@@ -224,7 +242,7 @@ def build_outputs(psdk: Path) -> dict[str, str]:
             continue
         emitted_names.add(php_name)
         outs[f"{php_name}.php"] = _emit_class(
-            php_name, node.get("properties") or {}, defs,
+            psdk, php_name, raw_name, node.get("properties") or {}, defs,
             f"$defs schema {raw_name!r}",
         )
 
@@ -256,8 +274,12 @@ def build_outputs(psdk: Path) -> dict[str, str]:
             if php_name in emitted_names:
                 continue
             emitted_names.add(php_name)
+            # A flattened <Verb>Config is a synthesized class (not a spec schema);
+            # its properties come from the verb's inline/union payload. Overlay
+            # scopes target real spec schema names (AIParams), so pass the verb
+            # wrapper name — a scoped rule won't match here, which is correct.
             outs[f"{php_name}.php"] = _emit_class(
-                php_name, props, defs,
+                psdk, php_name, wrapper, props, defs,
                 f"flattened SWMLMethod verb {verb!r} config",
             )
 

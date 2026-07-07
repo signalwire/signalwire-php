@@ -95,6 +95,56 @@ def repo_root() -> Path:
 
 
 # ---------------------------------------------------------------------------
+# SDK-surface policy overlay (the single source; NOT wire truth).
+# ---------------------------------------------------------------------------
+# porting-sdk/rest-apis/x-sdk-overlay.yaml is the ONE authoritative place that
+# says which spec fields the SDKs hide (dropped from the surface entirely, still
+# on the wire) or deprecate (emitted-but-flagged). It is a policy overlay, not
+# markup in the (often vendored) specs, so the same field is governed once and
+# applied wherever it surfaces (schema.json AIParams + the calling/fabric REST
+# projections). Mirrors the Python reference
+# (porting-sdk/scripts/generate_python_rest_types.py). Each rule is
+# (field, scope-or-None): scope=None matches in every schema; scope="Name" only
+# inside the SPEC schema of that name (the $defs / components.schemas key — NOT
+# the language-idiomatic PHP class name), so the scope value is identical cross-port.
+_overlay_cache: "dict[str, set[tuple[str, str | None]]] | None" = None
+
+
+def _load_overlay(psdk: Path) -> "dict[str, set[tuple[str, str | None]]]":
+    global _overlay_cache
+    if _overlay_cache is None:
+        def rules(key: str, data: dict) -> "set[tuple[str, str | None]]":
+            out: set[tuple[str, str | None]] = set()
+            for entry in data.get(key) or []:
+                if isinstance(entry, dict) and entry.get("field"):
+                    out.add((entry["field"], entry.get("scope")))
+            return out
+        path = psdk / "rest-apis" / "x-sdk-overlay.yaml"
+        data = yaml.safe_load(path.read_text()) or {} if path.is_file() else {}
+        _overlay_cache = {"hidden": rules("hidden", data), "deprecated": rules("deprecated", data)}
+    return _overlay_cache
+
+
+def _overlay_match(rules: "set[tuple[str, str | None]]", field: str, schema_name: str | None) -> bool:
+    # A rule matches when its field equals `field` AND (it is unscoped OR its scope
+    # equals the containing SPEC schema name). `schema_name` is the schema's name as
+    # it appears in the spec (the $defs / components.schemas key), NOT the PHP class
+    # name this generator later emits — so the scope value is identical across ports.
+    for rf, scope in rules:
+        if rf == field and (scope is None or scope == schema_name):
+            return True
+    return False
+
+
+def overlay_hidden(psdk: Path, field: str, schema_name: str | None = None) -> bool:
+    return _overlay_match(_load_overlay(psdk)["hidden"], field, schema_name)
+
+
+def overlay_deprecated(psdk: Path, field: str, schema_name: str | None = None) -> bool:
+    return _overlay_match(_load_overlay(psdk)["deprecated"], field, schema_name)
+
+
+# ---------------------------------------------------------------------------
 # Base loading (x-sdk-bases; §2).
 # ---------------------------------------------------------------------------
 
@@ -1367,7 +1417,7 @@ def php_property_name(wire_key: str) -> str:
     return s
 
 
-def emit_type_class(sub: str, raw_name: str, node: dict, ns_key: str, schemas: dict) -> str:
+def emit_type_class(psdk: Path, sub: str, raw_name: str, node: dict, ns_key: str, schemas: dict) -> str:
     """Emit one PHP data class for an object schema."""
     php_name = type_name(raw_name)
     lines: list[str] = []
@@ -1384,16 +1434,34 @@ def emit_type_class(sub: str, raw_name: str, node: dict, ns_key: str, schemas: d
     used: set[str] = set()
     body: list[str] = []
     for wire_key, psc in props.items():
+        # SDK-surface policy comes from the single overlay (x-sdk-overlay.yaml),
+        # matched by the SPEC schema name (raw_name), NOT the emitted PHP class name.
+        if overlay_hidden(psdk, wire_key, raw_name):
+            # hidden: drop from the SDK surface entirely (still on the wire).
+            continue
         prop = php_property_name(wire_key)
         while prop in used:
             prop += "_"
         used.add(prop)
         php_type, doc = php_property_type(psc if isinstance(psc, dict) else {}, schemas)
+        # Build ONE docblock (PHPStan/PHP only honor the block immediately above the
+        # property): @var value-type (required at L9 for ?array), optional wire-key
+        # note, and an @deprecated tag when the overlay deprecates the field.
+        tags: list[str] = []
         if doc is not None:
-            body.append(f"    /** @var {doc} */")
+            tags.append(f"@var {doc}")
         # Preserve the wire key when the sanitised property name differs.
         elif prop != wire_key:
-            body.append(f"    /** wire key: {wire_key} */")
+            tags.append(f"wire key: {wire_key}")
+        if overlay_deprecated(psdk, wire_key, raw_name):
+            # deprecated: still emitted (back-compat), flagged idiomatically.
+            tags.append(f"@deprecated {wire_key}")
+        if len(tags) == 1:
+            body.append(f"    /** {tags[0]} */")
+        elif tags:
+            body.append("    /**")
+            body.extend(f"     * {t}" for t in tags)
+            body.append("     */")
         body.append(f"    public {php_type} ${prop} = null;")
         body.append("")
     if body and body[-1] == "":
@@ -1473,7 +1541,7 @@ def emit_types(psdk: Path, outs: dict[str, str]) -> None:
                 # one spec's components.schemas; this guards against an x-sdk-enum
                 # sharing a leaf with an object, which does not occur today).
                 if fn not in outs:
-                    outs[fn] = emit_type_class(sub, raw_name, node, ns_key, schemas)
+                    outs[fn] = emit_type_class(psdk, sub, raw_name, node, ns_key, schemas)
 
 
 # ---------------------------------------------------------------------------
