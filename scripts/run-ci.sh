@@ -156,6 +156,17 @@ source "$PORTING_SDK_DIR/scripts/gate_scheduler.sh"
 
 # ---- gate helper functions ---------------------------------------------------
 
+# ARTIFACT-DENY (day-one) — feed the AUTHORITATIVE published-package listing to
+# artifact_deny.py --listing. Packagist/Composer serve the "dist" tarball produced
+# by `git archive HEAD`, which honours `.gitattributes export-ignore` (composer
+# archive of the working dir does NOT — it ships vendor/, caches, and .sw-tmp). So
+# `git archive HEAD` IS the real package listing; pipe its paths in.
+dayone_artifact_deny() {
+    git -C "$PORT_ROOT" archive --format=tar HEAD \
+        | tar -t \
+        | python3 "$PORTING_SDK_DIR/scripts/artifact_deny.py" --port php --listing -
+}
+
 # TEST — run the full suite in PARALLEL via paratest against the pre-spawned shared
 # mocks (stood up below before sched_run). $MOCKS_UP gates whether the mocks came up.
 MOCKS_UP=0
@@ -373,6 +384,19 @@ sched_gate SWAIG-CLI desc="swaig-test shared mini-contract (verbs/serverless-rej
 sched_gate SWAIG-COVERAGE desc="every engine SWAIG action emittable (modulo allowlist)" \
     -- python3 "$PORTING_SDK_DIR/scripts/swaig_coverage.py" --check \
         --emission "$PORT_ROOT/src/SignalWire/SWAIG/FunctionResult.php"
+
+sched_gate DOC-LANG-PURITY res=dayone desc="no python-verbatim docs in a non-python port" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_lang_purity.py" --port php --repo "$PORT_ROOT"
+sched_gate DOC-LINKS res=dayone desc="every relative markdown link resolves to a tracked file" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_links.py" --port php --repo "$PORT_ROOT"
+sched_gate ROOT-HYGIENE res=dayone desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port php --repo "$PORT_ROOT"
+sched_gate IGNORE-LEDGER-VERIFY res=dayone desc="no laundered false-absence entries in DOC_AUDIT_IGNORE.md" \
+    -- python3 "$PORTING_SDK_DIR/scripts/ignore_ledger_verify.py" --port php --repo "$PORT_ROOT"
+sched_gate META-CONSISTENT res=dayone desc="package metadata consistency" \
+    -- python3 "$PORTING_SDK_DIR/scripts/meta_consistent.py" --port php --repo "$PORT_ROOT"
+sched_gate ARTIFACT-DENY res=dayone desc="no porting artifacts in the PUBLISHED package (authoritative listing)" \
+    --fn dayone_artifact_deny
 
 sched_run
 rc=$?
