@@ -112,5 +112,5 @@ php examples/simple_agent.php
 
 | File | Description |
 |------|-------------|
-| [relay_demo.php](relay_demo.php) | RELAY client: answer inbound calls and play TTS |
+| [relay_answer_and_welcome.php](relay_answer_and_welcome.php) | RELAY client: answer inbound calls and play TTS |
 | [rest_demo.php](rest_demo.php) | REST client: list resources across APIs |

@@ -1198,7 +1198,7 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument(
         "--porting-sdk", type=Path,
-        default=Path("/usr/local/home/devuser/src/porting-sdk"),
+        default=(Path(__file__).resolve().parent.parent.parent / "porting-sdk"),
     )
     args = parser.parse_args(argv)
 

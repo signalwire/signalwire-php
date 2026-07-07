@@ -31,7 +31,10 @@ HERE = Path(__file__).resolve().parent
 PORT_ROOT = HERE.parent
 PSDK = (PORT_ROOT.parent / "porting-sdk").resolve()
 if not PSDK.is_dir():
-    PSDK = Path("/usr/local/home/devuser/src/porting-sdk")
+    raise SystemExit(
+        f"porting-sdk not found adjacent to this repo (looked for {PSDK}); "
+        "clone signalwire/porting-sdk as a sibling of this port repo."
+    )
 
 sys.path.insert(0, str(HERE))
 from enumerate_surface import (  # type: ignore

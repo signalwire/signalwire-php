@@ -24,7 +24,6 @@ protocol: relay-event field accessor name (`event.protocol`) — not a method ca
 state: relay-event field accessor name (`event.state`) — not a method call
 url: relay-message field accessor name — not a method call
 media: relay-message field accessor name — not a method call
-messageId: relay-message field accessor name — not a method call
 callId: relay-event field accessor name (`event.callId`) — not a method call
 phoneNumber: REST resource path identifier — used in docs as a URL segment, not a method
 device: relay-event subfield (`event.device`) — not a method call
@@ -54,7 +53,6 @@ PHP exposes most REST namespaces as `CrudResource` instances via
 the underlying HTTP path. The methods are real; the surface enumerator
 doesn't pick them up because they're URL-driven, not declared methods.
 
-addDirectory: CrudResource directory-management helper (used in docs)
 addMembership: Fabric subscriber-membership helper
 assignDomainApplication: Fabric domain-application assignment
 assignPhoneRoute: deprecated phone-route helper (kept for back-compat doc)
@@ -77,35 +75,25 @@ getId: REST resource-id accessor in error responses
 getNextMember: Compat queue next-member helper
 getSipEndpoint: Fabric SIP-endpoint helper
 listAddresses: Fabric addresses listing
-listAvailableCountries: Compat available-countries listing
 listCampaigns: Registry namespace dynamic method
 listChunks: Datasphere documents chunks helper
 listConferenceTokens: Fabric conference-token helper
 listEvents: Compat events listing
-listMedia: Compat media listing
 listMembers: Compat conference-members listing
 listMemberships: Fabric subscriber-memberships listing
 listNumbers: Registry/numbers listing
 listOrders: Registry orders listing
-listParticipants: Compat participant listing
 listRecordings: Compat recording listing
 listSipEndpoints: Fabric SIP-endpoint listing
 listVersions: Fabric SWML-version listing
 purchase: Compat phone-number purchase helper
-removeDirectory: Web-service directory-management helper
 search: Datasphere/native_vector_search query helper (also a generic verb name)
-searchLocal: Compat numbers local-search helper
-searchTollFree: Compat numbers toll-free search helper
 sms: Compat SMS resource dispatch (`client.sms(...)`)
-startRecording: Compat call-recording helper
-startStream: Compat media-stream helper
 submitVerification: VerifiedCallers verification-submission helper
 verify: VerifiedCallers verification-token helper
 
 ## SWML / web-service helpers documented but not on the public surface
 
-start: web-service start helper (mirrors AgentServer::run); not on the public
-       surface but documented as a path
 handleServerlessRequest: serverless adapter helper (Adapter::dispatch)
                           — internal to the Adapter class
 resetDocument: Document::reset alias used in dynamic_swml_service example

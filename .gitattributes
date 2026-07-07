@@ -1,0 +1,43 @@
+# Publish-exclude discipline for the Composer dist package.
+#
+# Packagist/Composer serve the "dist" tarball produced by `git archive`
+# (equivalently `composer archive`), which honours `export-ignore`. Everything
+# marked here is porting-process audit machinery that must NOT ship inside the
+# published `signalwire/sdk` package — only the library (src/), the bin entry
+# point, and the landing-page/manifest files should.
+#
+# Verify authoritatively with the artifact_deny gate's --listing mode:
+#   git archive --format=tar HEAD | tar -t \
+#     | python3 ../porting-sdk/scripts/artifact_deny.py --port php --listing -
+
+# --- porting-audit contract files (root) ---
+CHECKLIST.md            export-ignore
+DOC_AUDIT_IGNORE.md     export-ignore
+PROGRESS.md             export-ignore
+REST_COVERAGE_GAPS.md   export-ignore
+PORT_ADDITIONS.md       export-ignore
+PORT_OMISSIONS.md       export-ignore
+PORT_SIGNATURE_OMISSIONS.md export-ignore
+PORT_TEST_OMISSIONS.md  export-ignore
+PORT_EXAMPLE_OMISSIONS.md export-ignore
+
+# --- generated audit oracles / coverage data ---
+port_signatures.json    export-ignore
+port_surface.json       export-ignore
+audit_coverage.json     export-ignore
+audit_coverage_baseline.json export-ignore
+
+# --- audit harness examples + emit tools (not library code) ---
+examples/RelayAuditHarness.php  export-ignore
+examples/RestAuditHarness.php   export-ignore
+examples/SkillsAuditHarness.php export-ignore
+scripts/emit_corpus.php export-ignore
+scripts/emit_skills.php export-ignore
+
+# --- allowlists + porting-process docs/dirs (not library code) ---
+ROOT_HYGIENE_ALLOW.md   export-ignore
+ARTIFACT_DENY_ALLOW.md  export-ignore
+META_CONSISTENT_ALLOW.md export-ignore
+.gitattributes          export-ignore
+scripts/                export-ignore
+tests/                  export-ignore
