@@ -40,8 +40,8 @@ composer require signalwire/sdk
 
 Each agent is a self-contained microservice that generates [SWML](docs/swml_service_guide.md) (SignalWire Markup Language) and handles [SWAIG](docs/swaig_reference.md) (SignalWire AI Gateway) tool calls. The SignalWire platform runs the entire AI pipeline (STT, LLM, TTS) -- your agent just defines the behavior.
 
+<!-- include: examples/quickstart_agent.php#construct -->
 ```php
-<?php
 require 'vendor/autoload.php';
 
 use SignalWire\Agent\AgentBase;
@@ -116,8 +116,8 @@ See [examples/README.md](examples/README.md) for the full list organized by cate
 
 Real-time call control and messaging over WebSocket. The RELAY client connects to SignalWire via the Blade protocol and gives you imperative, blocking control over live phone calls and SMS/MMS.
 
+<!-- include: examples/quickstart_relay.php#construct -->
 ```php
-<?php
 require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
@@ -155,8 +155,8 @@ See the **[RELAY documentation](relay/README.md)** for the full guide, API refer
 
 Synchronous REST client for managing SignalWire resources and controlling calls over HTTP. No WebSocket required.
 
+<!-- include: examples/quickstart_rest.php#construct -->
 ```php
-<?php
 require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
@@ -168,9 +168,9 @@ $client = new RestClient(
 );
 
 $client->fabric()->aiAgents()->create(['name' => 'Support Bot', 'prompt' => ['text' => 'You are helpful.']]);
-$client->calling()->play($callId, params: ['play' => [['type' => 'tts', 'text' => 'Hello!']]]);
+$client->calling()->play($callId, play: [['type' => 'tts', 'text' => 'Hello!']]);
 $client->phoneNumbers()->search(['areaCode' => '512']);
-$client->datasphere()->documents()->search(['queryString' => 'billing policy']);
+$client->datasphere()->documents()->search(queryString: 'billing policy');
 ```
 
 - 20 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
