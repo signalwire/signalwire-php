@@ -226,11 +226,11 @@ abstract class SkillBase
      */
     public function defineTool(string $name, string $description, array $parameters, callable $handler): void
     {
-        if (!empty($this->swaigFields)) {
-            $parameters = array_merge($parameters, $this->swaigFields);
-        }
-
-        $this->agent->defineTool($name, $description, $parameters, $handler);
+        // swaig_fields (e.g. meta_data_token) are TOP-LEVEL SWAIG function-definition
+        // fields — siblings of `argument`, NOT entries in the parameters schema.
+        // Mirrors Python `SkillBase.define_tool`, which forwards them as **swaig_fields
+        // (extra_swaig_fields) to agent.define_tool, landing at the function-def top level.
+        $this->agent->defineTool($name, $description, $parameters, $handler, false, $this->swaigFields);
     }
 
     /**

@@ -128,6 +128,29 @@ $a = newAgent();
 $a->addPronunciation('SW', 'SignalWire', true);
 $out['swml_add_pronunciation'] = extractPath(renderDoc($a), 'ai.pronounce');
 
+// swml_define_tool_complete_schema: a COMPLETE {type,properties,required} schema
+// passed to defineTool must PASS THROUGH — the rendered SWAIG function's argument
+// (PHP's rename of the oracle's `parameters` field) is that schema FLAT, not
+// double-wrapped. Extract ai.SWAIG.functions[?function=lookup].argument.
+$a = newAgent();
+$a->defineTool(
+    'lookup',
+    'Look up a thing',
+    ['type' => 'object', 'properties' => ['q' => ['type' => 'string']], 'required' => ['q']],
+    fn (array $args, array $raw): mixed => null,
+);
+$functions = extractPath(renderDoc($a), 'ai.SWAIG.functions');
+$lookupArg = null;
+if (is_array($functions)) {
+    foreach ($functions as $fn) {
+        if (is_array($fn) && ($fn['function'] ?? null) === 'lookup') {
+            $lookupArg = $fn['argument'] ?? null;
+            break;
+        }
+    }
+}
+$out['swml_define_tool_complete_schema'] = $lookupArg;
+
 $encoded = json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 if ($encoded === false) {
     fwrite(STDERR, 'swml-dump: json_encode failed: ' . json_last_error_msg() . "\n");

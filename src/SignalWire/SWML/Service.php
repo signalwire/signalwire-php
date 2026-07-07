@@ -411,7 +411,15 @@ class Service implements RequestHandlerLike
      * Tool descriptions and parameter descriptions are LLM-facing prompt
      * engineering, not internal documentation. See PORTING_GUIDE for guidance.
      *
-     * @param array<string, mixed> $parameters JSON-Schema `properties` map for the tool argument.
+     * @param array<string, mixed> $parameters JSON-Schema `properties` map for the tool argument,
+     *   OR a COMPLETE JSON-Schema object ({type, properties[, required]}) which is passed through
+     *   as-is. Mirrors Python `SWAIGFunction._ensure_parameter_structure`.
+     * @param array<string, mixed> $extraFields Additional SWAIG-only fields (e.g.
+     *   `meta_data_token`, `web_hook_auth_user`) merged at the TOP LEVEL of the generated
+     *   function definition — siblings of `argument`, NOT nested inside it. This is PHP's
+     *   positional expression of Python's `**swaig_fields` bag (mirrors the documented
+     *   `SWAIGFunction.__init__` `extraFields` idiom); Python renders these via
+     *   `function_def.update(self.extra_swaig_fields)`.
      */
     public function defineTool(
         string $name,
@@ -419,21 +427,42 @@ class Service implements RequestHandlerLike
         array $parameters,
         callable $handler,
         bool $secure = false,
+        array $extraFields = [],
     ): static {
-        $this->tools[$name] = [
+        $this->tools[$name] = array_merge($extraFields, [
             'function' => $name,
             'purpose' => $description,
-            'argument' => [
-                'type' => 'object',
-                'properties' => $parameters,
-            ],
+            'argument' => $this->ensureParameterStructure($parameters),
             '_handler' => $handler,
             '_secure' => $secure,
-        ];
+        ]);
         if (!in_array($name, $this->toolOrder, true)) {
             $this->toolOrder[] = $name;
         }
         return $this;
+    }
+
+    /**
+     * Normalize a defineTool $parameters value into the SWML argument schema.
+     *
+     * When $parameters is a bare `properties` map it is wrapped in
+     * {type: object, properties: $parameters}. When it is ALREADY a complete
+     * JSON-Schema object (has both `type` and `properties`) it is passed
+     * through unchanged — wrapping it would double-nest the schema. Mirrors
+     * Python `SWAIGFunction._ensure_parameter_structure`.
+     *
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function ensureParameterStructure(array $parameters): array
+    {
+        if (array_key_exists('type', $parameters) && array_key_exists('properties', $parameters)) {
+            return $parameters;
+        }
+        return [
+            'type' => 'object',
+            'properties' => $parameters,
+        ];
     }
 
     /**

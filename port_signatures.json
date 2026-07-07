@@ -998,6 +998,12 @@
                   "type": "bool",
                   "required": false,
                   "default": false
+                },
+                {
+                  "name": "extra_fields",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "any"
@@ -5370,6 +5376,12 @@
                   "type": "bool",
                   "required": false,
                   "default": false
+                },
+                {
+                  "name": "extra_fields",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "any"
@@ -9909,6 +9921,12 @@
                   "type": "bool",
                   "required": false,
                   "default": false
+                },
+                {
+                  "name": "extra_fields",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "any"

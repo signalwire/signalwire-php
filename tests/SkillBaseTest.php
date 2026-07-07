@@ -86,9 +86,12 @@ class SkillBaseTest extends TestCase
         $skill->registerTools();
         $fn = $agent->getFunction('do_thing');
         $this->assertNotNull($fn);
-        // SkillBase::defineTool merges the skill's swaig_fields into the tool's
-        // parameters (PHP's Service::defineTool carries them under argument.properties).
-        $this->assertSame('abc', Shape::at($fn, 'argument', 'properties', 'meta_data_token'));
+        // SkillBase::defineTool forwards the skill's swaig_fields as TOP-LEVEL SWAIG
+        // function-definition fields (siblings of `argument`), matching Python's
+        // extra_swaig_fields merge — NOT nested inside the parameters schema.
+        $this->assertSame('abc', Shape::at($fn, 'meta_data_token'));
+        // And the parameters schema is passed through flat (not double-wrapped, not polluted).
+        $this->assertSame(['type' => 'object', 'properties' => []], Shape::sub($fn, 'argument'));
     }
 
     public function testValidatePackagesTrueWhenNoneRequired(): void

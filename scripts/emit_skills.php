@@ -71,7 +71,7 @@ use SignalWire\Skills\SkillRegistry;
  */
 final class CapturingAgent implements AgentInterface
 {
-    /** @var list<array{name: string, parameters: array<string, mixed>, required?: list<string>}> */
+    /** @var list<array<string, mixed>> */
     public array $tools = [];
 
     /** @var list<string> */
@@ -95,6 +95,7 @@ final class CapturingAgent implements AgentInterface
         array $parameters,
         callable $handler,
         bool $secure = false,
+        array $extraFields = [],
     ): static {
         $props = [];
         $required = [];
@@ -107,7 +108,9 @@ final class CapturingAgent implements AgentInterface
             }
             $props[$param] = $def;
         }
-        $tool = ['name' => $name, 'parameters' => $props];
+        // Top-level SWAIG fields (swaig_fields, e.g. meta_data_token) captured as
+        // siblings — matching Service::defineTool's top-level merge.
+        $tool = array_merge($extraFields, ['name' => $name, 'parameters' => $props]);
         if ($required !== []) {
             $tool['required'] = $required;
         }

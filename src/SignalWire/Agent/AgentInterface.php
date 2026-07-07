@@ -39,6 +39,9 @@ interface AgentInterface
 
     /**
      * @param array<string, mixed> $parameters
+     * @param array<string, mixed> $extraFields Top-level SWAIG function-definition fields
+     *   (e.g. meta_data_token) — siblings of `argument`. PHP's positional form of Python's
+     *   `**swaig_fields`.
      */
     public function defineTool(
         string $name,
@@ -46,6 +49,7 @@ interface AgentInterface
         array $parameters,
         callable $handler,
         bool $secure = false,
+        array $extraFields = [],
     ): static;
 
     /**
