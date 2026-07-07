@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 
 /**
- * PhoneCallHandler — generated public enum (x-sdk-enum on components/schemas 'PhoneNumberCallHandlerRequest', 'relay_rest' spec).
+ * PhoneCallHandler — 'relay_rest' API enum.
  *
  * Backed enum: each case's value is the exact wire string.
  */

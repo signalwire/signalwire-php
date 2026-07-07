@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * ImportedNumbers — generated from x-sdk-resource 'ImportedNumbers' (relay-rest spec, base BaseResource).
+ * ImportedNumbers REST resource (relay-rest API).
  */
 class ImportedNumbers extends \SignalWire\REST\BaseResource
 {

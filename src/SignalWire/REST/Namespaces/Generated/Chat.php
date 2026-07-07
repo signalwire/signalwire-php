@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Chat — generated from x-sdk-resource 'Chat' (chat spec, base BaseResource).
+ * Chat REST resource (chat API).
  */
 class Chat extends \SignalWire\REST\BaseResource
 {

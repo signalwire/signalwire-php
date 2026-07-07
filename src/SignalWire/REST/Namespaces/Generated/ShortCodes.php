@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * ShortCodes — generated from x-sdk-resource 'ShortCodes' (relay-rest spec, base BaseResource).
+ * ShortCodes REST resource (relay-rest API).
  */
 class ShortCodes extends \SignalWire\REST\BaseResource
 {

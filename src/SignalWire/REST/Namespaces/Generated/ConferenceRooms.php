@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * ConferenceRooms — generated from x-sdk-resource 'ConferenceRooms' (fabric spec, base FabricResource).
+ * ConferenceRooms REST resource (fabric API).
  */
 class ConferenceRooms extends \SignalWire\REST\FabricResourcePUT
 {

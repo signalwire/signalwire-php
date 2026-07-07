@@ -263,7 +263,7 @@ class Message
      * the raw {@see getState()} string is outside the known closed set
      * (a forward-compatible server value).
      *
-     * Offered ALONGSIDE the bare-string {@see getState()} accessor for parity
+     * Offered ALONGSIDE the bare-string {@see getState()} accessor for compatibility
      * with the Python reference: `getState()` stays the canonical string;
      * `messageState()` is the typed view for autocompletion + an exhaustive
      * `match` + `->isTerminal()`. PORT_ADDITION.

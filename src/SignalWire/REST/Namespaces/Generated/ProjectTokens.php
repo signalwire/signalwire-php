@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * ProjectTokens — generated from x-sdk-resource 'ProjectTokens' (project spec, base BaseResource).
+ * ProjectTokens REST resource (project API).
  */
 class ProjectTokens extends \SignalWire\REST\BaseResource
 {

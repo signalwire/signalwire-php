@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * NumberGroups — generated from x-sdk-resource 'NumberGroups' (relay-rest spec, base CrudResource).
+ * NumberGroups REST resource (relay-rest API).
  */
 class NumberGroups extends \SignalWire\REST\CrudResource
 {

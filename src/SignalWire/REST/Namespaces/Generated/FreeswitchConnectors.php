@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * FreeswitchConnectors — generated from x-sdk-resource 'FreeswitchConnectors' (fabric spec, base FabricResource).
+ * FreeswitchConnectors REST resource (fabric API).
  */
 class FreeswitchConnectors extends \SignalWire\REST\FabricResourcePUT
 {

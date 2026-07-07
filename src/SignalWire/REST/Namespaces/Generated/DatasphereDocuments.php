@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * DatasphereDocuments — generated from x-sdk-resource 'DatasphereDocuments' (datasphere spec, base CrudResource).
+ * DatasphereDocuments REST resource (datasphere API).
  */
 class DatasphereDocuments extends \SignalWire\REST\CrudResource
 {

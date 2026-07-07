@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Recordings — generated from x-sdk-resource 'Recordings' (relay-rest spec, base BaseResource).
+ * Recordings REST resource (relay-rest API).
  */
 class Recordings extends \SignalWire\REST\BaseResource
 {

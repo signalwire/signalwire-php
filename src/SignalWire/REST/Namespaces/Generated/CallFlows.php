@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * CallFlows — generated from x-sdk-resource 'CallFlows' (fabric spec, base FabricResource).
+ * CallFlows REST resource (fabric API).
  */
 class CallFlows extends \SignalWire\REST\FabricResourcePUT
 {

@@ -61,7 +61,7 @@ class Logger
 
     /**
      * @param LogLevel|string $level severity level — the typed {@see LogLevel}
-     *   enum (typo-checked at the call site) or a bare string (parity with the
+     *   enum (typo-checked at the call site) or a bare string (matches the
      *   Python reference). Unknown string levels are ignored, as before.
      */
     public function setLevel(LogLevel|string $level): void
@@ -84,7 +84,7 @@ class Logger
 
     /**
      * @param LogLevel|string $level severity to test — the typed
-     *   {@see LogLevel} enum or a bare string (parity with Python).
+     *   {@see LogLevel} enum or a bare string (matches Python).
      */
     public function shouldLog(LogLevel|string $level): bool
     {

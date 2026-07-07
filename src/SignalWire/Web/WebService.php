@@ -14,7 +14,7 @@ use SignalWire\Core\SecurityConfig;
  * features: HTTP Basic auth, extension allow/block filtering, directory
  * browsing, per-file size limits, CORS, and security headers. Mirrors Python's
  * ``signalwire.web.web_service.WebService`` (wire/semantic contract) and TS's
- * ``WebService`` (shape oracle).
+ * ``WebService`` (the canonical shape).
  *
  * PHP idiom: Python couples serving to FastAPI/uvicorn and TS to Hono; PHP has
  * no bundled web framework, so serving is expressed via a native
@@ -24,7 +24,7 @@ use SignalWire\Core\SecurityConfig;
  * assertions. Framework mounting is NOT special-cased impossible — the whole
  * class ports; only the physical socket bind lives behind ``start()``.
  *
- * Python parity: signalwire/signalwire/web/web_service.py
+ * Mirrors signalwire/signalwire/web/web_service.py
  */
 class WebService
 {

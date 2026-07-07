@@ -27,7 +27,7 @@ use WebSocket\Message\Text;
  *
  * Why phrity/websocket:
  * - It performs a *real*, verified TLS handshake for ``wss://`` URIs. A
- *   private CA (e.g. the porting-sdk test CA) is trusted by passing its
+ *   private CA (e.g. a self-signed test CA) is trusted by passing its
  *   ``cafile`` through the stream {@see \Phrity\Net\Context} — peer
  *   verification stays ON (no allow_self_signed, no verify_peer=false).
  * - It owns frame masking/decoding, the upgrade handshake, the

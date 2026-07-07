@@ -17,9 +17,9 @@ use SignalWire\Logging\Logger;
  * Unified multi-method authentication handler supporting Bearer token, API key,
  * and Basic auth with constant-time (timing-safe) credential comparison.
  *
- * Parity with the Python reference `signalwire.core.auth_handler.AuthHandler`
+ * Mirrors the `signalwire.core.auth_handler.AuthHandler` API
  * (core/auth_handler.py) — same verify_api_key / verify_basic_auth /
- * verify_bearer_token / get_auth_info capability set — and the TS oracle
+ * verify_bearer_token / get_auth_info capability set — and TypeScript
  * `AuthHandler` (AuthHandler.ts), whose config-object construction this mirrors
  * (PHP named arguments give the same keyword-style call as TS's options bag).
  *
@@ -150,7 +150,7 @@ class AuthHandler
     /**
      * Validate a request's headers against every configured auth method in
      * order (Bearer, API key, Basic). When no method is configured, logs a
-     * warning and allows the request through (parity with TS's validate).
+     * warning and allows the request through.
      *
      * @param array<string,string> $headers Case-insensitive request headers.
      */

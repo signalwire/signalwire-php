@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * SipProfile — generated from x-sdk-resource 'SipProfile' (relay-rest spec, base BaseResource).
+ * SipProfile REST resource (relay-rest API).
  */
 class SipProfile extends \SignalWire\REST\BaseResource
 {

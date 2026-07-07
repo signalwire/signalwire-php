@@ -233,7 +233,7 @@ class Adapter
      * @param RequestHandlerLike $agent An AgentBase or Service request handler.
      * @param ExecutionMode|string|null $mode Optional explicit mode override.
      *        Pass an {@see ExecutionMode} (typed) or its backing string
-     *        ('lambda'/'gcf'/'azure'/'cgi'/'server', for parity) to pin the
+     *        ('lambda'/'gcf'/'azure'/'cgi'/'server') to pin the
      *        dispatch instead of auto-detecting via {@see detectMode()}. An
      *        out-of-set string raises \ValueError. Defaults to null
      *        (auto-detect), preserving the original single-argument behaviour.

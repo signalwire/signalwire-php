@@ -16,7 +16,7 @@ namespace SignalWire\Relay\Event;
  * wrapper. Handlers can always read the original dict from {@see getParams()}.
  *
  * Mirrors the Python reference `signalwire.relay.event.RelayEvent` and the
- * TypeScript `RelayEvent` (the shape oracle): same `from_payload`/`fromPayload`
+ * TypeScript `RelayEvent` (the canonical shape): same `from_payload`/`fromPayload`
  * factory, same field set, same `value ?? default` boundary-read semantics.
  *
  * The fields are `readonly` (PHP 8.1): handlers only ever read an event, so an
@@ -174,7 +174,7 @@ class RelayEvent
      * its wrapper. Used by {@see parseEvent()} to dispatch raw payloads.
      *
      * Mirrors the Python reference `EVENT_CLASS_MAP` and the TypeScript
-     * `EVENT_CLASS_MAP` (the shape oracle) — same 23 event-type → subclass
+     * `EVENT_CLASS_MAP` (the canonical shape). — same 23 event-type → subclass
      * entries.
      *
      * @return array<string, class-string<RelayEvent>>
@@ -215,7 +215,7 @@ class RelayEvent
      * subclass's {@see fromPayload()}; unrecognised types fall back to a base
      * {@see RelayEvent}. Mirrors the Python reference module-level
      * `signalwire.relay.event.parse_event` and the TypeScript `parseEvent`
-     * free function (the shape oracle). PHP has no module-level free functions
+     * free function (the canonical shape). PHP has no module-level free functions
      * (PSR-4 file-per-class), so it is hosted as a static method on the base
      * event class — projected back to the Python module-level free function by
      * the surface/signature adapters (see PORT_ADDITIONS.md / PORT_OMISSIONS.md).

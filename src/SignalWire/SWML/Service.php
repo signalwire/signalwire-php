@@ -37,7 +37,7 @@ class Service implements RequestHandlerLike
 
     /**
      * Manually-set proxy base URL for webhook URL generation. Lives on the
-     * base Service (Python SWMLService/WebMixin parity) so both a plain
+     * base Service (mirrors SWMLService/WebMixin) so both a plain
      * SWMLService and AgentBase share one field; getProxyUrlBase() reads it.
      */
     protected ?string $manualProxyUrl = null;
@@ -194,8 +194,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Validate provided basic-auth credentials against the configured ones
-     * using a constant-time comparison. Python parity:
-     * AuthMixin.validate_basic_auth(username, password). */
+     * using a constant-time comparison. Mirrors * AuthMixin.validate_basic_auth(username, password). */
     public function validateBasicAuth(string $username, string $password): bool
     {
         return hash_equals($this->basicAuthUser, $username)
@@ -203,8 +202,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Get (user, password, source) where source is "provided",
-     * "environment", or "generated". Python parity:
-     * AuthMixin.get_basic_auth_credentials(include_source=True).
+     * "environment", or "generated". Mirrors * AuthMixin.get_basic_auth_credentials(include_source=True).
      *
      * @return array{string, string, string} [user, password, source]
      */
@@ -511,14 +509,14 @@ class Service implements RequestHandlerLike
     }
 
     /** Whether a SWAIG function with the given name is registered.
-     * Python parity: ``ToolRegistry.has_function``. */
+     * Mirrors ``ToolRegistry.has_function``. */
     public function hasFunction(string $name): bool
     {
         return isset($this->tools[$name]);
     }
 
     /** Get a registered SWAIG function by name, or null when absent.
-     * Python parity: ``ToolRegistry.get_function``.
+     * Mirrors ``ToolRegistry.get_function``.
      *
      * @return array<string, mixed>|null */
     public function getFunction(string $name): ?array
@@ -527,7 +525,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Snapshot of all registered SWAIG functions keyed by name.
-     * Python parity: ``ToolRegistry.get_all_functions``.
+     * Mirrors ``ToolRegistry.get_all_functions``.
      *
      * @return array<string, array<string, mixed>> */
     public function getAllFunctions(): array
@@ -536,7 +534,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Remove a registered SWAIG function. True on success, false if absent.
-     * Python parity: ``ToolRegistry.remove_function``. */
+     * Mirrors ``ToolRegistry.remove_function``. */
     public function removeFunction(string $name): bool
     {
         if (!isset($this->tools[$name])) {
@@ -629,7 +627,7 @@ class Service implements RequestHandlerLike
      * Return null to use the default SWML rendering, or an array of
      * modifications to merge into the rendered document.
      *
-     * Python parity: WebMixin.on_request(request_data, callback_path).
+     * Mirrors WebMixin.on_request(request_data, callback_path).
      * The Python third `request` arg is FastAPI-specific and is not
      * mirrored.
      *
@@ -647,7 +645,7 @@ class Service implements RequestHandlerLike
      * modification). Subclasses override to inspect the body or
      * callback path and return an associative array of overrides.
      *
-     * Python parity: WebMixin.on_swml_request(request_data, callback_path).
+     * Mirrors WebMixin.on_swml_request(request_data, callback_path).
      *
      * @param array<string, mixed>|null $requestData
      * @return array<string, mixed>|null

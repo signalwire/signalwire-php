@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Subscribers — generated from x-sdk-resource 'Subscribers' (fabric spec, base FabricResource).
+ * Subscribers REST resource (fabric API).
  */
 class Subscribers extends \SignalWire\REST\FabricResourcePUT
 {

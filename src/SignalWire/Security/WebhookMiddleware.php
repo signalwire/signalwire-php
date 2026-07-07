@@ -94,7 +94,7 @@ final class WebhookMiddleware
     /**
      * Framework-free decomposed validation core.
      *
-     * This is the language-neutral shape the porting-sdk oracle requires
+     * This is the language-neutral shape is required
      * (mirrors dotnet's `WebhookValidationMiddleware.Validate` and the
      * Rack/PSGI `.call` decision core): given the raw request primitives it
      * returns `null` to signal "pass — call your downstream handler", or a
@@ -110,7 +110,7 @@ final class WebhookMiddleware
      *   - Never logs / echoes the signing key, signature, or expected digest.
      *
      * @param string               $method     HTTP method (unused by the signature
-     *                                          check; carried for shape parity so a
+     *                                          check; carried for shape compatibility so a
      *                                          caller can pass the full request tuple).
      * @param string               $url        Full reconstructed URL the platform POSTed to.
      * @param array<string,string> $headers    Request headers (mixed-case keys allowed).

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * RegistryCampaigns — generated from x-sdk-resource 'RegistryCampaigns' (relay-rest spec, base BaseResource).
+ * RegistryCampaigns REST resource (relay-rest API).
  */
 class RegistryCampaigns extends \SignalWire\REST\BaseResource
 {

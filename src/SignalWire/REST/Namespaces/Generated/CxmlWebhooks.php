@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * CxmlWebhooks — generated from x-sdk-resource 'CxmlWebhooks' (fabric spec, base FabricResource).
+ * CxmlWebhooks REST resource (fabric API).
  */
 class CxmlWebhooks extends \SignalWire\REST\FabricResource
 {

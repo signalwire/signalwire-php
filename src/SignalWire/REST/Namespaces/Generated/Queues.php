@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Queues — generated from x-sdk-resource 'Queues' (relay-rest spec, base CrudResource).
+ * Queues REST resource (relay-rest API).
  */
 class Queues extends \SignalWire\REST\CrudResource
 {

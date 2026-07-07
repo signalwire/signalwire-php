@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * SipEndpoints — generated from x-sdk-resource 'SipEndpoints' (fabric spec, base FabricResource).
+ * SipEndpoints REST resource (fabric API).
  */
 class SipEndpoints extends \SignalWire\REST\FabricResourcePUT
 {

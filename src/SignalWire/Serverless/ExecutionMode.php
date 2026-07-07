@@ -12,14 +12,14 @@ namespace SignalWire\Serverless;
  * IS that wire/dispatch token, so the enum and the legacy bare string are
  * interchangeable:
  *
- *     Adapter::detect();                       // 'lambda'         (string, parity)
+ *     Adapter::detect();                       // 'lambda'         (string)
  *     Adapter::detectMode();                   // ExecutionMode::Lambda (typed)
  *     Adapter::detectMode()->value;            // 'lambda'         (round-trips)
  *     ExecutionMode::from(Adapter::detect());  // ExecutionMode::Lambda
  *
  * {@see Adapter::serve()} accepts an explicit `ExecutionMode|string|null`
  * override alongside auto-detection, so callers may pin the mode in a typed,
- * typo-checked way while the bare string still works for parity with the
+ * typo-checked way while the bare string still works for matches the
  * stringly-typed original.
  *
  * This closed set is knowable from `Adapter::detect()`'s own implementation, so
@@ -65,7 +65,7 @@ enum ExecutionMode: string
      * enum, validating the string against the closed set.
      *
      * Accepting `ExecutionMode|string` lets the public API take the typed enum
-     * for safety while preserving the bare-string call style for parity.
+     * for safety while preserving the bare-string call style for compatibility.
      *
      * @throws \ValueError if $mode is a string outside the closed set.
      */

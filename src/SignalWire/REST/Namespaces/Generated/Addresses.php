@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Addresses — generated from x-sdk-resource 'Addresses' (relay-rest spec, base BaseResource).
+ * Addresses REST resource (relay-rest API).
  */
 class Addresses extends \SignalWire\REST\BaseResource
 {

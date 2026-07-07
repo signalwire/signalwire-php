@@ -14,11 +14,10 @@ namespace SignalWire\SWML;
 /**
  * Renders SWML documents for SignalWire AI Agents with AI and SWAIG components.
  *
- * Parity with the Python reference `signalwire.core.swml_renderer.SwmlRenderer`
- * (core/swml_renderer.py): a small standalone renderer built on top of the
- * {@see Service} document model. TS folds the same rendering into its
- * SWMLService/AgentBase; PHP keeps the standalone class the oracle records
- * (its two static methods delegate to the Service's Document).
+ * Mirrors the `signalwire.core.swml_renderer.SwmlRenderer` API
+ * a small standalone renderer built on top of the
+ * {@see Service} document model. Its two static methods delegate to the
+ * Service's Document.
  */
 class SwmlRenderer
 {
@@ -154,7 +153,7 @@ class SwmlRenderer
 
     /**
      * Render the built document in the requested format. JSON is the native
-     * output; 'yaml' emits YAML when ext-yaml is available (parity with the
+     * output; 'yaml' emits YAML when ext-yaml is available (matches the
      * reference's optional yaml branch), otherwise falls back to JSON.
      */
     private static function renderIn(Service $service, string $format): string

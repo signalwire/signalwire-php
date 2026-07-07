@@ -11,7 +11,7 @@ namespace SignalWire\Core;
  * settings, sourced from defaults, then environment variables, then an optional
  * config file (highest priority). Mirrors Python's
  * ``signalwire.core.security_config.SecurityConfig`` (wire/semantic contract) and
- * TS's ``SslConfig`` (the shape oracle for the TLS-serving concern).
+ * TS's ``SslConfig`` (defines the TLS-serving concern).
  *
  * PHP idiom note: Python's ``get_ssl_context_kwargs()`` returns a PRIMITIVE dict
  * of TLS path strings (``{ssl_certfile, ssl_keyfile}``) — not an ``ssl.SSLContext``
@@ -22,7 +22,7 @@ namespace SignalWire\Core;
  * accessor/key spelling — reconciled onto ``get_ssl_context_kwargs`` via the
  * enumerator's METHOD_ALIASES rename map (a rename, not an omission).
  *
- * Python parity: signalwire/signalwire/core/security_config.py
+ * Mirrors signalwire/signalwire/core/security_config.py
  */
 class SecurityConfig
 {
@@ -267,9 +267,8 @@ class SecurityConfig
      * the equivalent primitive stream-context ``ssl`` option array
      * ``{local_cert, local_pk}`` that a PHP TLS front-end
      * (``stream_socket_server`` / a SAPI) consumes, or an empty array when SSL is
-     * disabled or the config is invalid. Mirrors TS's
-     * ``SslConfig.getServerOptions()``. Reconciled onto the oracle name via the
-     * enumerator METHOD_ALIASES rename map.
+     * disabled or the config is invalid. Mirrors TypeScript's
+     * ``SslConfig.getServerOptions()``.
      *
      * @return array<string, mixed>
      */

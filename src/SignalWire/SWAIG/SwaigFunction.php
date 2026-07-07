@@ -20,8 +20,8 @@ use SignalWire\Logging\Logger;
  * per-parameter `description`) to decide WHEN to call the tool and HOW to fill
  * in the arguments.
  *
- * Parity with the Python reference `signalwire.core.swaig_function.SWAIGFunction`
- * (core/swaig_function.py) and the TS oracle `SwaigFunction` (SwaigFunction.ts).
+ * Mirrors the `signalwire.core.swaig_function.SWAIGFunction` API
+ * (core/swaig_function.py) and the TypeScript `SwaigFunction` (SwaigFunction.ts).
  * The Python/TS `__call__` dunder (a thin `handler(*args)` passthrough) is
  * intentionally not ported — PHP callers invoke {@see execute()} which is the
  * capability; see PORT_OMISSIONS.md.
@@ -219,7 +219,7 @@ class SwaigFunction
      * SWML. Mirrors Python's `to_swaig` / TS `toSwaig`.
      *
      * @param bool $includeAuth Whether to include auth credentials in the URL
-     *   (parity with Python; the token/call_id query is only appended when both
+     *   (matches Python; the token/call_id query is only appended when both
      *   are present, so this flag mirrors the reference signature).
      * @return array<string,mixed>
      */

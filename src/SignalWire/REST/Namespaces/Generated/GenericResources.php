@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * GenericResources — generated from x-sdk-resource 'GenericResources' (fabric spec, base BaseResource).
+ * GenericResources REST resource (fabric API).
  */
 class GenericResources extends \SignalWire\REST\BaseResource
 {

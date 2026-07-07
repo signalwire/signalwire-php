@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * MessageLogs — generated from x-sdk-resource 'MessageLogs' (message spec, base ReadResource).
+ * MessageLogs REST resource (message API).
  */
 class MessageLogs extends \SignalWire\REST\ReadResource
 {

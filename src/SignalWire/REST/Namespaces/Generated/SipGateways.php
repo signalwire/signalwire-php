@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * SipGateways — generated from x-sdk-resource 'SipGateways' (fabric spec, base FabricResource).
+ * SipGateways REST resource (fabric API).
  */
 class SipGateways extends \SignalWire\REST\FabricResource
 {

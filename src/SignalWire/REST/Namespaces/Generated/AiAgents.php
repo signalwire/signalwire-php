@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * AiAgents — generated from x-sdk-resource 'AiAgents' (fabric spec, base FabricResource).
+ * AiAgents REST resource (fabric API).
  */
 class AiAgents extends \SignalWire\REST\FabricResource
 {

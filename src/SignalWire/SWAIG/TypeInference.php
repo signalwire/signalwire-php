@@ -14,9 +14,9 @@ namespace SignalWire\SWAIG;
 /**
  * Runtime schema inference and typed-handler wrapping for SWAIG tools.
  *
- * Parity with the Python reference module
+ * Mirrors the reference module
  * `signalwire.core.agent.tools.type_inference` (infer_schema /
- * create_typed_handler_wrapper) and the TS oracle `TypeInference.ts`
+ * create_typed_handler_wrapper) and the TypeScript `TypeInference.ts`
  * (inferSchema / createTypedHandlerWrapper). Where Python inspects the
  * signature via `inspect` and TS parses `fn.toString()`, PHP uses native
  * Reflection (typed params, defaults, nullability) — the idiomatic

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * RegistryOrders — generated from x-sdk-resource 'RegistryOrders' (relay-rest spec, base BaseResource).
+ * RegistryOrders REST resource (relay-rest API).
  */
 class RegistryOrders extends \SignalWire\REST\BaseResource
 {

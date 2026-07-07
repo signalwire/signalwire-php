@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * PubSub — generated from x-sdk-resource 'PubSub' (pubsub spec, base BaseResource).
+ * PubSub REST resource (pubsub API).
  */
 class PubSub extends \SignalWire\REST\BaseResource
 {

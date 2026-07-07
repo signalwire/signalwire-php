@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Lookup — generated from x-sdk-resource 'Lookup' (relay-rest spec, base BaseResource).
+ * Lookup REST resource (relay-rest API).
  */
 class Lookup extends \SignalWire\REST\BaseResource
 {

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * FabricTokens — generated from x-sdk-resource 'FabricTokens' (fabric spec, base BaseResource).
+ * FabricTokens REST resource (fabric API).
  */
 class FabricTokens extends \SignalWire\REST\BaseResource
 {

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * SwmlScripts — generated from x-sdk-resource 'SwmlScripts' (fabric spec, base FabricResource).
+ * SwmlScripts REST resource (fabric API).
  */
 class SwmlScripts extends \SignalWire\REST\FabricResourcePUT
 {

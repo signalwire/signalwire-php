@@ -9,11 +9,11 @@ namespace SignalWire\SWAIG;
  *
  * {@see FunctionResult::tap()} accepts this enum OR a string for its `$codec`
  * argument. The enum gives editor autocompletion and makes a typo fail at the
- * call site; strings keep parity with the Python reference (`tap` takes a bare
+ * call site; strings keep mirrors the reference (`tap` takes a bare
  * `str`).
  *
  *     $result->tap($uri, codec: Codec::Pcma);   // typed
- *     $result->tap($uri, codec: 'PCMA');        // string (parity)
+ *     $result->tap($uri, codec: 'PCMA');        // string (for compatibility)
  *
  * The two members are the only codecs the Python reference's `tap` accepts
  * (`["PCMU", "PCMA"]`). The wire strings are upper-case and matching is

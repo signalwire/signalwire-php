@@ -34,7 +34,7 @@ use SignalWire\SWAIG\FunctionResult;
  *     snippet fallback).
  *   - snippets_only (false): skip page scraping entirely and format the
  *     CSE snippets directly. Sub-second response.
- *   - parallel_scrape (true): accepted for API/schema parity with
+ *   - parallel_scrape (true): accepted to match
  *     Python/Go/TS. PHP is single-threaded and true concurrent HTTP
  *     would require curl_multi (invasive, and parallelism is NOT part of
  *     the latency contract), so scrapes run SEQUENTIALLY with strict
@@ -434,7 +434,7 @@ class WebSearch extends SkillBase
      * when page scraping is abandoned by overall_deadline or every page
      * falls below the quality threshold. Always non-empty when the CSE
      * returned anything, so the kernel never sees a webhook timeout.
-     * Python parity: `_format_snippet_results` (skill.py:416-437).
+     * Mirrors `_format_snippet_results` (skill.py:416-437).
      *
      * @param list<array<mixed>> $items
      */

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * CxmlScripts — generated from x-sdk-resource 'CxmlScripts' (fabric spec, base FabricResource).
+ * CxmlScripts REST resource (fabric API).
  */
 class CxmlScripts extends \SignalWire\REST\FabricResourcePUT
 {

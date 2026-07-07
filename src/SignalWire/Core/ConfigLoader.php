@@ -8,13 +8,13 @@ namespace SignalWire\Core;
  * JSON configuration loader with environment-variable interpolation.
  *
  * Mirrors Python's ``signalwire.core.config_loader.ConfigLoader`` (wire/semantic
- * contract) and TS's ``ConfigLoader`` (shape oracle). Supports ``${VAR|default}``
+ * contract) and TS's ``ConfigLoader`` (the canonical shape). Supports ``${VAR|default}``
  * substitution inside string values and dot-notation access into nested config.
  *
  * PHP idiom: a plain class under ``SignalWire\Core`` (PSR-4 file-per-class); the
  * ordered-search constructor accepts a single path or a list of paths and loads
  * the first that exists (matching Python's ordered ``config_paths`` search).
- * Python parity: signalwire/signalwire/core/config_loader.py
+ * Mirrors signalwire/signalwire/core/config_loader.py
  */
 class ConfigLoader
 {

@@ -90,7 +90,7 @@ class Event
      * or null when absent / outside the known closed set (a forward-compatible
      * server value).
      *
-     * Offered ALONGSIDE the raw `getParams()['dial_state']` string for parity:
+     * Offered ALONGSIDE the raw `getParams()['dial_state']` string for compatibility:
      * the wire string stays available; `dialState()` is the typed view for
      * autocompletion + an exhaustive `match` + `->isTerminal()`. PORT_ADDITION.
      */

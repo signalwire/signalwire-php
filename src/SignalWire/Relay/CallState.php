@@ -15,12 +15,12 @@ namespace SignalWire\Relay;
  * (grounded in the Python reference's `relay/constants.py` CALL_STATES tuple);
  * each backing string IS the wire value the server emits in a
  * `calling.call.state` event's `call_state` / `state` field. {@see Call}
- * keeps the bare-string `$state` property for parity with the Python reference
+ * keeps the bare-string `$state` property for mirrors the reference
  * (which models state as a plain `str`); this enum is offered ALONGSIDE it via
  * the typed {@see Call::callState()} accessor — autocompletion and an
  * exhaustive `match` at the call site, with the string preserved.
  *
- *     $call->state;          // 'answered'              (string, parity)
+ *     $call->state;          // 'answered'              (string)
  *     $call->callState();    // CallState::Answered     (typed)
  *     $call->callState()?->isTerminal();  // false
  *

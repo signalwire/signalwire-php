@@ -220,7 +220,6 @@ class SkillRegistry
 
     /**
      * Returns the registered external skill directories.
-     * Parity surface for Python's `_external_paths`.
      *
      * @return list<string>
      */

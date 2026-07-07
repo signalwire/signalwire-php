@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * ConferenceLogs — generated from x-sdk-resource 'ConferenceLogs' (logs spec, base BaseResource).
+ * ConferenceLogs REST resource (logs API).
  */
 class ConferenceLogs extends \SignalWire\REST\BaseResource
 {

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * SwmlWebhooks — generated from x-sdk-resource 'SwmlWebhooks' (fabric spec, base FabricResource).
+ * SwmlWebhooks REST resource (fabric API).
  */
 class SwmlWebhooks extends \SignalWire\REST\FabricResource
 {

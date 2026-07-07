@@ -555,7 +555,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Return the agent's POM as a typed PromptObjectModel instance.
      *
-     * Python parity: ``agent.pom`` instance attribute (agent_base.py
+     * Mirrors ``agent.pom`` instance attribute (agent_base.py
      * line 209). Returns ``null`` when ``use_pom`` is false (mirroring
      * Python's ``self.pom = None``).  Otherwise returns a PromptObjectModel
      * built from the agent's stored POM section dicts — sections added via
@@ -564,7 +564,7 @@ class AgentBase extends Service implements AgentInterface
      * ``findSection`` etc directly.
      *
      * The returned instance is freshly constructed each call; mutating it
-     * does not affect the agent's stored state (Python parity is achieved
+     * does not affect the agent's stored state (the same behavior is achieved
      * via construction-from-dicts rather than shared references).
      */
     public function getPom(): ?PromptObjectModel
@@ -601,7 +601,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Mint a per-call SWAIG-function token via the agent's SessionManager.
      *
-     * Python parity: state_mixin.StateMixin._create_tool_token —
+     * Mirrors state_mixin.StateMixin._create_tool_token —
      * delegates to SessionManager::createToolToken and returns "" on
      * any thrown error (Python catches all exceptions and returns "").
      */
@@ -619,7 +619,7 @@ class AgentBase extends Service implements AgentInterface
      * function is not registered, when the SessionManager rejects the
      * token, or on any underlying exception.
      *
-     * Python parity: state_mixin.StateMixin.validate_tool_token —
+     * Mirrors state_mixin.StateMixin.validate_tool_token —
      * rejects unknown function names up-front and swallows exceptions.
      */
     public function validateToolToken(string $functionName, string $token, string $callId): bool
@@ -661,7 +661,7 @@ class AgentBase extends Service implements AgentInterface
      * Mirrors Python's ``AIConfigMixin.add_pattern_hint``: attaches a
      * STRUCTURED hint (not a bare string) that is merged into the rendered
      * SWML ``ai.hints`` array. All three of hint/pattern/replace must be
-     * non-empty for the hint to be recorded (Python parity).
+     * non-empty for the hint to be recorded (mirrors the reference).
      *
      * @param string $hint       The hint token to match.
      * @param string $pattern    Regular-expression pattern.
@@ -839,7 +839,7 @@ class AgentBase extends Service implements AgentInterface
      * mutually exclusive with setLanguages(); if both are set the server uses
      * `multilingual` and ignores `languages`.
      *
-     * Python parity: AIConfigMixin.set_multilingual(config).
+     * Mirrors AIConfigMixin.set_multilingual(config).
      *
      * @param array<string,mixed> $config The multilingual config object
      *   (languages, allowed, start_language, min_switch_words, fillers, etc.).
@@ -1588,7 +1588,7 @@ class AgentBase extends Service implements AgentInterface
      *
      * Mirrors Python `AgentBase.get_name()`. Declared on AgentBase (in
      * addition to the inherited {@see Service::getName}) so the surface
-     * enumerator records it on the agent_base module per the oracle.
+     * enumerator records it on the agent_base module in the reference.
      */
     public function getName(): string
     {
@@ -1852,7 +1852,7 @@ class AgentBase extends Service implements AgentInterface
      */
     /**
      * Handle a serverless-environment invocation (CGI, Lambda, Cloud
-     * Functions, Azure). Parity with the Python reference
+     * Functions, Azure). Mirrors the reference
      * `signalwire.core.mixins.serverless_mixin.ServerlessMixin.handle_serverless_request`:
      * detect (or accept an override for) the execution mode and dispatch to the
      * matching platform handler, returning a platform-appropriate response.

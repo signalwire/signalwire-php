@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VoiceLogs — generated from x-sdk-resource 'VoiceLogs' (voice spec, base ReadResource).
+ * VoiceLogs REST resource (voice API).
  */
 class VoiceLogs extends \SignalWire\REST\ReadResource
 {

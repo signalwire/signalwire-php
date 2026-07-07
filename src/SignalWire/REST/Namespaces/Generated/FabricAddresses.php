@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * FabricAddresses — generated from x-sdk-resource 'FabricAddresses' (fabric spec, base ReadResource).
+ * FabricAddresses REST resource (fabric API).
  */
 class FabricAddresses extends \SignalWire\REST\ReadResource
 {

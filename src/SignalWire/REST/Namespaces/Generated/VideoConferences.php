@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VideoConferences — generated from x-sdk-resource 'VideoConferences' (video spec, base CrudResource).
+ * VideoConferences REST resource (video API).
  */
 class VideoConferences extends \SignalWire\REST\CrudResource
 {

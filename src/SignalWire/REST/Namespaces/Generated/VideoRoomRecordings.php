@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VideoRoomRecordings — generated from x-sdk-resource 'VideoRoomRecordings' (video spec, base BaseResource).
+ * VideoRoomRecordings REST resource (video API).
  */
 class VideoRoomRecordings extends \SignalWire\REST\BaseResource
 {

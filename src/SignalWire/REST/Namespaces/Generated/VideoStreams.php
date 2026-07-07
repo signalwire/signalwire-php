@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VideoStreams — generated from x-sdk-resource 'VideoStreams' (video spec, base BaseResource).
+ * VideoStreams REST resource (video API).
  */
 class VideoStreams extends \SignalWire\REST\BaseResource
 {

@@ -13,10 +13,10 @@ namespace SignalWire\POM;
  * section types — any structure is allowed.
  *
  * Mirrors Python's ``signalwire.core.pom_builder.PomBuilder`` (wire/semantic
- * contract) and TS's ``PomBuilder`` (shape oracle). The fluent mutators return
+ * contract) and TS's ``PomBuilder`` (the canonical shape). The fluent mutators return
  * ``$this`` for method chaining, matching both references.
  *
- * Python parity: signalwire/signalwire/core/pom_builder.py
+ * Mirrors signalwire/signalwire/core/pom_builder.py
  */
 class PomBuilder
 {
@@ -199,8 +199,7 @@ class PomBuilder
     /**
      * Create a PomBuilder from a list of section arrays.
      *
-     * Only titled sections are addressable by title afterwards (Python parity:
-     * ``from_sections`` indexes only sections whose ``title`` is truthy).
+     * Only titled sections are addressable by title afterwards (Mirrors * ``from_sections`` indexes only sections whose ``title`` is truthy).
      *
      * @param list<array<string, mixed>> $sections
      */

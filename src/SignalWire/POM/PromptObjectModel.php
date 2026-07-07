@@ -78,7 +78,7 @@ class PromptObjectModel
      *   - every section must have body OR bullets OR subsections
      *   - subsections must have a title
      *   - subsequent (non-first) top-level sections without ``title`` are
-     *     auto-titled "Untitled Section" (Python parity)
+     *     auto-titled "Untitled Section" (mirrors the reference)
      *
      * @param array<array-key, mixed> $data
      */

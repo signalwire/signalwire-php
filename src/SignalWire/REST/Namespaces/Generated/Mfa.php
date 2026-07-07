@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * Mfa — generated from x-sdk-resource 'Mfa' (relay-rest spec, base BaseResource).
+ * Mfa REST resource (relay-rest API).
  */
 class Mfa extends \SignalWire\REST\BaseResource
 {

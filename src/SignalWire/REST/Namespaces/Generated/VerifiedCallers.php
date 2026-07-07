@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VerifiedCallers — generated from x-sdk-resource 'VerifiedCallers' (relay-rest spec, base CrudResource).
+ * VerifiedCallers REST resource (relay-rest API).
  */
 class VerifiedCallers extends \SignalWire\REST\CrudResource
 {

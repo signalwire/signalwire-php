@@ -969,7 +969,7 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
     recv = http_receiver(base)
 
     lines = []
-    lines.append(f"/**\n * {name} — generated from x-sdk-resource {name!r} ({spec.name} spec, base {base}).\n */")
+    lines.append(f"/**\n * {name} REST resource ({spec.name} API).\n */")
     lines.append(f"class {name} extends \\SignalWire\\REST\\{extends}")
     lines.append("{")
 
@@ -1146,10 +1146,9 @@ def emit_resource_tree(placed) -> str:
                 containers_seen.append(container)
 
     lines = []
-    lines.append("/**\n * ResourceTree — generated lazy accessors for every flat REST resource\n"
-                 " * plus the namespace containers (§8). The hand RestClient composes this via\n"
-                 " * `use ResourceTree;`. Placement resolved from x-sdk-namespace.attr +\n"
-                 " * per-resource x-sdk-resource.namespace/attr; base paths per §4.\n */")
+    lines.append("/**\n * ResourceTree — lazy accessors for every flat REST resource\n"
+                 " * plus the namespace containers. RestClient composes this via\n"
+                 " * `use ResourceTree;`.\n */")
     lines.append("trait ResourceTree")
     lines.append("{")
     # property declarations
@@ -1421,8 +1420,7 @@ def emit_type_enum(sub: str, enum_name: str, values: list[str], ns_key: str, raw
     enum (only PhoneCallHandler today). Surfaced as a class by the reference."""
     lines: list[str] = []
     lines.append("/**")
-    lines.append(f" * {enum_name} — generated public enum (x-sdk-enum on"
-                 f" components/schemas {raw_name!r}, {ns_key!r} spec).")
+    lines.append(f" * {enum_name} — {ns_key!r} API enum.")
     lines.append(" *")
     lines.append(" * Backed enum: each case's value is the exact wire string.")
     lines.append(" */")

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * FaxLogs — generated from x-sdk-resource 'FaxLogs' (fax spec, base ReadResource).
+ * FaxLogs REST resource (fax API).
  */
 class FaxLogs extends \SignalWire\REST\ReadResource
 {

@@ -217,8 +217,8 @@ class Call
      * when the raw {@see $state} string is outside the known closed set
      * (a forward-compatible server value).
      *
-     * Offered ALONGSIDE the bare-string {@see $state} property for parity with
-     * the Python reference: `$call->state` stays the canonical string;
+     * Offered ALONGSIDE the bare-string {@see $state} property:
+     * `$call->state` stays the canonical string;
      * `$call->callState()` is the typed view for autocompletion + an
      * exhaustive `match` + `->isTerminal()`. PORT_ADDITION.
      */

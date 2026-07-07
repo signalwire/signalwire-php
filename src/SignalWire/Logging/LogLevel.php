@@ -10,12 +10,12 @@ namespace SignalWire\Logging;
  * {@see \SignalWire\Logging\Logger::setLevel()} and {@see Logger::shouldLog()}
  * accept this enum OR a string. The enum gives editor autocompletion and makes
  * a typo fail at the call site (a bare string like `'wrn'` only fails silently
- * at runtime — `setLevel()` ignores unknown levels); strings keep parity with
+ * at runtime — `setLevel()` ignores unknown levels); strings stays consistent with
  * the Python reference (which configures stdlib `logging` with bare names) and
  * remain available for callers reading a level out of config/env.
  *
  *     $logger->setLevel(LogLevel::Warn);   // typed, autocompleted
- *     $logger->setLevel('warn');           // string still works (parity)
+ *     $logger->setLevel('warn');           // string still works (for compatibility)
  *
  * The backing values are the exact lowercase strings the Logger keys on.
  */

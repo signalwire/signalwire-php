@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VideoConferenceTokens — generated from x-sdk-resource 'VideoConferenceTokens' (video spec, base BaseResource).
+ * VideoConferenceTokens REST resource (video API).
  */
 class VideoConferenceTokens extends \SignalWire\REST\BaseResource
 {

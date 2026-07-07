@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * PhoneNumbers — generated from x-sdk-resource 'PhoneNumbers' (relay-rest spec, base CrudResource).
+ * PhoneNumbers REST resource (relay-rest API).
  */
 class PhoneNumbers extends \SignalWire\REST\CrudResource
 {

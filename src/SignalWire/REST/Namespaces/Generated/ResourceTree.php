@@ -12,10 +12,9 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * ResourceTree — generated lazy accessors for every flat REST resource
- * plus the namespace containers (§8). The hand RestClient composes this via
- * `use ResourceTree;`. Placement resolved from x-sdk-namespace.attr +
- * per-resource x-sdk-resource.namespace/attr; base paths per §4.
+ * ResourceTree — lazy accessors for every flat REST resource
+ * plus the namespace containers. RestClient composes this via
+ * `use ResourceTree;`.
  */
 trait ResourceTree
 {

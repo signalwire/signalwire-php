@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * VideoRoomTokens — generated from x-sdk-resource 'VideoRoomTokens' (video spec, base BaseResource).
+ * VideoRoomTokens REST resource (video API).
  */
 class VideoRoomTokens extends \SignalWire\REST\BaseResource
 {

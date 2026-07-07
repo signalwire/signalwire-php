@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * RegistryNumbers — generated from x-sdk-resource 'RegistryNumbers' (relay-rest spec, base BaseResource).
+ * RegistryNumbers REST resource (relay-rest API).
  */
 class RegistryNumbers extends \SignalWire\REST\BaseResource
 {

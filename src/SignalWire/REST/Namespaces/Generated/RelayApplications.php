@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * RelayApplications — generated from x-sdk-resource 'RelayApplications' (fabric spec, base FabricResource).
+ * RelayApplications REST resource (fabric API).
  */
 class RelayApplications extends \SignalWire\REST\FabricResourcePUT
 {

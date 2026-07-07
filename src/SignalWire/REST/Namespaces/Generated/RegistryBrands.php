@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\REST\Namespaces\Generated;
 
 /**
- * RegistryBrands — generated from x-sdk-resource 'RegistryBrands' (relay-rest spec, base BaseResource).
+ * RegistryBrands REST resource (relay-rest API).
  */
 class RegistryBrands extends \SignalWire\REST\BaseResource
 {

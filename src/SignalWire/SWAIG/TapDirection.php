@@ -10,11 +10,11 @@ namespace SignalWire\SWAIG;
  *
  * {@see FunctionResult::tap()} accepts this enum OR a string for its
  * `$direction` argument. The enum gives editor autocompletion and makes a typo
- * fail at the call site; strings keep parity with the Python reference (`tap`
+ * fail at the call site; strings keep mirrors the reference (`tap`
  * takes a bare `str`).
  *
  *     $result->tap($uri, direction: TapDirection::Speak);   // typed
- *     $result->tap($uri, direction: 'speak');               // string (parity)
+ *     $result->tap($uri, direction: 'speak');               // string (for compatibility)
  *
  * The three members are the only directions the Python reference's `tap` accepts
  * (`["speak", "hear", "both"]`). Note this set uses `hear`, which differs from
