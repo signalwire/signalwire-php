@@ -33,6 +33,30 @@ $verbose   = false;
 $help      = false;
 
 $args = array_slice($argv, 1);
+
+// ------------------------------------------------------------------
+//  --parse-only / --dry-run detection (FIRST, position-independent)
+// ------------------------------------------------------------------
+// Detect --parse-only (alias --dry-run) anywhere in the arg list and strip it
+// out before the main parser runs, so it works even when it trails an
+// `--exec NAME` (which otherwise treats trailing tokens as its own operands).
+// When set, we validate the remaining args exactly as normal, then print
+// `parse OK` and exit 0 WITHOUT loading any agent, touching the filesystem, or
+// making a network call. Invalid args under --parse-only exit 2 (the canonical
+// contract mirrored by every port; matches python's argparse usage-error code).
+$parseOnly = false;
+$args = array_values(array_filter($args, function (string $a) use (&$parseOnly): bool {
+    if ($a === '--parse-only' || $a === '--dry-run') {
+        $parseOnly = true;
+        return false;
+    }
+    return true;
+}));
+
+// Under --parse-only an invalid invocation exits 2 (canonical contract);
+// otherwise the legacy usage-error code is 1.
+$argErrCode = $parseOnly ? 2 : 1;
+
 $i = 0;
 $count = count($args);
 
@@ -44,7 +68,7 @@ while ($i < $count) {
             $i++;
             if ($i >= $count) {
                 fwrite(STDERR, "Error: --url requires a value\n");
-                exit(1);
+                exit($argErrCode);
             }
             $url = $args[$i];
             break;
@@ -54,7 +78,7 @@ while ($i < $count) {
             $i++;
             if ($i >= $count) {
                 fwrite(STDERR, "Error: {$arg} requires a path\n");
-                exit(1);
+                exit($argErrCode);
             }
             $file = $args[$i];
             break;
@@ -71,7 +95,7 @@ while ($i < $count) {
             $i++;
             if ($i >= $count) {
                 fwrite(STDERR, "Error: --exec requires a tool name\n");
-                exit(1);
+                exit($argErrCode);
             }
             $execName = $args[$i];
             break;
@@ -80,7 +104,7 @@ while ($i < $count) {
             $i++;
             if ($i >= $count) {
                 fwrite(STDERR, "Error: --param requires a key=value argument\n");
-                exit(1);
+                exit($argErrCode);
             }
             $params[] = $args[$i];
             break;
@@ -127,6 +151,18 @@ if ($url === null && $file === null) {
 if (!$dumpSwml && !$listTools && $execName === null) {
     fwrite(STDERR, "Error: one of --dump-swml, --list-tools, or --exec NAME is required\n\n");
     usageExit(1);
+}
+
+// ============================================================
+//  Parse-Only / Dry-Run
+// ============================================================
+// All CLI arg parsing and cross-flag validation has succeeded by this point
+// (any bad flag or invalid combination above already exited non-zero). Report
+// success and exit WITHOUT loading the agent, touching the filesystem, or
+// hitting the network.
+if ($parseOnly) {
+    echo "parse OK\n";
+    exit(0);
 }
 
 // ============================================================
@@ -696,6 +732,15 @@ function httpPost(string $targetUrl, string $body): string
 
 function usageExit(int $code = 1): never
 {
+    global $parseOnly;
+
+    // Under --parse-only the canonical contract is exit code 2 for any invalid
+    // invocation (matching python's argparse usage-error code). --help still
+    // exits 0.
+    if ($parseOnly && $code !== 0) {
+        $code = 2;
+    }
+
     $text = <<<'USAGE'
 swaig-test - CLI tool for testing SWAIG agent endpoints
 
@@ -717,6 +762,10 @@ Options:
   --param key=value   Parameter for --exec (repeatable)
   --raw               Output compact JSON (no pretty-printing)
   --verbose           Show request/response details on stderr
+  --parse-only        Validate the arguments and exit without loading the agent
+                      or hitting the network (prints 'parse OK'). Position-
+                      independent — works even trailing an --exec.
+  --dry-run           Alias for --parse-only.
   --help, -h          Show this help message
 
 Examples:

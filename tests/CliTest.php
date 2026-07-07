@@ -413,4 +413,117 @@ class CliTest extends TestCase
         $outputStr = implode("\n", $output);
         $this->assertStringContainsString('mutually exclusive', $outputStr);
     }
+
+    // ==================================================================
+    // 23. --parse-only validates args and prints `parse OK` (no network)
+    // ==================================================================
+    //
+    // Canonical contract (mirrored by every port): --parse-only (alias
+    // --dry-run) validates the invocation's arguments, then prints exactly
+    // `parse OK` and exits 0 WITHOUT loading an agent or making any network
+    // call. The bogus/unreachable URL below proves no request is attempted —
+    // the command returns instantly with `parse OK` rather than a connect
+    // error.
+
+    public function testParseOnlyPrintsParseOkAndMakesNoNetworkCall(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 1;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@10.255.255.1:1/route'
+            . ' --list-tools --parse-only 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = trim(implode("\n", $output));
+        $this->assertSame(0, $exitCode, "parse-only should exit 0; got:\n{$outputStr}");
+        $this->assertSame('parse OK', $outputStr);
+    }
+
+    // ==================================================================
+    // 24. --dry-run is an exact alias for --parse-only
+    // ==================================================================
+
+    public function testDryRunIsAnExactAliasForParseOnly(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 1;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@localhost:3000/'
+            . ' --dump-swml --dry-run 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = trim(implode("\n", $output));
+        $this->assertSame(0, $exitCode, "dry-run should exit 0; got:\n{$outputStr}");
+        $this->assertSame('parse OK', $outputStr);
+    }
+
+    // ==================================================================
+    // 25. --parse-only is position-independent (works trailing an --exec)
+    // ==================================================================
+    //
+    // --exec consumes trailing tokens as function args; --parse-only must still
+    // be honored when it trails the --exec invocation.
+
+    public function testParseOnlyIsPositionIndependentAfterExec(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 1;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@localhost:3000/'
+            . ' --exec foo --param bar=1 --parse-only 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = trim(implode("\n", $output));
+        $this->assertSame(0, $exitCode, "parse-only after --exec should exit 0; got:\n{$outputStr}");
+        $this->assertSame('parse OK', $outputStr);
+    }
+
+    // ==================================================================
+    // 26. --parse-only with invalid args exits 2 and does NOT print parse OK
+    // ==================================================================
+
+    public function testParseOnlyInvalidArgsExitsTwoWithoutParseOk(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+
+        // Unknown flag under --parse-only.
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@localhost:3000/'
+            . ' --list-tools --parse-only --no-such-flag 2>&1',
+            $output,
+            $exitCode
+        );
+        $outputStr = implode("\n", $output);
+        $this->assertSame(2, $exitCode, "invalid parse-only args should exit 2; got:\n{$outputStr}");
+        // The success signal is the exact standalone line `parse OK`; the help
+        // text mentions the phrase in prose, so assert no bare `parse OK` line.
+        $this->assertNotContains('parse OK', array_map('trim', $output));
+
+        // Missing required target/action under --parse-only.
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin) . ' --parse-only 2>&1',
+            $output,
+            $exitCode
+        );
+        $outputStr = implode("\n", $output);
+        $this->assertSame(2, $exitCode, "missing args under parse-only should exit 2; got:\n{$outputStr}");
+        $this->assertNotContains('parse OK', array_map('trim', $output));
+    }
 }
