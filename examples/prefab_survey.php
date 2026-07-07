@@ -17,7 +17,7 @@ $agent = new SurveyAgent(
     brandName:       'Acme Corp',
     introduction:    'Thank you for choosing Acme Corp! We would love your feedback.',
     conclusion:      'Thank you for completing our survey. Your feedback helps us improve!',
-    surveyQuestions: [
+    questions:       [
         [
             'id'       => 'satisfaction',
             'text'     => 'On a scale of 1-5, how satisfied are you with our service?',

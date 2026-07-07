@@ -42,16 +42,16 @@ function createPreciseAssistant(): AgentBase
         'If uncertain, say so clearly',
     ]);
 
-    $agent->setPromptLlmParams(
-        temperature:      0.2,
-        topP:             0.85,
-        bargeConfidence:  0.8,
-        presencePenalty:  0.0,
-        frequencyPenalty: 0.1,
-    );
+    $agent->setPromptLlmParams([
+        'temperature'       => 0.2,
+        'top_p'             => 0.85,
+        'barge_confidence'  => 0.8,
+        'presence_penalty'  => 0.0,
+        'frequency_penalty' => 0.1,
+    ]);
 
     $agent->setPostPrompt('Provide a brief technical summary of the key points discussed.');
-    $agent->setPostPromptLlmParams(temperature: 0.1);
+    $agent->setPostPromptLlmParams(['temperature' => 0.1]);
 
     $agent->defineTool(
         name:        'get_system_info',
@@ -81,16 +81,16 @@ function createCreativeAssistant(): AgentBase
         'Suggest unique perspectives',
     ]);
 
-    $agent->setPromptLlmParams(
-        temperature:      0.8,
-        topP:             0.95,
-        bargeConfidence:  0.5,
-        presencePenalty:  0.2,
-        frequencyPenalty: 0.3,
-    );
+    $agent->setPromptLlmParams([
+        'temperature'       => 0.8,
+        'top_p'             => 0.95,
+        'barge_confidence'  => 0.5,
+        'presence_penalty'  => 0.2,
+        'frequency_penalty' => 0.3,
+    ]);
 
     $agent->setPostPrompt('Create an artistic summary of our conversation.');
-    $agent->setPostPromptLlmParams(temperature: 0.7);
+    $agent->setPostPromptLlmParams(['temperature' => 0.7]);
 
     $prompts = [
         'adventure' => ['A map that only appears during thunderstorms', 'A compass that points to what you need most'],
@@ -131,16 +131,16 @@ function createCustomerServiceAgent(): AgentBase
         'Follow company policies',
     ]);
 
-    $agent->setPromptLlmParams(
-        temperature:      0.4,
-        topP:             0.9,
-        bargeConfidence:  0.7,
-        presencePenalty:  0.1,
-        frequencyPenalty: 0.1,
-    );
+    $agent->setPromptLlmParams([
+        'temperature'       => 0.4,
+        'top_p'             => 0.9,
+        'barge_confidence'  => 0.7,
+        'presence_penalty'  => 0.1,
+        'frequency_penalty' => 0.1,
+    ]);
 
     $agent->setPostPrompt("Summarise the customer's issue and resolution for the ticket system.");
-    $agent->setPostPromptLlmParams(temperature: 0.3);
+    $agent->setPostPromptLlmParams(['temperature' => 0.3]);
 
     $agent->defineTool(
         name:        'check_order_status',

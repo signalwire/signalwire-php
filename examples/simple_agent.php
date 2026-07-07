@@ -31,13 +31,13 @@ $agent->promptAddSection('Instructions', '', bullets: [
 ]);
 
 // LLM parameters
-$agent->setPromptLlmParams(
-    temperature:      0.3,
-    topP:             0.9,
-    bargeConfidence:  0.7,
-    presencePenalty:  0.1,
-    frequencyPenalty: 0.2,
-);
+$agent->setPromptLlmParams([
+    'temperature'       => 0.3,
+    'top_p'             => 0.9,
+    'barge_confidence'  => 0.7,
+    'presence_penalty'  => 0.1,
+    'frequency_penalty' => 0.2,
+]);
 
 // Post-prompt for summary generation
 $agent->setPostPrompt(<<<'PROMPT'
