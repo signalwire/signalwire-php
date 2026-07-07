@@ -6,6 +6,7 @@
 
 ### Constructor
 
+<!-- snippet: no-compile pseudo-signature: type-annotated params illustrate the constructor shape, not runnable PHP -->
 ```php
 new AgentBase(
     name:       string,         // Agent name
@@ -89,6 +90,7 @@ new AgentBase(
 
 ### Constructor
 
+<!-- snippet: no-compile pseudo-signature: parameter types shown inline document the constructor shape, not a runnable `new` expression -->
 ```php
 new FunctionResult(string $response = null, bool $postProcess = false)
 ```
