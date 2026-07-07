@@ -64,12 +64,17 @@ $agent->defineTool(
 $agent->run();
 ```
 
-Test locally without running a server:
+List an agent's SWAIG tools in-process, without running a server:
 
 ```bash
-vendor/bin/swaig-test examples/simple_agent.php --list-tools
-vendor/bin/swaig-test examples/simple_agent.php --dump-swml
-vendor/bin/swaig-test examples/simple_agent.php --exec get_time
+vendor/bin/swaig-test --file examples/simple_agent.php --list-tools
+```
+
+Dump its SWML or execute a tool against a running agent (`--url` mode):
+
+```bash
+vendor/bin/swaig-test --url http://user:pass@localhost:3000/simple --dump-swml
+vendor/bin/swaig-test --url http://user:pass@localhost:3000/simple --exec get_time
 ```
 
 ### Agent Features
