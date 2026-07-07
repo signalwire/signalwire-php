@@ -101,6 +101,6 @@ $services = ['voicemail' => $voicemail, 'ivr' => $ivr, 'transfer' => $transfer];
 $selected = $services[$serviceName] ?? $voicemail;
 
 echo "Starting {$serviceName} service (auto-vivified)\n";
-echo "Available at: http://localhost:3000{$selected->route()}\n";
+echo "Available at: http://localhost:3000{$selected->getRoute()}\n";
 
 $selected->run();

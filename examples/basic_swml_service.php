@@ -104,6 +104,6 @@ $services = [
 $selected = $services[$service] ?? $voicemail;
 
 echo "Starting {$service} service\n";
-echo "Available at: http://localhost:3000{$selected->route()}\n";
+echo "Available at: http://localhost:3000{$selected->getRoute()}\n";
 
 $selected->run();

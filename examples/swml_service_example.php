@@ -37,29 +37,35 @@ $service->addVerb('record', [
 $service->addVerb('play', ['url' => 'say:Thank you for your message. Goodbye!']);
 $service->hangup();
 
-echo "Document built with " . count($service->getVerbs()) . " verbs\n\n";
+echo "Document built:\n" . $service->renderDocument() . "\n\n";
 
 // --- Example 2: SWMLBuilder fluent API ---
+//
+// SWMLBuilder wraps an SWMLService and delegates to it (Python parity:
+// SWMLBuilder(service)). Typed verb helpers (answer/play/say/hangup) use
+// named args; every other schema verb (record_call, sleep, ...) is
+// auto-vivified through __call with a config array.
 
 echo "=== Example using SWMLBuilder ===\n";
 
-$builder = new SWMLBuilder();
+$builderService = new SWMLService(name: 'voicemail-builder', route: '/voicemail-builder');
+$builder = new SWMLBuilder($builderService);
 $builder
     ->answer()
-    ->play(['url' => 'say:Welcome to the recording service.'])
-    ->recordCall([
+    ->play(url: 'say:Welcome to the recording service.')
+    ->record_call([
         'control_id' => 'call_recording',
         'format'     => 'mp3',
         'stereo'     => true,
         'direction'  => 'both',
         'beep'       => true,
     ])
-    ->play(['url' => 'say:This call is being recorded for quality purposes.'])
+    ->play(url: 'say:This call is being recorded for quality purposes.')
     ->sleep(30000)
-    ->play(['url' => 'say:Thank you for your time. Goodbye!'])
+    ->play(url: 'say:Thank you for your time. Goodbye!')
     ->hangup();
 
-echo "Document built with SWMLBuilder\n\n";
+echo "Document built with SWMLBuilder:\n" . $builder->render() . "\n\n";
 
 // --- Start the direct service ---
 

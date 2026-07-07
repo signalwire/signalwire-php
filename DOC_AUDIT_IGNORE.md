@@ -95,5 +95,4 @@ verify: VerifiedCallers verification-token helper
 handleServerlessRequest: serverless adapter helper (Adapter::dispatch)
                           — internal to the Adapter class
 resetDocument: Document::reset alias used in dynamic_swml_service example
-onRequest: dynamic-config callback installed via setDynamicConfigCallback
 setQuestionCallback: dynamic-info-gatherer callback hook (per-request question hook)
