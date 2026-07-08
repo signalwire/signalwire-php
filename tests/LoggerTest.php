@@ -27,7 +27,8 @@ class LoggerTest extends TestCase
     public function testGetLoggerReturnsInstance(): void
     {
         $logger = Logger::getLogger('test');
-        $this->assertInstanceOf(Logger::class, $logger);
+        // getLogger is a per-name singleton: the same name returns the same instance.
+        $this->assertSame($logger, Logger::getLogger('test'));
     }
 
     public function testLoggerName(): void
@@ -199,10 +200,13 @@ class LoggerTest extends TestCase
     public function testHasLogMethods(): void
     {
         $logger = Logger::getLogger('test');
-        $this->assertTrue(method_exists($logger, 'debug'));
-        $this->assertTrue(method_exists($logger, 'info'));
-        $this->assertTrue(method_exists($logger, 'warn'));
-        $this->assertTrue(method_exists($logger, 'error'));
+        $logger->setSuppressed(true);
+        // The four level methods exist and are invocable without error.
+        $logger->debug('m');
+        $logger->info('m');
+        $logger->warn('m');
+        $logger->error('m');
+        $this->assertSame('test', $logger->getName());
     }
 
     public function testLogOutputFormat(): void
@@ -290,6 +294,7 @@ PHP;
 
         // Bind ephemeral port.
         $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        $this->assertNotFalse($sock);
         \socket_bind($sock, '127.0.0.1', 0);
         \socket_getsockname($sock, $addr, $port);
         \socket_close($sock);
@@ -371,10 +376,8 @@ PHP;
      */
     public function testSetLevelAcceptsLogLevelEnumOrString(): void
     {
-        // The backed enum's value is the canonical level string the Logger keys on.
-        $this->assertSame('warn', LogLevel::Warn->value);
-
-        // Configure via the typed enum.
+        // Configure via the typed enum; getLevel() below confirms the enum's
+        // backed value ('warn') is what the Logger keys on.
         $enumLogger = Logger::getLogger('enum-level');
         $enumLogger->setLevel(LogLevel::Warn);
         $this->assertSame('warn', $enumLogger->getLevel());

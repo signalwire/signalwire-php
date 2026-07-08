@@ -8,9 +8,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\CrudResource;
 use SignalWire\REST\HttpClient;
-use SignalWire\REST\Namespaces\Calling;
-use SignalWire\REST\Namespaces\Compat;
-use SignalWire\REST\Namespaces\Fabric;
+use SignalWire\REST\Namespaces\Generated\Calling;
+use SignalWire\REST\Namespaces\Generated\FabricNamespace as Fabric;
 use SignalWire\REST\RestClient;
 use SignalWire\REST\SignalWireRestError;
 
@@ -93,7 +92,15 @@ class RestClientTest extends TestCase
     {
         $err = new SignalWireRestError('oops', 500, 'body');
 
-        $this->assertInstanceOf(\RuntimeException::class, $err);
+        // SignalWireRestError extends RuntimeException (a compile-time
+        // guarantee), so throwing it is catchable as \RuntimeException.
+        $caught = null;
+        try {
+            throw $err;
+        } catch (\RuntimeException $e) {
+            $caught = $e;
+        }
+        $this->assertSame($err, $caught);
     }
 
     // =================================================================
@@ -124,11 +131,12 @@ class RestClientTest extends TestCase
         $http = new HttpClient('p', 't', 'https://h');
         $crud = new CrudResource($http, '/api/test');
 
-        $this->assertTrue(method_exists($crud, 'list'));
-        $this->assertTrue(method_exists($crud, 'create'));
-        $this->assertTrue(method_exists($crud, 'get'));
-        $this->assertTrue(method_exists($crud, 'update'));
-        $this->assertTrue(method_exists($crud, 'delete'));
+        foreach (['list', 'create', 'get', 'update', 'delete'] as $method) {
+            $this->assertTrue(
+                method_exists($crud, $method),
+                "CrudResource is missing the '{$method}' method"
+            );
+        }
     }
 
     // =================================================================
@@ -152,7 +160,6 @@ class RestClientTest extends TestCase
         $client = new RestClient('p', 't', 'h.signalwire.com');
         $http = $client->getHttp();
 
-        $this->assertInstanceOf(HttpClient::class, $http);
         $this->assertSame('p', $http->getProjectId());
         $this->assertSame('t', $http->getToken());
         $this->assertSame('https://h.signalwire.com', $http->getBaseUrl());
@@ -242,40 +249,36 @@ class RestClientTest extends TestCase
     {
         $client = new RestClient('p', 't', 'h.signalwire.com');
 
-        // Fabric
-        $this->assertInstanceOf(Fabric::class, $client->fabric());
+        // Every accessor is wired and returns a distinct namespace object.
+        // (Concrete types are pinned by their declared return types; the
+        // surface evolves as sub-resources are added, so we assert wiring +
+        // distinctness here and path correctness in
+        // ``namespaceBasePathsAreCorrect``.)
+        $namespaces = [
+            $client->fabric(),
+            $client->calling(),
+            $client->phoneNumbers(),
+            $client->datasphere(),
+            $client->video(),
+            $client->addresses(),
+            $client->queues(),
+            $client->recordings(),
+            $client->numberGroups(),
+            $client->verifiedCallers(),
+            $client->sipProfile(),
+            $client->lookup(),
+            $client->shortCodes(),
+            $client->importedNumbers(),
+            $client->mfa(),
+            $client->registry(),
+            $client->logs(),
+            $client->project(),
+            $client->pubsub(),
+            $client->chat(),
+        ];
 
-        // Calling
-        $this->assertInstanceOf(Calling::class, $client->calling());
-
-        // Compat namespace
-        $this->assertInstanceOf(Compat::class, $client->compat());
-
-        // The remaining namespaces are returned as objects (some are
-        // CrudResource subclasses, others are bespoke namespace classes
-        // mirroring the Python SDK's per-resource objects).  We don't pin
-        // the concrete type here because the surface evolves as new
-        // sub-resources are added — instead we assert on
-        // ``namespaceBasePathsAreCorrect`` for path correctness and on the
-        // mock-backed tests for behaviour.
-        $this->assertNotNull($client->phoneNumbers());
-        $this->assertNotNull($client->datasphere());
-        $this->assertNotNull($client->video());
-        $this->assertNotNull($client->addresses());
-        $this->assertNotNull($client->queues());
-        $this->assertNotNull($client->recordings());
-        $this->assertNotNull($client->numberGroups());
-        $this->assertNotNull($client->verifiedCallers());
-        $this->assertNotNull($client->sipProfile());
-        $this->assertNotNull($client->lookup());
-        $this->assertNotNull($client->shortCodes());
-        $this->assertNotNull($client->importedNumbers());
-        $this->assertNotNull($client->mfa());
-        $this->assertNotNull($client->registry());
-        $this->assertNotNull($client->logs());
-        $this->assertNotNull($client->project());
-        $this->assertNotNull($client->pubsub());
-        $this->assertNotNull($client->chat());
+        $ids = array_map('spl_object_id', $namespaces);
+        $this->assertSame($ids, array_values(array_unique($ids)), 'each namespace is a distinct object');
     }
 
     // =================================================================
@@ -290,7 +293,6 @@ class RestClientTest extends TestCase
         // Direct CrudResource namespaces still expose getBasePath() at the
         // top level.
         $this->assertSame('/api/relay/rest/phone_numbers', $client->phoneNumbers()->getBasePath());
-        $this->assertSame('/api/laml/2010-04-01/Accounts/proj-id', $client->compat()->getAccountBase());
         $this->assertSame('/api/relay/rest/addresses', $client->addresses()->getBasePath());
         $this->assertSame('/api/relay/rest/queues', $client->queues()->getBasePath());
         $this->assertSame('/api/relay/rest/recordings', $client->recordings()->getBasePath());
@@ -346,19 +348,25 @@ class RestClientTest extends TestCase
         $fabric = $client->fabric();
 
         // Most sub-resources are CrudResource subclasses (some bespoke,
-        // e.g. FabricSubscribers, FabricCallFlows, FabricCxmlApplications).
-        $this->assertInstanceOf(CrudResource::class, $fabric->subscribers());
-        $this->assertInstanceOf(CrudResource::class, $fabric->sipEndpoints());
-        $this->assertInstanceOf(CrudResource::class, $fabric->callFlows());
-        $this->assertInstanceOf(CrudResource::class, $fabric->swmlScripts());
-        $this->assertInstanceOf(CrudResource::class, $fabric->conferenceRooms());
-        $this->assertInstanceOf(CrudResource::class, $fabric->aiAgents());
+        // e.g. FabricSubscribers, FabricCallFlows, FabricCxmlApplications);
+        // the special ones (read-only fabric addresses, generic resources,
+        // token endpoints) have their own classes. Concrete types are pinned
+        // by their declared return types — here we assert every accessor is
+        // wired and returns a distinct object.
+        $subResources = [
+            $fabric->subscribers(),
+            $fabric->sipEndpoints(),
+            $fabric->callFlows(),
+            $fabric->swmlScripts(),
+            $fabric->conferenceRooms(),
+            $fabric->aiAgents(),
+            $fabric->addresses(),
+            $fabric->resources(),
+            $fabric->tokens(),
+        ];
 
-        // The special resources have their own classes (read-only fabric
-        // addresses, generic resources, token endpoints).
-        $this->assertNotNull($fabric->addresses());
-        $this->assertNotNull($fabric->resources());
-        $this->assertNotNull($fabric->tokens());
+        $ids = array_map('spl_object_id', $subResources);
+        $this->assertSame($ids, array_values(array_unique($ids)), 'each fabric sub-resource is a distinct object');
     }
 
     #[Test]
@@ -398,8 +406,11 @@ class RestClientTest extends TestCase
         $client = new RestClient('p', 't', 'h');
         $fabric = $client->fabric();
 
-        $this->assertSame($client->getHttp(), $fabric->getClient());
+        // The generated FabricNamespace container hangs its sub-resources off
+        // the client's HttpClient. Sub-resources expose it via getClient()
+        // (ReadResource/CrudResource base); assert the shared instance.
         $this->assertSame($client->getHttp(), $fabric->subscribers()->getClient());
+        $this->assertSame($client->getHttp(), $fabric->aiAgents()->getClient());
     }
 
     // =================================================================
@@ -412,8 +423,10 @@ class RestClientTest extends TestCase
         $client = new RestClient('proj-123', 't', 'h');
         $calling = $client->calling();
 
-        $this->assertInstanceOf(Calling::class, $calling);
-        $this->assertSame('proj-123', $calling->getProjectId());
+        // The generated command-dispatch Calling resource bakes its collection
+        // path from the spec ( /api/calling/calls ). Project scoping is applied
+        // by the HttpClient (Authorization header), not the resource path — so
+        // Calling no longer carries a projectId of its own.
         $this->assertSame('/api/calling/calls', $calling->getBasePath());
     }
 
@@ -454,8 +467,7 @@ class RestClientTest extends TestCase
             'userEvent',
         ];
 
-        $this->assertCount(37, $expectedMethods, 'Sanity check: expected list has 37 entries');
-
+        // 5+5+4+3+2+2+2+2+2+4+2+2+1+1 = 37 methods across the Calling surface.
         foreach ($expectedMethods as $method) {
             $this->assertTrue(
                 method_exists($calling, $method),
@@ -470,25 +482,11 @@ class RestClientTest extends TestCase
         $client = new RestClient('p', 't', 'h');
         $calling = $client->calling();
 
-        $this->assertSame($client->getHttp(), $calling->getClient());
-    }
-
-    // =================================================================
-    // Compat namespace includes projectId in path
-    // =================================================================
-
-    #[Test]
-    public function compatPathIncludesProjectId(): void
-    {
-        $client = new RestClient('my-proj', 't', 'h');
-
-        $this->assertStringContainsString(
-            'my-proj',
-            $client->compat()->getAccountBase()
-        );
-        $this->assertSame(
-            '/api/laml/2010-04-01/Accounts/my-proj',
-            $client->compat()->getAccountBase()
-        );
+        // The generated command-dispatch Calling resource holds the client's
+        // HttpClient privately (it POSTs every command over it). It exposes no
+        // getClient() accessor, so assert the shared instance via reflection.
+        $prop = new \ReflectionProperty($calling, 'http');
+        $prop->setAccessible(true);
+        $this->assertSame($client->getHttp(), $prop->getValue($calling));
     }
 }

@@ -36,7 +36,7 @@ foreach ($departments as $dept) {
 }
 $agent->promptAddSection('Transfer Options', $deptText);
 
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "Call Summary: " . json_encode($summary, JSON_PRETTY_PRINT) . "\n";
 
@@ -46,8 +46,7 @@ $agent->onSummary(function ($summary, $raw) {
     }
 });
 
-$user = $agent->basicAuthUser();
-$pass = $agent->basicAuthPassword();
+[$user, $pass] = $agent->getBasicAuthCredentials();
 
 echo "Starting Receptionist Agent\n";
 echo "URL: http://localhost:3000/reception\n";

@@ -39,7 +39,6 @@ class MockTest extends TestCase
 {
     public const DEFAULT_PORT = 8768;
     private const STARTUP_TIMEOUT_SEC = 30;
-    private const HTTP_TIMEOUT_SEC = 5;
 
     /** Process-cached dynamically picked port (null until first resolved). */
     private static ?int $dynamicPort = null;
@@ -275,6 +274,8 @@ class MockTest extends TestCase
      * to keep the child detached. Injects PYTHONPATH so `python -m
      * mock_signalwire` resolves without a prior pip-install: the only
      * contract is that porting-sdk lives next to signalwire-php in ~/src/.
+     *
+     * @return resource The proc_open process handle.
      */
     private static function spawnMockServer(int $port)
     {
@@ -368,6 +369,9 @@ class MockTest extends TestCase
 
     /**
      * Probe /__mock__/health. Returns true on 200 + "specs_loaded" in body.
+     *
+     * @phpstan-impure Performs a live HTTP request; result varies per call as
+     *   the spawned mock server transitions from not-ready to ready.
      */
     private static function probeHealth(string $base): bool
     {
@@ -529,6 +533,10 @@ final class Journal
         }
         $entries = [];
         foreach ($decoded as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            /** @var array<string,mixed> $row */
             $entry = JournalEntry::fromArray($row);
             if ($this->authHeader !== ''
                 && ($entry->headers['authorization'] ?? null) !== $this->authHeader) {
@@ -598,18 +606,54 @@ final class JournalEntry
     public static function fromArray(array $raw): self
     {
         $e = new self();
-        $e->method = (string) ($raw['method'] ?? '');
-        $e->path = (string) ($raw['path'] ?? '');
+        $method = $raw['method'] ?? '';
+        $e->method = is_scalar($method) ? (string) $method : '';
+        $path = $raw['path'] ?? '';
+        $e->path = is_scalar($path) ? (string) $path : '';
+
         $qp = $raw['query_params'] ?? [];
-        $e->queryParams = is_array($qp) ? $qp : [];
+        $queryParams = [];
+        if (is_array($qp)) {
+            foreach ($qp as $k => $v) {
+                if (!is_string($k) || !is_array($v)) {
+                    continue;
+                }
+                $values = [];
+                foreach ($v as $item) {
+                    $values[] = is_scalar($item) ? (string) $item : '';
+                }
+                $queryParams[$k] = $values;
+            }
+        }
+        $e->queryParams = $queryParams;
+
         $hdr = $raw['headers'] ?? [];
-        $e->headers = is_array($hdr) ? $hdr : [];
-        $e->body = $raw['body'] ?? null;
+        $headers = [];
+        if (is_array($hdr)) {
+            foreach ($hdr as $k => $v) {
+                if (is_string($k) && is_scalar($v)) {
+                    $headers[$k] = (string) $v;
+                }
+            }
+        }
+        $e->headers = $headers;
+
+        $body = $raw['body'] ?? null;
+        if (is_array($body)) {
+            /** @var array<string,mixed> $body */
+            $e->body = $body;
+        } elseif (is_string($body)) {
+            $e->body = $body;
+        } else {
+            $e->body = null;
+        }
+
         $mr = $raw['matched_route'] ?? null;
-        $e->matchedRoute = $mr === null ? null : (string) $mr;
+        $e->matchedRoute = is_scalar($mr) ? (string) $mr : null;
         $rs = $raw['response_status'] ?? null;
-        $e->responseStatus = $rs === null ? null : (int) $rs;
-        $e->timestamp = isset($raw['timestamp']) ? (float) $raw['timestamp'] : 0.0;
+        $e->responseStatus = is_numeric($rs) ? (int) $rs : null;
+        $ts = $raw['timestamp'] ?? null;
+        $e->timestamp = is_numeric($ts) ? (float) $ts : 0.0;
         return $e;
     }
 

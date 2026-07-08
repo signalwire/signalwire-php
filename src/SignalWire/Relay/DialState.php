@@ -17,8 +17,8 @@ namespace SignalWire\Relay;
  * this port's {@see Client::handleDialEvent()} additionally treats the wire's
  * `no_answer` / `busy` as terminal failures, so they are modelled here too.
  * Each backing string IS the wire value. {@see Constants}::DIAL_STATE_* keeps
- * the bare-string constants for parity (the Python reference reads
- * `dial_state` as a plain `str`); this enum is offered ALONGSIDE them.
+ * the bare-string constants (the `dial_state` wire value is a plain
+ * string); this enum is offered ALONGSIDE them.
  *
  *     DialState::Answered->value;            // 'answered'  (wire string)
  *     DialState::tryFromWire('failed');      // DialState::Failed

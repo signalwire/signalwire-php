@@ -407,13 +407,14 @@ class Client implements RelayClientLike
         unset($this->pending[$id]);
 
         if ($error !== null) {
-            $code    = $error['code']    ?? 0;
-            $message = $error['message'] ?? 'Unknown RPC error';
-            throw new RelayError($message, $code);
+            $code    = (int)($error['code']    ?? 0);
+            $message = (string)($error['message'] ?? 'Unknown RPC error');
+            throw new RelayError($code, $message);
         }
 
         if ($result === null) {
             throw new RelayError(
+                408,
                 "RelayClient: timeout waiting for response to {$method} (id={$id})"
             );
         }
@@ -707,21 +708,21 @@ class Client implements RelayClientLike
                 $this->readOnce();
             } catch (\RuntimeException $e) {
                 unset($this->pendingDials[$tag]);
-                throw new RelayError('Dial transport error: ' . $e->getMessage(), 0);
+                throw new RelayError(0, 'Dial transport error: ' . $e->getMessage());
             }
         }
         unset($this->pendingDials[$tag]);
 
         if (!$resolved) {
-            throw new RelayError("Dial timed out waiting for calling.call.dial event (tag={$tag})", 408);
+            throw new RelayError(408, "Dial timed out waiting for calling.call.dial event (tag={$tag})");
         }
 
         if ($resolvedFailure !== null) {
-            throw new RelayError("Dial failed: {$resolvedFailure}", 0);
+            throw new RelayError(0, "Dial failed: {$resolvedFailure}");
         }
 
         if ($resolvedCall === null) {
-            throw new RelayError('Dial failed: no winner call_id received', 0);
+            throw new RelayError(0, 'Dial failed: no winner call_id received');
         }
 
         return $resolvedCall;

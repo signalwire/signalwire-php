@@ -74,7 +74,6 @@ class SWMLSchemaTest extends TestCase
         $this->assertNotNull($verb);
         $this->assertSame('answer', $verb['name']);
         $this->assertSame('Answer', $verb['schema_name']);
-        $this->assertArrayHasKey('definition', $verb);
     }
 
     public function testGetVerbNull(): void
@@ -88,7 +87,6 @@ class SWMLSchemaTest extends TestCase
         $schema = Schema::instance();
         $names = $schema->getVerbNames();
 
-        $this->assertIsArray($names);
         $this->assertGreaterThanOrEqual(38, count($names));
         $this->assertContains('answer', $names);
         $this->assertContains('hangup', $names);
@@ -106,6 +104,7 @@ class SWMLSchemaTest extends TestCase
         $this->assertTrue($schema->isValidVerb('sleep'));
 
         $verb = $schema->getVerb('sleep');
+        $this->assertNotNull($verb);
         $this->assertSame('Sleep', $verb['schema_name']);
     }
 
@@ -115,6 +114,7 @@ class SWMLSchemaTest extends TestCase
         $this->assertTrue($schema->isValidVerb('ai'));
 
         $verb = $schema->getVerb('ai');
+        $this->assertNotNull($verb);
         $this->assertSame('AI', $verb['schema_name']);
     }
 

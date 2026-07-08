@@ -64,7 +64,9 @@ class Call
         $this->device    = self::asStringKeyedArray($params['device']  ?? null);
         $this->peer      = self::asStringKeyedArray($params['peer']    ?? null);
         $this->context   = self::asNullableString($params['context']   ?? null);
-        $state           = $params['state'] ?? $params['call_state'] ?? null;
+        // Real RELAY wire key is ``call_state`` on the receive/state frame
+        // (mod_infrastructure relay.c + mock_relay), NOT ``state``.
+        $state           = $params['call_state'] ?? null;
         $this->state     = is_string($state) ? $state : 'created';
         $this->direction = self::asNullableString($params['direction'] ?? null);
 
@@ -119,8 +121,11 @@ class Call
 
         // ── call-level state events ──────────────────────────────────
         if ($eventType === 'calling.call.state') {
-            // Production wire uses ``call_state``; older fixtures use ``state``.
-            $newState = $params['state'] ?? $params['call_state'] ?? null;
+            // Real RELAY wire key is ``call_state`` (mod_infrastructure relay.c:
+            // relay_call_to_json emits ``call_state``; mock_relay emits the same).
+            // NOT ``state`` — that key belongs to control_id-routed component
+            // events (play/record/collect/…).
+            $newState = $params['call_state'] ?? null;
             if (is_string($newState)) {
                 $this->state = $newState;
             }
@@ -212,8 +217,8 @@ class Call
      * when the raw {@see $state} string is outside the known closed set
      * (a forward-compatible server value).
      *
-     * Offered ALONGSIDE the bare-string {@see $state} property for parity with
-     * the Python reference: `$call->state` stays the canonical string;
+     * Offered ALONGSIDE the bare-string {@see $state} property:
+     * `$call->state` stays the canonical string;
      * `$call->callState()` is the typed view for autocompletion + an
      * exhaustive `match` + `->isTerminal()`. PORT_ADDITION.
      */
@@ -321,6 +326,77 @@ class Call
     public function waitForEnding(int|float|null $timeout = null): bool
     {
         return $this->waitForState(Constants::CALL_STATE_ENDING, $timeout);
+    }
+
+    /**
+     * Wait for a specific event on this call, optionally filtered by a
+     * predicate, pumping inbound frames via ``$client->readOnce()``.
+     *
+     * Mirrors Python's async ``Call.wait_for(event_type, predicate, timeout)``
+     * and TS ``Call.waitFor``; the PHP port is synchronous (single-threaded),
+     * so instead of awaiting a future it drives the same read loop
+     * {@see waitForState}/{@see Action::wait} use until a matching event
+     * arrives. A one-shot listener captures the first matching {@see Event}.
+     *
+     * @param string                     $eventType The event type to wait for.
+     * @param (callable(Event): bool)|null $predicate Optional filter — only an
+     *        event for which this returns true resolves the wait.
+     * @param int|float|null             $timeout   Seconds to wait; null uses
+     *        the 30s default.
+     * @return Event|null The first matching event, or null on timeout.
+     */
+    public function waitFor(
+        string $eventType,
+        ?callable $predicate = null,
+        int|float|null $timeout = null
+    ): ?Event {
+        $matched = null;
+        $listener = function (Event $event, Call $call) use (
+            &$matched,
+            $eventType,
+            $predicate
+        ): void {
+            if ($matched !== null) {
+                return;
+            }
+            if ($event->getEventType() !== $eventType) {
+                return;
+            }
+            if ($predicate === null || $predicate($event)) {
+                $matched = $event;
+            }
+        };
+
+        $this->onEventCallbacks[] = $listener;
+        try {
+            $deadline = microtime(true) + ($timeout ?? 30);
+            while ($matched === null && microtime(true) < $deadline) {
+                $this->client->readOnce();
+            }
+        } finally {
+            // Remove the one-shot listener.
+            foreach ($this->onEventCallbacks as $i => $cb) {
+                if ($cb === $listener) {
+                    unset($this->onEventCallbacks[$i]);
+                }
+            }
+            $this->onEventCallbacks = array_values($this->onEventCallbacks);
+        }
+
+        return $matched;
+    }
+
+    /**
+     * Wait for the call to reach the terminal ``ended`` state, pumping inbound
+     * frames until it does. Mirrors Python's ``Call.wait_for_ended(timeout)``
+     * / TS ``Call.waitForEnded``.
+     *
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return bool True once the call has ended; false on timeout.
+     */
+    public function waitForEnded(int|float|null $timeout = null): bool
+    {
+        return $this->waitForState(Constants::CALL_STATE_ENDED, $timeout);
     }
 
     /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests;
 
-use JetBrains\PhpStorm\ArrayShape;
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
@@ -15,6 +14,7 @@ use SignalWire\Prefabs\ReceptionistAgent;
 use SignalWire\Prefabs\SurveyAgent;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 class PrefabsTest extends TestCase
 {
@@ -38,13 +38,28 @@ class PrefabsTest extends TestCase
         putenv('PORT');
     }
 
-    #[ArrayShape(['basicAuthUser' => 'string', 'basicAuthPassword' => 'string'])]
+    /**
+     * @return array{basicAuthUser: string, basicAuthPassword: string}
+     */
     private function baseOptions(): array
     {
         return [
             'basicAuthUser'     => 'testuser',
             'basicAuthPassword' => 'testpass',
         ];
+    }
+
+    /**
+     * Read a string-typed leaf out of a `toArray()` result, asserting (at
+     * runtime) each hop is an array and the leaf is a string — so it can be
+     * handed to assertStringContainsString()'s string-typed $haystack.
+     */
+    private function responseStr(FunctionResult $result, int|string ...$keys): string
+    {
+        $value = Shape::at($result->toArray(), ...$keys);
+        $this->assertIsString($value);
+
+        return $value;
     }
 
     // ==================================================================
@@ -98,10 +113,17 @@ class PrefabsTest extends TestCase
             basicAuthPassword: 'testpass'
         );
 
-        $result = $agent->onFunctionCall('start_questions', [], []);
+        // The platform seeds global_data (questions/index/answers) into the
+        // SWAIG raw_data; start_questions reads the current question from it
+        // (Python parity — Call reads global_data at runtime, not construction).
+        $rawData = ['global_data' => [
+            'questions'      => [['key_name' => 'name', 'question_text' => 'What is your name?']],
+            'question_index' => 0,
+            'answers'        => [],
+        ]];
+        $result = $agent->onFunctionCall('start_questions', [], $rawData);
         $this->assertInstanceOf(FunctionResult::class, $result);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('What is your name?', $arr['response']);
+        $this->assertStringContainsString('What is your name?', $this->responseStr($result, 'response'));
     }
 
     public function testInfoGathererSubmitAnswerRecords(): void
@@ -115,10 +137,25 @@ class PrefabsTest extends TestCase
             basicAuthPassword: 'testpass'
         );
 
-        $result = $agent->onFunctionCall('submit_answer', ['answer' => 'Alice'], []);
+        $rawData = ['global_data' => [
+            'questions'      => [['key_name' => 'name', 'question_text' => 'What is your name?']],
+            'question_index' => 0,
+            'answers'        => [],
+        ]];
+        $result = $agent->onFunctionCall('submit_answer', ['answer' => 'Alice'], $rawData);
         $this->assertInstanceOf(FunctionResult::class, $result);
         $arr = $result->toArray();
-        $this->assertStringContainsString('Alice', $arr['response']);
+        // Single-question survey: submitting the only answer completes the run
+        // and the answer is stored in a set_global_data action update.
+        $update = null;
+        foreach (Shape::arr($arr['action'] ?? []) as $action) {
+            if (is_array($action) && isset($action['set_global_data'])) {
+                $update = $action['set_global_data'];
+                break;
+            }
+        }
+        $this->assertNotNull($update);
+        $this->assertSame('Alice', Shape::at($update, 'answers', 0, 'answer'));
     }
 
     public function testInfoGathererSwmlRendering(): void
@@ -134,11 +171,11 @@ class PrefabsTest extends TestCase
 
         $swml = $agent->renderSwml();
         $this->assertSame('1.0.0', $swml['version']);
-        $this->assertArrayHasKey('main', $swml['sections']);
+        $this->assertArrayHasKey('main', Shape::sub($swml, 'sections'));
 
         $aiVerbs = array_filter(
-            $swml['sections']['main'],
-            fn (array $v) => array_key_first($v) === 'ai',
+            Shape::sub($swml, 'sections', 'main'),
+            fn (mixed $v) => is_array($v) && array_key_first($v) === 'ai',
         );
         $this->assertNotEmpty($aiVerbs);
     }
@@ -154,7 +191,10 @@ class PrefabsTest extends TestCase
             basicAuthPassword: 'testpass'
         );
 
-        $this->assertInstanceOf(AgentBase::class, $agent);
+        $this->assertTrue(
+            (new \ReflectionClass($agent))->isSubclassOf(AgentBase::class),
+            'InfoGathererAgent should inherit AgentBase',
+        );
     }
 
     // ==================================================================
@@ -195,13 +235,13 @@ class PrefabsTest extends TestCase
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => '4',
+            'response'    => '4',
         ], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
 
         $result2 = $agent->onFunctionCall('log_response', [
             'question_id' => 'q1',
-            'answer'      => '4',
+            'response'    => '4',
         ], []);
         $this->assertInstanceOf(FunctionResult::class, $result2);
     }
@@ -217,21 +257,21 @@ class PrefabsTest extends TestCase
             basicAuthPassword: 'testpass'
         );
 
-        // Valid rating
+        // Valid rating (Python parity: "Response to '<id>' is valid.")
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => '3',
+            'response'    => '3',
         ], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Valid rating', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('is valid', $this->responseStr($result, 'response'));
 
         // Invalid rating
         $result2 = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => '7',
+            'response'    => '7',
         ], []);
-        $arr2 = $result2->toArray();
-        $this->assertStringContainsString('Invalid rating', $arr2['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result2);
+        $this->assertStringContainsString('Invalid rating', $this->responseStr($result2, 'response'));
     }
 
     public function testSurveyValidatesMultipleChoice(): void
@@ -247,17 +287,17 @@ class PrefabsTest extends TestCase
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => 'Blue',
+            'response'    => 'Blue',
         ], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Valid choice', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('is valid', $this->responseStr($result, 'response'));
 
         $result2 = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => 'Purple',
+            'response'    => 'Purple',
         ], []);
-        $arr2 = $result2->toArray();
-        $this->assertStringContainsString('Invalid choice', $arr2['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result2);
+        $this->assertStringContainsString('Invalid choice', $this->responseStr($result2, 'response'));
     }
 
     public function testSurveyValidatesYesNo(): void
@@ -273,17 +313,17 @@ class PrefabsTest extends TestCase
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => 'yes',
+            'response'    => 'yes',
         ], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Valid response', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('is valid', $this->responseStr($result, 'response'));
 
         $result2 = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => 'maybe',
+            'response'    => 'maybe',
         ], []);
-        $arr2 = $result2->toArray();
-        $this->assertStringContainsString('yes or no', $arr2['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result2);
+        $this->assertStringContainsString("yes' or 'no", $this->responseStr($result2, 'response'));
     }
 
     public function testSurveyValidatesOpenEnded(): void
@@ -299,17 +339,18 @@ class PrefabsTest extends TestCase
 
         $result = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => 'Great service!',
+            'response'    => 'Great service!',
         ], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Response accepted', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('is valid', $this->responseStr($result, 'response'));
 
+        // Empty open-ended response is required by default (Python parity).
         $result2 = $agent->onFunctionCall('validate_response', [
             'question_id' => 'q1',
-            'answer'      => '',
+            'response'    => '',
         ], []);
-        $arr2 = $result2->toArray();
-        $this->assertStringContainsString('non-empty', $arr2['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result2);
+        $this->assertStringContainsString('A response is required', $this->responseStr($result2, 'response'));
     }
 
     public function testSurveyLogResponse(): void
@@ -325,11 +366,12 @@ class PrefabsTest extends TestCase
 
         $result = $agent->onFunctionCall('log_response', [
             'question_id' => 'q1',
-            'answer'      => '5',
+            'response'    => '5',
         ], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('q1', $arr['response']);
-        $this->assertStringContainsString('5', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        // Python parity: "Response to '<question text>' has been recorded."
+        $this->assertStringContainsString('Rate us', $this->responseStr($result, 'response'));
+        $this->assertStringContainsString('has been recorded', $this->responseStr($result, 'response'));
     }
 
     public function testSurveySwmlRendering(): void
@@ -405,8 +447,8 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'sales'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Transferring to sales', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('Transferring to sales', $this->responseStr($result, 'response'));
     }
 
     public function testReceptionistTransferNotFound(): void
@@ -421,8 +463,8 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'billing'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('not found', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('not found', $this->responseStr($result, 'response'));
     }
 
     public function testReceptionistSwmlTransferType(): void
@@ -437,8 +479,9 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'support'], []);
+        $this->assertInstanceOf(FunctionResult::class, $result);
         $arr = $result->toArray();
-        $this->assertStringContainsString('support', $arr['response']);
+        $this->assertStringContainsString('support', $this->responseStr($result, 'response'));
         // Should have a transfer_uri action
         $this->assertArrayHasKey('action', $arr);
     }
@@ -455,8 +498,9 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('transfer_call', ['department' => 'sales'], []);
+        $this->assertInstanceOf(FunctionResult::class, $result);
         $arr = $result->toArray();
-        $this->assertStringContainsString('Transferring to sales', $arr['response']);
+        $this->assertStringContainsString('Transferring to sales', $this->responseStr($result, 'response'));
         // Should have a SWML connect action
         $this->assertArrayHasKey('action', $arr);
     }
@@ -528,8 +572,8 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Cloud comms platform', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('Cloud comms platform', $this->responseStr($result, 'response'));
     }
 
     public function testFAQBotSearchNoMatch(): void
@@ -544,8 +588,8 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'banana'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('No FAQ found', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('No FAQ found', $this->responseStr($result, 'response'));
     }
 
     public function testFAQBotSearchKeywordScoring(): void
@@ -564,8 +608,8 @@ class PrefabsTest extends TestCase
 
         // "signalwire pricing" should match the second FAQ best
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire pricing'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Usage-based pricing', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('Usage-based pricing', $this->responseStr($result, 'response'));
     }
 
     public function testFAQBotSearchRelatedSuggestions(): void
@@ -583,8 +627,8 @@ class PrefabsTest extends TestCase
         );
 
         $result = $agent->onFunctionCall('search_faqs', ['query' => 'signalwire'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('Related questions:', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('Related questions:', $this->responseStr($result, 'response'));
     }
 
     public function testFAQBotCustomNameAndRoute(): void
@@ -653,7 +697,7 @@ class PrefabsTest extends TestCase
         $result = $agent->onFunctionCall('check_availability', ['service' => 'pool'], []);
         $this->assertInstanceOf(FunctionResult::class, $result);
 
-        $result2 = $agent->onFunctionCall('get_directions', ['destination' => 'pool'], []);
+        $result2 = $agent->onFunctionCall('get_directions', ['location' => 'pool'], []);
         $this->assertInstanceOf(FunctionResult::class, $result2);
     }
 
@@ -672,9 +716,9 @@ class PrefabsTest extends TestCase
             'service' => 'spa',
             'date'    => '2025-06-15',
         ], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('spa', $arr['response']);
-        $this->assertStringContainsString('Grand Hotel', $arr['response']);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('spa', $this->responseStr($result, 'response'));
+        $this->assertStringContainsString('Grand Hotel', $this->responseStr($result, 'response'));
     }
 
     public function testConciergeGetDirectionsKnown(): void
@@ -691,9 +735,9 @@ class PrefabsTest extends TestCase
             basicAuthPassword: 'testpass'
         );
 
-        $result = $agent->onFunctionCall('get_directions', ['destination' => 'pool'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('2nd Floor', $arr['response']);
+        $result = $agent->onFunctionCall('get_directions', ['location' => 'pool'], []);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('2nd Floor', $this->responseStr($result, 'response'));
     }
 
     public function testConciergeGetDirectionsUnknown(): void
@@ -708,9 +752,9 @@ class PrefabsTest extends TestCase
             basicAuthPassword: 'testpass'
         );
 
-        $result = $agent->onFunctionCall('get_directions', ['destination' => 'rooftop'], []);
-        $arr = $result->toArray();
-        $this->assertStringContainsString('front desk', $arr['response']);
+        $result = $agent->onFunctionCall('get_directions', ['location' => 'rooftop'], []);
+        $this->assertInstanceOf(FunctionResult::class, $result);
+        $this->assertStringContainsString('front desk', $this->responseStr($result, 'response'));
     }
 
     public function testConciergeSwmlRendering(): void
@@ -730,14 +774,14 @@ class PrefabsTest extends TestCase
         $this->assertSame('1.0.0', $swml['version']);
 
         $aiVerbs = array_filter(
-            $swml['sections']['main'],
-            fn (array $v) => array_key_first($v) === 'ai',
+            Shape::sub($swml, 'sections', 'main'),
+            fn (mixed $v) => is_array($v) && array_key_first($v) === 'ai',
         );
         $this->assertNotEmpty($aiVerbs);
 
-        $aiVerb = array_values($aiVerbs)[0]['ai'];
+        $aiVerb = Shape::sub(array_values($aiVerbs), 0, 'ai');
         $this->assertArrayHasKey('global_data', $aiVerb);
-        $this->assertSame('Test Hotel', $aiVerb['global_data']['venue_name']);
+        $this->assertSame('Test Hotel', Shape::at($aiVerb, 'global_data', 'venue_name'));
     }
 
     // ==================================================================
@@ -789,8 +833,11 @@ class PrefabsTest extends TestCase
         ];
 
         foreach ($agents as $agent) {
-            $class = (new \ReflectionClass($agent))->getShortName();
-            $this->assertInstanceOf(AgentBase::class, $agent, "{$class} should inherit AgentBase");
+            $rc = new \ReflectionClass($agent);
+            $this->assertTrue(
+                $rc->isSubclassOf(AgentBase::class),
+                "{$rc->getShortName()} should inherit AgentBase",
+            );
         }
     }
 
@@ -856,6 +903,6 @@ class PrefabsTest extends TestCase
             basicAuthPassword: $options['basicAuthPassword']
         );
 
-        $this->assertTrue(method_exists($agent, 'handleRequest'));
+        $this->assertTrue((new \ReflectionClass($agent))->hasMethod('handleRequest'));
     }
 }

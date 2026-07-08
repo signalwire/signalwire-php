@@ -38,7 +38,7 @@ class SchemaUtilsParityTest extends TestCase
     public function testDisabledValidation(): void
     {
         $su = new SchemaUtils(null, false);
-        $this->assertFalse($su->isFullValidationAvailable());
+        $this->assertFalse($su->fullValidationAvailable());
         // validate_verb on a known verb should still return valid=true
         [$valid, $errors] = $su->validateVerb('ai', []);
         $this->assertTrue($valid, 'validation skipped should return valid=true');
@@ -50,7 +50,7 @@ class SchemaUtilsParityTest extends TestCase
         putenv('SWML_SKIP_SCHEMA_VALIDATION=1');
         try {
             $su = new SchemaUtils(null, true);
-            $this->assertFalse($su->isFullValidationAvailable());
+            $this->assertFalse($su->fullValidationAvailable());
             [$valid, $errors] = $su->validateVerb('ai', []);
             $this->assertTrue($valid);
             $this->assertSame([], $errors);
@@ -123,7 +123,6 @@ class SchemaUtilsParityTest extends TestCase
     {
         $svc = new Service(name: 'test');
         $su = $svc->getSchemaUtils();
-        $this->assertInstanceOf(SchemaUtils::class, $su);
         $this->assertNotEmpty($su->getAllVerbNames());
     }
 

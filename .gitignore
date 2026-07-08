@@ -12,3 +12,9 @@ composer.lock
 .DS_Store
 .env
 __pycache__/
+
+# Claude Code local settings (never commit)
+.claude/
+
+# sw-verify repo-local scratch
+.sw-tmp/

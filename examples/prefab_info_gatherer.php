@@ -34,7 +34,7 @@ Return a JSON object with all collected information:
 }
 POST);
 
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "Registration completed:\n";
         if (is_array($summary)) {

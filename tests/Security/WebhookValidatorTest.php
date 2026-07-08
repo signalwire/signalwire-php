@@ -76,6 +76,7 @@ class WebhookValidatorTest extends TestCase
         return implode('&', $pairs);
     }
 
+    /** @param array<string,string> $params */
     private static function b64Sig(string $key, string $url, array $params = []): string
     {
         $concat = $url;
@@ -357,12 +358,11 @@ class WebhookValidatorTest extends TestCase
     {
         $this->expectException(TypeError::class);
         // PHP type-hint enforces this — a parsed array can't be passed.
-        // @phpstan-ignore-next-line intentional bad call for type-error test.
         WebhookValidator::validateWebhookSignature(
             self::VECTOR_A['signing_key'],
             'sig',
             self::VECTOR_A['url'],
-            ['event' => 'call.state'],
+            ['event' => 'call.state'], // @phpstan-ignore argument.type (intentional bad type to exercise the TypeError path)
         );
     }
 

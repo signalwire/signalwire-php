@@ -10,18 +10,31 @@ class SessionManager
 {
     private string $secret;
     private int $tokenExpirySecs;
+    private bool $debugMode = false;
 
     /**
      * @param int $tokenExpirySecs Token lifetime in seconds (default 3600).
+     * @param string|null $secretKey Optional HMAC signing key. When null a
+     *        cryptographically-secure random key is generated. Mirrors Python's
+     *        ``SessionManager(token_expiry_secs, secret_key)`` — an explicit key
+     *        is required for cross-instance token interop (the same key must sign
+     *        and validate a token). The key is used verbatim as HMAC-SHA256 key
+     *        bytes, matching Python's ``self.secret_key.encode()``.
      *
      * @throws RuntimeException If secure random bytes cannot be generated.
      */
-    public function __construct(int $tokenExpirySecs = 3600)
+    public function __construct(int $tokenExpirySecs = 3600, ?string $secretKey = null)
     {
         $this->tokenExpirySecs = $tokenExpirySecs;
 
+        if ($secretKey !== null) {
+            $this->secret = $secretKey;
+            return;
+        }
+
         try {
-            $this->secret = random_bytes(32);
+            // token_hex(32) parity: a 64-char hex string used verbatim as the key.
+            $this->secret = bin2hex(random_bytes(32));
         } catch (\Exception $e) {
             throw new RuntimeException(
                 'Failed to generate cryptographically secure secret: ' . $e->getMessage(),
@@ -154,6 +167,121 @@ class SessionManager
     public function getTokenExpirySecs(): int
     {
         return $this->tokenExpirySecs;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  Legacy session-lifecycle API (stateless — API-compatibility only)
+    //
+    //  The SessionManager is fully stateless: it does not track sessions in
+    //  memory (all state lives in the signed token). These methods mirror
+    //  Python's ``signalwire.core.security.session_manager.SessionManager``
+    //  legacy surface so callers written against the reference port 1:1.
+    // ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Legacy no-op: activate a session. Always returns true.
+     */
+    public function activateSession(string $callId): bool
+    {
+        return true;
+    }
+
+    /**
+     * Legacy no-op: end a session. Always returns true.
+     */
+    public function endSession(string $callId): bool
+    {
+        return true;
+    }
+
+    /**
+     * Legacy no-op: get session metadata. Always returns an empty array.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getSessionMetadata(string $callId): ?array
+    {
+        return [];
+    }
+
+    /**
+     * Legacy no-op: set session metadata. Always returns true.
+     */
+    public function setSessionMetadata(string $callId, string $key, mixed $value): bool
+    {
+        return true;
+    }
+
+    /**
+     * Decode a token's components for inspection WITHOUT validating it.
+     *
+     * Requires debug mode to be enabled (mirrors Python's ``_debug_mode`` gate);
+     * otherwise returns ``['error' => 'debug mode not enabled']``.
+     *
+     * @return array<string, mixed> Token components and status, or an error map.
+     */
+    public function debugToken(string $token): array
+    {
+        if (!$this->debugMode) {
+            return ['error' => 'debug mode not enabled'];
+        }
+
+        $decoded = $this->base64urlDecode($token);
+        if ($decoded === false) {
+            return [
+                'valid_format' => false,
+                'error' => 'malformed token',
+                'token_length' => strlen($token),
+            ];
+        }
+
+        $parts = explode('.', $decoded);
+        if (count($parts) !== 5) {
+            return [
+                'valid_format' => false,
+                'parts_count' => count($parts),
+                'token_length' => strlen($token),
+            ];
+        }
+
+        [$tokenCallId, $tokenFunction, $tokenExpiry, $tokenNonce, $tokenSignature] = $parts;
+
+        $currentTime = time();
+        if (preg_match('/^-?\d+$/', $tokenExpiry) === 1) {
+            $expiry = (int) $tokenExpiry;
+            $isExpired = $expiry < $currentTime;
+            $expiresIn = $isExpired ? 0 : $expiry - $currentTime;
+            $expiryDate = date('c', $expiry);
+        } else {
+            $isExpired = null;
+            $expiresIn = null;
+            $expiryDate = null;
+        }
+
+        return [
+            'valid_format' => true,
+            'components' => [
+                'call_id' => strlen($tokenCallId) > 8 ? substr($tokenCallId, 0, 8) . '...' : $tokenCallId,
+                'function' => $tokenFunction,
+                'expiry' => $tokenExpiry,
+                'expiry_date' => $expiryDate,
+                'nonce' => $tokenNonce,
+                'signature' => substr($tokenSignature, 0, 8) . '...',
+            ],
+            'status' => [
+                'current_time' => $currentTime,
+                'is_expired' => $isExpired,
+                'expires_in_seconds' => $expiresIn,
+            ],
+        ];
+    }
+
+    /**
+     * Enable or disable token-debug mode (gates {@see debugToken}).
+     */
+    public function setDebugMode(bool $enabled): void
+    {
+        $this->debugMode = $enabled;
     }
 
     /**

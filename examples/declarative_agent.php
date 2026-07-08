@@ -84,7 +84,7 @@ $agent->defineTool(
     },
 );
 
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "Conversation summary: " . json_encode($summary) . "\n";
     }

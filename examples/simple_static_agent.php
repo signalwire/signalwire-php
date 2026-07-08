@@ -28,7 +28,7 @@ $agent->setParams([
     'background_file_volume' => -20,
 ]);
 
-$agent->addHints('SignalWire', 'SWML', 'API', 'webhook', 'SIP');
+$agent->addHints(['SignalWire', 'SWML', 'API', 'webhook', 'SIP']);
 
 $agent->setGlobalData([
     'agent_type'       => 'customer_service',

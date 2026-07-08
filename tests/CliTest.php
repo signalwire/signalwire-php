@@ -9,87 +9,68 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests for the swaig-test CLI script.
  *
- * Since the CLI script uses plain functions, we include it once and test
- * the parseUrlWithAuth() and parseParam() functions directly.
+ * The CLI script (bin/swaig-test) uses plain functions guarded behind an
+ * argv-parsing main flow, so including it would execute that flow. Its two
+ * pure helpers — parseUrlWithAuth() and parseParam() — are mirrored here as
+ * private static methods and tested directly; the end-to-end tests below
+ * exercise the real script via exec().
  */
 class CliTest extends TestCase
 {
-    private static bool $scriptLoaded = false;
-
-    public static function setUpBeforeClass(): void
+    /**
+     * Parse a URL with optional embedded auth.
+     *
+     * Mirrors bin/swaig-test's parseUrlWithAuth() — reimplemented here as a
+     * test helper because including the CLI script would run its main
+     * argv-parsing flow.
+     *
+     * @return array{base_url: string, user: string|null, pass: string|null}
+     */
+    private static function parseUrlWithAuth(string $url): array
     {
-        // Load the CLI script functions without executing the main logic.
-        // We wrap it so the global argv-parsing code only runs once at include
-        // time with safe defaults.
-        if (!self::$scriptLoaded) {
-            // Define the functions by extracting them from the script
-            self::defineFunctionsFromScript();
-            self::$scriptLoaded = true;
+        $parsed = parse_url($url);
+
+        if ($parsed === false) {
+            return [
+                'base_url' => $url,
+                'user'     => null,
+                'pass'     => null,
+            ];
         }
+
+        $user = $parsed['user'] ?? null;
+        $pass = $parsed['pass'] ?? null;
+
+        $scheme = $parsed['scheme'] ?? 'http';
+        $host   = $parsed['host'] ?? 'localhost';
+        $port   = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+        $path   = $parsed['path'] ?? '/';
+
+        $baseUrl = "{$scheme}://{$host}{$port}{$path}";
+        $baseUrl = rtrim($baseUrl, '/');
+
+        return [
+            'base_url' => $baseUrl,
+            'user'     => $user,
+            'pass'     => $pass,
+        ];
     }
 
     /**
-     * Extract and define the helper functions from the CLI script
-     * without executing the main program flow.
+     * Parse a KEY=VALUE string. Mirrors bin/swaig-test's parseParam().
+     *
+     * @return array{string, string}|null
      */
-    private static function defineFunctionsFromScript(): void
+    private static function parseParam(string $param): ?array
     {
-        // Only define if not already defined (the script may have been loaded)
-        if (!\function_exists(__NAMESPACE__ . '\\parseUrlWithAuth')) {
-            /**
-             * Parse a URL with optional embedded auth.
-             *
-             * @return array{base_url: string, user: string|null, pass: string|null}
-             */
-            function parseUrlWithAuth(string $url): array
-            {
-                $parsed = parse_url($url);
-
-                if ($parsed === false) {
-                    return [
-                        'base_url' => $url,
-                        'user'     => null,
-                        'pass'     => null,
-                    ];
-                }
-
-                $user = $parsed['user'] ?? null;
-                $pass = $parsed['pass'] ?? null;
-
-                $scheme = $parsed['scheme'] ?? 'http';
-                $host   = $parsed['host'] ?? 'localhost';
-                $port   = isset($parsed['port']) ? ':' . $parsed['port'] : '';
-                $path   = $parsed['path'] ?? '/';
-
-                $baseUrl = "{$scheme}://{$host}{$port}{$path}";
-                $baseUrl = rtrim($baseUrl, '/');
-
-                return [
-                    'base_url' => $baseUrl,
-                    'user'     => $user,
-                    'pass'     => $pass,
-                ];
-            }
+        $eqPos = strpos($param, '=');
+        if ($eqPos === false) {
+            return null;
         }
-
-        if (!\function_exists(__NAMESPACE__ . '\\parseParam')) {
-            /**
-             * Parse a KEY=VALUE string.
-             *
-             * @return array{string, string}|null
-             */
-            function parseParam(string $param): ?array
-            {
-                $eqPos = strpos($param, '=');
-                if ($eqPos === false) {
-                    return null;
-                }
-                return [
-                    substr($param, 0, $eqPos),
-                    substr($param, $eqPos + 1),
-                ];
-            }
-        }
+        return [
+            substr($param, 0, $eqPos),
+            substr($param, $eqPos + 1),
+        ];
     }
 
     // ==================================================================
@@ -98,7 +79,7 @@ class CliTest extends TestCase
 
     public function testParseUrlWithAuth(): void
     {
-        $result = parseUrlWithAuth('http://myuser:mypass@localhost:3000/agent');
+        $result = self::parseUrlWithAuth('http://myuser:mypass@localhost:3000/agent');
 
         $this->assertSame('http://localhost:3000/agent', $result['base_url']);
         $this->assertSame('myuser', $result['user']);
@@ -111,7 +92,7 @@ class CliTest extends TestCase
 
     public function testParseUrlWithoutAuth(): void
     {
-        $result = parseUrlWithAuth('http://example.com:8080/path');
+        $result = self::parseUrlWithAuth('http://example.com:8080/path');
 
         $this->assertSame('http://example.com:8080/path', $result['base_url']);
         $this->assertNull($result['user']);
@@ -124,7 +105,7 @@ class CliTest extends TestCase
 
     public function testParseUrlWithAuthNoPort(): void
     {
-        $result = parseUrlWithAuth('http://admin:secret@example.com/');
+        $result = self::parseUrlWithAuth('http://admin:secret@example.com/');
 
         $this->assertSame('http://example.com', $result['base_url']);
         $this->assertSame('admin', $result['user']);
@@ -137,7 +118,7 @@ class CliTest extends TestCase
 
     public function testParseHttpsUrl(): void
     {
-        $result = parseUrlWithAuth('https://user:pass@secure.example.com:443/api');
+        $result = self::parseUrlWithAuth('https://user:pass@secure.example.com:443/api');
 
         $this->assertSame('https://secure.example.com:443/api', $result['base_url']);
         $this->assertSame('user', $result['user']);
@@ -150,7 +131,7 @@ class CliTest extends TestCase
 
     public function testParseUrlTrailingSlashStripped(): void
     {
-        $result = parseUrlWithAuth('http://user:pass@localhost:3000/');
+        $result = self::parseUrlWithAuth('http://user:pass@localhost:3000/');
 
         $this->assertSame('http://localhost:3000', $result['base_url']);
         $this->assertSame('user', $result['user']);
@@ -163,7 +144,7 @@ class CliTest extends TestCase
 
     public function testParseUrlNoPath(): void
     {
-        $result = parseUrlWithAuth('http://localhost:3000');
+        $result = self::parseUrlWithAuth('http://localhost:3000');
 
         $this->assertSame('http://localhost:3000', $result['base_url']);
         $this->assertNull($result['user']);
@@ -177,7 +158,7 @@ class CliTest extends TestCase
     public function testParseUrlPasswordWithSpecialChars(): void
     {
         // URL-encoded special characters in password
-        $result = parseUrlWithAuth('http://user:p%40ss%3Aword@localhost:3000/');
+        $result = self::parseUrlWithAuth('http://user:p%40ss%3Aword@localhost:3000/');
 
         $this->assertSame('http://localhost:3000', $result['base_url']);
         $this->assertSame('user', $result['user']);
@@ -191,7 +172,7 @@ class CliTest extends TestCase
 
     public function testParseUrlDeepPath(): void
     {
-        $result = parseUrlWithAuth('http://u:p@host:9000/api/v1/agent');
+        $result = self::parseUrlWithAuth('http://u:p@host:9000/api/v1/agent');
 
         $this->assertSame('http://host:9000/api/v1/agent', $result['base_url']);
         $this->assertSame('u', $result['user']);
@@ -204,7 +185,7 @@ class CliTest extends TestCase
 
     public function testParseParamValid(): void
     {
-        $result = parseParam('location=London');
+        $result = self::parseParam('location=London');
 
         $this->assertIsArray($result);
         $this->assertSame('location', $result[0]);
@@ -217,7 +198,7 @@ class CliTest extends TestCase
 
     public function testParseParamValueWithEquals(): void
     {
-        $result = parseParam('query=a=b');
+        $result = self::parseParam('query=a=b');
 
         $this->assertIsArray($result);
         $this->assertSame('query', $result[0]);
@@ -230,7 +211,7 @@ class CliTest extends TestCase
 
     public function testParseParamEmptyValue(): void
     {
-        $result = parseParam('key=');
+        $result = self::parseParam('key=');
 
         $this->assertIsArray($result);
         $this->assertSame('key', $result[0]);
@@ -243,7 +224,7 @@ class CliTest extends TestCase
 
     public function testParseParamInvalid(): void
     {
-        $result = parseParam('invalidparam');
+        $result = self::parseParam('invalidparam');
 
         $this->assertNull($result);
     }
@@ -254,7 +235,7 @@ class CliTest extends TestCase
 
     public function testParseParamValueWithSpaces(): void
     {
-        $result = parseParam('city=New York');
+        $result = self::parseParam('city=New York');
 
         $this->assertIsArray($result);
         $this->assertSame('city', $result[0]);
@@ -279,7 +260,11 @@ class CliTest extends TestCase
     public function testScriptHasShebang(): void
     {
         $path = dirname(__DIR__) . '/bin/swaig-test';
-        $firstLine = fgets(fopen($path, 'r'));
+        $handle = fopen($path, 'r');
+        $this->assertNotFalse($handle, "could not open {$path}");
+        $firstLine = fgets($handle);
+        fclose($handle);
+        $this->assertNotFalse($firstLine, 'script is empty');
         $this->assertStringStartsWith('#!/usr/bin/env php', trim($firstLine));
     }
 
@@ -427,5 +412,118 @@ class CliTest extends TestCase
         $this->assertSame(1, $exitCode);
         $outputStr = implode("\n", $output);
         $this->assertStringContainsString('mutually exclusive', $outputStr);
+    }
+
+    // ==================================================================
+    // 23. --parse-only validates args and prints `parse OK` (no network)
+    // ==================================================================
+    //
+    // Canonical contract (mirrored by every port): --parse-only (alias
+    // --dry-run) validates the invocation's arguments, then prints exactly
+    // `parse OK` and exits 0 WITHOUT loading an agent or making any network
+    // call. The bogus/unreachable URL below proves no request is attempted —
+    // the command returns instantly with `parse OK` rather than a connect
+    // error.
+
+    public function testParseOnlyPrintsParseOkAndMakesNoNetworkCall(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 1;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@10.255.255.1:1/route'
+            . ' --list-tools --parse-only 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = trim(implode("\n", $output));
+        $this->assertSame(0, $exitCode, "parse-only should exit 0; got:\n{$outputStr}");
+        $this->assertSame('parse OK', $outputStr);
+    }
+
+    // ==================================================================
+    // 24. --dry-run is an exact alias for --parse-only
+    // ==================================================================
+
+    public function testDryRunIsAnExactAliasForParseOnly(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 1;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@localhost:3000/'
+            . ' --dump-swml --dry-run 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = trim(implode("\n", $output));
+        $this->assertSame(0, $exitCode, "dry-run should exit 0; got:\n{$outputStr}");
+        $this->assertSame('parse OK', $outputStr);
+    }
+
+    // ==================================================================
+    // 25. --parse-only is position-independent (works trailing an --exec)
+    // ==================================================================
+    //
+    // --exec consumes trailing tokens as function args; --parse-only must still
+    // be honored when it trails the --exec invocation.
+
+    public function testParseOnlyIsPositionIndependentAfterExec(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+        $output = [];
+        $exitCode = 1;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@localhost:3000/'
+            . ' --exec foo --param bar=1 --parse-only 2>&1',
+            $output,
+            $exitCode
+        );
+
+        $outputStr = trim(implode("\n", $output));
+        $this->assertSame(0, $exitCode, "parse-only after --exec should exit 0; got:\n{$outputStr}");
+        $this->assertSame('parse OK', $outputStr);
+    }
+
+    // ==================================================================
+    // 26. --parse-only with invalid args exits 2 and does NOT print parse OK
+    // ==================================================================
+
+    public function testParseOnlyInvalidArgsExitsTwoWithoutParseOk(): void
+    {
+        $bin = dirname(__DIR__) . '/bin/swaig-test';
+
+        // Unknown flag under --parse-only.
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin)
+            . ' --url http://user:pass@localhost:3000/'
+            . ' --list-tools --parse-only --no-such-flag 2>&1',
+            $output,
+            $exitCode
+        );
+        $outputStr = implode("\n", $output);
+        $this->assertSame(2, $exitCode, "invalid parse-only args should exit 2; got:\n{$outputStr}");
+        // The success signal is the exact standalone line `parse OK`; the help
+        // text mentions the phrase in prose, so assert no bare `parse OK` line.
+        $this->assertNotContains('parse OK', array_map('trim', $output));
+
+        // Missing required target/action under --parse-only.
+        $output = [];
+        $exitCode = 0;
+        exec(
+            PHP_BINARY . ' ' . escapeshellarg($bin) . ' --parse-only 2>&1',
+            $output,
+            $exitCode
+        );
+        $outputStr = implode("\n", $output);
+        $this->assertSame(2, $exitCode, "missing args under parse-only should exit 2; got:\n{$outputStr}");
+        $this->assertNotContains('parse OK', array_map('trim', $output));
     }
 }

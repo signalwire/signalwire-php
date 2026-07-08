@@ -70,10 +70,10 @@ final class WebhookMiddleware
         string $rawBody,
         callable $next,
     ): array {
-        $signature = $this->extractSignature($headers);
+        $signature = self::extractSignatureFrom($headers);
         if ($signature === null || $signature === '') {
             $this->logger->warn('webhook signature missing — returning 403');
-            return $this->forbidden();
+            return self::forbiddenTriple();
         }
 
         $valid = WebhookValidator::validateWebhookSignature(
@@ -85,19 +85,82 @@ final class WebhookMiddleware
 
         if (!$valid) {
             $this->logger->warn('webhook signature invalid — returning 403');
-            return $this->forbidden();
+            return self::forbiddenTriple();
         }
 
         return $next($method, $url, $headers, $rawBody);
     }
 
     /**
-     * Extract the signature header value, preferring X-SignalWire-Signature
-     * over the legacy X-Twilio-Signature alias (cXML compat).
+     * Framework-free decomposed validation core.
+     *
+     * This is the language-neutral shape is required
+     * (mirrors dotnet's `WebhookValidationMiddleware.Validate` and the
+     * Rack/PSGI `.call` decision core): given the raw request primitives it
+     * returns `null` to signal "pass — call your downstream handler", or a
+     * `[status, headers, body]` triple to signal "reject; send this response
+     * and DO NOT call the handler". No framework object is produced or
+     * consumed — the object-shaped `process()` wrapper above is the
+     * PHP-idiom convenience layered on top of this.
+     *
+     * Behaviour matches `process()`:
+     *   - Missing X-SignalWire-Signature / X-Twilio-Signature header -> 403 triple.
+     *   - Invalid signature -> 403 triple.
+     *   - Valid signature -> null (the caller proceeds to its handler).
+     *   - Never logs / echoes the signing key, signature, or expected digest.
+     *
+     * @param string               $method     HTTP method (unused by the signature
+     *                                          check; carried for shape compatibility so a
+     *                                          caller can pass the full request tuple).
+     * @param string               $url        Full reconstructed URL the platform POSTed to.
+     * @param array<string,string> $headers    Request headers (mixed-case keys allowed).
+     * @param string               $body       Raw request body bytes.
+     * @param string               $signingKey Customer Signing Key. Empty raises
+     *                                          InvalidArgumentException (programming error).
+     *
+     * @return array{int, array<string,string>, string}|null Null on pass; a
+     *         [status, headers, body] triple on reject.
+     *
+     * @throws \InvalidArgumentException When $signingKey is empty.
+     */
+    public static function validate(
+        string $method,
+        string $url,
+        array $headers,
+        string $body,
+        string $signingKey,
+    ): ?array {
+        if ($signingKey === '') {
+            throw new \InvalidArgumentException('signingKey is required');
+        }
+
+        $signature = self::extractSignatureFrom($headers);
+        if ($signature === null || $signature === '') {
+            return self::forbiddenTriple();
+        }
+
+        $valid = WebhookValidator::validateWebhookSignature(
+            $signingKey,
+            $signature,
+            $url,
+            $body,
+        );
+
+        if (!$valid) {
+            return self::forbiddenTriple();
+        }
+
+        return null;
+    }
+
+    /**
+     * Header lookup shared by the instance `process()` and the static
+     * decomposed `validate()`. Prefers X-SignalWire-Signature over the legacy
+     * X-Twilio-Signature alias (cXML compat).
      *
      * @param array<string,mixed> $headers
      */
-    private function extractSignature(array $headers): ?string
+    private static function extractSignatureFrom(array $headers): ?string
     {
         foreach ($headers as $k => $v) {
             if (strcasecmp($k, 'X-SignalWire-Signature') === 0) {
@@ -113,11 +176,11 @@ final class WebhookMiddleware
     }
 
     /**
-     * Fixed 403 response with no detail leaked back to the caller.
+     * Fixed 403 triple with no detail leaked. Shared by process()/validate().
      *
      * @return array{int, array<string,string>, string}
      */
-    private function forbidden(): array
+    private static function forbiddenTriple(): array
     {
         return [
             403,
@@ -125,4 +188,5 @@ final class WebhookMiddleware
             'Forbidden',
         ];
     }
+
 }

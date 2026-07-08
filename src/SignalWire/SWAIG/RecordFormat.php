@@ -10,11 +10,11 @@ namespace SignalWire\SWAIG;
  *
  * {@see FunctionResult::recordCall()} accepts this enum OR a string for its
  * `$format` argument. The enum gives editor autocompletion and makes a typo
- * fail at the call site; strings keep parity with the Python reference
+ * fail at the call site; strings keep mirrors the reference
  * (`record_call` takes a bare `str`).
  *
  *     $result->recordCall(format: RecordFormat::Mp3);   // typed
- *     $result->recordCall(format: 'mp3');               // string (parity)
+ *     $result->recordCall(format: 'mp3');               // string (for compatibility)
  *
  * The three members are the only formats the Python reference's `record_call`
  * accepts (`["wav", "mp3", "mp4"]` — the SWML `record_call` verb schema; `mp4`

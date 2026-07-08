@@ -36,14 +36,25 @@ class RelayTypedStateTest extends TestCase
     #[Test]
     public function callStateBackingValuesMatchConstants(): void
     {
-        $this->assertSame(Constants::CALL_STATE_CREATED, CallState::Created->value);
-        $this->assertSame(Constants::CALL_STATE_RINGING, CallState::Ringing->value);
-        $this->assertSame(Constants::CALL_STATE_ANSWERED, CallState::Answered->value);
-        $this->assertSame(Constants::CALL_STATE_ENDING, CallState::Ending->value);
-        $this->assertSame(Constants::CALL_STATE_ENDED, CallState::Ended->value);
-
-        // Exactly five members, no more.
-        $this->assertCount(5, CallState::cases());
+        // Each CALL_STATE_* token IS the backing wire value of the matching
+        // case. Driving the check through a runtime map (rather than a literal
+        // `$case->value === 'created'`, which folds to a compile-time
+        // tautology) keeps it a genuine assertion.
+        $expected = [
+            Constants::CALL_STATE_CREATED  => CallState::Created,
+            Constants::CALL_STATE_RINGING  => CallState::Ringing,
+            Constants::CALL_STATE_ANSWERED => CallState::Answered,
+            Constants::CALL_STATE_ENDING   => CallState::Ending,
+            Constants::CALL_STATE_ENDED    => CallState::Ended,
+        ];
+        // Every enum case is covered by the map above (a missing case would
+        // leave its value unchecked), and each maps to its CALL_STATE_* token.
+        foreach (CallState::cases() as $case) {
+            $this->assertContains($case, $expected, "unmapped CallState::{$case->name}");
+        }
+        foreach ($expected as $wire => $case) {
+            $this->assertSame($wire, $case->value);
+        }
     }
 
     #[Test]
@@ -96,15 +107,23 @@ class RelayTypedStateTest extends TestCase
     #[Test]
     public function dialStateBackingValuesMatchConstantsAndWire(): void
     {
-        $this->assertSame(Constants::DIAL_STATE_DIALING, DialState::Dialing->value);
-        $this->assertSame(Constants::DIAL_STATE_ANSWERED, DialState::Answered->value);
-        $this->assertSame(Constants::DIAL_STATE_FAILED, DialState::Failed->value);
-        // no_answer / busy are the extra terminal-failure values the port's
-        // Client::handleDialEvent treats as terminal.
-        $this->assertSame('no_answer', DialState::NoAnswer->value);
-        $this->assertSame('busy', DialState::Busy->value);
-
-        $this->assertCount(5, DialState::cases());
+        // Driven through a runtime map so each check is a genuine assertion
+        // (a literal `$case->value === 'dialing'` folds to a compile-time
+        // tautology). no_answer / busy are the extra terminal-failure values
+        // the port's Client::handleDialEvent treats as terminal.
+        $expected = [
+            Constants::DIAL_STATE_DIALING  => DialState::Dialing,
+            Constants::DIAL_STATE_ANSWERED => DialState::Answered,
+            Constants::DIAL_STATE_FAILED   => DialState::Failed,
+            'no_answer'                    => DialState::NoAnswer,
+            'busy'                         => DialState::Busy,
+        ];
+        foreach (DialState::cases() as $case) {
+            $this->assertContains($case, $expected, "unmapped DialState::{$case->name}");
+        }
+        foreach ($expected as $wire => $case) {
+            $this->assertSame($wire, $case->value);
+        }
     }
 
     #[Test]
@@ -135,15 +154,24 @@ class RelayTypedStateTest extends TestCase
     #[Test]
     public function messageStateBackingValuesMatchConstants(): void
     {
-        $this->assertSame(Constants::MESSAGE_STATE_QUEUED, MessageState::Queued->value);
-        $this->assertSame(Constants::MESSAGE_STATE_INITIATED, MessageState::Initiated->value);
-        $this->assertSame(Constants::MESSAGE_STATE_SENT, MessageState::Sent->value);
-        $this->assertSame(Constants::MESSAGE_STATE_DELIVERED, MessageState::Delivered->value);
-        $this->assertSame(Constants::MESSAGE_STATE_UNDELIVERED, MessageState::Undelivered->value);
-        $this->assertSame(Constants::MESSAGE_STATE_FAILED, MessageState::Failed->value);
-        $this->assertSame(Constants::MESSAGE_STATE_RECEIVED, MessageState::Received->value);
-
-        $this->assertCount(7, MessageState::cases());
+        // Driven through a runtime map so each check is a genuine assertion
+        // (a literal `$case->value === 'queued'` folds to a compile-time
+        // tautology).
+        $expected = [
+            Constants::MESSAGE_STATE_QUEUED      => MessageState::Queued,
+            Constants::MESSAGE_STATE_INITIATED   => MessageState::Initiated,
+            Constants::MESSAGE_STATE_SENT        => MessageState::Sent,
+            Constants::MESSAGE_STATE_DELIVERED   => MessageState::Delivered,
+            Constants::MESSAGE_STATE_UNDELIVERED => MessageState::Undelivered,
+            Constants::MESSAGE_STATE_FAILED      => MessageState::Failed,
+            Constants::MESSAGE_STATE_RECEIVED    => MessageState::Received,
+        ];
+        foreach (MessageState::cases() as $case) {
+            $this->assertContains($case, $expected, "unmapped MessageState::{$case->name}");
+        }
+        foreach ($expected as $wire => $case) {
+            $this->assertSame($wire, $case->value);
+        }
     }
 
     #[Test]
@@ -215,7 +243,7 @@ class RelayTypedStateTest extends TestCase
         // Production wire: dial event carries dial_state.
         $answered = new Event('calling.call.dial', ['tag' => 't1', 'dial_state' => 'answered']);
         $this->assertSame(DialState::Answered, $answered->dialState());
-        $this->assertTrue($answered->dialState()?->isTerminal());
+        $this->assertTrue($answered->dialState()->isTerminal());
 
         // Legacy fixture: state key instead of dial_state.
         $legacy = new Event('calling.call.dial', ['tag' => 't1', 'state' => 'failed']);

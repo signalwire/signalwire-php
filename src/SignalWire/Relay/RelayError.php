@@ -17,4 +17,27 @@ namespace SignalWire\Relay;
  */
 class RelayError extends \RuntimeException
 {
+    /** JSON-RPC / SDK error code (e.g. -32601, or 408 for a client timeout). */
+    public readonly int $relayCode;
+
+    /** The RELAY error message (without the "RELAY error <code>:" prefix). */
+    public readonly string $relayMessage;
+
+    /**
+     * Construct a RELAY error.
+     *
+     * Mirrors Python `RelayError.__init__(code, message)` — code first, then
+     * message — building the "RELAY error <code>: <message>" description that
+     * the base exception message carries. The numeric code is exposed via
+     * {@see $relayCode} (and forwarded to the SPL exception code).
+     *
+     * @param int    $code    JSON-RPC error code or SDK sentinel.
+     * @param string $message Human-readable RELAY error message.
+     */
+    public function __construct(int $code, string $message)
+    {
+        $this->relayCode = $code;
+        $this->relayMessage = $message;
+        parent::__construct("RELAY error {$code}: {$message}", $code);
+    }
 }

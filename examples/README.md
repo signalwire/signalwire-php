@@ -85,7 +85,6 @@ php examples/simple_agent.php
 | File | Description |
 |------|-------------|
 | [mcp_agent.php](mcp_agent.php) | MCP client and server: expose tools, consume external MCP servers |
-| [mcp_gateway_demo.php](mcp_gateway_demo.php) | MCP Gateway skill connecting to MCP servers via gateway |
 
 ## Prefabs
 
@@ -113,5 +112,5 @@ php examples/simple_agent.php
 
 | File | Description |
 |------|-------------|
-| [relay_demo.php](relay_demo.php) | RELAY client: answer inbound calls and play TTS |
+| [relay_answer_and_welcome.php](relay_answer_and_welcome.php) | RELAY client: answer inbound calls and play TTS |
 | [rest_demo.php](rest_demo.php) | REST client: list resources across APIs |

@@ -115,9 +115,8 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
   - [x] native_vector_search (search_knowledge — network mode only)
   - [x] info_gatherer (start_questions + submit_answer — stateful)
   - [x] claude_skills (SKILL.md file loading)
-  - [x] mcp_gateway (MCP server bridge)
   - [x] custom_skills (user-defined tools from config)
-- [x] Tests: registry lists 18, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
+- [x] Tests: registry lists 17, each instantiable, skills without env vars setup OK, datetime+math handlers execute, SkillManager load/unload
 - [x] Commit to git
 
 ## Phase 5: Prefab Agents
@@ -174,7 +173,6 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
   - [x] PhoneNumbers
   - [x] Datasphere
   - [x] Video
-  - [x] Compat (Twilio LAML)
   - [x] Addresses, Queues, Recordings
   - [x] NumberGroups, VerifiedCallers, SipProfile
   - [x] Lookup, ShortCodes, ImportedNumbers
@@ -217,11 +215,10 @@ Documentation and examples prove the implementation is complete and usable. The 
 
 ### Top-level rest/ directory (REQUIRED)
 - [x] rest/README.md (API overview, namespace examples in target language)
-- [x] rest/docs/ (getting-started, namespaces, calling, fabric, compat, client-reference)
+- [x] rest/docs/ (getting-started, namespaces, calling, fabric, client-reference)
 - [x] rest/examples/rest_10dlc_registration.php
 - [x] rest/examples/rest_calling_ivr_and_ai.php
 - [x] rest/examples/rest_calling_play_and_record.php
-- [x] rest/examples/rest_compat_laml.php
 - [x] rest/examples/rest_datasphere_search.php
 - [x] rest/examples/rest_fabric_conferences_and_routing.php
 - [x] rest/examples/rest_fabric_subscribers_and_sip.php

@@ -17,11 +17,11 @@ namespace SignalWire\Relay;
  * `relay/constants.py` MESSAGE_STATE_* + MESSAGE_TERMINAL_STATES); each
  * backing string IS the wire value the server emits in the `message_state` /
  * `state` field. {@see Message} keeps the bare-string `getState()` accessor
- * for parity with the Python reference (which models state as a plain `str`);
+ * for mirrors the reference (which models state as a plain `str`);
  * this enum is offered ALONGSIDE it via the typed
  * {@see Message::messageState()} accessor.
  *
- *     $msg->getState();          // 'delivered'                (string, parity)
+ *     $msg->getState();          // 'delivered'                (string)
  *     $msg->messageState();      // MessageState::Delivered     (typed)
  *     $msg->messageState()?->isTerminal();  // true
  *

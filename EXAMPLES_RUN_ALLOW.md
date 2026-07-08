@@ -1,0 +1,15 @@
+# EXAMPLES_RUN allowlist
+
+Examples that legitimately need real credentials or a live third-party endpoint
+and so cannot run against the shared mock harness. Each entry names the concrete
+external dependency and the approver. The EXAMPLES-RUN gate skips these (it does
+not fail them). Anything NOT here must load + start against the mock.
+
+- examples/RelayAuditHarness.php — needs real SIGNALWIRE_RELAY_HOST audit-fixture (spun up by porting-sdk audit_relay_handshake.py), not mockable (approver: user, 2026-07-07)
+- examples/RestAuditHarness.php — needs real REST_OPERATION + REST_FIXTURE_URL audit-fixture (spun up by porting-sdk audit_rest_transport.py), not mockable (approver: user, 2026-07-07)
+- examples/SkillsAuditHarness.php — needs real SKILL_NAME + SKILL_FIXTURE_URL audit-fixture (spun up by porting-sdk audit_skills_dispatch.py), not mockable (approver: user, 2026-07-07)
+- examples/datasphere_serverless_env_demo.php — needs real SIGNALWIRE_SPACE_NAME + DATASPHERE_DOCUMENT_ID datasphere creds, not mockable (approver: user, 2026-07-07)
+- examples/datasphere_webhook_env_demo.php — needs real SIGNALWIRE_SPACE_NAME + DATASPHERE_DOCUMENT_ID datasphere creds, not mockable (approver: user, 2026-07-07)
+- examples/joke_agent.php — needs real API_NINJAS_KEY creds, not mockable (approver: user, 2026-07-07)
+- examples/joke_skill_demo.php — needs real API_NINJAS_KEY creds, not mockable (approver: user, 2026-07-07)
+- examples/web_search_agent.php — needs real GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_ENGINE_ID creds, not mockable (approver: user, 2026-07-07)

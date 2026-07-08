@@ -6,6 +6,7 @@ namespace SignalWire\Tests\POM;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\POM\Section;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Section-level parity tests. Translation of
@@ -52,7 +53,6 @@ class SectionTest extends TestCase
     {
         $parent = new Section('P');
         $child = $parent->addSubsection('C', ['body' => 'cb']);
-        $this->assertInstanceOf(Section::class, $child);
         $this->assertSame('C', $child->title);
         $this->assertCount(1, $parent->subsections);
         $this->assertSame($child, $parent->subsections[0]);
@@ -87,7 +87,7 @@ class SectionTest extends TestCase
         $this->assertSame(['title', 'body', 'bullets', 'subsections'], array_keys($arr));
         $this->assertSame('T', $arr['title']);
         $this->assertSame(['x', 'y'], $arr['bullets']);
-        $this->assertSame('Sub', $arr['subsections'][0]['title']);
+        $this->assertSame('Sub', Shape::at($arr, 'subsections', 0, 'title'));
     }
 
     public function testSectionToArrayOmitsEmptyKeys(): void

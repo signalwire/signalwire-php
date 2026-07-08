@@ -34,7 +34,9 @@ class BaseResourceTest extends TestCase
         $rc = new \ReflectionObject($this->client);
         $prop = $rc->getProperty('http');
         $prop->setAccessible(true);
-        return $prop->getValue($this->client);
+        $http = $prop->getValue($this->client);
+        $this->assertInstanceOf(HttpClient::class, $http);
+        return $http;
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -111,11 +113,9 @@ class BaseResourceTest extends TestCase
         // Class-hierarchy assertion — CrudWithAddresses must extend
         // CrudResource, which extends BaseResource. Mirrors Python's
         // signalwire.rest._base hierarchy so inheritance chains line up.
-        $this->assertTrue(
-            is_subclass_of(CrudWithAddresses::class, \SignalWire\REST\CrudResource::class)
-        );
-        $this->assertTrue(
-            is_subclass_of(\SignalWire\REST\CrudResource::class, BaseResource::class)
-        );
+        $parents = class_parents(CrudWithAddresses::class);
+        $this->assertIsArray($parents);
+        $this->assertArrayHasKey(\SignalWire\REST\CrudResource::class, $parents);
+        $this->assertArrayHasKey(BaseResource::class, $parents);
     }
 }

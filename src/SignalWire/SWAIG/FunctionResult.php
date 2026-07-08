@@ -117,7 +117,7 @@ class FunctionResult
 
     /**
      * Add a SWML transfer action with AI-response setup for when the transfer
-     * completes. Parity with the Python reference `swml_transfer`: builds a SWML
+     * completes. Mirrors the `swml_transfer` API: builds a SWML
      * document whose `main` runs `{set:{ai_response}}` then `{transfer:{dest}}`,
      * and emits a top-level `transfer` = str($final).lower() that marks the call
      * (non-)final. `$final` defaults TRUE (permanent transfer), same as connect().
@@ -340,7 +340,7 @@ class FunctionResult
     /**
      * Start background call recording using SWML.
      *
-     * Full parity with the Python reference `record_call`: validates the
+     * Mirrors the `record_call` API: validates the
      * format ({wav,mp3,mp4}) and direction ({speak,listen,both}) closed sets,
      * ALWAYS emits stereo/format/direction/beep/input_sensitivity, adds the
      * optional fields only when supplied, and wraps the {"record_call": ...}
@@ -349,12 +349,12 @@ class FunctionResult
      *
      * @param RecordFormat|string $format recording container format — the typed
      *   {@see RecordFormat} enum (typo-checked at the call site) or a bare string
-     *   (parity with Python's `record_call`). Normalized to the wire string
+     *   (matches `record_call`). Normalized to the wire string
      *   ('wav'/'mp3'/'mp4'). 'mp4' is valid for the SWML `record_call` verb,
      *   distinct from the RELAY `record` action's 2-value format set.
      * @param RecordDirection|string $direction stream direction — the typed
      *   {@see RecordDirection} enum (typo-checked at the call site) or a bare
-     *   string (parity with Python's `record_call`). Normalized to the wire
+     *   string (matches `record_call`). Normalized to the wire
      *   string ('speak'/'listen'/'both'). Note `record_call` uses 'listen'
      *   where {@see FunctionResult::tap()} uses 'hear' — distinct closed sets.
      * @throws \InvalidArgumentException on an invalid format or direction.
@@ -520,8 +520,8 @@ class FunctionResult
     // ── Advanced ─────────────────────────────────────────────────────────
 
     /**
-     * Execute SWML content with optional transfer behavior. Parity with the
-     * Python reference `execute_swml`: a string is parsed to an array (on parse
+     * Execute SWML content with optional transfer behavior. Mirrors
+     * `execute_swml`: a string is parsed to an array (on parse
      * failure it is wrapped as {"raw_swml": <text>}); when $transfer is true the
      * key "transfer" => "true" is set INSIDE the SWML document; the action is
      * ALWAYS added under the "SWML" key (there is no separate transfer key).
@@ -564,8 +564,8 @@ class FunctionResult
     /**
      * Join an ad-hoc audio conference with RELAY and CXML calls using SWML.
      *
-     * Full parity with signalwire-python core/function_result.py
-     * `join_conference`: 18 optional parameters, 7 validations, and the
+     * Mirrors the `join_conference` API:
+     * 18 optional parameters, 7 validations, and the
      * same simple/full emission. When every parameter is at its default the
      * payload collapses to the bare conference-NAME string
      * ({"join_conference": "<name>"}); otherwise it is the object form keyed
@@ -580,7 +580,7 @@ class FunctionResult
      * had no Python equivalent and was removed.)
      *
      * @param mixed $result Switch on return_value when object {} or cond when
-     *                      array []; null to omit (parity with Python `Optional[Any]`).
+     *                      array []; null to omit (matches `Optional[Any]`).
      * @throws \InvalidArgumentException on any of the 7 validation failures.
      */
     public function joinConference(
@@ -783,7 +783,7 @@ class FunctionResult
     /**
      * Start background call tap using SWML.
      *
-     * Full parity with the Python reference `tap`: validates direction
+     * Mirrors the `tap` API: validates direction
      * ({speak,hear,both}), codec ({PCMU,PCMA}) and rtp_ptime (> 0); the only
      * always-emitted field is `uri`; control_id/direction/codec/rtp_ptime/
      * status_url are added only when they differ from their defaults; the
@@ -791,10 +791,10 @@ class FunctionResult
      *
      * @param TapDirection|string $direction stream direction — the typed
      *   {@see TapDirection} enum (typo-checked at the call site) or a bare
-     *   string (parity with Python's `tap`). Normalized to the wire string
+     *   string (matches `tap`). Normalized to the wire string
      *   ('speak'/'hear'/'both').
      * @param Codec|string $codec media codec — the typed {@see Codec} enum
-     *   (typo-checked at the call site) or a bare string (parity with Python's
+     *   (typo-checked at the call site) or a bare string (matches Python's
      *   `tap`). Normalized to the wire string ('PCMU'/'PCMA'). This is the SWAIG
      *   tap codec set only, NOT the larger RELAY stream/connect codec superset.
      * @throws \InvalidArgumentException on invalid direction, codec, or rtp_ptime.
@@ -886,7 +886,7 @@ class FunctionResult
     /**
      * Send a text message to a PSTN phone number using SWML.
      *
-     * Full parity with the Python reference `send_sms`: either body or media
+     * Mirrors the `send_sms` API: either body or media
      * (or both) must be provided; the {"send_sms": ...} verb is wrapped in a
      * full SWML document via executeSwml. Optional fields (body/media/tags/
      * region) are emitted only when supplied.
@@ -941,7 +941,7 @@ class FunctionResult
     /**
      * Process payment using the SWML pay action.
      *
-     * Full parity with the Python reference `pay` (19 user-facing params): the
+     * Mirrors the `pay` API (19 user-facing params): the
      * SWML document runs `{set:{ai_response}}` then `{pay:{...}}`. The wire key
      * for the collection method is `input` (NOT `input_method`); numeric and
      * boolean fields are stringified ("5"/"true"); `postal_code` is emitted as a
@@ -1030,7 +1030,7 @@ class FunctionResult
     /**
      * Execute an RPC method on a call using SWML.
      *
-     * Parity with the Python reference `execute_rpc`: the rpc params are
+     * Mirrors the `execute_rpc` API: the rpc params are
      * keyed {method, call_id?, node_id?, params?} (call_id/node_id are
      * TOP-LEVEL siblings of method/params, NOT nested inside params) and the
      * {"execute_rpc": ...} verb is wrapped in a full SWML document. There is
@@ -1071,7 +1071,7 @@ class FunctionResult
 
     /**
      * Dial out to a number with a destination SWML URL using execute_rpc.
-     * Parity: method="dial", params={devices:{type,params:{to_number,
+     * Emits: method="dial", params={devices:{type,params:{to_number,
      * from_number}}, dest_swml}.
      */
     public function rpcDial(
@@ -1094,7 +1094,7 @@ class FunctionResult
 
     /**
      * Inject a message into an AI agent on another call using execute_rpc.
-     * Parity: method="ai_message", call_id top-level, params={role,
+     * Emits: method="ai_message", call_id top-level, params={role,
      * message_text}. `role` defaults to "system".
      */
     public function rpcAiMessage(string $callId, string $messageText, string $role = 'system'): self
@@ -1107,7 +1107,7 @@ class FunctionResult
 
     /**
      * Unhold another call using execute_rpc.
-     * Parity: method="ai_unhold", call_id top-level, params={}.
+     * Emits: method="ai_unhold", call_id top-level, params={}.
      */
     public function rpcAiUnhold(string $callId): self
     {
@@ -1125,7 +1125,7 @@ class FunctionResult
 
     /**
      * Create a payment-prompt structure for use with {@see FunctionResult::pay()}.
-     * Parity with the Python reference `create_payment_prompt`:
+     * Mirrors the `create_payment_prompt` API:
      * {"for": $forSituation, "actions": $actions, "card_type"?, "error_type"?}.
      *
      * @param list<array<string,string>> $actions   actions with 'type'/'phrase' keys.
@@ -1156,7 +1156,7 @@ class FunctionResult
 
     /**
      * Create a payment action for use in payment prompts.
-     * Parity: {"type": $actionType, "phrase": $phrase}.
+     * Emits: {"type": $actionType, "phrase": $phrase}.
      *
      * @return array<string,string>
      */
@@ -1170,7 +1170,7 @@ class FunctionResult
 
     /**
      * Create a payment parameter (name/value pair) for {@see FunctionResult::pay()}.
-     * Parity: {"name": $name, "value": $value}.
+     * Emits: {"name": $name, "value": $value}.
      *
      * @return array<string,string>
      */

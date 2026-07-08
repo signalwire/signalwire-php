@@ -10,6 +10,7 @@ use SignalWire\Relay\Call;
 use SignalWire\Relay\CallState;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Event;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for the SDK's event dispatch / routing logic.
@@ -42,6 +43,7 @@ class EventDispatchMockTest extends TestCase
      */
     private function answeredInboundCall(string $callId): Call
     {
+        /** @var \ArrayObject<string,Call> $captured */
         $captured = new \ArrayObject();
         $this->client->onCall(function (Call $call) use ($captured): void {
             $captured['call'] = $call;
@@ -61,6 +63,7 @@ class EventDispatchMockTest extends TestCase
     }
 
     /**
+     * @param array<string,mixed> $params
      * @return array<string,mixed>
      */
     private static function bareEventFrame(string $eventType, array $params): array
@@ -85,10 +88,10 @@ class EventDispatchMockTest extends TestCase
             ['format' => 'wav'],
             ['control_id' => 'ec-rec-pa-1'],
         );
-        $action->pause(['behavior' => 'continuous']);
+        $action->pause('continuous');
         $pauses = $this->mock->journal()->recv('calling.record.pause');
         $this->assertNotEmpty($pauses);
-        $p = $pauses[count($pauses) - 1]->frame['params'] ?? [];
+        $p = Shape::sub($pauses[count($pauses) - 1]->frame, 'params');
         $this->assertSame('ec-rec-pa-1', $p['control_id'] ?? null);
         $this->assertSame('continuous', $p['behavior'] ?? null);
     }
@@ -106,7 +109,7 @@ class EventDispatchMockTest extends TestCase
         $this->assertNotEmpty($resumes);
         $this->assertSame(
             'ec-rec-re-1',
-            $resumes[count($resumes) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($resumes[count($resumes) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -124,7 +127,7 @@ class EventDispatchMockTest extends TestCase
         $this->assertNotEmpty($starts);
         $this->assertSame(
             'ec-col-sit-1',
-            $starts[count($starts) - 1]->frame['params']['control_id'] ?? null,
+            Shape::at($starts[count($starts) - 1]->frame, 'params', 'control_id'),
         );
     }
 
@@ -139,11 +142,9 @@ class EventDispatchMockTest extends TestCase
         $action->volume(-5.5);
         $vol = $this->mock->journal()->recv('calling.play.volume');
         $this->assertNotEmpty($vol);
-        $this->assertEqualsWithDelta(
-            -5.5,
-            (float) ($vol[count($vol) - 1]->frame['params']['volume'] ?? null),
-            0.0001,
-        );
+        $volValue = Shape::at($vol[count($vol) - 1]->frame, 'params', 'volume');
+        $this->assertIsNumeric($volValue);
+        $this->assertEqualsWithDelta(-5.5, (float) $volValue, 0.0001);
     }
 
     // ------------------------------------------------------------------
@@ -293,10 +294,10 @@ class EventDispatchMockTest extends TestCase
 
             $sends = $mock->journal()->send('calling.call.dial');
             $this->assertNotEmpty($sends);
-            $inner = $sends[count($sends) - 1]->frame['params']['params'] ?? [];
+            $inner = Shape::sub($sends[count($sends) - 1]->frame, 'params', 'params');
             // Top-level params: tag, dial_state, call. NO call_id.
             $this->assertArrayNotHasKey('call_id', $inner);
-            $this->assertSame('WINTAG', $inner['call']['call_id'] ?? null);
+            $this->assertSame('WINTAG', Shape::at($inner, 'call', 'call_id'));
         } finally {
             $client->disconnect();
         }
@@ -401,14 +402,20 @@ class EventDispatchMockTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
-    public function callStateTypedAccessorAgreesWithStringAfterDispatch(): void
+    public function callStateTypedAccessorAgreesWithStringInitialAnswered(): void
     {
-        $call = $this->answeredInboundCall('ec-typed');
+        $call = $this->answeredInboundCall('ec-typed-init');
 
         // Before the terminal event: answered, not terminal.
         $this->assertSame('answered', $call->state);
         $this->assertSame(CallState::Answered, $call->callState());
-        $this->assertFalse($call->callState()?->isTerminal());
+        $this->assertFalse($call->callState()->isTerminal());
+    }
+
+    #[Test]
+    public function callStateTypedAccessorAgreesWithStringAfterDispatch(): void
+    {
+        $call = $this->answeredInboundCall('ec-typed');
 
         // Drive a real ending->state event through the recv loop.
         $this->mock->push(self::bareEventFrame('calling.call.state', [
@@ -423,19 +430,20 @@ class EventDispatchMockTest extends TestCase
         );
         $this->assertTrue($reached);
 
-        // The typed accessor reflects the SAME state the string carries, and
-        // now reports terminal — proving the enum tracks the dispatched event,
-        // not a hand-set value.
+        // The typed accessor reflects the SAME state the string carries after
+        // the dispatched event — proving the enum tracks the dispatched event,
+        // not a hand-set value. (Once callState() is proven to be
+        // CallState::Ended, ->value === 'ended' and ->isTerminal() === true
+        // hold by the enum's definition.)
         $this->assertSame('ended', $call->state);
         $this->assertSame(CallState::Ended, $call->callState());
-        $this->assertSame($call->state, $call->callState()?->value);
-        $this->assertTrue($call->callState()?->isTerminal());
     }
 
     #[Test]
     public function callListenerFiresOnEvent(): void
     {
         $call = $this->answeredInboundCall('ec-list');
+        /** @var \ArrayObject<int,Event> $seen */
         $seen = new \ArrayObject();
         $call->on(function (Event $e) use ($seen): void {
             if ($e->getEventType() === 'calling.call.play') {
@@ -453,7 +461,9 @@ class EventDispatchMockTest extends TestCase
             2.0,
         );
         $this->assertTrue($arrived);
-        $this->assertSame('calling.call.play', $seen[0]->getEventType());
+        $first = $seen[0];
+        $this->assertNotNull($first);
+        $this->assertSame('calling.call.play', $first->getEventType());
 
         $this->assertNotEmpty($this->mock->journal()->all());
     }

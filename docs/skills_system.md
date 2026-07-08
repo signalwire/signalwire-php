@@ -53,7 +53,6 @@ $agent->run();
 | `swml_transfer` | SWML-based call transfer | None |
 | `play_background_file` | Background audio playback | None |
 | `info_gatherer` | Structured information collection | Questions config |
-| `mcp_gateway` | MCP (Model Context Protocol) gateway | Gateway URL |
 | `claude_skills` | Claude-powered skills | API key |
 | `custom_skills` | User-defined custom skills | Skill definitions |
 

@@ -6,10 +6,10 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Agent\AgentBase;
-use SignalWire\Contexts\ContextBuilder;
 use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 class AgentBaseTest extends TestCase
 {
@@ -33,6 +33,19 @@ class AgentBaseTest extends TestCase
         putenv('PORT');
     }
 
+    /**
+     * @param array{
+     *   name?: string,
+     *   route?: string,
+     *   host?: string|null,
+     *   port?: int|null,
+     *   basic_auth_user?: string|null,
+     *   basic_auth_password?: string|null,
+     *   auto_answer?: bool,
+     *   record_call?: bool,
+     *   use_pom?: bool,
+     * } $opts
+     */
     private function makeAgent(array $opts = []): AgentBase
     {
         return new AgentBase(
@@ -48,9 +61,25 @@ class AgentBaseTest extends TestCase
         );
     }
 
+    /** @return array<string,string> */
     private function authHeader(string $user = 'testuser', string $pass = 'testpass'): array
     {
         return ['Authorization' => 'Basic ' . base64_encode("{$user}:{$pass}")];
+    }
+
+    /**
+     * The ordered verb names of a rendered SWML document's `main` section
+     * (each verb is a single-key map like `['answer' => ...]`).
+     *
+     * @param array<string,mixed> $swml
+     * @return list<int|string|null>
+     */
+    private function mainVerbNames(array $swml): array
+    {
+        return array_map(
+            static fn (mixed $v): int|string|null => is_array($v) ? array_key_first($v) : null,
+            array_values(Shape::sub($swml, 'sections', 'main'))
+        );
     }
 
     // ------------------------------------------------------------------
@@ -70,8 +99,7 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
         $swml = $agent->renderSwml();
 
-        $main = $swml['sections']['main'];
-        $verbs = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbs = $this->mainVerbNames($swml);
         $this->assertContains('answer', $verbs);
     }
 
@@ -80,8 +108,7 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
         $swml = $agent->renderSwml();
 
-        $main = $swml['sections']['main'];
-        $verbs = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbs = $this->mainVerbNames($swml);
         $this->assertNotContains('record_call', $verbs);
     }
 
@@ -137,10 +164,10 @@ class AgentBaseTest extends TestCase
 
         $prompt = $agent->getPrompt();
         $this->assertIsArray($prompt);
-        $this->assertArrayHasKey('subsections', $prompt[0]);
-        $this->assertCount(1, $prompt[0]['subsections']);
-        $this->assertSame('Detail', $prompt[0]['subsections'][0]['title']);
-        $this->assertSame('Detail body text.', $prompt[0]['subsections'][0]['body']);
+        $this->assertArrayHasKey('subsections', Shape::sub($prompt, 0));
+        $this->assertCount(1, Shape::sub($prompt, 0, 'subsections'));
+        $this->assertSame('Detail', Shape::at($prompt, 0, 'subsections', 0, 'title'));
+        $this->assertSame('Detail body text.', Shape::at($prompt, 0, 'subsections', 0, 'body'));
     }
 
     // ------------------------------------------------------------------
@@ -154,8 +181,8 @@ class AgentBaseTest extends TestCase
         $agent->promptAddToSection('Rules', ' Extra rules.', ['bullet one', 'bullet two']);
 
         $prompt = $agent->getPrompt();
-        $this->assertSame('Base rules. Extra rules.', $prompt[0]['body']);
-        $this->assertSame(['bullet one', 'bullet two'], $prompt[0]['bullets']);
+        $this->assertSame('Base rules. Extra rules.', Shape::at($prompt, 0, 'body'));
+        $this->assertSame(['bullet one', 'bullet two'], Shape::at($prompt, 0, 'bullets'));
     }
 
     // ------------------------------------------------------------------
@@ -191,14 +218,14 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $ai = $this->extractAiVerb($swml);
-        $functions = $ai['SWAIG']['functions'];
+        $functions = Shape::sub($ai, 'SWAIG', 'functions');
 
         $this->assertCount(1, $functions);
-        $this->assertSame('lookup', $functions[0]['function']);
-        $this->assertSame('Look up a customer', $functions[0]['purpose']);
+        $this->assertSame('lookup', Shape::at($functions, 0, 'function'));
+        $this->assertSame('Look up a customer', Shape::at($functions, 0, 'purpose'));
         // Handler must be stripped from the output
-        $this->assertArrayNotHasKey('_handler', $functions[0]);
-        $this->assertArrayNotHasKey('_secure', $functions[0]);
+        $this->assertArrayNotHasKey('_handler', Shape::sub($functions, 0));
+        $this->assertArrayNotHasKey('_secure', Shape::sub($functions, 0));
     }
 
     // ------------------------------------------------------------------
@@ -244,11 +271,11 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $ai = $this->extractAiVerb($swml);
-        $functions = $ai['SWAIG']['functions'];
+        $functions = Shape::sub($ai, 'SWAIG', 'functions');
 
         $this->assertCount(1, $functions);
-        $this->assertSame('data_map_tool', $functions[0]['function']);
-        $this->assertArrayHasKey('data_map', $functions[0]);
+        $this->assertSame('data_map_tool', Shape::at($functions, 0, 'function'));
+        $this->assertArrayHasKey('data_map', Shape::sub($functions, 0));
     }
 
     public function testRegisterSwaigFunctionEmptyNameIgnored(): void
@@ -275,11 +302,11 @@ class AgentBaseTest extends TestCase
 
         $swml = $agent->renderSwml();
         $ai = $this->extractAiVerb($swml);
-        $functions = $ai['SWAIG']['functions'];
+        $functions = Shape::sub($ai, 'SWAIG', 'functions');
 
         $this->assertCount(2, $functions);
-        $this->assertSame('tool_a', $functions[0]['function']);
-        $this->assertSame('tool_b', $functions[1]['function']);
+        $this->assertSame('tool_a', Shape::at($functions, 0, 'function'));
+        $this->assertSame('tool_b', Shape::at($functions, 1, 'function'));
     }
 
     // ------------------------------------------------------------------
@@ -292,7 +319,7 @@ class AgentBaseTest extends TestCase
         $agent->addHint('SignalWire');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertContains('SignalWire', $ai['hints']);
+        $this->assertContains('SignalWire', Shape::sub($ai, 'hints'));
     }
 
     public function testAddHints(): void
@@ -301,16 +328,19 @@ class AgentBaseTest extends TestCase
         $agent->addHints(['hello', 'world']);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['hello', 'world'], $ai['hints']);
+        $this->assertSame(['hello', 'world'], Shape::at($ai, 'hints'));
     }
 
     public function testAddPatternHint(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPatternHint('\\d{3}-\\d{4}');
+        $agent->addPatternHint('SW', '\\bSW\\b', 'SignalWire');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertContains('\\d{3}-\\d{4}', $ai['hints']);
+        $this->assertContains(
+            ['hint' => 'SW', 'pattern' => '\\bSW\\b', 'replace' => 'SignalWire', 'ignore_case' => false],
+            Shape::sub($ai, 'hints'),
+        );
     }
 
     public function testAddLanguage(): void
@@ -319,10 +349,41 @@ class AgentBaseTest extends TestCase
         $agent->addLanguage('English', 'en-US', 'rachel');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(1, $ai['languages']);
-        $this->assertSame('English', $ai['languages'][0]['name']);
-        $this->assertSame('en-US', $ai['languages'][0]['code']);
-        $this->assertSame('rachel', $ai['languages'][0]['voice']);
+        $this->assertCount(1, Shape::sub($ai, 'languages'));
+        $this->assertSame('English', Shape::at($ai, 'languages', 0, 'name'));
+        $this->assertSame('en-US', Shape::at($ai, 'languages', 0, 'code'));
+        $this->assertSame('rachel', Shape::at($ai, 'languages', 0, 'voice'));
+    }
+
+    // ------------------------------------------------------------------
+    // 12a2. setMultilingual (ASR-driven Mode B).
+    //
+    //       Mirrors Python AIConfigMixin.set_multilingual + the go/TS ports:
+    //       stores the config, empty config is a no-op, and the AI verb
+    //       renders a top-level "multilingual" object.
+    // ------------------------------------------------------------------
+
+    public function testSetMultilingualStoresAndChains(): void
+    {
+        $agent = $this->makeAgent();
+        $ret = $agent->setMultilingual(['start_language' => 'en-US', 'min_switch_words' => 2]);
+
+        $this->assertSame($agent, $ret, 'setMultilingual should return $this for chaining');
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertSame(
+            ['start_language' => 'en-US', 'min_switch_words' => 2],
+            Shape::at($ai, 'multilingual'),
+        );
+    }
+
+    public function testSetMultilingualEmptyIsNoop(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setMultilingual([]);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayNotHasKey('multilingual', $ai);
     }
 
     // ------------------------------------------------------------------
@@ -347,7 +408,7 @@ class AgentBaseTest extends TestCase
         $ai = $this->extractAiVerb($agent->renderSwml());
         $this->assertSame(
             ['stability' => 0.5, 'similarity_boost' => 0.75],
-            $ai['languages'][0]['params'],
+            Shape::at($ai, 'languages', 0, 'params'),
         );
     }
 
@@ -357,7 +418,7 @@ class AgentBaseTest extends TestCase
         $agent->addLanguage('French', 'fr-FR', 'fr-FR-Neural2-A');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+        $this->assertArrayNotHasKey('params', Shape::sub($ai, 'languages', 0));
     }
 
     public function testAddLanguageWithEmptyParamsOmitsKey(): void
@@ -366,7 +427,7 @@ class AgentBaseTest extends TestCase
         $agent->addLanguage('French', 'fr-FR', 'v', params: []);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+        $this->assertArrayNotHasKey('params', Shape::sub($ai, 'languages', 0));
     }
 
     public function testGetLanguageParamsReturnsSetDict(): void
@@ -398,7 +459,7 @@ class AgentBaseTest extends TestCase
         $this->assertSame(['b' => 2], $agent->getLanguageParams('en-US'));
         // And the SWML output reflects the replacement.
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['b' => 2], $ai['languages'][0]['params']);
+        $this->assertSame(['b' => 2], Shape::at($ai, 'languages', 0, 'params'));
     }
 
     public function testSetLanguageParamsAddsWhenUnset(): void
@@ -409,7 +470,7 @@ class AgentBaseTest extends TestCase
 
         $this->assertSame(['c' => 3], $agent->getLanguageParams('en-US'));
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['c' => 3], $ai['languages'][0]['params']);
+        $this->assertSame(['c' => 3], Shape::at($ai, 'languages', 0, 'params'));
     }
 
     public function testSetLanguageParamsEmptyArrayRemovesKey(): void
@@ -420,7 +481,7 @@ class AgentBaseTest extends TestCase
 
         $this->assertNull($agent->getLanguageParams('en-US'));
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+        $this->assertArrayNotHasKey('params', Shape::sub($ai, 'languages', 0));
     }
 
     public function testSetLanguageParamsUnknownCodeIsNoop(): void
@@ -432,7 +493,7 @@ class AgentBaseTest extends TestCase
         // The known language remains untouched.
         $this->assertNull($agent->getLanguageParams('en-US'));
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertArrayNotHasKey('params', $ai['languages'][0]);
+        $this->assertArrayNotHasKey('params', Shape::sub($ai, 'languages', 0));
     }
 
     public function testSetLanguageParamsReturnsSelfForChaining(): void
@@ -448,9 +509,23 @@ class AgentBaseTest extends TestCase
         $agent->addPronunciation('SW', 'SignalWire');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(1, $ai['pronounce']);
-        $this->assertSame('SW', $ai['pronounce'][0]['replace']);
-        $this->assertSame('SignalWire', $ai['pronounce'][0]['with']);
+        $this->assertCount(1, Shape::sub($ai, 'pronounce'));
+        $this->assertSame('SW', Shape::at($ai, 'pronounce', 0, 'replace'));
+        $this->assertSame('SignalWire', Shape::at($ai, 'pronounce', 0, 'with'));
+        // ignore_case omitted when false (Python parity)
+        $rule = Shape::arr(Shape::at($ai, 'pronounce', 0));
+        $this->assertArrayNotHasKey('ignore_case', $rule);
+        $this->assertArrayNotHasKey('ignore', $rule);
+    }
+
+    public function testAddPronunciationIgnoreCase(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addPronunciation('sw', 'SignalWire', ignoreCase: true);
+
+        // Wire parity with Python: emits `ignore_case: true` (bool), not `ignore`.
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertTrue(Shape::at($ai, 'pronounce', 0, 'ignore_case'));
     }
 
     public function testSetParam(): void
@@ -459,7 +534,7 @@ class AgentBaseTest extends TestCase
         $agent->setParam('temperature', 0.7);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(0.7, $ai['params']['temperature']);
+        $this->assertSame(0.7, Shape::at($ai, 'params', 'temperature'));
     }
 
     public function testSetParams(): void
@@ -468,8 +543,8 @@ class AgentBaseTest extends TestCase
         $agent->setParams(['temperature' => 0.5, 'top_p' => 0.9]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(0.5, $ai['params']['temperature']);
-        $this->assertSame(0.9, $ai['params']['top_p']);
+        $this->assertSame(0.5, Shape::at($ai, 'params', 'temperature'));
+        $this->assertSame(0.9, Shape::at($ai, 'params', 'top_p'));
     }
 
     public function testSetGlobalData(): void
@@ -478,7 +553,7 @@ class AgentBaseTest extends TestCase
         $agent->setGlobalData(['key' => 'value']);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['key' => 'value'], $ai['global_data']);
+        $this->assertSame(['key' => 'value'], Shape::at($ai, 'global_data'));
     }
 
     public function testUpdateGlobalData(): void
@@ -488,7 +563,7 @@ class AgentBaseTest extends TestCase
         $agent->updateGlobalData(['b' => 2]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['a' => 1, 'b' => 2], $ai['global_data']);
+        $this->assertSame(['a' => 1, 'b' => 2], Shape::at($ai, 'global_data'));
     }
 
     public function testSetNativeFunctions(): void
@@ -497,7 +572,7 @@ class AgentBaseTest extends TestCase
         $agent->setNativeFunctions(['check_voicemail', 'send_digits']);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['check_voicemail', 'send_digits'], $ai['SWAIG']['native_functions']);
+        $this->assertSame(['check_voicemail', 'send_digits'], Shape::at($ai, 'SWAIG', 'native_functions'));
     }
 
     // ------------------------------------------------------------------
@@ -507,10 +582,13 @@ class AgentBaseTest extends TestCase
     public function testSetInternalFillers(): void
     {
         $agent = $this->makeAgent();
-        $agent->setInternalFillers(['hmm', 'let me think']);
+        // Expected format: ['function_name' => ['language_code' => ['phrase', ...]]]
+        // Mirrors the Python reference test_sets_internal_fillers_with_valid_dict.
+        $fillers = ['next_step' => ['en-US' => ['Moving on...', "Let's continue..."]]];
+        $agent->setInternalFillers($fillers);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['hmm', 'let me think'], $ai['params']['internal_fillers']);
+        $this->assertSame($fillers, Shape::at($ai, 'params', 'internal_fillers'));
     }
 
     public function testAddInternalFiller(): void
@@ -520,7 +598,7 @@ class AgentBaseTest extends TestCase
         $agent->addInternalFiller('uh');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['hmm', 'uh'], $ai['params']['internal_fillers']);
+        $this->assertSame(['hmm', 'uh'], Shape::at($ai, 'params', 'internal_fillers'));
     }
 
     // ------------------------------------------------------------------
@@ -532,17 +610,19 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
         $agent->enableDebugEvents();
 
+        // Wire parity with Python: default level 1 emitted as the AI param
+        // `debug_webhook_level` (int), not a `debug_events` string.
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('all', $ai['params']['debug_events']);
+        $this->assertSame(1, Shape::at($ai, 'params', 'debug_webhook_level'));
     }
 
     public function testEnableDebugEventsCustomLevel(): void
     {
         $agent = $this->makeAgent();
-        $agent->enableDebugEvents('verbose');
+        $agent->enableDebugEvents(2);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('verbose', $ai['params']['debug_events']);
+        $this->assertSame(2, Shape::at($ai, 'params', 'debug_webhook_level'));
     }
 
     // ------------------------------------------------------------------
@@ -558,8 +638,8 @@ class AgentBaseTest extends TestCase
         ]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(1, $ai['SWAIG']['includes']);
-        $this->assertSame('https://example.com/funcs', $ai['SWAIG']['includes'][0]['url']);
+        $this->assertCount(1, Shape::sub($ai, 'SWAIG', 'includes'));
+        $this->assertSame('https://example.com/funcs', Shape::at($ai, 'SWAIG', 'includes', 0, 'url'));
     }
 
     public function testSetFunctionIncludes(): void
@@ -571,8 +651,8 @@ class AgentBaseTest extends TestCase
         ]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(1, $ai['SWAIG']['includes']);
-        $this->assertSame('https://replaced.com', $ai['SWAIG']['includes'][0]['url']);
+        $this->assertCount(1, Shape::sub($ai, 'SWAIG', 'includes'));
+        $this->assertSame('https://replaced.com', Shape::at($ai, 'SWAIG', 'includes', 0, 'url'));
     }
 
     // ------------------------------------------------------------------
@@ -586,8 +666,8 @@ class AgentBaseTest extends TestCase
         $agent->setPromptLlmParams(['temperature' => 0.3, 'top_p' => 0.8]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(0.3, $ai['prompt']['temperature']);
-        $this->assertSame(0.8, $ai['prompt']['top_p']);
+        $this->assertSame(0.3, Shape::at($ai, 'prompt', 'temperature'));
+        $this->assertSame(0.8, Shape::at($ai, 'prompt', 'top_p'));
     }
 
     public function testSetPostPromptLlmParams(): void
@@ -597,7 +677,7 @@ class AgentBaseTest extends TestCase
         $agent->setPostPromptLlmParams(['temperature' => 0.1]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(0.1, $ai['post_prompt']['temperature']);
+        $this->assertSame(0.1, Shape::at($ai, 'post_prompt', 'temperature'));
     }
 
     // ------------------------------------------------------------------
@@ -610,11 +690,11 @@ class AgentBaseTest extends TestCase
         $agent->addPreAnswerVerb('play', ['url' => 'ring.wav']);
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
+        $first = Shape::sub($swml, 'sections', 'main', 0);
 
         // Pre-answer verb should be the first verb
-        $this->assertSame('play', array_key_first($main[0]));
-        $this->assertSame(['url' => 'ring.wav'], $main[0]['play']);
+        $this->assertSame('play', array_key_first($first));
+        $this->assertSame(['url' => 'ring.wav'], $first['play'] ?? null);
     }
 
     public function testAddPostAnswerVerb(): void
@@ -623,10 +703,8 @@ class AgentBaseTest extends TestCase
         $agent->addPostAnswerVerb('play', ['url' => 'welcome.wav']);
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-
         // Post-answer verb should be after 'answer', before 'ai'
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $answerIdx = array_search('answer', $verbNames, true);
         $playIdx = array_search('play', $verbNames, true);
         $aiIdx = array_search('ai', $verbNames, true);
@@ -641,9 +719,7 @@ class AgentBaseTest extends TestCase
         $agent->addPostAiVerb('hangup', []);
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $aiIdx = array_search('ai', $verbNames, true);
         $hangupIdx = array_search('hangup', $verbNames, true);
 
@@ -657,8 +733,7 @@ class AgentBaseTest extends TestCase
         $agent->clearPreAnswerVerbs();
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $this->assertNotContains('play', $verbNames);
     }
 
@@ -669,8 +744,7 @@ class AgentBaseTest extends TestCase
         $agent->clearPostAnswerVerbs();
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $this->assertNotContains('play', $verbNames);
     }
 
@@ -681,8 +755,7 @@ class AgentBaseTest extends TestCase
         $agent->clearPostAiVerbs();
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $this->assertNotContains('hangup', $verbNames);
     }
 
@@ -698,10 +771,9 @@ class AgentBaseTest extends TestCase
         $this->assertArrayHasKey('version', $swml);
         $this->assertSame('1.0.0', $swml['version']);
         $this->assertArrayHasKey('sections', $swml);
-        $this->assertArrayHasKey('main', $swml['sections']);
+        $this->assertArrayHasKey('main', Shape::sub($swml, 'sections'));
 
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $this->assertContains('answer', $verbNames);
         $this->assertContains('ai', $verbNames);
     }
@@ -716,8 +788,8 @@ class AgentBaseTest extends TestCase
         $agent->setPromptText('You are a receptionist.');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('You are a receptionist.', $ai['prompt']['text']);
-        $this->assertArrayNotHasKey('pom', $ai['prompt']);
+        $this->assertSame('You are a receptionist.', Shape::at($ai, 'prompt', 'text'));
+        $this->assertArrayNotHasKey('pom', Shape::sub($ai, 'prompt'));
     }
 
     // ------------------------------------------------------------------
@@ -731,11 +803,11 @@ class AgentBaseTest extends TestCase
         $agent->promptAddSection('Rules', 'Be polite.', ['no cursing', 'be patient']);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertArrayHasKey('pom', $ai['prompt']);
-        $this->assertCount(2, $ai['prompt']['pom']);
-        $this->assertSame('Identity', $ai['prompt']['pom'][0]['title']);
-        $this->assertSame('Rules', $ai['prompt']['pom'][1]['title']);
-        $this->assertSame(['no cursing', 'be patient'], $ai['prompt']['pom'][1]['bullets']);
+        $this->assertArrayHasKey('pom', Shape::sub($ai, 'prompt'));
+        $this->assertCount(2, Shape::sub($ai, 'prompt', 'pom'));
+        $this->assertSame('Identity', Shape::at($ai, 'prompt', 'pom', 0, 'title'));
+        $this->assertSame('Rules', Shape::at($ai, 'prompt', 'pom', 1, 'title'));
+        $this->assertSame(['no cursing', 'be patient'], Shape::at($ai, 'prompt', 'pom', 1, 'bullets'));
     }
 
     // ------------------------------------------------------------------
@@ -749,7 +821,7 @@ class AgentBaseTest extends TestCase
 
         $ai = $this->extractAiVerb($agent->renderSwml());
         $this->assertArrayHasKey('post_prompt', $ai);
-        $this->assertSame('Summarize the conversation.', $ai['post_prompt']['text']);
+        $this->assertSame('Summarize the conversation.', Shape::at($ai, 'post_prompt', 'text'));
     }
 
     // ------------------------------------------------------------------
@@ -768,12 +840,12 @@ class AgentBaseTest extends TestCase
 
         $ai = $this->extractAiVerb($agent->renderSwml());
         $this->assertArrayHasKey('SWAIG', $ai);
-        $this->assertArrayHasKey('functions', $ai['SWAIG']);
-        $this->assertCount(1, $ai['SWAIG']['functions']);
+        $this->assertArrayHasKey('functions', Shape::sub($ai, 'SWAIG'));
+        $this->assertCount(1, Shape::sub($ai, 'SWAIG', 'functions'));
 
-        $func = $ai['SWAIG']['functions'][0];
-        $this->assertSame('get_weather', $func['function']);
-        $this->assertSame('Get the weather', $func['purpose']);
+        $func = Shape::sub($ai, 'SWAIG', 'functions', 0);
+        $this->assertSame('get_weather', $func['function'] ?? null);
+        $this->assertSame('Get the weather', $func['purpose'] ?? null);
         $this->assertArrayNotHasKey('_handler', $func);
         $this->assertArrayNotHasKey('_secure', $func);
         $this->assertArrayHasKey('web_hook_url', $func);
@@ -790,7 +862,7 @@ class AgentBaseTest extends TestCase
         $agent->addHint('FreeSWITCH');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['SignalWire', 'FreeSWITCH'], $ai['hints']);
+        $this->assertSame(['SignalWire', 'FreeSWITCH'], Shape::at($ai, 'hints'));
     }
 
     // ------------------------------------------------------------------
@@ -804,9 +876,9 @@ class AgentBaseTest extends TestCase
         $agent->addLanguage('Spanish', 'es-ES', 'pedro');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(2, $ai['languages']);
-        $this->assertSame('English', $ai['languages'][0]['name']);
-        $this->assertSame('Spanish', $ai['languages'][1]['name']);
+        $this->assertCount(2, Shape::sub($ai, 'languages'));
+        $this->assertSame('English', Shape::at($ai, 'languages', 0, 'name'));
+        $this->assertSame('Spanish', Shape::at($ai, 'languages', 1, 'name'));
     }
 
     // ------------------------------------------------------------------
@@ -836,8 +908,8 @@ class AgentBaseTest extends TestCase
         $this->assertSame(200, $status);
 
         $decoded = json_decode($body, true);
-        $aiVerb = $this->extractAiVerb($decoded);
-        $this->assertSame('Dynamic prompt.', $aiVerb['prompt']['text']);
+        $aiVerb = $this->extractAiVerb(Shape::arr($decoded));
+        $this->assertSame('Dynamic prompt.', Shape::at($aiVerb, 'prompt', 'text'));
     }
 
     // ------------------------------------------------------------------
@@ -875,13 +947,16 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
 
         $receivedSummary = null;
-        $agent->onSummary(function (string $summary, array $data, array $headers) use (&$receivedSummary): void {
+        // The overridable on_summary(summary, raw_data) handler is the canonical
+        // contract; setSummaryCallback is the PHP-additive registrar convenience.
+        $agent->setSummaryCallback(function ($summary, array $data, array $headers) use (&$receivedSummary): void {
             $receivedSummary = $summary;
         });
 
         $postPromptBody = json_encode([
             'post_prompt_data' => ['raw' => 'The call was about billing.'],
         ]);
+        $this->assertIsString($postPromptBody);
 
         [$status, ,] = $agent->handleRequest(
             'POST',
@@ -903,7 +978,8 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
         $builder = $agent->defineContexts();
 
-        $this->assertInstanceOf(ContextBuilder::class, $builder);
+        // A fresh builder has no contexts defined yet.
+        $this->assertFalse($builder->hasContexts());
     }
 
     public function testDefineContextsReturnsSameInstance(): void
@@ -930,7 +1006,7 @@ class AgentBaseTest extends TestCase
         $this->assertSame($agent, $agent->promptAddToSection('S', 'more'));
         $this->assertSame($agent, $agent->addHint('hint'));
         $this->assertSame($agent, $agent->addHints(['h']));
-        $this->assertSame($agent, $agent->addPatternHint('p'));
+        $this->assertSame($agent, $agent->addPatternHint('p', 'pat', 'rep'));
         $this->assertSame($agent, $agent->addLanguage('En', 'en', 'v'));
         $this->assertSame($agent, $agent->addPronunciation('a', 'b'));
         $this->assertSame($agent, $agent->setParam('k', 'v'));
@@ -952,7 +1028,7 @@ class AgentBaseTest extends TestCase
         $this->assertSame($agent, $agent->clearPostAnswerVerbs());
         $this->assertSame($agent, $agent->clearPostAiVerbs());
         $this->assertSame($agent, $agent->setDynamicConfigCallback(fn () => null));
-        $this->assertSame($agent, $agent->onSummary(fn () => null));
+        $this->assertSame($agent, $agent->setSummaryCallback(fn () => null));
         $this->assertSame($agent, $agent->defineTool('t', 'd', [], fn () => null));
         $this->assertSame($agent, $agent->registerSwaigFunction(['function' => 'f']));
         $this->assertSame($agent, $agent->defineTools([]));
@@ -985,6 +1061,7 @@ class AgentBaseTest extends TestCase
                 ],
             ],
         ]);
+        $this->assertIsString($swaigBody);
 
         [$status, , $body] = $agent->handleRequest(
             'POST',
@@ -995,7 +1072,7 @@ class AgentBaseTest extends TestCase
 
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
-        $this->assertSame('Echo: hello', $decoded['response']);
+        $this->assertSame('Echo: hello', Shape::at($decoded, 'response'));
     }
 
     public function testHandleSwaigRequestUnknownFunction(): void
@@ -1006,6 +1083,7 @@ class AgentBaseTest extends TestCase
             'function' => 'no_such_func',
             'argument' => ['parsed' => [['x' => 1]]],
         ]);
+        $this->assertIsString($swaigBody);
 
         [$status, , $body] = $agent->handleRequest(
             'POST',
@@ -1016,7 +1094,7 @@ class AgentBaseTest extends TestCase
 
         $this->assertSame(404, $status);
         $decoded = json_decode($body, true);
-        $this->assertArrayHasKey('error', $decoded);
+        $this->assertArrayHasKey('error', Shape::arr($decoded));
     }
 
     public function testHandleSwaigRequestMissingFunctionName(): void
@@ -1024,6 +1102,7 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
 
         $swaigBody = json_encode(['argument' => ['parsed' => [[]]]]);
+        $this->assertIsString($swaigBody);
 
         [$status, ,] = $agent->handleRequest(
             'POST',
@@ -1047,8 +1126,7 @@ class AgentBaseTest extends TestCase
         $agent->addPostAiVerb('hangup', []);
 
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
 
         $playIdx = array_search('play', $verbNames, true);
         $answerIdx = array_search('answer', $verbNames, true);
@@ -1074,7 +1152,7 @@ class AgentBaseTest extends TestCase
 
         $ai = $this->extractAiVerb($agent->renderSwml());
         $this->assertArrayHasKey('SWAIG', $ai);
-        $this->assertSame(['check_voicemail', 'send_digits'], $ai['SWAIG']['native_functions']);
+        $this->assertSame(['check_voicemail', 'send_digits'], Shape::at($ai, 'SWAIG', 'native_functions'));
     }
 
     // ------------------------------------------------------------------
@@ -1105,8 +1183,7 @@ class AgentBaseTest extends TestCase
     {
         $agent = $this->makeAgent(['record_call' => true]);
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $this->assertContains('record_call', $verbNames);
     }
 
@@ -1114,8 +1191,7 @@ class AgentBaseTest extends TestCase
     {
         $agent = $this->makeAgent(['auto_answer' => false]);
         $swml = $agent->renderSwml();
-        $main = $swml['sections']['main'];
-        $verbNames = array_map(fn (array $v) => array_key_first($v), $main);
+        $verbNames = $this->mainVerbNames($swml);
         $this->assertNotContains('answer', $verbNames);
     }
 
@@ -1124,7 +1200,9 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent();
         $ai = $this->extractAiVerb($agent->renderSwml());
         $this->assertArrayHasKey('post_prompt_url', $ai);
-        $this->assertStringContainsString('/post_prompt', $ai['post_prompt_url']);
+        $postPromptUrl = Shape::at($ai, 'post_prompt_url');
+        $this->assertIsString($postPromptUrl);
+        $this->assertStringContainsString('/post_prompt', $postPromptUrl);
     }
 
     public function testManualProxyUrlUsedInWebhook(): void
@@ -1139,7 +1217,8 @@ class AgentBaseTest extends TestCase
         );
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $webhookUrl = $ai['SWAIG']['functions'][0]['web_hook_url'];
+        $webhookUrl = Shape::at($ai, 'SWAIG', 'functions', 0, 'web_hook_url');
+        $this->assertIsString($webhookUrl);
         $this->assertStringContainsString('my-proxy.example.com', $webhookUrl);
     }
 
@@ -1149,7 +1228,7 @@ class AgentBaseTest extends TestCase
         $agent->promptAddSection('Rules', 'Follow these rules:', ['rule 1', 'rule 2']);
 
         $prompt = $agent->getPrompt();
-        $this->assertSame(['rule 1', 'rule 2'], $prompt[0]['bullets']);
+        $this->assertSame(['rule 1', 'rule 2'], Shape::at($prompt, 0, 'bullets'));
     }
 
     public function testCloneForRequestIsIndependent(): void
@@ -1167,7 +1246,7 @@ class AgentBaseTest extends TestCase
         // Original should be unaffected
         $this->assertSame('Original.', $agent->getPrompt());
         $origAi = $this->extractAiVerb($agent->renderSwml());
-        $this->assertNotContains('clone_hint', $origAi['hints'] ?? []);
+        $this->assertNotContains('clone_hint', Shape::sub($origAi, 'hints'));
     }
 
     // ------------------------------------------------------------------
@@ -1185,7 +1264,6 @@ class AgentBaseTest extends TestCase
 
         $pom = $agent->getPom();
         $this->assertNotNull($pom);
-        $this->assertInstanceOf(\SignalWire\POM\PromptObjectModel::class, $pom);
         $this->assertCount(1, $pom->sections);
         $this->assertSame('Greeting', $pom->sections[0]->title);
         $this->assertSame('Hello', $pom->sections[0]->body);
@@ -1198,7 +1276,6 @@ class AgentBaseTest extends TestCase
 
         $pom = $agent->getPom();
         $this->assertNotNull($pom);
-        $this->assertInstanceOf(\SignalWire\POM\PromptObjectModel::class, $pom);
         $this->assertCount(1, $pom->sections);
         $this->assertSame('Topic', $pom->sections[0]->title);
         $this->assertSame('Body text', $pom->sections[0]->body);
@@ -1260,7 +1337,7 @@ class AgentBaseTest extends TestCase
         $agent->setGlobalData(['b' => 2]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['a' => 1, 'b' => 2], $ai['global_data']);
+        $this->assertSame(['a' => 1, 'b' => 2], Shape::at($ai, 'global_data'));
     }
 
     public function testSetGlobalDataOverwritesOnCollision(): void
@@ -1270,7 +1347,7 @@ class AgentBaseTest extends TestCase
         $agent->setGlobalData(['k' => 'second']);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['k' => 'second', 'keep' => 'x'], $ai['global_data']);
+        $this->assertSame(['k' => 'second', 'keep' => 'x'], Shape::at($ai, 'global_data'));
     }
 
     // #191 — setFunctionIncludes must DROP entries that lack a truthy url or an
@@ -1287,8 +1364,8 @@ class AgentBaseTest extends TestCase
         ]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(1, $ai['SWAIG']['includes']);
-        $this->assertSame('https://valid.com', $ai['SWAIG']['includes'][0]['url']);
+        $this->assertCount(1, Shape::sub($ai, 'SWAIG', 'includes'));
+        $this->assertSame('https://valid.com', Shape::at($ai, 'SWAIG', 'includes', 0, 'url'));
     }
 
     public function testSetFunctionIncludesKeepsAllValidEntries(): void
@@ -1300,7 +1377,7 @@ class AgentBaseTest extends TestCase
         ]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertCount(2, $ai['SWAIG']['includes']);
+        $this->assertCount(2, Shape::sub($ai, 'SWAIG', 'includes'));
     }
 
     public function testSetFunctionIncludesWarnsPerDroppedEntry(): void
@@ -1358,7 +1435,7 @@ class AgentBaseTest extends TestCase
             ->setText('Begin.');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('You are Aria, a helpful AI assistant.', $ai['prompt']['text']);
+        $this->assertSame('You are Aria, a helpful AI assistant.', Shape::at($ai, 'prompt', 'text'));
     }
 
     public function testEmptyPromptWithoutContextsStaysEmpty(): void
@@ -1368,7 +1445,7 @@ class AgentBaseTest extends TestCase
         $agent = $this->makeAgent(['use_pom' => false]);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('', $ai['prompt']['text']);
+        $this->assertSame('', Shape::at($ai, 'prompt', 'text'));
     }
 
     public function testNonEmptyPromptWithContextsIsUnchanged(): void
@@ -1381,7 +1458,7 @@ class AgentBaseTest extends TestCase
             ->setText('Begin.');
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame('Custom prompt.', $ai['prompt']['text']);
+        $this->assertSame('Custom prompt.', Shape::at($ai, 'prompt', 'text'));
     }
 
     // #182 — promptAddToSection / promptAddSubsection must AUTO-CREATE the
@@ -1395,9 +1472,9 @@ class AgentBaseTest extends TestCase
         $prompt = $agent->getPrompt();
         $this->assertIsArray($prompt);
         $this->assertCount(1, $prompt);
-        $this->assertSame('Rules', $prompt[0]['title']);
-        $this->assertSame('Body text.', $prompt[0]['body']);
-        $this->assertSame(['bullet one'], $prompt[0]['bullets']);
+        $this->assertSame('Rules', Shape::at($prompt, 0, 'title'));
+        $this->assertSame('Body text.', Shape::at($prompt, 0, 'body'));
+        $this->assertSame(['bullet one'], Shape::at($prompt, 0, 'bullets'));
     }
 
     public function testPromptAddSubsectionAutoCreatesMissingParent(): void
@@ -1408,11 +1485,11 @@ class AgentBaseTest extends TestCase
         $prompt = $agent->getPrompt();
         $this->assertIsArray($prompt);
         $this->assertCount(1, $prompt);
-        $this->assertSame('Main', $prompt[0]['title']);
-        $this->assertArrayHasKey('subsections', $prompt[0]);
-        $this->assertCount(1, $prompt[0]['subsections']);
-        $this->assertSame('Detail', $prompt[0]['subsections'][0]['title']);
-        $this->assertSame('Detail body.', $prompt[0]['subsections'][0]['body']);
+        $this->assertSame('Main', Shape::at($prompt, 0, 'title'));
+        $this->assertArrayHasKey('subsections', Shape::sub($prompt, 0));
+        $this->assertCount(1, Shape::sub($prompt, 0, 'subsections'));
+        $this->assertSame('Detail', Shape::at($prompt, 0, 'subsections', 0, 'title'));
+        $this->assertSame('Detail body.', Shape::at($prompt, 0, 'subsections', 0, 'body'));
     }
 
     // ------------------------------------------------------------------
@@ -1422,12 +1499,83 @@ class AgentBaseTest extends TestCase
     /**
      * Extract the AI verb config from a rendered SWML document array.
      */
+    // ------------------------------------------------------------------
+    // MCP servers + web/serverless mixin methods (item I cluster)
+    // ------------------------------------------------------------------
+
+    public function testAddMcpServerEmitsIntoSwaig(): void
+    {
+        $agent = $this->makeAgent();
+        $result = $agent
+            ->addMcpServer('https://mcp.example.com', ['Authorization' => 'Bearer sk-x'], true, ['caller_id' => '${caller_id_number}'])
+            ->defineTool('noop', 'noop', [], fn () => new FunctionResult('ok'));
+        $this->assertSame($agent, $result);
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+        $this->assertArrayHasKey('mcp_servers', Shape::sub($ai, 'SWAIG'));
+        $server = Shape::sub($ai, 'SWAIG', 'mcp_servers', 0);
+        $this->assertSame('https://mcp.example.com', $server['url'] ?? null);
+        $this->assertSame(['Authorization' => 'Bearer sk-x'], $server['headers'] ?? null);
+        $this->assertTrue($server['resources'] ?? null);
+        $this->assertSame(['caller_id' => '${caller_id_number}'], $server['resource_vars'] ?? null);
+    }
+
+    public function testGetMcpServersAndEnableFlag(): void
+    {
+        $agent = $this->makeAgent();
+        $this->assertSame([], $agent->getMcpServers());
+        $this->assertFalse($agent->isMcpServerEnabled());
+
+        $agent->addMcpServer('https://a.example.com');
+        $this->assertCount(1, $agent->getMcpServers());
+
+        $this->assertSame($agent, $agent->enableMcpServer());
+        $this->assertTrue($agent->isMcpServerEnabled());
+    }
+
+    public function testEnableDebugRoutesReturnsSelf(): void
+    {
+        $agent = $this->makeAgent();
+        $this->assertSame($agent, $agent->enableDebugRoutes());
+    }
+
+    public function testSetupGracefulShutdownReturnsVoidWithoutThrowing(): void
+    {
+        $agent = $this->makeAgent();
+        // No-op when ext-pcntl is absent; must complete without throwing (void).
+        $agent->setupGracefulShutdown();
+        // Agent remains usable afterwards (SWML still renders).
+        $swml = $agent->renderSwml();
+        $this->assertArrayHasKey('sections', $swml);
+    }
+
+    public function testMcpServersPreservedThroughCloneForRequest(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addMcpServer('https://mcp.example.com')->enableMcpServer();
+
+        $clone = $agent->cloneForRequest();
+        $this->assertCount(1, $clone->getMcpServers());
+        $this->assertTrue($clone->isMcpServerEnabled());
+
+        // Mutating the clone must not affect the original (deep copy).
+        $clone->addMcpServer('https://other.example.com');
+        $this->assertCount(1, $agent->getMcpServers());
+        $this->assertCount(2, $clone->getMcpServers());
+    }
+
+    /**
+     * @param array<string,mixed> $swml
+     * @return array<string,mixed>
+     */
     private function extractAiVerb(array $swml): array
     {
-        $main = $swml['sections']['main'];
-        foreach ($main as $verb) {
-            if (isset($verb['ai'])) {
-                return $verb['ai'];
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            if (is_array($verb) && isset($verb['ai'])) {
+                $ai = $verb['ai'];
+                $this->assertIsArray($ai);
+                /** @var array<string,mixed> $ai */
+                return $ai;
             }
         }
         $this->fail('AI verb not found in rendered SWML');

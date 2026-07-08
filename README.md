@@ -40,8 +40,8 @@ composer require signalwire/sdk
 
 Each agent is a self-contained microservice that generates [SWML](docs/swml_service_guide.md) (SignalWire Markup Language) and handles [SWAIG](docs/swaig_reference.md) (SignalWire AI Gateway) tool calls. The SignalWire platform runs the entire AI pipeline (STT, LLM, TTS) -- your agent just defines the behavior.
 
+<!-- include: examples/quickstart_agent.php#construct -->
 ```php
-<?php
 require 'vendor/autoload.php';
 
 use SignalWire\Agent\AgentBase;
@@ -64,12 +64,17 @@ $agent->defineTool(
 $agent->run();
 ```
 
-Test locally without running a server:
+List an agent's SWAIG tools in-process, without running a server:
 
 ```bash
-vendor/bin/swaig-test examples/simple_agent.php --list-tools
-vendor/bin/swaig-test examples/simple_agent.php --dump-swml
-vendor/bin/swaig-test examples/simple_agent.php --exec get_time
+vendor/bin/swaig-test --file examples/simple_agent.php --list-tools
+```
+
+Dump its SWML or execute a tool against a running agent (`--url` mode):
+
+```bash
+vendor/bin/swaig-test --url http://user:pass@localhost:3000/simple --dump-swml
+vendor/bin/swaig-test --url http://user:pass@localhost:3000/simple --exec get_time
 ```
 
 ### Agent Features
@@ -111,8 +116,8 @@ See [examples/README.md](examples/README.md) for the full list organized by cate
 
 Real-time call control and messaging over WebSocket. The RELAY client connects to SignalWire via the Blade protocol and gives you imperative, blocking control over live phone calls and SMS/MMS.
 
+<!-- include: examples/quickstart_relay.php#construct -->
 ```php
-<?php
 require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
@@ -150,8 +155,8 @@ See the **[RELAY documentation](relay/README.md)** for the full guide, API refer
 
 Synchronous REST client for managing SignalWire resources and controlling calls over HTTP. No WebSocket required.
 
+<!-- include: examples/quickstart_rest.php#construct -->
 ```php
-<?php
 require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
@@ -163,12 +168,12 @@ $client = new RestClient(
 );
 
 $client->fabric()->aiAgents()->create(['name' => 'Support Bot', 'prompt' => ['text' => 'You are helpful.']]);
-$client->calling()->play($callId, params: ['play' => [['type' => 'tts', 'text' => 'Hello!']]]);
+$client->calling()->play($callId, play: [['type' => 'tts', 'text' => 'Hello!']]);
 $client->phoneNumbers()->search(['areaCode' => '512']);
-$client->datasphere()->documents()->search(['queryString' => 'billing policy']);
+$client->datasphere()->documents()->search(queryString: 'billing policy');
 ```
 
-- 21 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Compat (Twilio-compatible), Phone Numbers, SIP, Queues, Recordings, and more
+- 20 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
 - Lightweight HTTP via cURL with connection reuse
 - Array returns -- raw data, no wrapper objects
 
@@ -208,7 +213,6 @@ Guides are also available in the [`docs/`](docs/) directory:
 
 - [Skills System](docs/skills_system.md) -- built-in skills and the modular framework
 - [Third-Party Skills](docs/third_party_skills.md) -- creating and publishing custom skills
-- [MCP Gateway](docs/mcp_gateway_reference.md) -- Model Context Protocol integration
 
 ### Deployment
 
@@ -239,17 +243,27 @@ Guides are also available in the [`docs/`](docs/) directory:
 | `SIGNALWIRE_LOG_LEVEL` | All | Logging level (`debug`, `info`, `warn`, `error`) |
 | `SIGNALWIRE_LOG_MODE` | All | Set to `off` to suppress all logging |
 
-## Testing
+## Testing, Formatting, and Linting
+
+Test / format / lint go through the canonical `scripts/run-*.sh` entry points.
+They self-bootstrap their tool environment (put `vendor/bin` on `PATH`,
+`composer install` if `vendor/` is missing) and run correctly from **any**
+directory, so you never have to invoke the raw tools by hand. `scripts/run-ci.sh`
+calls these same scripts, so local behavior matches CI.
 
 ```bash
-# Install dependencies
-composer install
+# Run the full test suite (canonical entry point; self-bootstraps, any CWD)
+bash scripts/run-tests.sh
 
-# Run the test suite
-composer test
+# Run a subset — pass a filter (phpunit --filter): a test name / class / regex
+bash scripts/run-tests.sh LoggerTest
 
-# Run with verbose output
-composer test:verbose
+# Format (php-cs-fixer): APPLY in place (default) / --check = verify-only (CI)
+bash scripts/run-format.sh
+bash scripts/run-format.sh --check
+
+# Lint (phpstan level 9, zero findings)
+bash scripts/run-lint.sh
 
 # Coverage (requires Xdebug or PCOV)
 XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-html coverage/

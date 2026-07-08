@@ -31,12 +31,18 @@ HERE = Path(__file__).resolve().parent
 PORT_ROOT = HERE.parent
 PSDK = (PORT_ROOT.parent / "porting-sdk").resolve()
 if not PSDK.is_dir():
-    PSDK = Path("/usr/local/home/devuser/src/porting-sdk")
+    raise SystemExit(
+        f"porting-sdk not found adjacent to this repo (looked for {PSDK}); "
+        "clone signalwire/porting-sdk as a sibling of this port repo."
+    )
 
 sys.path.insert(0, str(HERE))
 from enumerate_surface import (  # type: ignore
     CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES,
     camel_to_snake, _module_path_for_class, _translate_class,
+    _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
+    _SWML_VERBS_MODULE, _RELAY_PROTO_MODULE,
+    _SWAIG_PAYLOAD_SUB_TO_MODULE,
 )
 
 
@@ -47,6 +53,31 @@ class TypeTranslationError(RuntimeError):
 def load_aliases() -> dict[str, str]:
     data = yaml.safe_load((PSDK / "type_aliases.yaml").read_text(encoding="utf-8"))
     return {str(k): str(v) for k, v in data.get("aliases", {}).get("php", {}).items()}
+
+
+# ---------------------------------------------------------------------------
+# Generated-REST typed-param sidecar (§5 unfold).
+#
+# scripts/generate_rest.py emits src/SignalWire/REST/Namespaces/Generated/
+# rest_signatures.json — the canonical typed-param records for every generated
+# operation/command/set method. PHP reflection can't express keyword-only kind,
+# an ``array``'s element type, or the open ``extras`` dict, so for those methods
+# we REPLACE the reflected params with the recorded shape (mirrors Go's
+# enumerator struct-unfold). Keyed "<PhpClassName>::<phpMethodName>". The PHP
+# signature and this sidecar are derived from the same computed param list in the
+# generator, so they never diverge (GEN-FRESH covers the sidecar).
+# ---------------------------------------------------------------------------
+
+_SIDECAR_PATH = (
+    PORT_ROOT / "src" / "SignalWire" / "REST" / "Namespaces" / "Generated" / "rest_signatures.json"
+)
+
+
+def load_rest_sidecar() -> dict[str, list[dict]]:
+    if not _SIDECAR_PATH.is_file():
+        return {}
+    data = json.loads(_SIDECAR_PATH.read_text(encoding="utf-8"))
+    return data.get("methods", {})
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +201,35 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.logging_config", "get_execution_mode"),
     ("SignalWire\\Logging\\LoggingConfig", "isServerlessMode"):
         ("signalwire.utils", "is_serverless_mode"),
+    # Central logging helpers — Python ships them as module-level free
+    # functions in signalwire.core.logging_config; PHP hosts them as static
+    # methods on the LoggingConfig class (PSR-4) and projects to the canonical
+    # snake_case names.
+    ("SignalWire\\Logging\\LoggingConfig", "configureLogging"):
+        ("signalwire.core.logging_config", "configure_logging"),
+    ("SignalWire\\Logging\\LoggingConfig", "getLogger"):
+        ("signalwire.core.logging_config", "get_logger"),
+    ("SignalWire\\Logging\\LoggingConfig", "resetLoggingConfiguration"):
+        ("signalwire.core.logging_config", "reset_logging_configuration"),
+    ("SignalWire\\Logging\\LoggingConfig", "stripControlChars"):
+        ("signalwire.core.logging_config", "strip_control_chars"),
+    # Runtime schema-inference helpers — Python ships them as module-level free
+    # functions in signalwire.core.agent.tools.type_inference; PHP hosts them as
+    # static methods on a TypeInference class (PSR-4) and projects to the
+    # canonical snake_case names.
+    ("SignalWire\\SWAIG\\TypeInference", "inferSchema"):
+        ("signalwire.core.agent.tools.type_inference", "infer_schema"),
+    ("SignalWire\\SWAIG\\TypeInference", "createTypedHandlerWrapper"):
+        ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
+    # LiveWire package-level helpers — Python ships function_tool / run_app as
+    # module-level free functions in signalwire.livewire; PHP has no module-level
+    # free functions (PSR-4 file-per-class), so they are hosted as static methods
+    # on the LiveWire facade class and projected onto the canonical module-level
+    # names. Mirrors the LoggingConfig / SignalWire host precedent.
+    ("SignalWire\\Livewire\\LiveWire", "functionTool"):
+        ("signalwire.livewire", "function_tool"),
+    ("SignalWire\\Livewire\\LiveWire", "runApp"):
+        ("signalwire.livewire", "run_app"),
     # Top-level SignalWire\SignalWire class hosts package-level helpers
     # (RestClient, register_skill, add_skill_directory,
     # list_skills_with_params). Project each onto the canonical
@@ -183,6 +243,18 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire", "add_skill_directory"),
     ("SignalWire\\SignalWire", "list_skills_with_params"):
         ("signalwire", "list_skills_with_params"),
+    ("SignalWire\\SignalWire", "list_skills"):
+        ("signalwire", "list_skills"),
+    # Context / DataMap module-level factory helpers — Python ships them as
+    # module-level free functions; PHP (PSR-4 file-per-class) hosts them as
+    # static factories on the Context / DataMap classes and projects onto the
+    # canonical module-level names.
+    ("SignalWire\\Contexts\\Context", "createSimpleContext"):
+        ("signalwire.core.contexts", "create_simple_context"),
+    ("SignalWire\\DataMap\\DataMap", "createSimpleApiTool"):
+        ("signalwire.core.data_map", "create_simple_api_tool"),
+    ("SignalWire\\DataMap\\DataMap", "createExpressionTool"):
+        ("signalwire.core.data_map", "create_expression_tool"),
     # Webhook signature validation — Python ships them as module-level free
     # functions (signalwire.core.security.webhook_validator); PHP groups
     # both static methods on a WebhookValidator final class for PSR-4 + IDE
@@ -191,6 +263,17 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
     ("SignalWire\\Security\\WebhookValidator", "validateRequest"):
         ("signalwire.core.security.webhook_validator", "validate_request"),
+    # Decomposed framework-free validation core — Python ships it as the
+    # module-level free function signalwire.core.security.webhook_middleware.
+    # validate(method, url, headers, body, *, signing_key) -> optional triple.
+    # PHP hosts it as a static method on the WebhookMiddleware class (the same
+    # class whose object-shaped process() stays a PHP-idiom PORT_ADDITION) and
+    # projects it onto the canonical module-level `validate` name. The param
+    # kinds (keyword-only signing_key) + concrete element types PHP reflection
+    # erases are re-established via FREE_FUNCTION_PARAM_OVERRIDES /
+    # FREE_FUNCTION_RETURN_OVERRIDES below.
+    ("SignalWire\\Security\\WebhookMiddleware", "validate"):
+        ("signalwire.core.security.webhook_middleware", "validate"),
     # Security hygiene helpers — Python ships them as module-level free
     # functions (signalwire.core.security.security_utils); PHP groups the
     # three static methods on a SecurityUtils final class for PSR-4 + IDE
@@ -218,10 +301,220 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
         {"name": "kwargs", "kind": "var_keyword", "type": "dict<string,any>",
          "required": False, "default": {}},
     ],
+    # Decomposed webhook validation core. The Python reference declares
+    # signing_key keyword-only (`validate(method, url, headers, body, *,
+    # signing_key)`) and types headers as dict<string,string>; PHP reflection
+    # sees a trailing positional `string $signingKey` and erases the headers
+    # element type to bare `array` -> `any`. Re-establish the canonical
+    # kind+types so the projected free function reconciles EQUAL with the oracle.
+    ("signalwire.core.security.webhook_middleware", "validate"): [
+        {"name": "method", "type": "string", "required": True},
+        {"name": "url", "type": "string", "required": True},
+        {"name": "headers", "type": "dict<string,string>", "required": True},
+        {"name": "body", "type": "string", "required": True},
+        {"name": "signing_key", "kind": "keyword", "type": "string",
+         "required": True},
+    ],
 }
 
 
-def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
+# Return-type overrides for free-function projections whose PHP reflected
+# return type erases the concrete shape the oracle records (PHP's only
+# list/map type is bare ``array`` -> ``any``). Keyed by the PROJECTED
+# (target_module, target_function). Parallel to FREE_FUNCTION_PARAM_OVERRIDES.
+FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
+    # validate() returns None (pass) or a [status, headers, body] triple
+    # (reject); PHP's `?array` reflects as optional<any>. Re-establish the
+    # oracle's optional<tuple<int,dict<string,string>,string>>.
+    ("signalwire.core.security.webhook_middleware", "validate"):
+        "optional<tuple<int,dict<string,string>,string>>",
+    # infer_schema() reflects a typed handler and returns the SWAIG schema
+    # tuple [parameters, required, description, is_typed, has_raw_data]. PHP's
+    # only tuple type is the bare ``array`` -> ``any``; the concrete shape is
+    # documented on TypeInference::inferSchema via the ``@return array{...}``
+    # generic. Re-establish the oracle's fixed schema-contract tuple.
+    ("signalwire.core.agent.tools.type_inference", "infer_schema"):
+        "tuple<dict<string,dict<string,any>>,list<string>,optional<string>,bool,bool>",
+}
+
+
+# Param-type remaps for parameters whose concrete element type PHP reflection
+# erases. PHP's only list/map type is the bare ``array``, which reflects as the
+# canonical ``any`` — but the Python reference types these params concretely
+# (``list<string>``, ``list<dict<string,any>>``, ``dict<string,list<string>>``,
+# ``optional<list<string>>``, …). The concrete element type IS documented on the
+# PHP method via a PHPDoc ``@param list<string> $x`` generic (phpstan L9 reads it),
+# but PHP *reflection* — the source `signature_dump.php` uses — cannot see PHPDoc,
+# so it drops to ``array``→``any``. This table re-establishes the exact concrete
+# type the PHPDoc already records. It is a rename/remap (a real future change to
+# the element type still surfaces as drift), NOT an omission (which would blind
+# the whole param). The keys mirror the ``@param`` generics on the source method.
+# Keyed by (PHP fully-qualified class, PHP method name) -> {snake_param_name: type}.
+PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
+    ("SignalWire\\Relay\\Event\\MessageReceiveEvent", "__construct"): {
+        "media": "list<string>",
+        "tags": "list<string>",
+    },
+    ("SignalWire\\Relay\\Event\\MessageStateEvent", "__construct"): {
+        "media": "list<string>",
+        "tags": "list<string>",
+    },
+    # PomBuilder::fromSections takes a list of section dicts; PHP's bare `array`
+    # erases the concrete element type the oracle records (list<dict<string,any>>).
+    ("SignalWire\\POM\\PomBuilder", "fromSections"): {
+        "sections": "list<dict<string,any>>",
+    },
+    # Service::handleRequest — the HTTP request-dispatch entry point (projected to
+    # SWMLService.handle_request). PHP reflection erases `array $headers` to bare
+    # `array`→`any`; the PHPDoc `@param array<string,string> $headers` records the
+    # concrete oracle type dict<string,string>. Re-establish it (the `body` param
+    # is a genuine string-vs-dict idiom divergence — the PHP entry point takes the
+    # raw wire body string and json_decodes it internally — documented in
+    # PORT_SIGNATURE_OMISSIONS.md, PHP-param-shape).
+    ("SignalWire\\SWML\\Service", "handleRequest"): {
+        "headers": "dict<string,string>",
+    },
+    # --- AgentBase: AI-config / prompt / skill mixin params (projected onto the
+    # AIConfigMixin/PromptMixin/PromptManager/SkillMixin targets by MIXIN_PROJECTIONS
+    # after this remap runs, so tightening here clears every projected copy too). ---
+    ("SignalWire\\Agent\\AgentBase", "setPromptPom"): {
+        "pom": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addSwaigQueryParams"): {
+        "params": "dict<string,string>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addHints"): {
+        "hints": "list<string>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setFunctionIncludes"): {
+        "includes": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setInternalFillers"): {
+        "fillers": "dict<string,dict<string,list<string>>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setLanguages"): {
+        "languages": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setNativeFunctions"): {
+        "functions": "list<string>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "setPronunciations"): {
+        "pronunciations": "list<dict<string,any>>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addSkill"): {
+        "params": "optional<dict<string,any>>",
+    },
+    # --- Contexts.Context / Contexts.Step: bullet/filler/context/step lists. ---
+    ("SignalWire\\Contexts\\Context", "addBullets"): {"bullets": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "addSystemBullets"): {"bullets": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "setValidContexts"): {"contexts": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "setValidSteps"): {"steps": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "setEnterFillers"): {
+        "enter_fillers": "dict<string,list<string>>",
+    },
+    ("SignalWire\\Contexts\\Context", "setExitFillers"): {
+        "exit_fillers": "dict<string,list<string>>",
+    },
+    ("SignalWire\\Contexts\\Context", "addEnterFiller"): {"fillers": "list<string>"},
+    ("SignalWire\\Contexts\\Context", "addExitFiller"): {"fillers": "list<string>"},
+    ("SignalWire\\Contexts\\Step", "addBullets"): {"bullets": "list<string>"},
+    ("SignalWire\\Contexts\\Step", "setValidContexts"): {"contexts": "list<string>"},
+    ("SignalWire\\Contexts\\Step", "setValidSteps"): {"steps": "list<string>"},
+    # --- DataMap: error-key lists, enum, webhook headers/require_args, expressions. ---
+    ("SignalWire\\DataMap\\DataMap", "errorKeys"): {"keys": "list<string>"},
+    ("SignalWire\\DataMap\\DataMap", "globalErrorKeys"): {"keys": "list<string>"},
+    ("SignalWire\\DataMap\\DataMap", "parameter"): {"enum": "optional<list<string>>"},
+    ("SignalWire\\DataMap\\DataMap", "webhook"): {
+        "headers": "optional<dict<string,string>>",
+        "require_args": "optional<list<string>>",
+    },
+    ("SignalWire\\DataMap\\DataMap", "webhookExpressions"): {
+        "expressions": "list<dict<string,any>>",
+    },
+    # --- FunctionResult: action/hint/media/tag/toggle lists. ---
+    ("SignalWire\\SWAIG\\FunctionResult", "addActions"): {
+        "actions": "list<dict<string,any>>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "addDynamicHints"): {
+        "hints": "list<union<dict<string,any>,string>>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "createPaymentPrompt"): {
+        "actions": "list<dict<string,string>>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "sendSms"): {
+        "media": "optional<list<string>>",
+        "tags": "optional<list<string>>",
+    },
+    # --- ToolMixin.on_function_call (projected from Service::onFunctionCall). ---
+    ("SignalWire\\SWML\\Service", "onFunctionCall"): {
+        "raw_data": "optional<dict<string,any>>",
+    },
+    # --- SkillBase constructor params dict. ---
+    ("SignalWire\\Skills\\SkillBase", "__construct"): {
+        "params": "optional<dict<string,any>>",
+    },
+    # --- POM Section.add_bullets. ---
+    ("SignalWire\\POM\\Section", "addBullets"): {"bullets": "list<string>"},
+    # --- RelayClient.receive / unreceive context lists. ---
+    ("SignalWire\\Relay\\Client", "receive"): {"contexts": "list<string>"},
+    ("SignalWire\\Relay\\Client", "unreceive"): {"contexts": "list<string>"},
+    # --- SchemaValidationError errors list. ---
+    ("SignalWire\\Utils\\SchemaValidationError", "__construct"): {
+        "errors": "list<string>",
+    },
+}
+
+
+# Return-type remaps for methods whose concrete return element type PHP
+# reflection erases (bare ``array`` → ``any``) but the Python reference types
+# concretely. Same rationale as PARAM_TYPE_REMAPS: the ``@return`` generic on
+# the PHP source records the exact shape (phpstan L9 reads it), PHP reflection
+# cannot. Re-establishing the concrete return here keeps a real future change
+# surfacing as drift. Keyed by (PHP fully-qualified class, PHP method name) ->
+# canonical return type string.
+RETURN_TYPE_REMAPS: dict[tuple[str, str], str] = {
+    # as_router() — Python's named "embed my routes in a host app" return type is
+    # ``signalwire.core.web.HostAppRouter``; the signature oracle records it as the
+    # return of both SWMLService.as_router and the projected WebMixin.as_router. PHP
+    # has no framework router: asRouter() returns the Service itself (which
+    # implements RequestHandlerLike — the mountable/dispatchable unit), so PHP
+    # reflection sees ``$this`` → the concrete Service class. Record the canonical
+    # named return type HERE so PHP reconciles EQUAL with Python's
+    # ``as_router() -> HostAppRouter`` contract. HostAppRouter is a signature-only
+    # named type (NOT in the surface oracle — it is deliberately not surfaced, exactly
+    # like the ConversationRole/StringFormat aliases in PROPERTY_TYPE_REMAPS), so
+    # referencing it here adds NO surface class and does not perturb SURFACE-DIFF.
+    # The remap is applied during class enumeration (before mixin projection), so the
+    # single entry flows to both SWMLService.as_router and WebMixin.as_router. Mirrors
+    # go, whose port_signatures.json records the same HostAppRouter return.
+    # Annotation-only: no new class, no surface change, no runtime change.
+    ("SignalWire\\SWML\\Service", "asRouter"):
+        "class:signalwire.core.web.HostAppRouter",
+}
+
+
+# Property-type remaps for GENERATED wire-type class fields whose schema $ref is
+# a scalar string-Literal TypeAlias (ConversationRole, StringFormat). The
+# reference SIGNATURE oracle (griffe) records the field type as the named alias
+# (``class:…ConversationRole``) even though the alias itself is a scalar that the
+# SURFACE oracle deliberately drops (so no PHP class is — or may be — emitted for
+# it: surfacing one would break SURFACE-DIFF). PHP keeps the runtime property as
+# a plain ``?string`` (the wire value IS a string constrained to the literal set)
+# and records the canonical named-alias type HERE — exactly mirroring go's
+# ``gen:"class:…ConversationRole"`` struct tag on a ``type ConversationRole string``
+# field (go likewise does not surface the alias as a public type). Annotation-only:
+# no new class, no surface change, no runtime change. Keyed by (PHP FQCN, property).
+PROPERTY_TYPE_REMAPS: dict[tuple[str, str], str] = {
+    ("SignalWire\\SWML\\Generated\\ConversationMessage", "role"):
+        "class:signalwire.core.swml_verbs_generated.ConversationRole",
+    ("SignalWire\\SWML\\Generated\\StringProperty", "format"):
+        "class:signalwire.core.swml_verbs_generated.StringFormat",
+}
+
+
+def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None = None) -> tuple[dict, list]:
+    if rest_sidecar is None:
+        rest_sidecar = {}
     out_modules: dict = {}
     failures: list = []
 
@@ -238,10 +531,49 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         canonical_name = _translate_class(php_name)
         # Compute file_relative for module resolution
         file_relative = Path(ns.replace("SignalWire\\", "").replace("\\", "/")) / php_name
+        # Generated wire-type classes (SignalWire\REST\Namespaces\Generated\Types\
+        # <Sub>\...) route by their <Sub> namespace segment to the oracle's
+        # <ns>_types_generated module — this MUST win over CLASS_MODULE_MAP because
+        # a type name can collide with an SDK class (DataMap/Section/Document) or
+        # recur across namespaces (AIObject). Reserved-keyword class names
+        # generate_rest.py suffixed with `_` are renamed back to the bare oracle
+        # leaf. Mirrors enumerate_surface.py's path-based routing.
+        types_mod = None
+        if "\\REST\\Namespaces\\Generated\\Types\\" in f"{ns}\\":
+            sub = ns.rsplit("\\", 1)[-1]
+            types_mod = _TYPES_SUB_TO_MODULE.get(sub)
+        # Generated SWML-verbs config classes (SignalWire\SWML\Generated\...) route
+        # by PATH to the single oracle module signalwire.core.swml_verbs_generated —
+        # same rationale as the Types route: a config type name collides with an SDK
+        # builder (DataMap/Section/Document) or recurs as a REST wire type
+        # (AIObject/Cond), so path MUST win over CLASS_MODULE_MAP. Reserved-keyword
+        # names the generator suffixed with `_` (Goto_/…) rename back to the bare leaf.
+        elif ns == "SignalWire\\SWML\\Generated":
+            types_mod = _SWML_VERBS_MODULE
+        # Generated RELAY-protocol wire-type classes (SignalWire\Relay\Generated\...)
+        # route by PATH to the single oracle module
+        # signalwire.relay.protocol_types_generated. Scoped strictly to the
+        # \Relay\Generated namespace so the hand-written Relay SDK classes one level
+        # up (Call/Client/Event/…) keep their CLASS_MODULE_MAP routing.
+        elif ns == "SignalWire\\Relay\\Generated":
+            types_mod = _RELAY_PROTO_MODULE
+        # Generated SWAIG-payload classes (SignalWire\SWAIG\Generated\<Sub>\...) route
+        # by PATH: the <Sub> namespace segment (PostPrompt / SwaigRequest / SwaigActions)
+        # → its signalwire.core.*_generated oracle module. Same rationale as the Types
+        # route: the path MUST win over CLASS_MODULE_MAP so a payload type name never
+        # misroutes onto a hand SWAIG SDK class one/two levels up. The diff tool's
+        # gen-payload fold then keys a class-typed field by (class, field) cross-port.
+        elif ns.startswith("SignalWire\\SWAIG\\Generated\\"):
+            sub = ns.rsplit("\\", 1)[-1]
+            types_mod = _SWAIG_PAYLOAD_SUB_TO_MODULE.get(sub)
+        # (types_mod, when set, wins below over CLASS_MODULE_MAP.)
         # FQN_CLASS_MODULE_MAP wins when set — disambiguates short-name
         # collisions between e.g. REST namespace classes and skills.
         full_php_for_lookup = f"{ns}\\{php_name}" if ns else php_name
-        if full_php_for_lookup in FQN_CLASS_MODULE_MAP:
+        if types_mod is not None:
+            mod = types_mod
+            canonical_name = _TYPES_RESERVED_UNRENAME.get(php_name, canonical_name)
+        elif full_php_for_lookup in FQN_CLASS_MODULE_MAP:
             mod, override_name = FQN_CLASS_MODULE_MAP[full_php_for_lookup]
             if override_name is not None:
                 canonical_name = override_name
@@ -314,6 +646,9 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
                 override = FREE_FUNCTION_PARAM_OVERRIDES.get((target_mod, target_fn))
                 if override is not None:
                     sig["params"] = [dict(p) for p in override]
+                ret_override = FREE_FUNCTION_RETURN_OVERRIDES.get((target_mod, target_fn))
+                if ret_override is not None:
+                    sig["returns"] = ret_override
                 free_functions_out.append((target_mod, target_fn, sig))
                 continue
 
@@ -323,6 +658,52 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
             except TypeTranslationError as e:
                 failures.append(str(e))
                 continue
+            # Classmethod-factory receiver: the Python reference declares the
+            # typed RELAY event factory `from_payload` as a @classmethod, so it
+            # carries a `cls` receiver. PHP expresses the same factory as a
+            # `static` method (no implicit receiver), which build_signature
+            # (correctly, for a genuine @staticmethod) records with no receiver
+            # — producing a spurious param-count drift vs the reference's `cls`.
+            # Inject the `cls` receiver for this classmethod-analog so the two
+            # line up (the diff already reconciles cls<->self). Scoped to the
+            # specific (module, method) classmethod-factory pairs the oracle
+            # records with a `cls` receiver, so no genuine PHP @staticmethod is
+            # affected:
+            #   - relay.event  from_payload  (typed RELAY event factory)
+            #   - pom_builder  from_sections (PomBuilder classmethod factory)
+            _classmethod_factories = {
+                ("signalwire.relay.event", "from_payload"),
+                ("signalwire.core.pom_builder", "from_sections"),
+            }
+            if (
+                (mod, method_canonical) in _classmethod_factories
+                and m.get("is_static", False)
+                and not (sig.get("params") and sig["params"][0].get("kind") in ("self", "cls"))
+            ):
+                sig["params"] = [{"name": "cls", "kind": "cls"}] + sig.get("params", [])
+            # Concrete-collection param remap: re-establish a param's concrete
+            # element type where PHP's bare ``array`` erased it (see
+            # PARAM_TYPE_REMAPS). Matched on the reflected param name.
+            remap = PARAM_TYPE_REMAPS.get((full_php, native))
+            if remap:
+                for prm in sig.get("params", []):
+                    new_type = remap.get(prm.get("name", ""))
+                    if new_type is not None:
+                        prm["type"] = new_type
+            # Concrete-collection return remap: re-establish the return element
+            # type where PHP's bare ``array`` erased it (see RETURN_TYPE_REMAPS).
+            ret_remap = RETURN_TYPE_REMAPS.get((full_php, native))
+            if ret_remap is not None:
+                sig["returns"] = ret_remap
+            # §5 unfold: a generated REST operation/command/set method takes its
+            # wire fields as named PHP params (options-struct idiom); PHP
+            # reflection can't recover keyword kind / element types / the open
+            # ``extras`` dict, so REPLACE the reflected params with the generator's
+            # canonical records. Keyed by PHP class + PHP method name.
+            sidecar_key = f"{php_name}::{native}"
+            if sidecar_key in rest_sidecar:
+                records = [dict(r) for r in rest_sidecar[sidecar_key]]
+                sig["params"] = [{"name": "self", "kind": "self"}] + records
             if method_canonical in methods_out:
                 continue
             methods_out[method_canonical] = sig
@@ -332,7 +713,19 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
         if not is_freefn_only_class:
             for p in type_entry.get("properties", []):
                 pname = p.get("name", "")
-                snake = camel_to_snake(pname)
+                # Path-routed generated wire-type classes (types_mod set: the
+                # REST Types / SWML-verbs / RELAY-proto / SWAIG-payload modules)
+                # carry the EXACT wire-key field name on their PHP property
+                # ($SWAIG, $allOf, $oneOf, $anyOf, $numberedBullets, …). The
+                # reference oracle (griffe over the generated TypedDicts) records
+                # those field names verbatim — NOT snake-folded — so a blanket
+                # camel_to_snake would mangle them (SWAIG→swaig, allOf→all_of)
+                # into a spurious missing-port drift. Preserve verbatim for these
+                # generated classes; hand-written SDK classes still snake-fold.
+                if types_mod is not None:
+                    snake = pname
+                else:
+                    snake = camel_to_snake(pname)
                 method_canonical = METHOD_ALIASES.get(snake, snake)
                 if method_canonical in methods_out:
                     continue
@@ -342,6 +735,9 @@ def collect(raw: dict, aliases: dict) -> tuple[dict, list]:
                 except TypeTranslationError as e:
                     failures.append(str(e))
                     continue
+                prop_remap = PROPERTY_TYPE_REMAPS.get((full_php, pname))
+                if prop_remap is not None:
+                    ret = prop_remap
                 params_out = []
                 if not p.get("is_static", False):
                     params_out.append({"name": "self", "kind": "self"})
@@ -551,7 +947,8 @@ def main() -> int:
     else:
         raw = run_dump()
 
-    canonical, failures = collect(raw, aliases)
+    rest_sidecar = load_rest_sidecar()
+    canonical, failures = collect(raw, aliases, rest_sidecar)
     if failures:
         print(f"enumerate_signatures: {len(failures)} translation failure(s)", file=sys.stderr)
         for f in failures[:30]:

@@ -9,7 +9,7 @@ use InvalidArgumentException;
 /**
  * Webhook signature validation for SignalWire-signed HTTP requests.
  *
- * Implements both schemes from porting-sdk/webhooks.md:
+ * Implements both signature schemes:
  *
  *  - Scheme A (RELAY/SWML/JSON): hex(HMAC-SHA1(key, url + rawBody))
  *  - Scheme B (Compat/cXML form): base64(HMAC-SHA1(key, url + sortedFormParams))
@@ -37,7 +37,7 @@ final class WebhookValidator
      * @param string $url         The full URL SignalWire POSTed to (scheme, host,
      *                            optional port, path, query). Must match what the
      *                            platform saw — see the URL-reconstruction section
-     *                            of porting-sdk/webhooks.md.
+     *                            of the shared specs
      * @param string $rawBody     The raw request body bytes as a UTF-8 string, BEFORE
      *                            any JSON / form parsing. Type-hinted string so a
      *                            parsed array passed by mistake yields a TypeError.

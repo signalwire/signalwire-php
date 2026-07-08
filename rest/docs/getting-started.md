@@ -97,5 +97,4 @@ safe('List numbers', fn() => $client->phoneNumbers()->list());
 - [Client Reference](client-reference.md) -- all namespaces and methods
 - [Fabric Resources](fabric.md) -- AI agents, SWML scripts, subscribers
 - [Calling Commands](calling.md) -- REST call control
-- [Compatibility API](compat.md) -- Twilio-compatible LAML
 - [All Namespaces](namespaces.md) -- phone numbers, video, datasphere, etc.

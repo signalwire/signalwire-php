@@ -61,10 +61,9 @@
 ### REST Client
 
 - Synchronous HTTP client for all SignalWire REST APIs
-- Namespaced sub-objects: `fabric`, `calling`, `phoneNumbers`, `compat`, `video`, `datasphere`, `registry`, etc.
+- Namespaced sub-objects: `fabric`, `calling`, `phoneNumbers`, `video`, `datasphere`, `registry`, etc.
 - Full Fabric API: AI agents, SWML scripts, subscribers, call flows, conference rooms, SIP gateways
 - Call control: dial, play, record, collect, detect, AI, transcribe, tap, stream
-- Compatibility API: full Twilio-compatible LAML surface
 - Phone number management, 10DLC, MFA, logs
 - Array returns for zero-overhead data access
 

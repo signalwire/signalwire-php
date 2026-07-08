@@ -11,6 +11,7 @@ use SignalWire\Skills\SkillManager;
 use SignalWire\Skills\SkillName;
 use SignalWire\Skills\SkillRegistry;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\Shape;
 
 class SkillsTest extends TestCase
 {
@@ -42,6 +43,14 @@ class SkillsTest extends TestCase
         putenv('SIGNALWIRE_LOG_MODE');
     }
 
+    /**
+     * @param array{
+     *     name?: string,
+     *     route?: string,
+     *     basic_auth_user?: string,
+     *     basic_auth_password?: string
+     * } $opts
+     */
     private function makeAgent(array $opts = []): AgentBase
     {
         return new AgentBase(
@@ -56,12 +65,12 @@ class SkillsTest extends TestCase
     //  Registry tests (8)
     // ══════════════════════════════════════════════════════════════════════
 
-    public function testRegistryListSkillsReturns18Skills(): void
+    public function testRegistryListSkillsReturns17Skills(): void
     {
         $registry = SkillRegistry::instance();
         $skills = $registry->listSkills();
 
-        $this->assertCount(18, $skills);
+        $this->assertCount(17, $skills);
     }
 
     public function testRegistryGetFactoryForKnownSkillReturnsClassName(): void
@@ -93,8 +102,9 @@ class SkillsTest extends TestCase
         $this->assertContains('my_custom', $skills);
     }
 
-    public function testRegistryAll18BuiltinNamesPresentInListSkills(): void
+    public function testRegistryAll17BuiltinNamesPresentInListSkills(): void
     {
+        // 17 built-ins: mcp_gateway is NOT ported (approved Python-only per §I.1).
         $expected = [
             'api_ninjas_trivia',
             'claude_skills',
@@ -106,7 +116,6 @@ class SkillsTest extends TestCase
             'info_gatherer',
             'joke',
             'math',
-            'mcp_gateway',
             'native_vector_search',
             'play_background_file',
             'spider',
@@ -214,7 +223,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $skill = new \SignalWire\Skills\Builtin\Datetime($agent);
 
-        $this->assertInstanceOf(\SignalWire\Skills\SkillBase::class, $skill);
+        $this->assertSame('datetime', $skill->getName());
     }
 
     public function testSkillBaseGetNameGetDescriptionGetVersion(): void
@@ -233,7 +242,6 @@ class SkillsTest extends TestCase
         $skill = new \SignalWire\Skills\Builtin\Datetime($agent);
 
         $envVars = $skill->getRequiredEnvVars();
-        $this->assertIsArray($envVars);
         // Datetime has no required env vars
         $this->assertEmpty($envVars);
     }
@@ -265,12 +273,12 @@ class SkillsTest extends TestCase
 
         $schema = $skill->getParameterSchema();
 
-        $this->assertIsArray($schema);
         $this->assertSame('object', $schema['type']);
         $this->assertArrayHasKey('properties', $schema);
-        $this->assertArrayHasKey('swaig_fields', $schema['properties']);
-        $this->assertArrayHasKey('skip_prompt', $schema['properties']);
-        $this->assertArrayHasKey('tool_name', $schema['properties']);
+        $properties = Shape::sub($schema, 'properties');
+        $this->assertArrayHasKey('swaig_fields', $properties);
+        $this->assertArrayHasKey('skip_prompt', $properties);
+        $this->assertArrayHasKey('tool_name', $properties);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -328,9 +336,7 @@ class SkillsTest extends TestCase
 
     public function testAddSkillAcceptsSkillNameEnumOrString(): void
     {
-        // The backed enum's value is the canonical wire string.
-        $this->assertSame('datetime', SkillName::Datetime->value);
-
+        // The backed enum's value is the canonical wire string 'datetime'.
         // addSkill() via the typed enum loads the identical skill as the bare
         // string; hasSkill()/removeSkill() accept the enum too.
         $agent = $this->makeAgent();
@@ -352,10 +358,10 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        $this->assertSame([], $manager->listSkills());
+        $this->assertSame([], $manager->listLoadedSkills());
 
         $manager->loadSkill('datetime', ['skip_prompt' => true]);
-        $this->assertSame(['datetime'], $manager->listSkills());
+        $this->assertSame(['datetime'], $manager->listLoadedSkills());
     }
 
     public function testSkillManagerHasSkillTrueAndFalse(): void
@@ -448,7 +454,8 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
 
         // Before any skills loaded, listSkills returns empty
-        $this->assertSame([], $agent->listSkills());
+        $before = $agent->listSkills();
+        $this->assertSame([], $before);
 
         $agent->addSkill('datetime', ['skip_prompt' => true]);
         $agent->addSkill('math', ['skip_prompt' => true]);
@@ -480,20 +487,22 @@ class SkillsTest extends TestCase
         // Datetime registers get_current_time and get_current_date tools.
         // These should appear in the SWAIG functions block.
         $aiVerb = null;
-        foreach ($swml['sections']['main'] as $verb) {
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            $verb = Shape::arr($verb);
             if (isset($verb['ai'])) {
-                $aiVerb = $verb['ai'];
+                $aiVerb = Shape::arr($verb['ai']);
                 break;
             }
         }
 
         $this->assertNotNull($aiVerb, 'Expected an ai verb in SWML output');
         $this->assertArrayHasKey('SWAIG', $aiVerb);
-        $this->assertArrayHasKey('functions', $aiVerb['SWAIG']);
+        $swaig = Shape::sub($aiVerb, 'SWAIG');
+        $this->assertArrayHasKey('functions', $swaig);
 
         $functionNames = array_map(
-            fn (array $f) => $f['function'],
-            $aiVerb['SWAIG']['functions'],
+            fn ($f) => Shape::at($f, 'function'),
+            Shape::sub($swaig, 'functions'),
         );
 
         $this->assertContains('get_current_time', $functionNames);
@@ -532,6 +541,7 @@ class SkillsTest extends TestCase
 
         // Bind an ephemeral port.
         $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        $this->assertNotFalse($sock, 'Failed to create socket');
         \socket_bind($sock, '127.0.0.1', 0);
         \socket_getsockname($sock, $addr, $port);
         \socket_close($sock);
@@ -635,6 +645,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
             $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
             $this->assertStringContainsString("Snippet-only results for 'hello'", $body);
             $this->assertStringContainsString('Title: Result One', $body);
@@ -666,6 +677,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
             $this->assertStringStartsWith("PREFIX_HEADER:\n\n", $body);
             $this->assertStringEndsWith("\n\nPOSTFIX_FOOTER.", $body);
             $this->assertStringContainsString('Title: Result One', $body);
@@ -695,6 +707,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
             // Bare response — no prefix / postfix markers anywhere.
             $this->assertStringStartsWith("Snippet-only results for 'hello'", $body);
             $this->assertStringContainsString('Title: Result One', $body);
@@ -766,6 +779,7 @@ class SkillsTest extends TestCase
         \file_put_contents($tmp, $script);
 
         $sock = \socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        $this->assertNotFalse($sock, 'Failed to create socket');
         \socket_bind($sock, '127.0.0.1', 0);
         \socket_getsockname($sock, $addr, $port);
         \socket_close($sock);
@@ -847,6 +861,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Snippet formatter output, carrying the CSE titles + snippets.
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
@@ -888,6 +903,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Snippet fallback fired: non-empty, carries titles + snippets.
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
@@ -937,6 +953,7 @@ class SkillsTest extends TestCase
 
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Every page timed out -> snippet fallback (non-empty).
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
@@ -990,6 +1007,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha beta gamma'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Full scraped-result format, with extracted page content.
             $this->assertStringContainsString('Web search results for "alpha beta gamma"', $body);
@@ -1013,7 +1031,7 @@ class SkillsTest extends TestCase
             'api_key'          => 'fake-key',
             'search_engine_id' => 'fake-cx',
         ]);
-        $props = $skill->getParameterSchema()['properties'];
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
 
         // Every latency / response param the skill reads must be advertised
         // (guards the recurring "read a param but forgot the schema entry"
@@ -1065,6 +1083,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'weather forecast'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             // Default path scraped (not snippets_only) and the page cleared
             // the default quality threshold.
@@ -1102,6 +1121,7 @@ class SkillsTest extends TestCase
             $result = $agent->onFunctionCall('web_search', ['query' => 'alpha'], []);
             $this->assertNotNull($result);
             $body = $result->toArray()['response'];
+            $this->assertIsString($body);
 
             $this->assertStringContainsString("Snippet-only results for 'alpha'", $body);
             $paths = $this->readRequestLog($log);
@@ -1119,13 +1139,27 @@ class SkillsTest extends TestCase
     //  Individual skill instantiation test (1)
     // ══════════════════════════════════════════════════════════════════════
 
-    public function testAll18SkillsCanBeInstantiatedWithAgent(): void
+    public function testAll17SkillsCanBeInstantiatedWithAgent(): void
     {
         $agent = $this->makeAgent();
         $registry = SkillRegistry::instance();
         $skillNames = $registry->listSkills();
 
-        $this->assertCount(18, $skillNames);
+        $this->assertCount(17, $skillNames);
+
+        // A few skills validate their required config in the constructor
+        // (mirroring Python's __init__ which raises ValueError): supply the
+        // minimal valid config so construction succeeds. Others accept an
+        // empty config and validate later in setup().
+        $ctorConfig = [
+            'api_ninjas_trivia'    => ['api_key' => 'x'],
+            'weather_api'          => ['api_key' => 'x'],
+            'play_background_file'  => [
+                'files' => [
+                    ['key' => 'hold', 'url' => 'https://example.com/hold.mp3', 'description' => 'Hold music'],
+                ],
+            ],
+        ];
 
         foreach ($skillNames as $name) {
             $className = $registry->getFactory($name);
@@ -1138,20 +1172,470 @@ class SkillsTest extends TestCase
             );
 
             // Instantiate -- some may require env vars for setup(), but
-            // the constructor itself must not throw.
-            $instance = new $className($agent);
+            // the constructor itself must not throw when given valid config.
+            $instance = new $className($agent, $ctorConfig[$name] ?? []);
             $this->assertInstanceOf(
                 \SignalWire\Skills\SkillBase::class,
                 $instance,
                 "Skill '{$name}' should extend SkillBase",
             );
 
-            // Verify basic accessors work
-            $this->assertIsString($instance->getName());
-            $this->assertIsString($instance->getDescription());
-            $this->assertIsString($instance->getVersion());
-            $this->assertIsArray($instance->getRequiredEnvVars());
-            $this->assertIsBool($instance->supportsMultipleInstances());
+            // Verify basic accessors are callable and non-empty where expected.
+            $this->assertNotSame('', $instance->getName());
+            $this->assertNotSame('', $instance->getVersion());
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Skill-interface method tests (item I: get_parameter_schema /
+    //  get_instance_key / get_hints / get_tools / search_wiki + registry)
+    // ══════════════════════════════════════════════════════════════════════
+
+    public function testTriviaParameterSchemaMergesApiKeyAndCategories(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k']);
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+
+        // base props preserved
+        $this->assertArrayHasKey('swaig_fields', $props);
+        // skill-specific props merged
+        $this->assertArrayHasKey('api_key', $props);
+        $this->assertTrue(Shape::at($props, 'api_key', 'required'));
+        $this->assertTrue(Shape::at($props, 'api_key', 'hidden'));
+        $this->assertSame('API_NINJAS_KEY', Shape::at($props, 'api_key', 'env_var'));
+        $this->assertArrayHasKey('categories', $props);
+        $this->assertSame('array', Shape::at($props, 'categories', 'type'));
+    }
+
+    public function testTriviaGetInstanceKeyDistinctPerToolName(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k']);
+        $b = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'k', 'tool_name' => 'quiz']);
+
+        $this->assertSame('api_ninjas_trivia_get_trivia', $a->getInstanceKey());
+        $this->assertSame('api_ninjas_trivia_quiz', $b->getInstanceKey());
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+    }
+
+    public function testTriviaGetToolsBuildsDataMapWebhook(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, ['api_key' => 'secret']);
+        $tools = $skill->getTools();
+
+        $this->assertCount(1, $tools);
+        $tool = Shape::sub($tools, 0);
+        $this->assertSame('get_trivia', $tool['function']);
+        $this->assertArrayHasKey('data_map', $tool);
+        $this->assertSame(
+            'secret',
+            Shape::at($tool, 'data_map', 'webhooks', 0, 'headers', 'X-Api-Key'),
+        );
+        $this->assertContains('category', Shape::sub($tool, 'argument', 'required'));
+    }
+
+    public function testTriviaConstructorRejectsMissingApiKey(): void
+    {
+        $agent = $this->makeAgent();
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, []);
+    }
+
+    public function testTriviaConstructorRejectsInvalidCategory(): void
+    {
+        $agent = $this->makeAgent();
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\ApiNinjasTrivia($agent, [
+            'api_key'    => 'k',
+            'categories' => ['not_a_real_category'],
+        ]);
+    }
+
+    public function testWeatherGetToolsAndSchemaAndCtor(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\WeatherApi($agent, [
+            'api_key'          => 'wkey',
+            'temperature_unit' => 'celsius',
+        ]);
+
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertArrayHasKey('temperature_unit', $props);
+        $this->assertSame(['fahrenheit', 'celsius'], Shape::at($props, 'temperature_unit', 'enum'));
+
+        $tools = $skill->getTools();
+        $this->assertCount(1, $tools);
+        $tool = Shape::sub($tools, 0);
+        $this->assertSame('get_weather', $tool['function']);
+        // celsius unit selected -> temp_c template used
+        $response = Shape::at($tool, 'data_map', 'webhooks', 0, 'output', 'response');
+        $this->assertIsString($response);
+        $this->assertStringContainsString('temp_c', $response);
+
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\WeatherApi($agent, ['api_key' => 'k', 'temperature_unit' => 'kelvin']);
+    }
+
+    public function testPlayBackgroundFileToolsAndInstanceKeyAndCtor(): void
+    {
+        $agent = $this->makeAgent();
+        $files = [
+            ['key' => 'hold', 'url' => 'https://x/h.mp3', 'description' => 'Hold music'],
+        ];
+        $skill = new \SignalWire\Skills\Builtin\PlayBackgroundFile($agent, ['files' => $files]);
+
+        $this->assertSame('play_background_file_play_background_file', $skill->getInstanceKey());
+
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertArrayHasKey('files', $props);
+        $this->assertTrue(Shape::at($props, 'files', 'required'));
+
+        $tools = $skill->getTools();
+        $this->assertCount(1, $tools);
+        $enum = Shape::sub($tools, 0, 'argument', 'properties', 'action', 'enum');
+        $this->assertContains('start_hold', $enum);
+        $this->assertContains('stop', $enum);
+
+        $this->expectException(\InvalidArgumentException::class);
+        new \SignalWire\Skills\Builtin\PlayBackgroundFile($agent, ['files' => []]);
+    }
+
+    public function testDataSphereInstanceKeyHintsAndSchema(): void
+    {
+        $agent = $this->makeAgent();
+        $cfg = ['space_name' => 's', 'project_id' => 'p', 'token' => 't', 'document_id' => 'd'];
+        $a = new \SignalWire\Skills\Builtin\Datasphere($agent, $cfg);
+        $b = new \SignalWire\Skills\Builtin\Datasphere($agent, $cfg + ['tool_name' => 'kb']);
+
+        $this->assertSame('datasphere_search_knowledge', $a->getInstanceKey());
+        $this->assertSame('datasphere_kb', $b->getInstanceKey());
+        $this->assertSame([], $a->getHints());
+
+        $props = Shape::sub($a->getParameterSchema(), 'properties');
+        foreach (['space_name', 'project_id', 'token', 'document_id', 'count', 'distance'] as $k) {
+            $this->assertArrayHasKey($k, $props, "datasphere schema omits {$k}");
+        }
+    }
+
+    public function testDataSphereServerlessSchemaAndInstanceKey(): void
+    {
+        $agent = $this->makeAgent();
+        $cfg = ['space_name' => 's', 'project_id' => 'p', 'token' => 't', 'document_id' => 'd'];
+        $skill = new \SignalWire\Skills\Builtin\DatasphereServerless($agent, $cfg);
+
+        $this->assertSame('datasphere_serverless_search_knowledge', $skill->getInstanceKey());
+        $this->assertSame([], $skill->getHints());
+        $this->assertArrayHasKey('document_id', Shape::sub($skill->getParameterSchema(), 'properties'));
+    }
+
+    public function testDatetimeAndMathSchemasAreBaseOnly(): void
+    {
+        $agent = $this->makeAgent();
+        $dt = new \SignalWire\Skills\Builtin\Datetime($agent);
+        $math = new \SignalWire\Skills\Builtin\Math($agent);
+
+        // Both inherit only the base schema (no custom props beyond base three).
+        $dtProps = array_keys(Shape::sub($dt->getParameterSchema(), 'properties'));
+        $mathProps = array_keys(Shape::sub($math->getParameterSchema(), 'properties'));
+        sort($dtProps);
+        sort($mathProps);
+        $this->assertSame(['skip_prompt', 'swaig_fields', 'tool_name'], $dtProps);
+        $this->assertSame(['skip_prompt', 'swaig_fields', 'tool_name'], $mathProps);
+
+        $this->assertSame([], $dt->getHints());
+        $this->assertSame([], $math->getHints());
+    }
+
+    public function testJokeSchemaMergesApiKey(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\Joke($agent);
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertArrayHasKey('api_key', $props);
+        $this->assertSame('get_joke', Shape::at($props, 'tool_name', 'default'));
+        $this->assertSame([], $skill->getHints());
+    }
+
+    public function testGoogleMapsSchemaHasApiKeyAndToolNames(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\GoogleMaps($agent, ['api_key' => 'k']);
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertSame('lookup_address', Shape::at($props, 'lookup_tool_name', 'default'));
+        $this->assertSame('compute_route', Shape::at($props, 'route_tool_name', 'default'));
+    }
+
+    public function testInfoGathererInstanceKeyAndSchema(): void
+    {
+        $agent = $this->makeAgent();
+        $questions = [['key_name' => 'name', 'question_text' => 'Your name?']];
+        $plain = new \SignalWire\Skills\Builtin\InfoGatherer($agent, ['questions' => $questions]);
+        $prefixed = new \SignalWire\Skills\Builtin\InfoGatherer($agent, ['questions' => $questions, 'prefix' => 'intake']);
+
+        $this->assertSame('info_gatherer', $plain->getInstanceKey());
+        $this->assertSame('info_gatherer_intake', $prefixed->getInstanceKey());
+        $this->assertArrayHasKey('questions', Shape::sub($plain->getParameterSchema(), 'properties'));
+    }
+
+    public function testClaudeSkillsInstanceKeyDistinctPerPath(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => '/a']);
+        $b = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => '/b']);
+
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+        $this->assertStringStartsWith('claude_skills_', $a->getInstanceKey());
+        $this->assertArrayHasKey('skills_path', Shape::sub($a->getParameterSchema(), 'properties'));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Claude skills load-path validation + SKILL.md discovery + tool register
+    //  Mirrors Python `ClaudeSkillsSkill.setup` / `_discover_skills`
+    //  (skills/claude_skills/skill.py): validate the load path, walk it for
+    //  `<dir>/SKILL.md`, parse frontmatter, and register one SWAIG tool per
+    //  loadable skill.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Create a temporary skills root under sys_get_temp_dir with one valid
+     * skill directory (a `SKILL.md` with frontmatter). Returns the root path.
+     */
+    private function makeSkillsDir(): string
+    {
+        $root = \sys_get_temp_dir() . DIRECTORY_SEPARATOR
+            . 'sw_claude_skills_' . \bin2hex(\random_bytes(6));
+        \mkdir($root . DIRECTORY_SEPARATOR . 'greeter', 0777, true);
+        \file_put_contents(
+            $root . DIRECTORY_SEPARATOR . 'greeter' . DIRECTORY_SEPARATOR . 'SKILL.md',
+            "---\nname: greeter\ndescription: Greet the caller warmly\n---\n\nSay hello to \$ARGUMENTS.\n",
+        );
+        // A companion .md becomes a discovered section.
+        \file_put_contents(
+            $root . DIRECTORY_SEPARATOR . 'greeter' . DIRECTORY_SEPARATOR . 'formal.md',
+            "Use a formal register.\n",
+        );
+        // A directory WITHOUT SKILL.md must be ignored by discovery.
+        \mkdir($root . DIRECTORY_SEPARATOR . 'not_a_skill', 0777, true);
+        \file_put_contents(
+            $root . DIRECTORY_SEPARATOR . 'not_a_skill' . DIRECTORY_SEPARATOR . 'README.md',
+            "not a skill\n",
+        );
+        return $root;
+    }
+
+    private function rmrf(string $path): void
+    {
+        if (!\file_exists($path)) {
+            return;
+        }
+        if (\is_dir($path)) {
+            foreach (\scandir($path) ?: [] as $e) {
+                if ($e === '.' || $e === '..') {
+                    continue;
+                }
+                $this->rmrf($path . DIRECTORY_SEPARATOR . $e);
+            }
+            @\rmdir($path);
+        } else {
+            @\unlink($path);
+        }
+    }
+
+    public function testClaudeSkillsSetupRejectsInvalidLoadPath(): void
+    {
+        $agent = $this->makeAgent();
+
+        // Missing skills_path -> setup fails (load-path validation).
+        $noPath = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, []);
+        $this->assertFalse($noPath->setup(), 'setup accepted a missing skills_path');
+
+        // Non-existent directory -> setup fails.
+        $bogus = \sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sw_no_such_skills_' . \bin2hex(\random_bytes(6));
+        $missing = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => $bogus]);
+        $this->assertFalse($missing->setup(), 'setup accepted a non-existent skills_path');
+
+        // A file (not a directory) -> setup fails.
+        $file = \tempnam(\sys_get_temp_dir(), 'sw_skill_file_');
+        try {
+            $notDir = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, ['skills_path' => $file]);
+            $this->assertFalse($notDir->setup(), 'setup accepted a file as skills_path');
+        } finally {
+            @\unlink($file);
+        }
+    }
+
+    public function testClaudeSkillsDiscoversSkillMdAndRegistersDeclaredTool(): void
+    {
+        $root = $this->makeSkillsDir();
+        try {
+            $agent = $this->makeAgent();
+            $skill = new \SignalWire\Skills\Builtin\ClaudeSkills($agent, [
+                'skills_path' => $root,
+                'skip_prompt' => true,
+            ]);
+
+            // Valid load path -> setup succeeds and discovers the SKILL.md dir.
+            $this->assertTrue($skill->setup(), 'setup failed on a valid skills_path with a SKILL.md');
+
+            // Registering tools must declare one SWAIG tool for the discovered
+            // skill (prefixed 'claude_' by default), reachable in the agent SWML.
+            $skill->registerTools();
+            $swml = $agent->renderSwml();
+
+            $aiVerb = null;
+            foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+                $verb = Shape::arr($verb);
+                if (isset($verb['ai'])) {
+                    $aiVerb = Shape::arr($verb['ai']);
+                    break;
+                }
+            }
+            $this->assertNotNull($aiVerb, 'no ai verb rendered after registering claude skill tools');
+            $swaig = Shape::sub($aiVerb, 'SWAIG');
+            $functionNames = array_map(
+                fn ($f) => Shape::at($f, 'function'),
+                Shape::sub($swaig, 'functions'),
+            );
+            // The declared tool for the 'greeter' SKILL.md must be registered.
+            $this->assertContains('claude_greeter', $functionNames, 'declared tool for discovered SKILL.md not registered');
+
+            // The companion 'formal.md' must be exposed as a selectable section.
+            $greeterFn = null;
+            foreach (Shape::sub($swaig, 'functions') as $fn) {
+                if (Shape::at($fn, 'function') === 'claude_greeter') {
+                    $greeterFn = Shape::arr($fn);
+                    break;
+                }
+            }
+            $this->assertNotNull($greeterFn);
+            // Rendered SWML uses the abbreviated SWAIG form: the arg schema is
+            // under 'argument' (not 'parameters').
+            $sectionEnum = Shape::sub($greeterFn, 'argument', 'properties', 'section', 'enum');
+            $this->assertContains('formal', $sectionEnum, 'companion .md not discovered as a section');
+        } finally {
+            $this->rmrf($root);
+        }
+    }
+
+    public function testNativeVectorSearchInterfaceMethods(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\NativeVectorSearch($agent, ['remote_url' => 'http://x']);
+        $b = new \SignalWire\Skills\Builtin\NativeVectorSearch($agent, ['remote_url' => 'http://x', 'tool_name' => 'kb']);
+
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+        $this->assertStringStartsWith('native_vector_search_', $a->getInstanceKey());
+        $this->assertSame([], $a->getGlobalData());
+        $this->assertSame([], $a->getPromptSections());
+        // cleanup is a no-op; must not throw
+        $a->cleanup();
+
+        $props = Shape::sub($a->getParameterSchema(), 'properties');
+        $this->assertArrayHasKey('remote_url', $props);
+        $this->assertArrayHasKey('exclude_patterns', $props);
+        // exclude_patterns default matches Python's glob set (byte-identical)
+        $this->assertSame(
+            ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
+            Shape::at($props, 'exclude_patterns', 'default'),
+        );
+    }
+
+    public function testSpiderInterfaceMethods(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\Spider($agent, []);
+
+        $this->assertSame('spider_spider', $skill->getInstanceKey());
+        $skill->cleanup(); // no-op, must not throw
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertArrayHasKey('max_depth', $props);
+        $this->assertSame(
+            ['fast_text', 'clean_text', 'full_text', 'html', 'custom'],
+            Shape::at($props, 'extract_type', 'enum'),
+        );
+    }
+
+    public function testSwmlTransferInstanceKeyAndSchema(): void
+    {
+        $agent = $this->makeAgent();
+        $cfg = ['transfers' => ['/sales/' => ['url' => 'https://x/sales']]];
+        $a = new \SignalWire\Skills\Builtin\SwmlTransfer($agent, $cfg);
+        $b = new \SignalWire\Skills\Builtin\SwmlTransfer($agent, $cfg + ['tool_name' => 'route']);
+
+        $this->assertSame('swml_transfer_transfer_call', $a->getInstanceKey());
+        $this->assertSame('swml_transfer_route', $b->getInstanceKey());
+        $this->assertArrayHasKey('transfers', Shape::sub($a->getParameterSchema(), 'properties'));
+    }
+
+    public function testWebSearchInstanceKeyAndHints(): void
+    {
+        $agent = $this->makeAgent();
+        $a = new \SignalWire\Skills\Builtin\WebSearch($agent, ['api_key' => 'k', 'search_engine_id' => 'cx1']);
+        $b = new \SignalWire\Skills\Builtin\WebSearch($agent, ['api_key' => 'k', 'search_engine_id' => 'cx2']);
+
+        $this->assertNotSame($a->getInstanceKey(), $b->getInstanceKey());
+        $this->assertSame('web_search_cx1_web_search', $a->getInstanceKey());
+        $this->assertSame([], $a->getHints());
+    }
+
+    public function testWikipediaSchemaHintsAndSearchWiki(): void
+    {
+        $agent = $this->makeAgent();
+        $skill = new \SignalWire\Skills\Builtin\WikipediaSearch($agent);
+
+        $props = Shape::sub($skill->getParameterSchema(), 'properties');
+        $this->assertArrayHasKey('num_results', $props);
+        $this->assertSame(1, $props['num_results']['default']);
+        $this->assertSame([], $skill->getHints());
+
+        // search_wiki returns a string; empty query short-circuits with an error.
+        $this->assertSame('Error: No search query provided.', $skill->searchWiki('   '));
+    }
+
+    public function testRegistryDiscoverAndGetSkillClassRoundTrip(): void
+    {
+        $registry = SkillRegistry::instance();
+
+        $discovered = $registry->discoverSkills();
+        $this->assertNotEmpty($discovered);
+        $names = array_column($discovered, 'name');
+        $this->assertContains('datetime', $names);
+        $this->assertContains('web_search', $names);
+
+        // Round-trip: every discovered skill resolves to a loadable class.
+        foreach ($names as $name) {
+            $class = $registry->getSkillClass($name);
+            $this->assertNotNull($class, "getSkillClass('{$name}') returned null");
+            $this->assertTrue(class_exists($class));
+            $this->assertTrue(is_subclass_of($class, \SignalWire\Skills\SkillBase::class));
+        }
+
+        // Unknown skill -> null.
+        $this->assertNull($registry->getSkillClass('no_such_skill_xyz'));
+    }
+
+    public function testRegistryListAllSkillSources(): void
+    {
+        $registry = SkillRegistry::instance();
+        $sources = $registry->listAllSkillSources();
+
+        $this->assertContains('datetime', $sources['built-in']);
+
+        // A directly-registered non-builtin appears under 'registered'.
+        $registry->registerSkill('my_custom', 'Some\\Custom\\Class');
+        $sources = $registry->listAllSkillSources();
+        $this->assertContains('my_custom', $sources['registered']);
+        $this->assertNotContains('my_custom', $sources['built-in']);
+    }
+
+    public function testRegistryConstructorIsPublicAndInstanceKeyDistinctForBaseSkills(): void
+    {
+        // Constructor is public (mirrors Python's plain-class registry) while
+        // instance() still returns one shared singleton.
+        $fresh = new SkillRegistry();
+        $this->assertNotSame(SkillRegistry::instance(), $fresh);
+        $this->assertSame(SkillRegistry::instance(), SkillRegistry::instance());
     }
 }

@@ -129,6 +129,20 @@ class ReceptionistAgent extends AgentBase
     }
 
     /**
+     * Process the conversation summary.
+     *
+     * Mirrors Python `ReceptionistAgent.on_summary`: a no-op hook that
+     * subclasses override to handle the end-of-call summary.
+     *
+     * @param array<string,mixed>|string|null $summary
+     * @param array<string,mixed>|null        $rawData
+     */
+    public function onSummary(array|string|null $summary, ?array $rawData = null): void
+    {
+        // Subclasses can override this to handle the summary.
+    }
+
+    /**
      * @return list<array>
      */
     public function getDepartments(): array

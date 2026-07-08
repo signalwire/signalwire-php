@@ -26,7 +26,6 @@ There are 21 namespaces:
 | `$client->fabric()` | Fabric API: AI agents, SWML, subscribers, call flows, etc. |
 | `$client->calling()` | REST call control commands |
 | `$client->phoneNumbers()` | Phone number search, purchase, manage |
-| `$client->compat()` | Twilio-compatible LAML API |
 | `$client->video()` | Video rooms, sessions, conferences, streams |
 | `$client->datasphere()` | Document upload and semantic search |
 | `$client->registry()` | 10DLC brands, campaigns, orders, numbers |

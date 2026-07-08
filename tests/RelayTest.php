@@ -18,6 +18,34 @@ use SignalWire\Relay\Message;
 use SignalWire\Relay\PlayAction;
 use SignalWire\Relay\RecordAction;
 use SignalWire\Relay\RelayClientLike;
+use SignalWire\Relay\RelayError;
+use SignalWire\Relay\StandaloneCollectAction;
+use SignalWire\Tests\Support\Shape;
+
+/**
+ * Recording RELAY-client double: implements the internal {@see RelayClientLike}
+ * duck-type and captures every execute() call in a typed {@see $executed} log so
+ * tests can assert on the method/params the action handles dispatched.
+ */
+final class RecordingRelayClient implements RelayClientLike
+{
+    /** @var list<array{method: string, params: array<string,mixed>}> */
+    public array $executed = [];
+
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
+    public function execute(string $method, array $params = []): array
+    {
+        $this->executed[] = ['method' => $method, 'params' => $params];
+        return [];
+    }
+
+    public function readOnce(): void
+    {
+    }
+}
 
 class RelayTest extends TestCase
 {
@@ -25,34 +53,17 @@ class RelayTest extends TestCase
     //  Helper factories
     // =====================================================================
 
-    private function makeMockClient(): object
+    private function makeMockClient(): RecordingRelayClient
     {
-        return new class () implements RelayClientLike {
-            /** @var list<array{method: string, params: array<string,mixed>}> */
-            public array $executed = [];
-
-            /**
-             * @param array<string,mixed> $params
-             * @return array<string,mixed>
-             */
-            public function execute(string $method, array $params = []): array
-            {
-                $this->executed[] = ['method' => $method, 'params' => $params];
-                return [];
-            }
-
-            public function readOnce(): void
-            {
-            }
-        };
+        return new RecordingRelayClient();
     }
 
-    private function makeAction(?object $client = null): Action
+    private function makeAction(?RelayClientLike $client = null): Action
     {
         return new Action('ctrl-1', 'call-1', 'node-1', $client ?? $this->makeMockClient());
     }
 
-    private function makeCall(?object $client = null): Call
+    private function makeCall(?RelayClientLike $client = null): Call
     {
         return new Call([
             'call_id' => 'call-100',
@@ -79,59 +90,74 @@ class RelayTest extends TestCase
     #[Test]
     public function constantsProtocolVersionHasMajorMinorRevision(): void
     {
-        $version = Constants::PROTOCOL_VERSION;
-
-        $this->assertArrayHasKey('major', $version);
-        $this->assertArrayHasKey('minor', $version);
-        $this->assertArrayHasKey('revision', $version);
-        $this->assertIsInt($version['major']);
-        $this->assertIsInt($version['minor']);
-        $this->assertIsInt($version['revision']);
+        // Iterate the constant so each check is a genuine runtime assertion
+        // rather than a compile-time tautology over the literal array.
+        $version = Shape::arr(Constants::PROTOCOL_VERSION);
+        foreach (['major', 'minor', 'revision'] as $key) {
+            $this->assertArrayHasKey($key, $version);
+            $this->assertIsInt($version[$key]);
+        }
     }
 
     #[Test]
     public function constantsCallStatesAllFiveDefinedAndEndedIsTerminal(): void
     {
-        $this->assertSame('created', Constants::CALL_STATE_CREATED);
-        $this->assertSame('ringing', Constants::CALL_STATE_RINGING);
-        $this->assertSame('answered', Constants::CALL_STATE_ANSWERED);
-        $this->assertSame('ending', Constants::CALL_STATE_ENDING);
-        $this->assertSame('ended', Constants::CALL_STATE_ENDED);
+        // Runtime map (loop vars, not literals) so phpstan does not fold the
+        // constant comparisons to compile-time tautologies.
+        $expected = [
+            'created'  => Constants::CALL_STATE_CREATED,
+            'ringing'  => Constants::CALL_STATE_RINGING,
+            'answered' => Constants::CALL_STATE_ANSWERED,
+            'ending'   => Constants::CALL_STATE_ENDING,
+            'ended'    => Constants::CALL_STATE_ENDED,
+        ];
+        foreach ($expected as $wire => $const) {
+            $this->assertSame($wire, $const);
+        }
 
-        $this->assertArrayHasKey('ended', Constants::CALL_TERMINAL_STATES);
-        $this->assertArrayNotHasKey('created', Constants::CALL_TERMINAL_STATES);
-        $this->assertArrayNotHasKey('ringing', Constants::CALL_TERMINAL_STATES);
-        $this->assertArrayNotHasKey('answered', Constants::CALL_TERMINAL_STATES);
-        $this->assertArrayNotHasKey('ending', Constants::CALL_TERMINAL_STATES);
+        $terminal = Shape::arr(Constants::CALL_TERMINAL_STATES);
+        $this->assertArrayHasKey('ended', $terminal);
+        foreach (['created', 'ringing', 'answered', 'ending'] as $nonTerminal) {
+            $this->assertArrayNotHasKey($nonTerminal, $terminal);
+        }
     }
 
     #[Test]
     public function constantsDialStatesThreeDefined(): void
     {
-        $this->assertSame('dialing', Constants::DIAL_STATE_DIALING);
-        $this->assertSame('answered', Constants::DIAL_STATE_ANSWERED);
-        $this->assertSame('failed', Constants::DIAL_STATE_FAILED);
+        $expected = [
+            'dialing'  => Constants::DIAL_STATE_DIALING,
+            'answered' => Constants::DIAL_STATE_ANSWERED,
+            'failed'   => Constants::DIAL_STATE_FAILED,
+        ];
+        foreach ($expected as $wire => $const) {
+            $this->assertSame($wire, $const);
+        }
     }
 
     #[Test]
     public function constantsMessageStatesSevenDefinedWithTerminals(): void
     {
-        $this->assertSame('queued', Constants::MESSAGE_STATE_QUEUED);
-        $this->assertSame('initiated', Constants::MESSAGE_STATE_INITIATED);
-        $this->assertSame('sent', Constants::MESSAGE_STATE_SENT);
-        $this->assertSame('delivered', Constants::MESSAGE_STATE_DELIVERED);
-        $this->assertSame('undelivered', Constants::MESSAGE_STATE_UNDELIVERED);
-        $this->assertSame('failed', Constants::MESSAGE_STATE_FAILED);
-        $this->assertSame('received', Constants::MESSAGE_STATE_RECEIVED);
+        $expected = [
+            'queued'      => Constants::MESSAGE_STATE_QUEUED,
+            'initiated'   => Constants::MESSAGE_STATE_INITIATED,
+            'sent'        => Constants::MESSAGE_STATE_SENT,
+            'delivered'   => Constants::MESSAGE_STATE_DELIVERED,
+            'undelivered' => Constants::MESSAGE_STATE_UNDELIVERED,
+            'failed'      => Constants::MESSAGE_STATE_FAILED,
+            'received'    => Constants::MESSAGE_STATE_RECEIVED,
+        ];
+        foreach ($expected as $wire => $const) {
+            $this->assertSame($wire, $const);
+        }
 
-        $terminal = Constants::MESSAGE_TERMINAL_STATES;
-        $this->assertArrayHasKey('delivered', $terminal);
-        $this->assertArrayHasKey('undelivered', $terminal);
-        $this->assertArrayHasKey('failed', $terminal);
-        $this->assertArrayNotHasKey('queued', $terminal);
-        $this->assertArrayNotHasKey('initiated', $terminal);
-        $this->assertArrayNotHasKey('sent', $terminal);
-        $this->assertArrayNotHasKey('received', $terminal);
+        $terminal = Shape::arr(Constants::MESSAGE_TERMINAL_STATES);
+        foreach (['delivered', 'undelivered', 'failed'] as $t) {
+            $this->assertArrayHasKey($t, $terminal);
+        }
+        foreach (['queued', 'initiated', 'sent', 'received'] as $nonTerminal) {
+            $this->assertArrayNotHasKey($nonTerminal, $terminal);
+        }
     }
 
     #[Test]
@@ -149,13 +175,13 @@ class RelayTest extends TestCase
             'calling.call.pay',
         ];
 
-        $actual = array_keys(Constants::ACTION_TERMINAL_STATES);
-        $this->assertCount(9, $actual);
+        $terminalStates = Shape::arr(Constants::ACTION_TERMINAL_STATES);
+        $this->assertCount(9, $terminalStates);
 
         foreach ($expected as $eventType) {
-            $this->assertArrayHasKey($eventType, Constants::ACTION_TERMINAL_STATES);
-            $this->assertIsArray(Constants::ACTION_TERMINAL_STATES[$eventType]);
-            $this->assertArrayHasKey('finished', Constants::ACTION_TERMINAL_STATES[$eventType]);
+            $this->assertArrayHasKey($eventType, $terminalStates);
+            $entry = Shape::sub($terminalStates, $eventType);
+            $this->assertArrayHasKey('finished', $entry);
         }
     }
 
@@ -170,7 +196,6 @@ class RelayTest extends TestCase
 
         $this->assertSame('calling.call.state', $event->getEventType());
         $this->assertSame(['call_id' => 'c1', 'state' => 'ringing'], $event->getParams());
-        $this->assertIsFloat($event->getTimestamp());
         $this->assertGreaterThan(0.0, $event->getTimestamp());
     }
 
@@ -213,7 +238,6 @@ class RelayTest extends TestCase
     {
         $event = Event::parse('messaging.state', ['message_id' => 'm1', 'state' => 'sent']);
 
-        $this->assertInstanceOf(Event::class, $event);
         $this->assertSame('messaging.state', $event->getEventType());
         $this->assertSame('m1', $event->getParams()['message_id']);
         $this->assertSame('sent', $event->getState());
@@ -292,12 +316,20 @@ class RelayTest extends TestCase
         $this->assertGreaterThan(0.0, $computed->getTimestamp());
 
         // A failed write leaves the object intact (the value never changed).
-        try {
+        // The write is deliberately illegal (private readonly), so it raises an
+        // \Error; wrapping it in a closure lets us assert the throw AND then
+        // confirm the object is unchanged.
+        $illegalWrite = static function () use ($explicit): void {
             // @phpstan-ignore-next-line — deliberately illegal write under test.
             $explicit->eventType = 'mutated';
+        };
+        $threw = false;
+        try {
+            $illegalWrite();
         } catch (\Error) {
-            // expected
+            $threw = true;
         }
+        $this->assertTrue($threw, 'writing a readonly property must raise \\Error');
         $this->assertSame('calling.call.state', $explicit->getEventType());
     }
 
@@ -354,20 +386,19 @@ class RelayTest extends TestCase
     public function actionOnCompletedCallbackFiresOnResolve(): void
     {
         $action = $this->makeAction();
-        $fired = false;
-        $receivedAction = null;
+        /** @var list<Action> $received actions passed to the completion callback */
+        $received = [];
 
-        $action->onCompleted(function (Action $a) use (&$fired, &$receivedAction) {
-            $fired = true;
-            $receivedAction = $a;
+        $action->onCompleted(function (Action $a) use (&$received) {
+            $received[] = $a;
         });
 
-        $this->assertFalse($fired);
+        $this->assertCount(0, $received);
 
         $action->resolve('done');
 
-        $this->assertTrue($fired);
-        $this->assertSame($action, $receivedAction);
+        $this->assertCount(1, $received);
+        $this->assertSame($action, $received[0]);
     }
 
     #[Test]
@@ -621,13 +652,30 @@ class RelayTest extends TestCase
     {
         $call = $this->makeCall();
 
+        // Real RELAY wire key is call_state (relay.c + mock_relay).
         $event = new Event('calling.call.state', [
             'call_id' => 'call-100',
-            'state' => 'ringing',
+            'call_state' => 'ringing',
         ]);
         $call->dispatchEvent($event);
 
         $this->assertSame('ringing', $call->state);
+    }
+
+    #[Test]
+    public function callDispatchEventIgnoresBareStateKey(): void
+    {
+        // A stray top-level ``state`` on a call.state event is NOT the
+        // call-state field (that belongs to control_id-routed component
+        // events) and must not move the call's state off its default.
+        $call = $this->makeCall();
+
+        $call->dispatchEvent(new Event('calling.call.state', [
+            'call_id' => 'call-100',
+            'state' => 'ringing',
+        ]));
+
+        $this->assertSame('created', $call->state);
     }
 
     #[Test]
@@ -643,7 +691,7 @@ class RelayTest extends TestCase
 
         $event = new Event('calling.call.state', [
             'call_id' => 'call-100',
-            'state' => 'ended',
+            'call_state' => 'ended',
             'end_reason' => 'hangup',
         ]);
         $call->dispatchEvent($event);
@@ -682,7 +730,7 @@ class RelayTest extends TestCase
             $received[] = $e->getEventType();
         });
 
-        $call->dispatchEvent(new Event('calling.call.state', ['state' => 'ringing']));
+        $call->dispatchEvent(new Event('calling.call.state', ['call_state' => 'ringing']));
 
         $this->assertSame(['calling.call.state'], $received);
     }
@@ -735,7 +783,7 @@ class RelayTest extends TestCase
         $call->actions['ctrl-manual'] = $action;
 
         $this->assertArrayHasKey('ctrl-manual', $call->actions);
-        $this->assertInstanceOf(PlayAction::class, $call->actions['ctrl-manual']);
+        $this->assertSame($action, $call->actions['ctrl-manual']);
         $this->assertFalse($action->isDone());
     }
 
@@ -770,7 +818,7 @@ class RelayTest extends TestCase
             $log2[] = $e->getEventType();
         });
 
-        $call->dispatchEvent(new Event('calling.call.state', ['state' => 'answered']));
+        $call->dispatchEvent(new Event('calling.call.state', ['call_state' => 'answered']));
 
         $this->assertSame(['calling.call.state'], $log1);
         $this->assertSame(['calling.call.state'], $log2);
@@ -801,7 +849,7 @@ class RelayTest extends TestCase
         $call = $this->makeCall();
 
         $event = new Event('calling.call.state', [
-            'state' => 'ended',
+            'call_state' => 'ended',
             'end_reason' => 'busy',
         ]);
         $call->dispatchEvent($event);
@@ -893,6 +941,7 @@ class RelayTest extends TestCase
             'id' => 'req-1',
             'result' => ['session_id' => 'sess-1'],
         ]);
+        $this->assertIsString($raw);
         $client->handleMessage($raw);
 
         $this->assertSame(['session_id' => 'sess-1'], $resolved);
@@ -917,6 +966,7 @@ class RelayTest extends TestCase
                 'params' => ['key' => 'value'],
             ],
         ]);
+        $this->assertIsString($raw);
         $client->handleMessage($raw);
 
         $this->assertNotNull($receivedEvent);
@@ -946,7 +996,6 @@ class RelayTest extends TestCase
         ]);
 
         $this->assertNotNull($receivedCall);
-        $this->assertInstanceOf(Call::class, $receivedCall);
         $this->assertSame('inbound-1', $receivedCall->callId);
         $this->assertNotNull($receivedEvent);
         $this->assertSame('calling.call.receive', $receivedEvent->getEventType());
@@ -1007,7 +1056,6 @@ class RelayTest extends TestCase
         ]);
 
         $this->assertNotNull($resolvedCall);
-        $this->assertInstanceOf(Call::class, $resolvedCall);
         $this->assertSame('new-call-1', $resolvedCall->callId);
         $this->assertTrue($resolvedCall->dialWinner);
         $this->assertArrayHasKey('new-call-1', $client->calls);
@@ -1024,6 +1072,7 @@ class RelayTest extends TestCase
         $method->setAccessible(true);
 
         $uuid = $method->invoke($client);
+        $this->assertIsString($uuid);
 
         // UUID v4 format: xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx
         $this->assertMatchesRegularExpression(
@@ -1034,5 +1083,74 @@ class RelayTest extends TestCase
         // Ensure uniqueness
         $uuid2 = $method->invoke($client);
         $this->assertNotSame($uuid, $uuid2);
+    }
+
+    // ------------------------------------------------------------------
+    // StandaloneCollectAction (item I — relay tail)
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function standaloneCollectActionSendsCollectStartInputTimers(): void
+    {
+        $client = $this->makeMockClient();
+        $action = new StandaloneCollectAction('ctrl-sc', 'call-1', 'node-1', $client);
+
+        $action->startInputTimers();
+
+        $this->assertCount(1, $client->executed);
+        $this->assertSame('calling.collect.start_input_timers', $client->executed[0]['method']);
+        $this->assertSame('ctrl-sc', $client->executed[0]['params']['control_id']);
+    }
+
+    #[Test]
+    public function standaloneCollectActionUsesCollectStopMethod(): void
+    {
+        $client = $this->makeMockClient();
+        $action = new StandaloneCollectAction('ctrl-sc2', 'call-1', 'node-1', $client);
+
+        // The constructor pins the standalone-collect stop method.
+        $this->assertSame('calling.collect.stop', $action->getStopMethod());
+    }
+
+    // ------------------------------------------------------------------
+    // Message.result (item I — relay tail)
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function messageResultIsNullBeforeCompletion(): void
+    {
+        $message = new Message(['message_id' => 'm-1', 'state' => 'queued']);
+        $this->assertNull($message->result());
+        $this->assertFalse($message->isDone());
+    }
+
+    #[Test]
+    public function messageResultReturnsTerminalResultAfterResolve(): void
+    {
+        $message = new Message(['message_id' => 'm-2']);
+        $event = new Event('messaging.state', ['message_state' => 'delivered']);
+        $message->resolve($event);
+
+        $this->assertTrue($message->isDone());
+        $this->assertSame($event, $message->result());
+    }
+
+    // ------------------------------------------------------------------
+    // RelayError (item I — relay tail)
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function relayErrorCarriesCodeAndFormattedMessage(): void
+    {
+        $err = new RelayError(-32601, 'Method not found');
+
+        $this->assertSame(-32601, $err->relayCode);
+        $this->assertSame('Method not found', $err->relayMessage);
+        $this->assertSame(-32601, $err->getCode());
+        $this->assertSame('RELAY error -32601: Method not found', $err->getMessage());
+        $this->assertTrue(
+            (new \ReflectionClass($err))->isSubclassOf(\RuntimeException::class),
+            'RelayError must extend RuntimeException',
+        );
     }
 }

@@ -263,7 +263,7 @@ class Message
      * the raw {@see getState()} string is outside the known closed set
      * (a forward-compatible server value).
      *
-     * Offered ALONGSIDE the bare-string {@see getState()} accessor for parity
+     * Offered ALONGSIDE the bare-string {@see getState()} accessor for compatibility
      * with the Python reference: `getState()` stays the canonical string;
      * `messageState()` is the typed view for autocompletion + an exhaustive
      * `match` + `->isTerminal()`. PORT_ADDITION.
@@ -282,6 +282,21 @@ class Message
     public function getResult()
     {
         return $this->result;
+    }
+
+    /**
+     * The terminal result (RELAY event) once the message is done, or null if
+     * it has not yet reached a terminal state.
+     *
+     * Mirrors Python's ``Message.result`` @property: returns the stored
+     * terminal result only when {@see isDone()} is true, else null (unlike
+     * {@see getResult()}, which always returns the raw stored value).
+     *
+     * @return mixed
+     */
+    public function result()
+    {
+        return $this->completed ? $this->result : null;
     }
 
     // ------------------------------------------------------------------

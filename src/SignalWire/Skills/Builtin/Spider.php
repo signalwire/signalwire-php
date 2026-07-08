@@ -28,6 +28,22 @@ class Spider extends SkillBase
 {
     private const BASE_URL_ENV = 'SPIDER_BASE_URL';
 
+    /**
+     * Initialize the spider skill with configuration parameters.
+     *
+     * Mirrors Python `SpiderSkill.__init__` (skill.py:151): the base
+     * constructor stores agent + params; the spider reads its performance /
+     * crawl / content settings on demand from `$this->params`, so there is no
+     * eager field-extraction or validation here (Python's `__init__` sets
+     * defaults but does not raise — the corpus constructs it with `{}`).
+     *
+     * @param array<string,mixed> $params
+     */
+    public function __construct(\SignalWire\Agent\AgentInterface $agent, array $params = [])
+    {
+        parent::__construct($agent, $params);
+    }
+
     public function getName(): string
     {
         return 'spider';
@@ -41,6 +57,145 @@ class Spider extends SkillBase
     public function supportsMultipleInstances(): bool
     {
         return true;
+    }
+
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `SpiderSkill.get_instance_key` (skill.py:201): the tool
+     * name (default 'spider') differentiates instances.
+     */
+    public function getInstanceKey(): string
+    {
+        return 'spider_' . $this->getToolName('spider');
+    }
+
+    /**
+     * Release resources when the skill is unloaded.
+     *
+     * Mirrors Python `SpiderSkill.cleanup` (skill.py:669), which closes the
+     * requests session and clears the response cache. The PHP skill issues
+     * stateless HTTP calls with no persistent session or cache, so cleanup is
+     * a no-op.
+     */
+    public function cleanup(): void
+    {
+    }
+
+    /**
+     * Parameter schema for the Spider skill.
+     *
+     * Mirrors Python `SpiderSkill.get_parameter_schema` (skill.py:43):
+     * advertises every crawl / content / feature parameter.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'delay' => [
+                'type' => 'number',
+                'description' => 'Delay between requests in seconds',
+                'default' => 0.1,
+                'required' => false,
+                'minimum' => 0.0,
+            ],
+            'concurrent_requests' => [
+                'type' => 'integer',
+                'description' => 'Number of concurrent requests allowed',
+                'default' => 5,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 20,
+            ],
+            'timeout' => [
+                'type' => 'integer',
+                'description' => 'Request timeout in seconds',
+                'default' => 5,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 60,
+            ],
+            'max_pages' => [
+                'type' => 'integer',
+                'description' => 'Maximum number of pages to scrape',
+                'default' => 1,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 100,
+            ],
+            'max_depth' => [
+                'type' => 'integer',
+                'description' => 'Maximum crawl depth (0 = single page only)',
+                'default' => 0,
+                'required' => false,
+                'minimum' => 0,
+                'maximum' => 5,
+            ],
+            'extract_type' => [
+                'type' => 'string',
+                'description' => 'Content extraction method',
+                'default' => 'fast_text',
+                'required' => false,
+                'enum' => ['fast_text', 'clean_text', 'full_text', 'html', 'custom'],
+            ],
+            'max_text_length' => [
+                'type' => 'integer',
+                'description' => 'Maximum text length to return',
+                'default' => 10000,
+                'required' => false,
+                'minimum' => 100,
+                'maximum' => 100000,
+            ],
+            'clean_text' => [
+                'type' => 'boolean',
+                'description' => 'Whether to clean extracted text',
+                'default' => true,
+                'required' => false,
+            ],
+            'selectors' => [
+                'type' => 'object',
+                'description' => 'Custom CSS/XPath selectors for extraction',
+                'default' => [],
+                'required' => false,
+                'additionalProperties' => ['type' => 'string'],
+            ],
+            'follow_patterns' => [
+                'type' => 'array',
+                'description' => 'URL patterns to follow when crawling',
+                'default' => [],
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'user_agent' => [
+                'type' => 'string',
+                'description' => 'User agent string for requests',
+                'default' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'required' => false,
+            ],
+            'headers' => [
+                'type' => 'object',
+                'description' => 'Additional HTTP headers',
+                'default' => [],
+                'required' => false,
+                'additionalProperties' => ['type' => 'string'],
+            ],
+            'follow_robots_txt' => [
+                'type' => 'boolean',
+                'description' => 'Whether to respect robots.txt',
+                'default' => true,
+                'required' => false,
+            ],
+            'cache_enabled' => [
+                'type' => 'boolean',
+                'description' => 'Whether to cache scraped pages',
+                'default' => true,
+                'required' => false,
+            ],
+        ]);
+        return $schema;
     }
 
     public function setup(): bool

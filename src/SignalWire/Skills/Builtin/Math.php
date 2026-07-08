@@ -24,6 +24,31 @@ class Math extends SkillBase
         return true;
     }
 
+    /**
+     * Speech-recognition hints for this skill.
+     *
+     * Mirrors Python `MathSkill.get_hints` (skill.py:116): no hints provided.
+     *
+     * @return list<string>
+     */
+    public function getHints(): array
+    {
+        return [];
+    }
+
+    /**
+     * Parameter schema for the math skill.
+     *
+     * Mirrors Python `MathSkill.get_parameter_schema` (skill.py:140): the math
+     * skill has no custom parameters and inherits only the base schema.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        return parent::getParameterSchema();
+    }
+
     public function registerTools(): void
     {
         $this->defineTool(

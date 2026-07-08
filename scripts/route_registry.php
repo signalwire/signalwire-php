@@ -372,8 +372,13 @@ final class RouteRegistry
     }
 
     /**
-     * Build sentinel arguments for a route method: required `string` → "{id}",
-     * required `array` → []. Optional / variadic params get nothing.
+     * Build sentinel arguments for a route method, matching each required
+     * param's declared type: `string`/untyped → "{id}", `array` → [],
+     * `int` → 0, `float` → 0.0, `bool` → false. Optional / variadic params get
+     * nothing. Scalar-typed required params exist because the generated methods
+     * now carry typed named params (e.g. `int $ttl`, `float $volume`); passing
+     * the string path sentinel to them would raise a TypeError and drop the
+     * route from Set B.
      *
      * @return array<int,mixed>
      */
@@ -385,11 +390,24 @@ final class RouteRegistry
                 continue;
             }
             $t = $p->getType();
-            if ($t instanceof ReflectionNamedType && $t->getName() === 'array') {
-                $args[] = [];
-            } else {
-                // string (resource id / sid) and everything else → the path sentinel.
-                $args[] = SENTINEL;
+            $name = ($t instanceof ReflectionNamedType) ? $t->getName() : '';
+            switch ($name) {
+                case 'array':
+                    $args[] = [];
+                    break;
+                case 'int':
+                    $args[] = 0;
+                    break;
+                case 'float':
+                    $args[] = 0.0;
+                    break;
+                case 'bool':
+                    $args[] = false;
+                    break;
+                default:
+                    // string (resource id / sid) and everything else → the path sentinel.
+                    $args[] = SENTINEL;
+                    break;
             }
         }
         return $args;

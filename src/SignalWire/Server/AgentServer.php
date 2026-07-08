@@ -98,6 +98,34 @@ class AgentServer
     }
 
     /**
+     * Register a routing callback across all registered agents.
+     *
+     * Mirrors Python `AgentServer.register_global_routing_callback(callback_fn,
+     * path)`: normalizes the path and installs the callback on every agent at
+     * that path, so unified routing logic applies uniformly. New agents
+     * registered after this call are not retroactively updated (matching the
+     * reference, which iterates the current agent set).
+     *
+     * @param callable $callbackFn fn(array $requestData, array $headers): ?string
+     * @param string   $path       Path to register the callback at.
+     */
+    public function registerGlobalRoutingCallback(callable $callbackFn, string $path): void
+    {
+        // Normalize the path (leading slash, no trailing slash).
+        if (!str_starts_with($path, '/')) {
+            $path = "/{$path}";
+        }
+        $path = rtrim($path, '/');
+
+        foreach ($this->agents as $agent) {
+            // Service::registerRoutingCallback takes (path, callback).
+            $agent->registerRoutingCallback($path, $callbackFn);
+        }
+
+        $this->logger->info("Registered global routing callback at {$path} on all agents");
+    }
+
+    /**
      * Unregister an agent from a route.
      */
     public function unregister(string $route): self
@@ -193,7 +221,9 @@ class AgentServer
     public function registerSipUsername(string $username, string $route): self
     {
         $route = $this->normalizeRoute($route);
-        $this->sipUsernameMapping[$username] = $route;
+        // Python parity: the mapping is keyed by the lowercased username (store
+        // AND lookup case-fold), so "Bob" and "bob" resolve to the same route.
+        $this->sipUsernameMapping[strtolower($username)] = $route;
         return $this;
     }
 
@@ -307,6 +337,73 @@ class AgentServer
     }
 
     /**
+     * Dispatch the current PHP request (cli-server / php-fpm / mod_php) to
+     * this server's {@see self::handleRequest()} and write the response.
+     *
+     * Mirrors {@see \SignalWire\SWML\Service::dispatchFromGlobals()}: the
+     * plaintext `php -S` router re-invokes the entry script under the
+     * cli-server SAPI, which rebuilds this AgentServer and calls run(); the
+     * cli-server branch of serve() then routes through here so the multi-agent
+     * routing (including the served /sip → routing-callback → 307 path) is
+     * actually reachable over the socket, not just via handleRequest() in
+     * process.
+     */
+    private function dispatchFromGlobals(): void
+    {
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $method = is_string($method) ? $method : 'GET';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
+
+        // Reconstruct headers from $_SERVER (works in every SAPI).
+        $headers = [];
+        foreach ($_SERVER as $k => $v) {
+            if (is_string($k) && str_starts_with($k, 'HTTP_') && is_string($v)) {
+                $name = ucwords(strtolower(str_replace('_', '-', substr($k, 5))), '-');
+                $headers[$name] = $v;
+            }
+        }
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? null;
+        if (is_string($contentType)) {
+            $headers['Content-Type'] = $contentType;
+        }
+        $contentLength = $_SERVER['CONTENT_LENGTH'] ?? null;
+        if (is_string($contentLength)) {
+            $headers['Content-Length'] = $contentLength;
+        }
+        // Recover the Authorization header the cli-server SAPI strips for CGI
+        // safety (same recovery as Service::dispatchFromGlobals).
+        if (!isset($headers['Authorization'])) {
+            $authVal = $_SERVER['HTTP_AUTHORIZATION']
+                ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+                ?? null;
+            if (is_string($authVal) && $authVal !== '') {
+                $headers['Authorization'] = $authVal;
+            } elseif (is_string($_SERVER['PHP_AUTH_USER'] ?? null)) {
+                $user = $_SERVER['PHP_AUTH_USER'];
+                $pwRaw = $_SERVER['PHP_AUTH_PW'] ?? '';
+                $pw = is_string($pwRaw) ? $pwRaw : '';
+                $headers['Authorization'] = 'Basic ' . base64_encode($user . ':' . $pw);
+            }
+        }
+
+        $body = file_get_contents('php://input');
+        if ($body === false || $body === '') {
+            $body = null;
+        }
+
+        [$status, $respHeaders, $respBody] = $this->handleRequest($method, $path, $headers, $body);
+
+        if (!headers_sent()) {
+            http_response_code($status);
+            foreach ($respHeaders as $k => $v) {
+                header("{$k}: {$v}", true);
+            }
+        }
+        echo $respBody;
+    }
+
+    /**
      * Start the server (blocking).
      *
      * Mirrors Python's AgentServer SSL handling: when ``SWML_SSL_ENABLED`` is
@@ -317,6 +414,15 @@ class AgentServer
      */
     public function serve(): void
     {
+        // Under the cli-server SAPI we are already inside a `php -S` worker
+        // that re-invoked the entry script (which rebuilt this server and
+        // called run()). Dispatch the inbound request and emit the response
+        // directly instead of re-spawning — mirrors Service::serve().
+        if (PHP_SAPI === 'cli-server') {
+            $this->dispatchFromGlobals();
+            return;
+        }
+
         $this->logger->info("AgentServer starting on {$this->host}:{$this->port}");
 
         foreach ($this->getAgents() as $route) {
@@ -331,9 +437,64 @@ class AgentServer
         }
 
         $addr = "{$this->host}:{$this->port}";
-        $router = $this->createRouterScript();
-        $cmd = sprintf('php -S %s %s', escapeshellarg($addr), escapeshellarg($router));
+        // The router IS the original entry script the user ran: when `php -S`
+        // re-invokes it per request, the builder reconstructs the server and
+        // calls run(), which this time takes the cli-server branch above and
+        // dispatches through handleRequest(). A generated empty router would
+        // never reach the registered agents (the previous stub behaviour).
+        $entry = $this->resolveEntryScript();
+        $cmd = sprintf(
+            '%s -S %s %s',
+            escapeshellcmd(PHP_BINARY),
+            escapeshellarg($addr),
+            escapeshellarg($entry),
+        );
         passthru($cmd);
+    }
+
+    /**
+     * Resolve the path of the original entry script that constructed this
+     * server, so `php -S` can re-invoke it as the router. Mirrors
+     * {@see \SignalWire\SWML\Service::resolveEntryScript()}.
+     */
+    private function resolveEntryScript(): string
+    {
+        $env = getenv('SWML_SERVICE_ENTRY');
+        if (is_string($env) && $env !== '' && file_exists($env)) {
+            return realpath($env) ?: $env;
+        }
+        $script = $_SERVER['SCRIPT_FILENAME'] ?? null;
+        if (is_string($script) && $script !== '' && file_exists($script)) {
+            return realpath($script) ?: $script;
+        }
+        $argv = $_SERVER['argv'] ?? null;
+        $argv0 = is_array($argv) ? ($argv[0] ?? null) : null;
+        if (is_string($argv0) && $argv0 !== '') {
+            $abs = realpath($argv0);
+            if ($abs !== false && file_exists($abs)) {
+                return $abs;
+            }
+        }
+        $sdkDir = realpath(__DIR__ . '/../..');
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
+            $file = $frame['file'] ?? null;
+            if (!is_string($file) || $file === '') {
+                continue;
+            }
+            $abs = realpath($file);
+            if ($abs === false) {
+                continue;
+            }
+            if ($sdkDir !== false && str_starts_with($abs, $sdkDir)) {
+                continue;
+            }
+            return $abs;
+        }
+        throw new \RuntimeException(
+            'Could not locate the entry script for AgentServer::serve(). '
+            . 'Set the SWML_SERVICE_ENTRY env var to the entry path or '
+            . 'invoke the script via `php <your-server>.php`.'
+        );
     }
 
     /**
@@ -650,18 +811,4 @@ class AgentServer
         ];
     }
 
-    /**
-     * Create a temporary PHP router script for the built-in server.
-     */
-    private function createRouterScript(): string
-    {
-        $tmp = tempnam(sys_get_temp_dir(), 'sw_server_');
-        file_put_contents($tmp, <<<'PHP'
-        <?php
-        // Auto-generated router script for AgentServer
-        // Delegates all requests to the AgentServer
-        PHP);
-
-        return $tmp;
-    }
 }

@@ -335,76 +335,98 @@ class DataMap
     // ── Static Helpers ──────────────────────────────────────────────────
 
     /**
-     * Build a complete SWAIG function definition with a single webhook.
+     * Create a simple API tool with minimal configuration.
      *
-     * @param array<array{name: string, type: string, description: string, required?: bool, enum?: array<string>}> $parameters
-     * @param array<string, string> $headers
-     * @return array<string, mixed>
+     * Mirrors Python's module-level `create_simple_api_tool(name, url,
+     * response_template, parameters=None, method="GET", headers=None,
+     * body=None, error_keys=None)` free function. PHP (PSR-4, file-per-class)
+     * cannot declare a module-level free function, so it is hosted here as a
+     * static factory on DataMap and projected onto the canonical
+     * `signalwire.create_simple_api_tool` via FREE_FUNCTION_PROJECTIONS.
+     * Returns the configured {@see DataMap} builder for chaining.
+     *
+     * @param array<string, array{type?: string, description?: string, required?: bool}>|null $parameters
+     * @param array<string, string>|null $headers
+     * @param array<string, mixed>|null  $body
+     * @param list<string>|null           $errorKeys
      */
     public static function createSimpleApiTool(
         string $name,
-        string $purpose,
-        array $parameters,
-        string $method,
         string $url,
-        mixed $output,
-        array $headers = []
-    ): array {
-        $builder = new self($name);
-        $builder->purpose($purpose);
+        string $responseTemplate,
+        ?array $parameters = null,
+        string $method = 'GET',
+        ?array $headers = null,
+        ?array $body = null,
+        ?array $errorKeys = null
+    ): self {
+        $dataMap = new self($name);
 
-        foreach ($parameters as $param) {
-            $builder->parameter(
-                $param['name'],
-                $param['type'],
-                $param['description'],
-                $param['required'] ?? false,
-                $param['enum'] ?? []
-            );
+        if ($parameters !== null) {
+            foreach ($parameters as $paramName => $paramDef) {
+                $required = (bool)($paramDef['required'] ?? false);
+                $dataMap->parameter(
+                    $paramName,
+                    $paramDef['type'] ?? 'string',
+                    $paramDef['description'] ?? "{$paramName} parameter",
+                    $required
+                );
+            }
         }
 
-        $builder->webhook($method, $url, $headers);
-        $builder->output($output);
+        $dataMap->webhook($method, $url, $headers ?? []);
 
-        return $builder->toSwaigFunction();
+        if ($body !== null) {
+            $dataMap->body($body);
+        }
+
+        if ($errorKeys !== null) {
+            $dataMap->errorKeys($errorKeys);
+        }
+
+        $dataMap->output(new FunctionResult($responseTemplate));
+
+        return $dataMap;
     }
 
     /**
-     * Build a complete SWAIG function definition with expressions only.
+     * Create an expression-based tool for pattern-matching responses.
      *
-     * @param array<array{name: string, type: string, description: string, required?: bool, enum?: array<string>}> $parameters
-     * @param list<array{string: string, pattern: string, output: mixed, nomatch_output?: mixed}> $expressions
-     * @return array<string, mixed>
+     * Mirrors Python's module-level `create_expression_tool(name, patterns,
+     * parameters=None)` free function, where `patterns` maps a test value to a
+     * `(pattern, FunctionResult)` tuple. PHP has no tuple type; each entry is
+     * `[test_value => [pattern, FunctionResult]]`. Hosted as a static factory
+     * on DataMap (PSR-4) and projected onto the canonical
+     * `signalwire.create_expression_tool`. Returns the configured DataMap.
+     *
+     * @param array<string, array{0: string, 1: FunctionResult}> $patterns
+     * @param array<string, array{type?: string, description?: string, required?: bool}>|null $parameters
      */
     public static function createExpressionTool(
         string $name,
-        string $purpose,
-        array $parameters,
-        array $expressions
-    ): array {
-        $builder = new self($name);
-        $builder->purpose($purpose);
+        array $patterns,
+        ?array $parameters = null
+    ): self {
+        $dataMap = new self($name);
 
-        foreach ($parameters as $param) {
-            $builder->parameter(
-                $param['name'],
-                $param['type'],
-                $param['description'],
-                $param['required'] ?? false,
-                $param['enum'] ?? []
-            );
+        if ($parameters !== null) {
+            foreach ($parameters as $paramName => $paramDef) {
+                $required = (bool)($paramDef['required'] ?? false);
+                $dataMap->parameter(
+                    $paramName,
+                    $paramDef['type'] ?? 'string',
+                    $paramDef['description'] ?? "{$paramName} parameter",
+                    $required
+                );
+            }
         }
 
-        foreach ($expressions as $expr) {
-            $builder->expression(
-                $expr['string'],
-                $expr['pattern'],
-                $expr['output'],
-                $expr['nomatch_output'] ?? null
-            );
+        foreach ($patterns as $testValue => $spec) {
+            [$pattern, $result] = $spec;
+            $dataMap->expression($testValue, $pattern, $result);
         }
 
-        return $builder->toSwaigFunction();
+        return $dataMap;
     }
 
     /**

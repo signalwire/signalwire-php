@@ -8,10 +8,10 @@ namespace SignalWire\REST;
  * Common base class for namespace and resource classes.
  *
  * Mirrors Python's signalwire.rest._base.BaseResource — minimal wrapper
- * around an HttpClient and a base path. CrudResource extends this for
- * standard REST collection+item access; namespace classes that want a
- * shared base path (without inheriting list/create/get/update/delete)
- * can subclass BaseResource directly.
+ * around an HttpClient and a base path. ReadResource extends this to add
+ * list/get; CrudResource extends ReadResource for the full CRUD surface;
+ * namespace classes that want a shared base path (without inheriting any
+ * collection methods) can subclass BaseResource directly.
  */
 class BaseResource
 {
@@ -47,15 +47,59 @@ class BaseResource
 }
 
 /**
- * Generic CRUD wrapper around an HttpClient and a base API path.
+ * Read-only collection wrapper: list + get.
  *
- * Provides list / create / get / update / delete for any REST resource that
- * follows the standard SignalWire collection+item URL pattern.
+ * Mirrors Python's signalwire.rest._base.ReadResource — a BaseResource that
+ * exposes the two read verbs (list over the collection, get by id). Resources
+ * that only read (logs, sessions, sip_profile-style reads) subclass this; the
+ * full-CRUD CrudResource composes it so list/get are defined exactly once.
  */
-class CrudResource extends BaseResource
+class ReadResource extends BaseResource
 {
     protected HttpClient $client;
 
+    public function __construct(HttpClient $client, string $basePath)
+    {
+        parent::__construct($client, $basePath);
+        $this->client = $client;
+    }
+
+    public function getClient(): HttpClient
+    {
+        return $this->client;
+    }
+
+    /**
+     * List resources (GET basePath).
+     *
+     * @param array<string,mixed> $params Query-string parameters.
+     * @return array<string,mixed>
+     */
+    public function list(array $params = []): array
+    {
+        return $this->client->get($this->basePath, $params);
+    }
+
+    /**
+     * Retrieve a single resource by ID (GET basePath/{id}).
+     *
+     * @return array<string,mixed>
+     */
+    public function get(string $id): array
+    {
+        return $this->client->get($this->path($id));
+    }
+}
+
+/**
+ * Generic CRUD wrapper around an HttpClient and a base API path.
+ *
+ * Mirrors Python's signalwire.rest._base.CrudResource — composes ReadResource
+ * (list/get) and adds create / update / delete for any REST resource that
+ * follows the standard SignalWire collection+item URL pattern.
+ */
+class CrudResource extends ReadResource
+{
     /**
      * HTTP verb used by update(). Mirrors Python's
      * ``CrudResource._update_method`` class attribute: the base default is
@@ -67,42 +111,7 @@ class CrudResource extends BaseResource
     public function __construct(HttpClient $client, string $basePath, string $updateMethod = 'PATCH')
     {
         parent::__construct($client, $basePath);
-        $this->client = $client;
         $this->updateMethod = strtoupper($updateMethod);
-    }
-
-    public function getBasePath(): string
-    {
-        return $this->basePath;
-    }
-
-    public function getClient(): HttpClient
-    {
-        return $this->client;
-    }
-
-    /**
-     * Build a full path by appending segments to the base path.
-     *
-     * @param string ...$parts Additional path segments.
-     */
-    protected function path(string ...$parts): string
-    {
-        if (empty($parts)) {
-            return $this->basePath;
-        }
-        return $this->basePath . '/' . implode('/', $parts);
-    }
-
-    /**
-     * List resources (GET basePath).
-     *
-     * @param array<string,string> $params Query-string parameters.
-     * @return array<string,mixed>
-     */
-    public function list(array $params = []): array
-    {
-        return $this->client->get($this->basePath, $params);
     }
 
     /**
@@ -114,16 +123,6 @@ class CrudResource extends BaseResource
     public function create(array $data): array
     {
         return $this->client->post($this->basePath, $data);
-    }
-
-    /**
-     * Retrieve a single resource by ID (GET basePath/{id}).
-     *
-     * @return array<string,mixed>
-     */
-    public function get(string $id): array
-    {
-        return $this->client->get($this->path($id));
     }
 
     /**

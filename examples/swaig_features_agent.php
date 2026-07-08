@@ -15,12 +15,13 @@ use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
 $agent = new AgentBase(
-    name:              'swaig_features',
-    route:             '/swaig_features',
-    host:              '0.0.0.0',
-    port:              3000,
-    defaultWebhookUrl: 'https://api.example-external-service.com/swaig',
+    name:  'swaig_features',
+    route: '/swaig_features',
+    host:  '0.0.0.0',
+    port:  3000,
 );
+
+$agent->setWebHookUrl('https://api.example-external-service.com/swaig');
 
 // Declarative prompt sections
 $agent->promptAddSection('Personality', 'You are a friendly and helpful assistant.');
@@ -47,12 +48,14 @@ $agent->defineTool(
     name:        'get_time',
     description: 'Get the current time',
     parameters:  ['type' => 'object', 'properties' => []],
-    fillers:     [
-        'en-US' => ['Let me check the time for you', 'One moment while I check the current time'],
-    ],
     handler: function (array $args, array $raw): FunctionResult {
         return new FunctionResult('The current time is ' . date('H:i:s'));
     },
+    extraFields: [
+        'fillers' => [
+            'en-US' => ['Let me check the time for you', 'One moment while I check the current time'],
+        ],
+    ],
 );
 
 // Tool with multi-language fillers
@@ -65,10 +68,6 @@ $agent->defineTool(
             'location' => ['type' => 'string', 'description' => 'City or location to get weather for'],
         ],
     ],
-    fillers: [
-        'en-US' => ['I am checking the weather for you', 'Let me look up the weather information'],
-        'es'    => ['Estoy consultando el clima para ti', 'Permíteme verificar el clima'],
-    ],
     handler: function (array $args, array $raw): FunctionResult {
         $location = $args['location'] ?? 'unknown';
         $data = [
@@ -79,6 +78,12 @@ $agent->defineTool(
         $result = $data[strtolower($location)] ?? "It's sunny and 72F";
         return new FunctionResult("The weather in {$location}: {$result}");
     },
+    extraFields: [
+        'fillers' => [
+            'en-US' => ['I am checking the weather for you', 'Let me look up the weather information'],
+            'es'    => ['Estoy consultando el clima para ti', 'Permíteme verificar el clima'],
+        ],
+    ],
 );
 
 // Tool with enum parameter

@@ -12,7 +12,8 @@ declare(strict_types=1);
 namespace SignalWire\Logging;
 
 /**
- * Cross-language SDK contract for serverless / deployment-mode detection.
+ * Central logging configuration for the SignalWire SDK, plus the
+ * cross-language serverless / deployment-mode detection contract.
  *
  * Mirrors signalwire.core.logging_config.get_execution_mode and
  * signalwire.utils.is_serverless_mode in the Python reference. Order
@@ -33,6 +34,84 @@ namespace SignalWire\Logging;
  */
 final class LoggingConfig
 {
+    /** Idempotency guard for {@see configureLogging()} (mirrors Python's _logging_configured). */
+    private static bool $configured = false;
+
+    /**
+     * Control characters stripped from log values to prevent log injection.
+     * Mirrors Python's `_CONTROL_CHAR_RE` / TS's `CONTROL_CHAR_RE`:
+     * \x00-\x08, \x0b, \x0c, \x0e-\x1f, \x7f-\x9f.
+     */
+    private const CONTROL_CHAR_RE = '/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/u';
+
+    /**
+     * Configure the logging system once, globally, from environment
+     * variables. Idempotent — subsequent calls are a no-op until
+     * {@see resetLoggingConfiguration()} is invoked. Mirrors Python's
+     * `configure_logging()`.
+     *
+     * Projected to the module-level free function
+     * signalwire.core.logging_config.configure_logging via
+     * scripts/enumerate_signatures.py FREE_FUNCTION_PROJECTIONS.
+     */
+    public static function configureLogging(): void
+    {
+        if (self::$configured) {
+            return;
+        }
+        self::$configured = true;
+    }
+
+    /**
+     * Reset the logging configuration so the next {@see configureLogging()}
+     * re-reads the environment. Clears the cached Logger instances (they
+     * snapshot env-derived level/mode at construction). Mirrors Python's
+     * `reset_logging_configuration()`.
+     *
+     * Projected to signalwire.core.logging_config.reset_logging_configuration.
+     */
+    public static function resetLoggingConfiguration(): void
+    {
+        self::$configured = false;
+        Logger::reset();
+    }
+
+    /**
+     * Get a Logger instance for the given name, configuring logging first.
+     * The single entry point for all logging in the SDK. Mirrors Python's
+     * `get_logger()`.
+     *
+     * Projected to signalwire.core.logging_config.get_logger.
+     */
+    public static function getLogger(string $name): Logger
+    {
+        self::configureLogging();
+        return Logger::getLogger($name);
+    }
+
+    /**
+     * Strip control characters from every string value in a data record to
+     * prevent log injection. Nested arrays are processed recursively. Mirrors
+     * Python's `strip_control_chars` structlog processor / TS's
+     * `stripControlChars`.
+     *
+     * Projected to signalwire.core.logging_config.strip_control_chars.
+     *
+     * @param array<mixed> $eventDict
+     * @return array<mixed>
+     */
+    public static function stripControlChars(array $eventDict): array
+    {
+        foreach ($eventDict as $key => $value) {
+            if (is_string($value)) {
+                $eventDict[$key] = (string) preg_replace(self::CONTROL_CHAR_RE, '', $value);
+            } elseif (is_array($value)) {
+                $eventDict[$key] = self::stripControlChars($value);
+            }
+        }
+        return $eventDict;
+    }
+
     /**
      * Detect the SDK's deployment environment based on well-known
      * environment variables.

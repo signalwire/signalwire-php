@@ -164,9 +164,13 @@ final class SchemaUtils
 
     /**
      * Whether full JSON Schema validation is wired up.
-     * Mirrors Python's full_validation_available property.
+     *
+     * Mirrors Python's `SchemaUtils.full_validation_available` property. PHP
+     * exposes it as a bare boolean accessor (the property idiom → method),
+     * named to match the canonical `full_validation_available` after
+     * camelCase→snake_case projection.
      */
-    public function isFullValidationAvailable(): bool
+    public function fullValidationAvailable(): bool
     {
         return $this->fullValidator !== null;
     }

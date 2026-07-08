@@ -68,9 +68,22 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # core/agent
     "AgentBase": "signalwire.core.agent_base",
 
+    # prefab: Amazon Bedrock voice-to-voice agent. Lives under
+    # src/SignalWire/Agents/ (PSR-4) and routes by name to the oracle module
+    # so its methods surface under signalwire.agents.bedrock rather than the
+    # path-derived signalwire.agents.bedrock_agent.
+    "BedrockAgent": "signalwire.agents.bedrock",
+
     # core/swml
     "Service": "signalwire.core.swml_service",  # PHP `Service` -> Python `SWMLService`
     "Document": "signalwire.core.swml_builder",
+    # SWML fluent builder + verb-handler registry (Python swml_builder /
+    # swml_handler single-file modules; PSR-4 splits each class into its own
+    # file under SWML/). Class names already match the oracle verbatim.
+    "SWMLBuilder": "signalwire.core.swml_builder",
+    "SWMLVerbHandler": "signalwire.core.swml_handler",
+    "AIVerbHandler": "signalwire.core.swml_handler",
+    "VerbHandlerRegistry": "signalwire.core.swml_handler",
     # PHP's Schema is a singleton sidecar; canonical SchemaUtils ships
     # under signalwire\Utils\SchemaUtils and projects to the Python
     # canonical name.  The legacy Schema mapping is kept as a port-only
@@ -81,6 +94,22 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # core/swaig
     "FunctionResult": "signalwire.core.function_result",
+    "SwaigFunction": "signalwire.core.swaig_function",  # PHP `SwaigFunction` -> Python `SWAIGFunction`
+    # Runtime schema-inference helpers. Python ships them as module-level free
+    # functions (signalwire.core.agent.tools.type_inference.infer_schema /
+    # create_typed_handler_wrapper); PHP hosts them as static methods on a
+    # TypeInference class (PSR-4) routed to the same module. The static methods
+    # project to the module-level Python free-function names via
+    # enumerate_signatures.py FREE_FUNCTION_PROJECTIONS; the surface diff
+    # reconciles them as OMISSIONS (host noted) + the TypeInference class as an
+    # ADDITION (mirrors the SecurityUtils / UrlValidator host precedent).
+    "TypeInference": "signalwire.core.agent.tools.type_inference",
+
+    # core/auth
+    "AuthHandler": "signalwire.core.auth_handler",
+
+    # core/swml renderer (standalone renderer the Python reference records)
+    "SwmlRenderer": "signalwire.core.swml_renderer",
 
     # core/contexts
     "Context": "signalwire.core.contexts",
@@ -91,6 +120,12 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # core/datamap
     "DataMap": "signalwire.core.data_map",
+
+    # core/config + security + POM builder + web (item I — config/security/web cluster)
+    "ConfigLoader": "signalwire.core.config_loader",
+    "SecurityConfig": "signalwire.core.security_config",
+    "PomBuilder": "signalwire.core.pom_builder",
+    "WebService": "signalwire.web.web_service",
 
     # core/security
     "SessionManager": "signalwire.core.security.session_manager",
@@ -116,110 +151,88 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "RestClient": "signalwire.rest.client",
     "HttpClient": "signalwire.rest._base",
     "BaseResource": "signalwire.rest._base",
+    "ReadResource": "signalwire.rest._base",
     "CrudResource": "signalwire.rest._base",
     "CrudWithAddresses": "signalwire.rest._base",
+    "FabricResource": "signalwire.rest._base",
+    "FabricResourcePUT": "signalwire.rest._base",
     "SignalWireRestError": "signalwire.rest._base",
 
-    # rest namespaces (PHP only ships dedicated classes for Calling and Fabric;
-    # the rest are accessed as CrudResource via RestClient::namespace()).
-    "Calling": "signalwire.rest.namespaces.calling",
-    "Fabric": "signalwire.rest.namespaces.fabric",
-    # Compat sub-resources collapse to `signalwire.rest.namespaces.compat` to
-    # match Python's CompatNamespace/sub-class layout. Both the PHP-native
-    # name (Compat) and the Python-canonical name (CompatNamespace) are
-    # listed so the signature emitter resolves return types consistently.
-    "Compat": "signalwire.rest.namespaces.compat",
-    "CompatNamespace": "signalwire.rest.namespaces.compat",
-    "CompatAccounts": "signalwire.rest.namespaces.compat",
-    "CompatCalls": "signalwire.rest.namespaces.compat",
-    "CompatMessages": "signalwire.rest.namespaces.compat",
-    "CompatFaxes": "signalwire.rest.namespaces.compat",
-    "CompatConferences": "signalwire.rest.namespaces.compat",
-    "CompatPhoneNumbers": "signalwire.rest.namespaces.compat",
-    "CompatApplications": "signalwire.rest.namespaces.compat",
-    "CompatLamlBins": "signalwire.rest.namespaces.compat",
-    "CompatQueues": "signalwire.rest.namespaces.compat",
-    "CompatRecordings": "signalwire.rest.namespaces.compat",
-    "CompatTranscriptions": "signalwire.rest.namespaces.compat",
-    "CompatTokens": "signalwire.rest.namespaces.compat",
+    # ---------------------------------------------------------------
+    # Generated REST resource layer (adopted from scripts/generate_rest.py).
+    # The 47 resource classes live under
+    # SignalWire\REST\Namespaces\Generated\<Name> and project onto the Python
+    # oracle's `<ns>_resources_generated` modules (mirrors Go/TS/python). The
+    # generated PHP subclass emits ONLY its own declared methods; the CRUD
+    # methods the oracle records on the subclass (create/update) are inherited
+    # from the hand base and injected by the implicit-base projection below
+    # (see _REST_IMPLICIT_BASE / INJECT_BY_BASE).
+    # ---------------------------------------------------------------
+    # relay-rest namespace
+    "Addresses": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "ImportedNumbers": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "Lookup": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "Mfa": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "NumberGroups": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "PhoneNumbers": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "Queues": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "Recordings": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "RegistryBrands": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "RegistryCampaigns": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "RegistryNumbers": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "RegistryOrders": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "ShortCodes": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "SipProfile": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    "VerifiedCallers": "signalwire.rest.namespaces.relay_rest_resources_generated",
+    # fabric namespace
+    "AiAgents": "signalwire.rest.namespaces.fabric_resources_generated",
+    "CallFlows": "signalwire.rest.namespaces.fabric_resources_generated",
+    "ConferenceRooms": "signalwire.rest.namespaces.fabric_resources_generated",
+    "CxmlApplications": "signalwire.rest.namespaces.fabric_resources_generated",
+    "CxmlScripts": "signalwire.rest.namespaces.fabric_resources_generated",
+    "CxmlWebhooks": "signalwire.rest.namespaces.fabric_resources_generated",
+    "FabricAddresses": "signalwire.rest.namespaces.fabric_resources_generated",
+    "FabricTokens": "signalwire.rest.namespaces.fabric_resources_generated",
+    "FreeswitchConnectors": "signalwire.rest.namespaces.fabric_resources_generated",
+    "GenericResources": "signalwire.rest.namespaces.fabric_resources_generated",
+    "RelayApplications": "signalwire.rest.namespaces.fabric_resources_generated",
+    "SipEndpoints": "signalwire.rest.namespaces.fabric_resources_generated",
+    "SipGateways": "signalwire.rest.namespaces.fabric_resources_generated",
+    "Subscribers": "signalwire.rest.namespaces.fabric_resources_generated",
+    "SwmlScripts": "signalwire.rest.namespaces.fabric_resources_generated",
+    "SwmlWebhooks": "signalwire.rest.namespaces.fabric_resources_generated",
+    # calling (command-dispatch)
+    "Calling": "signalwire.rest.namespaces.calling_resources_generated",
+    # chat / pubsub token resources
+    "Chat": "signalwire.rest.namespaces.chat_resources_generated",
+    "PubSub": "signalwire.rest.namespaces.pubsub_resources_generated",
+    # datasphere (NOTE: short name `Datasphere` = the skill; the REST resource
+    # class is `DatasphereDocuments`, no collision).
+    "DatasphereDocuments": "signalwire.rest.namespaces.datasphere_resources_generated",
+    # logs family (split across message/voice/fax/logs specs, grouped by client)
+    "MessageLogs": "signalwire.rest.namespaces.message_resources_generated",
+    "VoiceLogs": "signalwire.rest.namespaces.voice_resources_generated",
+    "FaxLogs": "signalwire.rest.namespaces.fax_resources_generated",
+    "ConferenceLogs": "signalwire.rest.namespaces.logs_resources_generated",
+    # project tokens
+    "ProjectTokens": "signalwire.rest.namespaces.project_resources_generated",
+    # video namespace
+    "VideoRooms": "signalwire.rest.namespaces.video_resources_generated",
+    "VideoRoomTokens": "signalwire.rest.namespaces.video_resources_generated",
+    "VideoRoomSessions": "signalwire.rest.namespaces.video_resources_generated",
+    "VideoRoomRecordings": "signalwire.rest.namespaces.video_resources_generated",
+    "VideoConferences": "signalwire.rest.namespaces.video_resources_generated",
+    "VideoConferenceTokens": "signalwire.rest.namespaces.video_resources_generated",
+    "VideoStreams": "signalwire.rest.namespaces.video_resources_generated",
 
-    # Video namespace and its sub-resources (Python: signalwire.rest.namespaces.video)
-    "Video": "signalwire.rest.namespaces.video",
-    "VideoNamespace": "signalwire.rest.namespaces.video",
-    "VideoRooms": "signalwire.rest.namespaces.video",
-    "VideoRoomTokens": "signalwire.rest.namespaces.video",
-    "VideoRoomSessions": "signalwire.rest.namespaces.video",
-    "VideoRoomRecordings": "signalwire.rest.namespaces.video",
-    "VideoConferences": "signalwire.rest.namespaces.video",
-    "VideoConferenceTokens": "signalwire.rest.namespaces.video",
-    "VideoStreams": "signalwire.rest.namespaces.video",
-
-    # Logs namespace + sub-resources
-    "Logs": "signalwire.rest.namespaces.logs",
-    "LogsNamespace": "signalwire.rest.namespaces.logs",
-    "MessageLogs": "signalwire.rest.namespaces.logs",
-    "VoiceLogs": "signalwire.rest.namespaces.logs",
-    "FaxLogs": "signalwire.rest.namespaces.logs",
-    "ConferenceLogs": "signalwire.rest.namespaces.logs",
-
-    # 10DLC Registry namespace + sub-resources
-    "Registry": "signalwire.rest.namespaces.registry",
-    "RegistryNamespace": "signalwire.rest.namespaces.registry",
-    "RegistryBrands": "signalwire.rest.namespaces.registry",
-    "RegistryCampaigns": "signalwire.rest.namespaces.registry",
-    "RegistryOrders": "signalwire.rest.namespaces.registry",
-    "RegistryNumbers": "signalwire.rest.namespaces.registry",
-
-    # Project tokens
-    "Project": "signalwire.rest.namespaces.project",
-    "ProjectNamespace": "signalwire.rest.namespaces.project",
-    "ProjectTokens": "signalwire.rest.namespaces.project",
-
-    # Datasphere
-    "Datasphere": "signalwire.rest.namespaces.datasphere",  # NOTE: shadowed by skill below; see CLASS_RENAME_MAP
-    "DatasphereNamespace": "signalwire.rest.namespaces.datasphere",
-    "DatasphereDocuments": "signalwire.rest.namespaces.datasphere",
-
-    # Chat / PubSub token resources (Python: one module + class each)
-    "ChatResource": "signalwire.rest.namespaces.chat",
-    "PubSubResource": "signalwire.rest.namespaces.pubsub",
-
-    # Verified caller IDs + phone numbers (dedicated per-resource modules)
-    "VerifiedCallersResource": "signalwire.rest.namespaces.verified_callers",
-    "PhoneNumbersResource": "signalwire.rest.namespaces.phone_numbers",
-
-    # Other small namespaces
-    "Queues": "signalwire.rest.namespaces.queues",
-    "QueuesResource": "signalwire.rest.namespaces.queues",
-    "NumberGroups": "signalwire.rest.namespaces.number_groups",
-    "NumberGroupsResource": "signalwire.rest.namespaces.number_groups",
-    "ShortCodes": "signalwire.rest.namespaces.short_codes",
-    "ShortCodesResource": "signalwire.rest.namespaces.short_codes",
-    "ImportedNumbers": "signalwire.rest.namespaces.imported_numbers",
-    "ImportedNumbersResource": "signalwire.rest.namespaces.imported_numbers",
-    "Mfa": "signalwire.rest.namespaces.mfa",
-    "MfaResource": "signalwire.rest.namespaces.mfa",
-    "SipProfile": "signalwire.rest.namespaces.sip_profile",
-    "SipProfileResource": "signalwire.rest.namespaces.sip_profile",
-    "Addresses": "signalwire.rest.namespaces.addresses",
-    "AddressesResource": "signalwire.rest.namespaces.addresses",
-    "Recordings": "signalwire.rest.namespaces.recordings",
-    "RecordingsResource": "signalwire.rest.namespaces.recordings",
-    "LookupResource": "signalwire.rest.namespaces.lookup",
-
-    # Fabric helper classes — all collapse onto signalwire.rest.namespaces.fabric
-    "FabricSubscribers": "signalwire.rest.namespaces.fabric",
-    "SubscribersResource": "signalwire.rest.namespaces.fabric",
-    "FabricCallFlows": "signalwire.rest.namespaces.fabric",
-    "CallFlowsResource": "signalwire.rest.namespaces.fabric",
-    "FabricConferenceRooms": "signalwire.rest.namespaces.fabric",
-    "ConferenceRoomsResource": "signalwire.rest.namespaces.fabric",
-    "FabricCxmlApplications": "signalwire.rest.namespaces.fabric",
-    "CxmlApplicationsResource": "signalwire.rest.namespaces.fabric",
-    "FabricGenericResources": "signalwire.rest.namespaces.fabric",
-    "GenericResources": "signalwire.rest.namespaces.fabric",
-    "FabricAddresses": "signalwire.rest.namespaces.fabric",
-    "FabricTokens": "signalwire.rest.namespaces.fabric",
+    # Generated namespace CONTAINER classes → the oracle's
+    # `_client_tree_generated` module (mirrors Python's client assembly).
+    "FabricNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "VideoNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "LogsNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "RegistryNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "ProjectNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "DatasphereNamespace": "signalwire.rest.namespaces._client_tree_generated",
 
     # POM (Prompt Object Model) — typed standalone classes
     "PromptObjectModel": "signalwire.pom.pom",
@@ -230,12 +243,14 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # relay
     "Client": "signalwire.relay.client",   # PHP `Relay\Client` -> Python `RelayClient`
+    "RelayError": "signalwire.relay.client",  # RELAY-protocol error, oracle module signalwire.relay.client
     "Call": "signalwire.relay.call",
     "Message": "signalwire.relay.message",
     "Action": "signalwire.relay.call",
     "PlayAction": "signalwire.relay.call",
     "RecordAction": "signalwire.relay.call",
     "CollectAction": "signalwire.relay.call",
+    "StandaloneCollectAction": "signalwire.relay.call",
     "DetectAction": "signalwire.relay.call",
     "FaxAction": "signalwire.relay.call",
     "TapAction": "signalwire.relay.call",
@@ -244,6 +259,35 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "TranscribeAction": "signalwire.relay.call",
     "AIAction": "signalwire.relay.call",
     "Event": "signalwire.relay.event",
+    # Typed RELAY event hierarchy (signalwire.relay.event) — the base
+    # RelayEvent + 23 per-event-type subclasses, each one its own PSR-4 file
+    # under src/SignalWire/Relay/Event/. Routed by name to the oracle module
+    # (CLASS_MODULE_MAP wins over the file-path fallback, which would otherwise
+    # derive signalwire.relay.event.<snake> from the Relay/Event/ subdir).
+    "RelayEvent": "signalwire.relay.event",
+    "CallStateEvent": "signalwire.relay.event",
+    "CallReceiveEvent": "signalwire.relay.event",
+    "PlayEvent": "signalwire.relay.event",
+    "RecordEvent": "signalwire.relay.event",
+    "CollectEvent": "signalwire.relay.event",
+    "ConnectEvent": "signalwire.relay.event",
+    "DetectEvent": "signalwire.relay.event",
+    "FaxEvent": "signalwire.relay.event",
+    "TapEvent": "signalwire.relay.event",
+    "StreamEvent": "signalwire.relay.event",
+    "SendDigitsEvent": "signalwire.relay.event",
+    "DialEvent": "signalwire.relay.event",
+    "ReferEvent": "signalwire.relay.event",
+    "DenoiseEvent": "signalwire.relay.event",
+    "PayEvent": "signalwire.relay.event",
+    "QueueEvent": "signalwire.relay.event",
+    "EchoEvent": "signalwire.relay.event",
+    "TranscribeEvent": "signalwire.relay.event",
+    "HoldEvent": "signalwire.relay.event",
+    "ConferenceEvent": "signalwire.relay.event",
+    "CallingErrorEvent": "signalwire.relay.event",
+    "MessageReceiveEvent": "signalwire.relay.event",
+    "MessageStateEvent": "signalwire.relay.event",
     # Constants/WebSocket are port-internal — fall through to native translation.
 
     # prefabs
@@ -264,7 +308,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "InfoGatherer": "signalwire.skills.info_gatherer.skill",
     "Joke": "signalwire.skills.joke.skill",
     "Math": "signalwire.skills.math.skill",
-    "McpGateway": "signalwire.skills.mcp_gateway.skill",
     "NativeVectorSearch": "signalwire.skills.native_vector_search.skill",
     "PlayBackgroundFile": "signalwire.skills.play_background_file.skill",
     "Spider": "signalwire.skills.spider.skill",
@@ -275,6 +318,51 @@ CLASS_MODULE_MAP: dict[str, str] = {
 
     # Top-level
     "SignalWire": "signalwire",
+}
+
+
+# ---------------------------------------------------------------------------
+# Surface free-function projection (mirrors enumerate_signatures.py's
+# FREE_FUNCTION_PROJECTIONS). Some PHP classes exist solely to HOST static
+# methods that the Python reference ships as module-level free functions
+# (PSR-4 forbids bare module functions). On the SURFACE side those hosted
+# methods must land in the target module's `functions` list — not as class
+# methods — so they reconcile EQUAL with the oracle's module-level functions
+# instead of being recorded as `impossible:` omissions + a host-class addition.
+#
+# Keyed by (PHP class name, snake_case method) -> (target_module, target_fn).
+# A method listed here is REMOVED from its host class's method set and emitted
+# as a module-level function. If EVERY public method of the host class is
+# projected, the empty class shell is dropped (no stray addition); a host that
+# still declares non-projected methods keeps its class shell (a PORT_ADDITION).
+SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
+    # Webhook signature validators — Python ships them as module-level free
+    # functions in signalwire.core.security.webhook_validator; PHP hosts both on
+    # the WebhookValidator final class (PSR-4 + IDE discoverability). Project to
+    # the canonical module-level names (parallel to the signature enumerator).
+    ("WebhookValidator", "validate_webhook_signature"):
+        ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
+    ("WebhookValidator", "validate_request"):
+        ("signalwire.core.security.webhook_validator", "validate_request"),
+    # Decomposed framework-free validation core — the SURFACE oracle records
+    # signalwire.core.security.webhook_middleware.validate as a module-level
+    # function (alongside make_webhook_validation_dependency). PHP hosts it as a
+    # static method on the WebhookMiddleware class (whose object-shaped
+    # __init__/process stay a PHP-idiom PORT_ADDITION); project `validate` to the
+    # module-level function so it reconciles EQUAL instead of being an omission.
+    ("WebhookMiddleware", "validate"):
+        ("signalwire.core.security.webhook_middleware", "validate"),
+    # Runtime schema-inference helpers — Python ships infer_schema /
+    # create_typed_handler_wrapper as module-level free functions in
+    # signalwire.core.agent.tools.type_inference; PHP hosts them as static
+    # methods on the TypeInference final class (PSR-4). Project to the canonical
+    # module-level names so they reconcile EQUAL with the oracle (parallel to the
+    # signature enumerator's FREE_FUNCTION_PROJECTIONS). EVERY public method of
+    # TypeInference is projected, so the empty class shell is dropped.
+    ("TypeInference", "infer_schema"):
+        ("signalwire.core.agent.tools.type_inference", "infer_schema"),
+    ("TypeInference", "create_typed_handler_wrapper"):
+        ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
 }
 
 
@@ -296,7 +384,8 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
             "enable_debug_events", "enable_mcp_server",
             "get_language_params",
             "set_function_includes", "set_global_data", "set_internal_fillers",
-            "set_language_params", "set_languages", "set_native_functions",
+            "set_language_params", "set_languages", "set_multilingual",
+            "set_native_functions",
             "set_param", "set_params",
             "set_post_prompt_llm_params", "set_prompt_llm_params",
             "set_pronunciations", "update_global_data",
@@ -326,6 +415,7 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ("signalwire.core.agent.prompt.manager", "PromptManager"): (
         "AgentBase",
         [
+            "__init__",
             "define_contexts", "get_contexts", "get_post_prompt", "get_prompt",
             "get_raw_prompt",
             "prompt_add_section", "prompt_add_subsection", "prompt_add_to_section",
@@ -352,7 +442,7 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ),
     ("signalwire.core.agent.tools.registry", "ToolRegistry"): (
         "SWMLService",
-        ["define_tool", "register_swaig_function",
+        ["__init__", "define_tool", "register_swaig_function",
          "has_function", "get_function", "get_all_functions",
          "remove_function"],
     ),
@@ -375,6 +465,10 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
 CLASS_RENAME_MAP: dict[str, str] = {
     "Service": "SWMLService",
     "Client": "RelayClient",
+    # PHP StudlyCaps `SwaigFunction` -> Python canonical `SWAIGFunction`
+    # (acronym-cased). A pure spelling/identity difference — reconciled in the
+    # adapter rename table, never an omission (RULES.md §4).
+    "SwaigFunction": "SWAIGFunction",
     # Internal duck-type contracts (the TS RelayClientLike pattern) fold onto
     # the canonical concrete class they abstract, so any signature that
     # references one as a param/return type compares against the Python-
@@ -385,36 +479,15 @@ CLASS_RENAME_MAP: dict[str, str] = {
     "AgentInterface": "AgentBase",
     "RelayClientLike": "RelayClient",
     "RequestHandlerLike": "SWMLService",
-    # REST namespace classes (Python uses descriptive *Resource / *Namespace names)
-    "Calling": "CallingNamespace",
-    "Fabric": "FabricNamespace",  # not in Python; emitted into fabric.py module
-    "Compat": "CompatNamespace",
-    "Video": "VideoNamespace",
-    "Logs": "LogsNamespace",
-    "Registry": "RegistryNamespace",
-    "Project": "ProjectNamespace",
-    # Datasphere is special — same short name used by both a REST namespace
-    # and a skill. The REST name is disambiguated via FQN_CLASS_MODULE_MAP
-    # in enumerate_signatures.py, leaving the legacy skill rename below
-    # untouched. (Don't add `Datasphere -> DatasphereNamespace` here.)
-    "Queues": "QueuesResource",
-    "NumberGroups": "NumberGroupsResource",
-    "ShortCodes": "ShortCodesResource",
-    "ImportedNumbers": "ImportedNumbersResource",
-    "Mfa": "MfaResource",
-    "SipProfile": "SipProfileResource",
-    "Addresses": "AddressesResource",
-    "Recordings": "RecordingsResource",
-    # Fabric helpers — PHP names use the FabricXxx prefix to keep the global
-    # PHP class-name-space flat; Python names drop the prefix because each
-    # class lives inside fabric.py.
-    "FabricSubscribers": "SubscribersResource",
-    "FabricCallFlows": "CallFlowsResource",
-    "FabricConferenceRooms": "ConferenceRoomsResource",
-    "FabricCxmlApplications": "CxmlApplicationsResource",
-    "FabricGenericResources": "GenericResources",
-    # FabricAddresses / FabricTokens keep their PHP names verbatim — Python
-    # uses the same class names.
+    # REST: the generated resource + container classes are named VERBATIM by the
+    # oracle canonical names (scripts/generate_rest.py emits `class PhoneNumbers`,
+    # `class FabricNamespace`, `class Calling`, …), so they need NO rename — the
+    # CLASS_MODULE_MAP above routes them to the right `_resources_generated` /
+    # `_client_tree_generated` module, so they need NO rename.
+    # Datasphere is special — same short name used by both a REST skill and a
+    # REST namespace container. The REST container class is `DatasphereNamespace`
+    # (no rename needed). The bare `Datasphere` short name is the skill, renamed
+    # below. (Don't add `Datasphere -> DatasphereNamespace` here.)
     # Skill renames -- append Skill suffix to match Python's <Name>Skill convention
     "ApiNinjasTrivia": "ApiNinjasTriviaSkill",
     "ClaudeSkills": "ClaudeSkillsSkill",
@@ -426,7 +499,6 @@ CLASS_RENAME_MAP: dict[str, str] = {
     "InfoGatherer": "InfoGathererSkill",
     "Joke": "JokeSkill",
     "Math": "MathSkill",
-    "McpGateway": "MCPGatewaySkill",
     "NativeVectorSearch": "NativeVectorSearchSkill",
     "PlayBackgroundFile": "PlayBackgroundFileSkill",
     "Spider": "SpiderSkill",
@@ -457,6 +529,14 @@ RE_NAMESPACE = re.compile(r"^\s*namespace\s+([\\\w]+)\s*;")
 RE_CLASS = re.compile(
     r"^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+([A-Za-z_]\w*)"
 )
+# Capture the immediate parent of a `class Foo extends \Ns\Bar` declaration
+# (last path segment). Used by the REST implicit-base projection: a generated
+# resource subclass inherits create/update from its hand base, which the
+# oracle records on the subclass; the enumerator only sees the subclass file,
+# so it injects the inherited methods keyed on this parent name.
+RE_CLASS_EXTENDS = re.compile(
+    r"^\s*(?:final\s+|abstract\s+)?class\s+[A-Za-z_]\w*\s+extends\s+([\\\w]+)"
+)
 # Interfaces are class-like scopes too. They were absent from this SDK until
 # the internal duck-type contracts (AgentInterface, RelayClientLike,
 # RequestHandlerLike — the TS RelayClientLike pattern) were added. We must
@@ -468,8 +548,35 @@ RE_CLASS = re.compile(
 RE_INTERFACE = re.compile(
     r"^\s*interface\s+([A-Za-z_]\w*)"
 )
+# Traits are class-like scopes but are NOT independent surface — they are mixed
+# INTO a using class (e.g. the generated ResourceTree is composed into
+# RestClient), and the using class re-exposes their methods. So a trait's own
+# scope is tracked (to keep its methods from leaking as `__module__` free
+# functions) but excluded from the enumerated surface — the same treatment as
+# an @internal interface. This mirrors enumerate_signatures.py skipping
+# `kind: trait` and the Python reference keeping `_GeneratedResourceTree` off
+# the surface.
+RE_TRAIT = re.compile(
+    r"^\s*trait\s+([A-Za-z_]\w*)"
+)
+# In-class trait composition (`use ResourceTree;`) — a bare, single-segment
+# capitalised name (no leading backslash / namespace path, which would be a
+# top-of-file import, not a trait mix-in). A class that composes a trait
+# re-exposes the trait's public methods, so the enumerator flattens them onto
+# the using class (see build_surface). This is what makes the generated
+# ResourceTree accessors (calling/fabric/video/...) part of RestClient's
+# surface, matching the real callable API.
+RE_USE_TRAIT = re.compile(
+    r"^\s*use\s+([A-Z]\w*)\s*;"
+)
 RE_PUBLIC_METHOD = re.compile(
-    r"^\s*public\s+(?:static\s+)?function\s+(\w+)\s*\("
+    # Matches `public function`, `public static function`, and
+    # `abstract public function` (the abstract methods on an abstract base —
+    # e.g. SkillBase::setup / registerTools — are part of the class's public
+    # surface: every concrete subclass implements them, and go/TS surface the
+    # corresponding SkillBase.setup / register_tools members). PHP also allows
+    # the modifiers in either order (`public abstract`), so accept both.
+    r"^\s*(?:abstract\s+)?public\s+(?:abstract\s+)?(?:static\s+)?function\s+(\w+)\s*\("
 )
 
 
@@ -499,14 +606,28 @@ METHOD_ALIASES: dict[str, str] = {
     # Python ``SWMLService.schema_utils`` is a public attribute exposed
     # via PHP's ``getSchemaUtils()`` getter. Strip the get_ prefix.
     "get_schema_utils": "schema_utils",
-    # Compat sub-resource accessors. Python exposes ``compat.calls`` etc. as
-    # plain attributes; PHP wraps them in getter methods (``calls()`` is the
-    # PHP idiom). Project the PHP method names onto the same surface so the
-    # cross-language audit treats them as the same symbol. ``get_account_base``
-    # / ``get_account_sid`` / ``get_http`` are PHP-only debugging accessors;
-    # the surface diff already tolerates extras, so leave them in place
-    # rather than aliasing them onto Python attributes that don't exist.
-    # The Compat class is mapped by name above (Compat -> CompatNamespace).
+    # LiveWire @property accessors — Python exposes session/userdata/history as
+    # @property (getter+setter); PHP uses explicit getX()/setX() methods.
+    # Project the PHP accessors onto the bare Python property names (getter and
+    # setter fold to the same set member). No collision: getSessionMetadata /
+    # setSessionMetadata snake to get_session_metadata, not get_session.
+    "get_session": "session",
+    "set_session": "session",
+    "get_userdata": "userdata",
+    "set_userdata": "userdata",
+    "get_history": "history",
+    # Python ``Call.pass_`` carries a trailing underscore because ``pass`` is a
+    # Python keyword; PHP has no such clash and names the method ``pass()``.
+    # Project the PHP name onto the canonical ``pass_`` (only Call declares a
+    # ``pass`` method — no collision applying globally).
+    "pass": "pass_",
+    # Python ``SecurityConfig.get_ssl_context_kwargs`` returns a PRIMITIVE dict of
+    # TLS path strings ({ssl_certfile, ssl_keyfile}) — NOT an ssl.SSLContext object.
+    # PHP exposes the same primitive TLS config via ``getServerTlsOptions()``
+    # (stream-context ``ssl`` options {local_cert, local_pk}). Same capability, only
+    # the dict-key spelling / accessor name differs — a rename, not an omission.
+    # (Only SecurityConfig declares this method — no collision applying globally.)
+    "get_server_tls_options": "get_ssl_context_kwargs",
 }
 
 
@@ -528,8 +649,187 @@ def camel_to_snake(name: str) -> str:
     return s2.lower()
 
 
+# ---------------------------------------------------------------------------
+# Generated REST wire-type surface (item A/H — REAL types, not `array`).
+#
+# scripts/generate_rest.py emits one PHP data class / enum per components/schemas
+# object into src/SignalWire/REST/Namespaces/Generated/Types/<Sub>/<Name>.php. The
+# reference records these as method-less type definitions in
+# signalwire.rest.namespaces.<ns>_types_generated. Each <Sub> subdir maps 1:1 to a
+# <ns>_types_generated module. Routing is BY FILE PATH (not class name) because the
+# same type name recurs across namespaces (AIObject in calling AND fabric; the shared
+# Types_StatusCodes_* error types in every namespace) and even collides with existing
+# SDK class names (DataMap/Document/Section) — so the path-based route MUST win over
+# CLASS_MODULE_MAP for these files (§H item 3). The SURFACE-DIFF gen-type leaf fold
+# collapses the cross-module duplicates to one gen-type.<Leaf> on both ref and port.
+# ---------------------------------------------------------------------------
+_TYPES_DIR_MARKER = "REST/Namespaces/Generated/Types/"
+_TYPES_SUB_TO_MODULE: dict[str, str] = {
+    "RelayRest": "signalwire.rest.namespaces.relay_rest_types_generated",
+    "Fabric": "signalwire.rest.namespaces.fabric_types_generated",
+    "Calling": "signalwire.rest.namespaces.calling_types_generated",
+    "Video": "signalwire.rest.namespaces.video_types_generated",
+    "Datasphere": "signalwire.rest.namespaces.datasphere_types_generated",
+    "Logs": "signalwire.rest.namespaces.logs_types_generated",
+    "Message": "signalwire.rest.namespaces.message_types_generated",
+    "Voice": "signalwire.rest.namespaces.voice_types_generated",
+    "Fax": "signalwire.rest.namespaces.fax_types_generated",
+    "Project": "signalwire.rest.namespaces.project_types_generated",
+    "Chat": "signalwire.rest.namespaces.chat_types_generated",
+    "PubSub": "signalwire.rest.namespaces.pubsub_types_generated",
+    "SwmlWebhooks": "signalwire.rest.namespaces.swml_webhooks_types_generated",
+}
+# Hard-reserved PHP keyword class names generate_rest.py suffixed with `_`; map back
+# to the bare oracle leaf (the type-name analog of the reserved-word field rename).
+# SCOPED to the Types/ files so a non-type class named `Return_` (none today) is
+# unaffected.
+_TYPES_RESERVED_UNRENAME: dict[str, str] = {
+    "Goto_": "Goto",
+    "Return_": "Return",
+    "Switch_": "Switch",
+    "Unset_": "Unset",
+}
+
+
+def _types_subdir(file_relative: Path) -> str | None:
+    """If ``file_relative`` is a generated wire-type file
+    (REST/Namespaces/Generated/Types/<Sub>/…), return <Sub>; else None."""
+    rel = file_relative.as_posix()
+    idx = rel.find(_TYPES_DIR_MARKER)
+    if idx == -1:
+        return None
+    tail = rel[idx + len(_TYPES_DIR_MARKER):]
+    sub = tail.split("/", 1)[0]
+    return sub or None
+
+
+# ---------------------------------------------------------------------------
+# Generated SWML-verbs CONFIG surface (item D2 — core.swml_verbs_generated).
+#
+# scripts/generate_swml_verbs.py emits one method-less PHP data class per
+# schema.json $defs OBJECT schema (133) + one <Verb>Config class per flattened
+# SWMLMethod verb (22) = 155, into src/SignalWire/SWML/Generated/<Name>.php. The
+# Python reference records these as the 155 method-less type definitions in
+# signalwire.core.swml_verbs_generated. Routing is BY FILE PATH (not class name):
+# 125 of the 155 leaf names ALSO exist as REST wire types (AIObject/Cond/Section/
+# DataMap …), and several collide with existing SDK class names (Document/DataMap/
+# Section), so the path-based route MUST win over CLASS_MODULE_MAP for these files
+# — exactly like the REST Types routing above (§H item 3). The module string ends
+# in ``.swml_verbs_generated`` so the SURFACE-DIFF gen-type leaf fold recognises it
+# and collapses the cross-module duplicates (this module ↔ every <ns>_types_generated
+# copy) to one gen-type.<Leaf> on both the reference and the port.
+# ---------------------------------------------------------------------------
+_SWML_VERBS_DIR_MARKER = "SWML/Generated/"
+_SWML_VERBS_MODULE = "signalwire.core.swml_verbs_generated"
+
+
+def _is_swml_verbs_file(file_relative: Path) -> bool:
+    """True when ``file_relative`` is a generated SWML-verbs config file
+    (src/SignalWire/SWML/Generated/<Name>.php)."""
+    return _SWML_VERBS_DIR_MARKER in file_relative.as_posix()
+
+
+# ---------------------------------------------------------------------------
+# Generated RELAY-protocol wire-type surface (item I — relay.protocol_types_generated).
+#
+# scripts/generate_relay_protocol.py emits one method-less PHP data class per RELAY
+# WS method+phase object schema (123) into src/SignalWire/Relay/Generated/<Name>.php.
+# The Python reference records these as the 123 method-less type definitions in
+# signalwire.relay.protocol_types_generated. Routing is BY FILE PATH (not class
+# name) — and MUST be scoped strictly to the Relay/Generated/ subdir so the existing
+# Relay SDK classes one level up (Call/Client/CallState/Event/AIAction/…, routed by
+# CLASS_MODULE_MAP to signalwire.relay.call/client/event) are NOT misrouted. A
+# relay-protocol type name that also exists as a REST/SWML wire type would collide
+# with CLASS_MODULE_MAP, so the path route MUST win over it for these files (§H
+# item 3), exactly like the REST Types + SWML Generated routing above.
+# ---------------------------------------------------------------------------
+_RELAY_PROTO_DIR_MARKER = "Relay/Generated/"
+_RELAY_PROTO_MODULE = "signalwire.relay.protocol_types_generated"
+
+
+def _is_relay_proto_file(file_relative: Path) -> bool:
+    """True when ``file_relative`` is a generated RELAY-protocol wire-type file
+    (src/SignalWire/Relay/Generated/<Name>.php)."""
+    return _RELAY_PROTO_DIR_MARKER in file_relative.as_posix()
+
+
+# ---------------------------------------------------------------------------
+# Generated SWAIG read-side payload surface (item D1 — the three
+# signalwire.core.*_generated SWAIG payload modules).
+#
+# scripts/generate_swaig_payloads.py emits one method-less PHP data class per SWAIG
+# payload object schema into src/SignalWire/SWAIG/Generated/<Sub>/<Name>.php, where
+# <Sub> is one of PostPrompt / SwaigRequest / SwaigActions. The Python reference
+# records these as the 14 + 2 + 4 = 20 method-less type definitions in
+# signalwire.core.post_prompt_generated / .swaig_request_generated /
+# .swaig_actions_generated. Routing is BY FILE PATH (the <Sub> subdir → the oracle
+# module), same rationale as the REST Types + SWML Generated + RELAY Generated routes
+# above: a payload type name can collide with a hand-written SWAIG SDK class one/two
+# levels up (FunctionResult/ParameterSchema/RecordFormat) or recur elsewhere, so the
+# path route MUST win over CLASS_MODULE_MAP (§H item 3). The module strings end in the
+# ``*_generated`` markers the diff tool's gen-payload fold recognises, so a class-typed
+# field compares by (class, field) cross-port regardless of file grouping.
+# ---------------------------------------------------------------------------
+_SWAIG_PAYLOAD_DIR_MARKER = "SWAIG/Generated/"
+_SWAIG_PAYLOAD_SUB_TO_MODULE: dict[str, str] = {
+    "PostPrompt": "signalwire.core.post_prompt_generated",
+    "SwaigRequest": "signalwire.core.swaig_request_generated",
+    "SwaigActions": "signalwire.core.swaig_actions_generated",
+}
+
+
+def _swaig_payload_subdir(file_relative: Path) -> str | None:
+    """If ``file_relative`` is a generated SWAIG-payload file
+    (SWAIG/Generated/<Sub>/…), return <Sub>; else None."""
+    rel = file_relative.as_posix()
+    idx = rel.find(_SWAIG_PAYLOAD_DIR_MARKER)
+    if idx == -1:
+        return None
+    tail = rel[idx + len(_SWAIG_PAYLOAD_DIR_MARKER):]
+    sub = tail.split("/", 1)[0]
+    return sub or None
+
+
 def _module_path_for_class(name: str, file_relative: Path) -> str:
     """Map a PHP class to its Python-canonical module path."""
+    # LiveWire subsystem routes by PATH, winning over CLASS_MODULE_MAP. This is
+    # required because a livewire class name collides with a top-level SDK class
+    # (SignalWire\Livewire\AgentServer vs SignalWire\Server\AgentServer →
+    # signalwire.agent_server; a name-keyed map cannot tell them apart). The
+    # Plugins/ subdir → signalwire.livewire.plugins; everything else directly
+    # under Livewire/ → signalwire.livewire.
+    _lw = file_relative.as_posix()
+    _lw_idx = _lw.find("SignalWire/Livewire/")
+    if _lw_idx != -1:
+        tail = _lw[_lw_idx + len("SignalWire/Livewire/"):]
+        if tail.startswith("Plugins/"):
+            return "signalwire.livewire.plugins"
+        return "signalwire.livewire"
+    # Generated wire-type files route by PATH (their <Sub> subdir → the oracle
+    # <ns>_types_generated module), winning over CLASS_MODULE_MAP so a type name
+    # that recurs across namespaces / collides with an SDK class name lands in the
+    # right module.
+    sub = _types_subdir(file_relative)
+    if sub is not None and sub in _TYPES_SUB_TO_MODULE:
+        return _TYPES_SUB_TO_MODULE[sub]
+    # Generated SWML-verbs config files route by PATH to the single oracle module
+    # signalwire.core.swml_verbs_generated (same rationale as the REST Types route
+    # — name recurrence/collision means path MUST win over CLASS_MODULE_MAP).
+    if _is_swml_verbs_file(file_relative):
+        return _SWML_VERBS_MODULE
+    # Generated RELAY-protocol wire-type files route by PATH to the single oracle
+    # module signalwire.relay.protocol_types_generated — scoped strictly to the
+    # Relay/Generated/ subdir so the hand-written Relay SDK classes one level up
+    # keep their CLASS_MODULE_MAP routing.
+    if _is_relay_proto_file(file_relative):
+        return _RELAY_PROTO_MODULE
+    # Generated SWAIG-payload files route by PATH: the <Sub> subdir (PostPrompt /
+    # SwaigRequest / SwaigActions) → its signalwire.core.*_generated module, winning
+    # over CLASS_MODULE_MAP so a payload type name never misroutes onto a hand SWAIG
+    # SDK class (FunctionResult/ParameterSchema/RecordFormat) or elsewhere.
+    swaig_sub = _swaig_payload_subdir(file_relative)
+    if swaig_sub is not None and swaig_sub in _SWAIG_PAYLOAD_SUB_TO_MODULE:
+        return _SWAIG_PAYLOAD_SUB_TO_MODULE[swaig_sub]
     if name in CLASS_MODULE_MAP:
         return CLASS_MODULE_MAP[name]
     # Fallback: derive from file path. e.g. src/SignalWire/Foo/Bar.php
@@ -553,6 +853,23 @@ def _translate_class(name: str) -> str:
     return CLASS_RENAME_MAP.get(name, name)
 
 
+def _translate_class_in_file(name: str, file_relative: Path) -> str:
+    """Class-name translation aware of the file's location. For a generated wire-
+    type file OR a generated SWML-verbs config file, a reserved-keyword class name
+    the generator suffixed with ``_`` (Goto_/Return_/Switch_/Unset_) is renamed
+    back to the bare oracle leaf; scoped to those generated files so a non-type
+    class of the same spelling is unaffected."""
+    in_generated_type_file = (
+        _types_subdir(file_relative) is not None
+        or _is_swml_verbs_file(file_relative)
+        or _is_relay_proto_file(file_relative)
+        or _swaig_payload_subdir(file_relative) is not None
+    )
+    if in_generated_type_file and name in _TYPES_RESERVED_UNRENAME:
+        return _TYPES_RESERVED_UNRENAME[name]
+    return _translate_class(name)
+
+
 def _walk_source_files() -> list[Path]:
     files: list[Path] = []
     if not SRC_DIR.is_dir():
@@ -565,21 +882,37 @@ def _walk_source_files() -> list[Path]:
     return sorted(files)
 
 
-def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
-    """Return (free_functions, class_methods, defined_classes).
+def _parse_file(
+    path: Path,
+) -> tuple[
+    set[str],
+    dict[str, set[str]],
+    set[str],
+    dict[str, set[str]],
+    dict[str, set[str]],
+]:
+    """Return (free_functions, class_methods, defined_classes,
+    trait_methods, class_uses).
 
     free_functions: top-level public function names declared outside any class
                     (rare in this SDK; PHP usually wraps everything in classes).
     class_methods: {class_name: {method_names...}} — already snake_cased.
     defined_classes: class names declared in this file.
+    trait_methods: {trait_name: {method_names...}} — a trait's own public
+                   methods (snake_cased). Kept separate from class_methods so a
+                   trait never surfaces on its own, only flattened onto the
+                   class(es) that `use` it.
+    class_uses: {class_name: {trait_name...}} — in-class trait compositions.
     """
     free_fns: set[str] = set()
     methods: dict[str, set[str]] = defaultdict(set)
     classes: set[str] = set()
+    trait_methods: dict[str, set[str]] = defaultdict(set)
+    class_uses: dict[str, set[str]] = defaultdict(set)
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return free_fns, dict(methods), classes
+        return free_fns, dict(methods), classes, dict(trait_methods), dict(class_uses)
 
     lines = text.splitlines()
     cur_class: str | None = None
@@ -589,6 +922,9 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
     # contract, not exported API) — but the scope is still tracked so its
     # methods do not leak as `__module__` free functions.
     cur_excluded: bool = False
+    # When the current scope is a trait, its name (so its public methods are
+    # collected into trait_methods for later flattening onto using classes).
+    cur_trait: str | None = None
     brace_depth = 0
     in_block_comment = False
     # True when the immediately-preceding docblock carried an `@internal` tag;
@@ -622,22 +958,42 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
             if "@internal" in line[start:end]:
                 internal_pending = True
             line = line[:start] + line[end + 2:]
-        # Strip line comments
-        ls_idx = line.find("//")
-        if ls_idx != -1:
-            line = line[:ls_idx]
-        # Strip # comments (PHP allows them)
-        hash_idx = line.find("#")
-        if hash_idx != -1:
-            # avoid stripping inside strings
-            line_stripped = line[:hash_idx]
-            line = line_stripped
+        # Strip line comments (`//` and PHP's `#`), but ONLY when the marker is
+        # NOT inside a quoted string — otherwise a regex/URL literal like
+        # `'#^https?://#i'` truncates the line and drops the trailing `{`,
+        # which desyncs brace-depth and prematurely closes the class scope
+        # (dropping later public methods, e.g. skill getHints()). Scan
+        # character-by-character tracking single/double-quote state.
+        _in_s = _in_d = False
+        _cut = -1
+        _j = 0
+        _n = len(line)
+        while _j < _n:
+            _ch = line[_j]
+            if _ch == "\\" and (_in_s or _in_d):
+                _j += 2
+                continue
+            if _ch == "'" and not _in_d:
+                _in_s = not _in_s
+            elif _ch == '"' and not _in_s:
+                _in_d = not _in_d
+            elif not _in_s and not _in_d:
+                if _ch == "#":
+                    _cut = _j
+                    break
+                if _ch == "/" and _j + 1 < _n and line[_j + 1] == "/":
+                    _cut = _j
+                    break
+            _j += 1
+        if _cut != -1:
+            line = line[:_cut]
 
         # Class declaration
         m_class = RE_CLASS.match(line)
         if m_class:
             cur_class = m_class.group(1)
             cur_excluded = False
+            cur_trait = None
             classes.add(cur_class)
             internal_pending = False
             # Brace might appear later on the same or following line; we'll
@@ -652,10 +1008,33 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
         if m_iface:
             cur_class = m_iface.group(1)
             cur_excluded = internal_pending
+            cur_trait = None
             if not cur_excluded:
                 classes.add(cur_class)
             internal_pending = False
             cur_class_brace = -1
+
+        # Trait declaration — a class-like scope that is composed INTO a using
+        # class (the using class re-exposes its methods). Track the scope so
+        # its methods don't leak as `__module__` free functions, but exclude it
+        # from the surface entirely (see RE_TRAIT).
+        m_trait = RE_TRAIT.match(line)
+        if m_trait:
+            cur_class = m_trait.group(1)
+            cur_trait = m_trait.group(1)
+            cur_excluded = True
+            internal_pending = False
+            cur_class_brace = -1
+
+        # In-class trait composition (`use SomeTrait;`). Record it so the
+        # trait's public methods are flattened onto this class later. Only
+        # inside a real (non-excluded) class scope; a bare single-segment name
+        # (top-of-file `use Foo\Bar;` imports carry a backslash and don't match
+        # RE_USE_TRAIT).
+        if cur_class is not None and not cur_excluded and cur_trait is None:
+            m_use = RE_USE_TRAIT.match(line)
+            if m_use:
+                class_uses[cur_class].add(m_use.group(1))
 
         # Public method
         m_method = RE_PUBLIC_METHOD.match(line)
@@ -672,7 +1051,12 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
                 py_name = camel_to_snake(method_name)
             # Apply Python-canonical aliasing where PHP idiom differs.
             py_name = METHOD_ALIASES.get(py_name, py_name)
-            if cur_excluded:
+            if cur_trait is not None:
+                # Trait body — collect the method for flattening onto the
+                # class(es) that `use` this trait; the trait itself never
+                # surfaces.
+                trait_methods[cur_trait].add(py_name)
+            elif cur_excluded:
                 # Internal interface body — neither surface method nor a
                 # leaked free function.
                 pass
@@ -683,9 +1067,32 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
 
         # Track braces (very simple — sufficient because PHP files are
         # one-class-per-file in this SDK except Action.php and Adapter.php
-        # which open all classes at the top level)
-        opens = line.count("{")
-        closes = line.count("}")
+        # which open all classes at the top level). Count braces OUTSIDE of
+        # quoted strings only: a string/regex literal like
+        # `'/\$\{([^}|]+)(?:\|([^}]*))?\}/'` carries unbalanced `{`/`}` that
+        # would desync brace-depth and prematurely close the class scope
+        # (dropping later public methods). Reuse the same single/double-quote
+        # tracking used above for comment stripping.
+        opens = 0
+        closes = 0
+        _bin_s = _bin_d = False
+        _bi = 0
+        _bn = len(line)
+        while _bi < _bn:
+            _bc = line[_bi]
+            if _bc == "\\" and (_bin_s or _bin_d):
+                _bi += 2
+                continue
+            if _bc == "'" and not _bin_d:
+                _bin_s = not _bin_s
+            elif _bc == '"' and not _bin_s:
+                _bin_d = not _bin_d
+            elif not _bin_s and not _bin_d:
+                if _bc == "{":
+                    opens += 1
+                elif _bc == "}":
+                    closes += 1
+            _bi += 1
         for _ in range(opens):
             brace_depth += 1
             if cur_class is not None and cur_class_brace == -1:
@@ -696,8 +1103,57 @@ def _parse_file(path: Path) -> tuple[set[str], dict[str, set[str]], set[str]]:
                 cur_class = None
                 cur_class_brace = 0
                 cur_excluded = False
+                cur_trait = None
 
-    return free_fns, dict(methods), classes
+    return free_fns, dict(methods), classes, dict(trait_methods), dict(class_uses)
+
+
+# Per-base implicit-method injection for the generated REST resource subclasses
+# (the create/update the oracle records on the subclass but PHP inherits from
+# the hand base). Keyed by the PHP `extends` parent (last path segment).
+REST_IMPLICIT_BASE_METHODS: dict[str, set[str]] = {
+    "CrudResource": {"create", "update"},
+    "FabricResource": {"create", "update"},
+    "FabricResourcePUT": {"create", "update"},
+    # ReadResource / BaseResource contribute nothing (list/get live on the
+    # ReadResource base and are not recorded on the subclass).
+}
+
+# Only project onto classes that live in the generated resource module tree.
+_GENERATED_NS_MARKER = "REST/Namespaces/Generated/"
+
+
+def _inject_extends(modules: dict, files: list[Path]) -> None:
+    """Inject inherited create/update onto generated REST resource subclasses,
+    keyed on each class's `extends` parent. See the caller for the rationale."""
+    for path in files:
+        rel_str = str(path.relative_to(REPO_ROOT))
+        if _GENERATED_NS_MARKER not in rel_str.replace("\\", "/"):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for line in text.splitlines():
+            m = RE_CLASS_EXTENDS.match(line)
+            if not m:
+                continue
+            parent = m.group(1).rsplit("\\", 1)[-1]
+            inject = REST_IMPLICIT_BASE_METHODS.get(parent)
+            if not inject:
+                continue
+            # The class name is captured by RE_CLASS on the same line.
+            mc = RE_CLASS.match(line)
+            if not mc:
+                continue
+            cls = mc.group(1)
+            module_path = CLASS_MODULE_MAP.get(cls)
+            if not module_path:
+                continue
+            translated = _translate_class(cls)
+            existing = set(modules[module_path]["classes"].get(translated, []))
+            existing.update(inject)
+            modules[module_path]["classes"][translated] = sorted(existing)
 
 
 def build_surface() -> dict:
@@ -707,35 +1163,116 @@ def build_surface() -> dict:
     sha = _git_sha()
     files = _walk_source_files()
 
-    # First pass: collect class declarations + their files
+    # First pass: collect class declarations + their files, and the global
+    # trait -> methods map (a trait can be defined in one file and `use`d in
+    # another, so both must be gathered before flattening in the second pass).
     class_defining_files: dict[str, Path] = {}
+    all_trait_methods: dict[str, set[str]] = defaultdict(set)
     for path in files:
-        free_fns, methods, classes = _parse_file(path)
+        free_fns, methods, classes, trait_methods, class_uses = _parse_file(path)
         rel = path.relative_to(REPO_ROOT)
         for cls in classes:
             class_defining_files.setdefault(cls, rel)
+        for trait, meth_set in trait_methods.items():
+            all_trait_methods[trait].update(meth_set)
         if free_fns:
             mod = _module_path_for_class("__module__", rel)
             modules[mod]["functions"].extend(sorted(free_fns))
 
-    # Second pass: collect methods per class
+    # Second pass: collect methods per class, flattening any `use`d trait's
+    # public methods onto the using class (the class re-exposes them as its own
+    # callable API — e.g. RestClient composes the generated ResourceTree, so
+    # calling()/fabric()/video()/... are part of RestClient's surface).
     for path in files:
-        free_fns, methods, classes = _parse_file(path)
+        free_fns, methods, classes, trait_methods, class_uses = _parse_file(path)
         rel = path.relative_to(REPO_ROOT)
+        for using_cls, traits in class_uses.items():
+            for trait in traits:
+                if trait in all_trait_methods:
+                    methods.setdefault(using_cls, set()).update(
+                        all_trait_methods[trait]
+                    )
         for cls, meth_set in methods.items():
-            module_path = _module_path_for_class(
-                cls, class_defining_files.get(cls, rel)
-            )
-            translated = _translate_class(cls)
+            # Free-function projection: lift hosted static methods to the target
+            # module's `functions` list (mirrors the signature enumerator) so a
+            # module-level Python free function reconciles EQUAL instead of being
+            # an `impossible:` omission. Remove them from the host class's set.
+            projected_here = {
+                m for m in meth_set
+                if (cls, m) in SURFACE_FREE_FUNCTION_PROJECTIONS
+            }
+            for m in projected_here:
+                target_mod, target_fn = SURFACE_FREE_FUNCTION_PROJECTIONS[(cls, m)]
+                modules[target_mod]["functions"].append(target_fn)
+            meth_set = {m for m in meth_set if m not in projected_here}
+            # If the host class had ONLY projected methods, drop the empty shell.
+            if not meth_set and projected_here:
+                continue
+            # Route by the CURRENT file's path, not the first-seen defining file:
+            # a class name can recur across files (the SWML `Document`/`Section`/
+            # `DataMap` builders vs the same-named generated wire-type data classes
+            # in Types/<Sub>/), and each file's methods must land in ITS module.
+            module_path = _module_path_for_class(cls, rel)
+            translated = _translate_class_in_file(cls, rel)
             existing = set(modules[module_path]["classes"].get(translated, []))
             existing.update(meth_set)
             modules[module_path]["classes"][translated] = sorted(existing)
-        # Also add classes that have no methods (rare but possible)
+        # Also add classes that have no methods (the generated wire-type data
+        # classes / enums are exactly this — method-less type definitions). Use
+        # the CURRENT file's path (`rel`, not the first-seen defining file) so a
+        # type name that recurs across namespaces (AIObject in Types/Calling AND
+        # Types/Fabric, the shared Types_StatusCodes_* in every namespace) is
+        # routed to EACH namespace's <ns>_types_generated module — the reference
+        # duplicates them the same way and the gen-type fold collapses both.
         for cls in classes:
             if cls not in methods:
                 module_path = _module_path_for_class(cls, rel)
-                translated = _translate_class(cls)
+                translated = _translate_class_in_file(cls, rel)
                 modules[module_path]["classes"].setdefault(translated, [])
+
+    # REST implicit-base projection (mirrors Go's implicitBaseMethods()).
+    #
+    # The generated resource subclass (SignalWire\REST\Namespaces\Generated\*)
+    # emits ONLY its own declared methods; the CRUD methods the oracle records
+    # on the subclass are INHERITED from the hand-written PHP base. The
+    # enumerator sees only the subclass file, so it injects the inherited
+    # methods the oracle records, keyed on the subclass's `extends` parent:
+    #   * extends CrudResource / FabricResource / FabricResourcePUT
+    #       -> inject create, update   (the two typed-override CRUD methods the
+    #          Python reference re-declares on each such subclass; delete/get/
+    #          list stay on the base classes and are NOT recorded on the
+    #          subclass — see rest._base CrudResource=[create,delete,update],
+    #          ReadResource=[get,list]).
+    #   * extends ReadResource / BaseResource -> inject nothing (a ReadResource
+    #     subclass records only its own declared methods; list/get are on the
+    #     ReadResource base).
+    _inject_extends(modules, files)
+
+    # RELAY concrete-action `stop` projection.
+    #
+    # The Python reference factors the call-action controls into a mixin chain
+    # (StoppableAction -> PausableAction -> VolumeAction -> concrete
+    # PlayAction/RecordAction/...) and PROJECTS `stop` onto every concrete
+    # action, so the oracle records `stop` on each of the 11 concrete actions.
+    # PHP flattens the chain: `stop()` lives on the base `Action` (driven by
+    # each subclass's `getStopMethod()` override) and every concrete action
+    # inherits it — i.e. each concrete action DOES expose `stop` at runtime.
+    # The enumerator records only own-body methods, so inject the inherited
+    # `stop` onto each concrete action to reconcile the flattening in emit
+    # (rule §2: idiom is reconciled in the enumerator, never by omission).
+    _RELAY_CONCRETE_ACTIONS = {
+        "PlayAction", "RecordAction", "CollectAction", "StandaloneCollectAction",
+        "DetectAction", "FaxAction", "TapAction", "StreamAction", "PayAction",
+        "TranscribeAction", "AIAction",
+    }
+    for cls in _RELAY_CONCRETE_ACTIONS:
+        module_path = CLASS_MODULE_MAP.get(cls)
+        if not module_path:
+            continue
+        translated = _translate_class(cls)
+        existing = set(modules[module_path]["classes"].get(translated, []))
+        existing.add("stop")
+        modules[module_path]["classes"][translated] = sorted(existing)
 
     # Apply mixin projections — pick matching methods off AgentBase / SWMLService
     # and emit them under each Python mixin module path so the diff lines up.
@@ -746,6 +1283,20 @@ def build_surface() -> dict:
             if cls_methods:
                 return set(cls_methods)
         return set()
+
+    # Inherited-method injection: `AgentBase extends Service` (→ SWMLService), so
+    # `handleRequest` — declared on Service — is a REAL inherited method on
+    # AgentBase at runtime. The Python reference records `handle_request` on BOTH
+    # AgentBase and SWMLService (it un-hid the HTTP request-dispatch entry point
+    # as a suggested-base method projected onto both concrete classes). The PHP
+    # enumerator records only own-body methods, so inject the inherited
+    # `handle_request` onto AgentBase to reconcile the flattening in the
+    # enumerator (rule §2: reconcile idiom in the enumerator, never by omission).
+    _ab_mod = "signalwire.core.agent_base"
+    if "handle_request" in _lookup_class_methods("SWMLService"):
+        _ab = set(modules[_ab_mod]["classes"].get("AgentBase", []))
+        _ab.add("handle_request")
+        modules[_ab_mod]["classes"]["AgentBase"] = sorted(_ab)
 
     agent_base_methods = _lookup_class_methods("AgentBase")
     swml_service_methods = _lookup_class_methods("SWMLService")

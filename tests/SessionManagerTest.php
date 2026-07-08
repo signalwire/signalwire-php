@@ -6,6 +6,7 @@ namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Security\SessionManager;
+use SignalWire\Tests\Support\Shape;
 
 class SessionManagerTest extends TestCase
 {
@@ -84,7 +85,6 @@ class SessionManagerTest extends TestCase
     public function testGenerateTokenReturnsNonEmptyString(): void
     {
         $token = $this->manager->generateToken('func', 'call-123');
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
     }
 
@@ -265,5 +265,48 @@ class SessionManagerTest extends TestCase
     {
         $manager = new SessionManager(0);
         $this->assertSame(0, $manager->getTokenExpirySecs());
+    }
+
+    // ---------------------------------------------------------------
+    // Legacy stateless session-lifecycle API (Python parity)
+    // ---------------------------------------------------------------
+
+    public function testActivateAndEndSessionAreStatelessNoOps(): void
+    {
+        $this->assertTrue($this->manager->activateSession('call-1'));
+        $this->assertTrue($this->manager->endSession('call-1'));
+    }
+
+    public function testSessionMetadataStateless(): void
+    {
+        $this->assertSame([], $this->manager->getSessionMetadata('call-1'));
+        $this->assertTrue($this->manager->setSessionMetadata('call-1', 'k', 'v'));
+        // Still empty — stateless.
+        $this->assertSame([], $this->manager->getSessionMetadata('call-1'));
+    }
+
+    public function testDebugTokenGatedByDebugMode(): void
+    {
+        $token = $this->manager->generateToken('my_func', 'call-42');
+
+        // Debug mode disabled by default.
+        $this->assertSame(
+            ['error' => 'debug mode not enabled'],
+            $this->manager->debugToken($token)
+        );
+
+        $this->manager->setDebugMode(true);
+        $debug = $this->manager->debugToken($token);
+        $this->assertTrue($debug['valid_format']);
+        $this->assertSame('my_func', Shape::at($debug, 'components', 'function'));
+        $this->assertFalse(Shape::at($debug, 'status', 'is_expired'));
+        $this->assertGreaterThan(0, Shape::at($debug, 'status', 'expires_in_seconds'));
+    }
+
+    public function testDebugTokenMalformed(): void
+    {
+        $this->manager->setDebugMode(true);
+        $result = $this->manager->debugToken('not-a-valid-token');
+        $this->assertFalse($result['valid_format']);
     }
 }

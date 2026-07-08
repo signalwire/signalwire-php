@@ -21,8 +21,10 @@ class WebMixinTest extends TestCase
     public function testOnRequestDelegatesToOnSwmlRequest(): void
     {
         $svc = new class (name: 't') extends Service {
+            /** @var array<string,mixed>|null */
             public ?array $lastRequestData = null;
             public ?string $lastCallbackPath = null;
+            /** @var array<string,mixed>|null */
             public ?array $customReturn = null;
 
             public function onSwmlRequest(?array $requestData = null, ?string $callbackPath = null): ?array
@@ -59,6 +61,7 @@ class WebMixinTest extends TestCase
     {
         $svc = new class (name: 't') extends Service {
             public bool $called = false;
+            /** @var array<string,mixed>|null */
             public ?array $sawData = null;
             public ?string $sawPath = null;
 
@@ -152,6 +155,7 @@ class WebMixinTest extends TestCase
         $agent->setDynamicConfigCallback($first);
         $agent->setDynamicConfigCallback($second);
         $stored = $agent->getDynamicConfigCallback();
+        $this->assertNotNull($stored);
         $this->assertSame('second', $stored());
     }
 }

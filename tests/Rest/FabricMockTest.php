@@ -33,7 +33,6 @@ class FabricMockTest extends TestCase
     public function addressesListReturnsDataCollection(): void
     {
         $body = $this->client->fabric()->addresses()->list();
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -47,7 +46,6 @@ class FabricMockTest extends TestCase
     public function addressesGetUsesAddressId(): void
     {
         $body = $this->client->fabric()->addresses()->get('addr-9001');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -55,20 +53,25 @@ class FabricMockTest extends TestCase
         $this->assertNotNull($j->matchedRoute, 'spec gap: address get');
     }
 
-    // ----- cxml_applications.create — explicit failure ---------------
+    // ----- cxml_applications has no create -----------------------------
+    //
+    // The cXML-applications API has no create endpoint. The spec/oracle puts
+    // CxmlApplications on BaseResource with [delete, get, list, list_addresses,
+    // update] and NO create, so the generated resource class simply does not
+    // expose a create() method (rather than the old hand class's create() that
+    // threw BadMethodCallException). Assert the method is absent — the surface
+    // is oracle-correct — and that nothing reached the wire.
 
     #[Test]
-    public function cxmlApplicationsCreateThrowsBadMethodCall(): void
+    public function cxmlApplicationsHasNoCreate(): void
     {
-        $this->expectException(\BadMethodCallException::class);
-        $this->expectExceptionMessage('cXML applications cannot');
-
-        try {
-            $this->client->fabric()->cxmlApplications()->create(['name' => 'never_built']);
-        } finally {
-            // Nothing should have hit the wire.
-            $this->assertSame([], $this->mock->journal()->all());
-        }
+        $resource = $this->client->fabric()->cxmlApplications();
+        $this->assertFalse(
+            method_exists($resource, 'create'),
+            'CxmlApplications must not expose create() — the cXML-applications API has no create endpoint'
+        );
+        // Nothing should have hit the wire.
+        $this->assertSame([], $this->mock->journal()->all());
     }
 
     // ----- call_flows.list_addresses uses singular path ---------------
@@ -77,7 +80,6 @@ class FabricMockTest extends TestCase
     public function callFlowsListAddressesUsesSingularPath(): void
     {
         $body = $this->client->fabric()->callFlows()->listAddresses('cf-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -94,7 +96,6 @@ class FabricMockTest extends TestCase
     public function conferenceRoomsListAddressesUsesSingularPath(): void
     {
         $body = $this->client->fabric()->conferenceRooms()->listAddresses('cr-1');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
 
         $j = $this->mock->journal()->last();
@@ -109,7 +110,6 @@ class FabricMockTest extends TestCase
     public function subscribersGetSipEndpoint(): void
     {
         $body = $this->client->fabric()->subscribers()->getSipEndpoint('sub-1', 'ep-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -126,9 +126,8 @@ class FabricMockTest extends TestCase
         $body = $this->client->fabric()->subscribers()->updateSipEndpoint(
             'sub-1',
             'ep-1',
-            ['username' => 'renamed']
+            username: 'renamed'
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('PATCH', $j->method);
@@ -145,7 +144,6 @@ class FabricMockTest extends TestCase
     public function subscribersDeleteSipEndpoint(): void
     {
         $body = $this->client->fabric()->subscribers()->deleteSipEndpoint('sub-1', 'ep-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -162,9 +160,9 @@ class FabricMockTest extends TestCase
     public function tokensCreateInviteToken(): void
     {
         $body = $this->client->fabric()->tokens()->createInviteToken(
-            ['email' => 'invitee@example.com']
+            'addr-1',
+            extras: ['email' => 'invitee@example.com']
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -179,9 +177,9 @@ class FabricMockTest extends TestCase
     public function tokensCreateEmbedToken(): void
     {
         $body = $this->client->fabric()->tokens()->createEmbedToken(
-            ['allowed_addresses' => ['addr-1', 'addr-2']]
+            'tok-1',
+            extras: ['allowed_addresses' => ['addr-1', 'addr-2']]
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -194,10 +192,7 @@ class FabricMockTest extends TestCase
     #[Test]
     public function tokensRefreshSubscriberToken(): void
     {
-        $body = $this->client->fabric()->tokens()->refreshSubscriberToken(
-            ['refresh_token' => 'abc-123']
-        );
-        $this->assertIsArray($body);
+        $body = $this->client->fabric()->tokens()->refreshSubscriberToken('abc-123');
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
@@ -213,7 +208,6 @@ class FabricMockTest extends TestCase
     public function resourcesListReturnsDataCollection(): void
     {
         $body = $this->client->fabric()->resources()->list();
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -227,7 +221,6 @@ class FabricMockTest extends TestCase
     public function resourcesGetReturnsSingleResource(): void
     {
         $body = $this->client->fabric()->resources()->get('res-1');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
@@ -238,7 +231,6 @@ class FabricMockTest extends TestCase
     public function resourcesDelete(): void
     {
         $body = $this->client->fabric()->resources()->delete('res-2');
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('DELETE', $j->method);
@@ -250,7 +242,6 @@ class FabricMockTest extends TestCase
     public function resourcesListAddresses(): void
     {
         $body = $this->client->fabric()->resources()->listAddresses('res-3');
-        $this->assertIsArray($body);
         $this->assertArrayHasKey('data', $body);
         $this->assertIsArray($body['data']);
 
@@ -264,9 +255,8 @@ class FabricMockTest extends TestCase
     {
         $body = $this->client->fabric()->resources()->assignDomainApplication(
             'res-4',
-            ['domain_application_id' => 'da-7']
+            'da-7'
         );
-        $this->assertIsArray($body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);

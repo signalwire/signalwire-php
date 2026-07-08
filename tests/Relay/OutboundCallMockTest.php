@@ -10,6 +10,7 @@ use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Device;
 use SignalWire\Relay\RelayError;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for outbound calls (``Client::dial``).
@@ -65,7 +66,6 @@ class OutboundCallMockTest extends TestCase
             [[self::phoneDevice()]],
             ['tag' => 't-happy', 'dial_timeout' => 5.0],
         );
-        $this->assertInstanceOf(Call::class, $call);
         $this->assertSame('winner-1', $call->callId);
         $this->assertSame('t-happy', $call->tag);
         $this->assertSame('answered', $call->state);
@@ -92,13 +92,18 @@ class OutboundCallMockTest extends TestCase
         $diag = '';
         if (count($entries) !== 1) {
             $globalRaw = \SignalWire\Tests\Relay\RelayMockHttp::get($this->mock->httpUrl() . '/__mock__/journal');
-            $global = json_decode($globalRaw, true) ?: [];
+            $global = Shape::arr(json_decode($globalRaw, true) ?: []);
             $dials = [];
             $sessions = [];
             foreach ($global as $e) {
-                $sessions[$e['session_id'] ?? '?'] = true;
+                $e = Shape::arr($e);
+                $sid = $e['session_id'] ?? '?';
+                $sidKey = (is_int($sid) || is_string($sid)) ? $sid : '?';
+                $sessions[$sidKey] = true;
                 if (($e['method'] ?? '') === 'calling.dial' && ($e['direction'] ?? '') === 'recv') {
-                    $dials[] = ['session_id' => $e['session_id'] ?? '?', 'tag' => $e['frame']['params']['tag'] ?? '?'];
+                    $frame = Shape::arr($e['frame'] ?? []);
+                    $params = Shape::arr($frame['params'] ?? []);
+                    $dials[] = ['session_id' => $sid, 'tag' => $params['tag'] ?? '?'];
                 }
             }
             $diag = "\nDIAG scopedSid=" . $this->mock->sessionId()
@@ -108,10 +113,10 @@ class OutboundCallMockTest extends TestCase
                 . ' globalDials=' . json_encode($dials);
         }
         $this->assertCount(1, $entries, $diag);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('t-frame', $p['tag'] ?? null);
         $this->assertIsArray($p['devices'] ?? null);
-        $this->assertSame('phone', $p['devices'][0][0]['type'] ?? null);
+        $this->assertSame('phone', Shape::at($p, 'devices', 0, 0, 'type'));
     }
 
     // ------------------------------------------------------------------
@@ -142,7 +147,7 @@ class OutboundCallMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.dial');
         $this->assertCount(1, $entries);
-        $wireDevice = $entries[0]->frame['params']['devices'][0][0] ?? null;
+        $wireDevice = Shape::at($entries[0]->frame, 'params', 'devices', 0, 0);
 
         // The device on the wire is exactly what the hand-written literal
         // would have produced — same keys, values, AND order.
@@ -166,7 +171,7 @@ class OutboundCallMockTest extends TestCase
         );
         $entries = $this->mock->journal()->recv('calling.dial');
         $this->assertCount(1, $entries);
-        $this->assertSame(300, $entries[0]->frame['params']['max_duration'] ?? null);
+        $this->assertSame(300, Shape::at($entries[0]->frame, 'params', 'max_duration'));
     }
 
     #[Test]
@@ -257,7 +262,7 @@ class OutboundCallMockTest extends TestCase
         // Verify the journal recorded a dial with that tag.
         $entries = $this->mock->journal()->recv('calling.dial');
         $this->assertCount(1, $entries);
-        $this->assertSame($call->tag, $entries[0]->frame['params']['tag'] ?? null);
+        $this->assertSame($call->tag, Shape::at($entries[0]->frame, 'params', 'tag'));
     }
 
     // ------------------------------------------------------------------
@@ -385,15 +390,15 @@ class OutboundCallMockTest extends TestCase
         $this->assertNotEmpty($sends);
         $finalForAnswered = null;
         foreach ($sends as $e) {
-            $params = $e->frame['params']['params'] ?? [];
+            $params = Shape::sub($e->frame, 'params', 'params');
             if (($params['dial_state'] ?? null) === 'answered') {
                 $finalForAnswered = $e;
             }
         }
         $this->assertNotNull($finalForAnswered);
-        $inner = $finalForAnswered->frame['params']['params'] ?? [];
-        $this->assertTrue($inner['call']['dial_winner'] ?? null);
-        $this->assertSame('WIN-ID', $inner['call']['call_id'] ?? null);
+        $inner = Shape::sub($finalForAnswered->frame, 'params', 'params');
+        $this->assertTrue(Shape::at($inner, 'call', 'dial_winner'));
+        $this->assertSame('WIN-ID', Shape::at($inner, 'call', 'call_id'));
     }
 
     #[Test]
@@ -416,7 +421,7 @@ class OutboundCallMockTest extends TestCase
         $stateEvents = $this->mock->journal()->send('calling.call.state');
         $loserEnded = false;
         foreach ($stateEvents as $e) {
-            $p = $e->frame['params']['params'] ?? [];
+            $p = Shape::sub($e->frame, 'params', 'params');
             if (($p['call_id'] ?? null) === 'L1' && ($p['call_state'] ?? null) === 'ended') {
                 $loserEnded = true;
                 break;
@@ -474,10 +479,10 @@ class OutboundCallMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('calling.dial');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
-        $this->assertCount(1, $p['devices']);
-        $this->assertCount(2, $p['devices'][0]);
-        $this->assertSame('+15551110001', $p['devices'][0][0]['params']['to_number'] ?? null);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertCount(1, Shape::sub($p, 'devices'));
+        $this->assertCount(2, Shape::sub($p, 'devices', 0));
+        $this->assertSame('+15551110001', Shape::at($p, 'devices', 0, 0, 'params', 'to_number'));
     }
 
     #[Test]
@@ -497,7 +502,7 @@ class OutboundCallMockTest extends TestCase
         $this->client->dial($devs, ['tag' => 't-par', 'dial_timeout' => 5.0]);
         $entries = $this->mock->journal()->recv('calling.dial');
         $this->assertCount(1, $entries);
-        $this->assertCount(2, $entries[0]->frame['params']['devices'] ?? []);
+        $this->assertCount(2, Shape::sub($entries[0]->frame, 'params', 'devices'));
     }
 
     // ------------------------------------------------------------------
@@ -521,7 +526,7 @@ class OutboundCallMockTest extends TestCase
         $stateEvents = $this->mock->journal()->send('calling.call.state');
         $winnerStates = [];
         foreach ($stateEvents as $e) {
-            $p = $e->frame['params']['params'] ?? [];
+            $p = Shape::sub($e->frame, 'params', 'params');
             if (($p['call_id'] ?? null) === 'WIN-PROG') {
                 $winnerStates[] = $p['call_state'] ?? null;
             }
@@ -555,7 +560,7 @@ class OutboundCallMockTest extends TestCase
         $this->assertNotEmpty($endFrames);
         $this->assertSame(
             'WIN-AFTER',
-            $endFrames[count($endFrames) - 1]->frame['params']['call_id'] ?? null,
+            Shape::at($endFrames[count($endFrames) - 1]->frame, 'params', 'call_id'),
         );
     }
 
@@ -578,9 +583,9 @@ class OutboundCallMockTest extends TestCase
         );
         $play = $this->mock->journal()->recv('calling.play');
         $this->assertNotEmpty($play);
-        $p = $play[count($play) - 1]->frame['params'] ?? [];
+        $p = Shape::sub($play[count($play) - 1]->frame, 'params');
         $this->assertSame('WIN-PLAY', $p['call_id'] ?? null);
-        $this->assertSame('tts', $p['play'][0]['type'] ?? null);
+        $this->assertSame('tts', Shape::at($p, 'play', 0, 'type'));
     }
 
     // ------------------------------------------------------------------
@@ -607,7 +612,7 @@ class OutboundCallMockTest extends TestCase
         $entries = $this->mock->journal()->recv('calling.dial');
         $this->assertSame(
             'my-very-explicit-tag-99',
-            $entries[0]->frame['params']['tag'] ?? null,
+            Shape::at($entries[0]->frame, 'params', 'tag'),
         );
     }
 

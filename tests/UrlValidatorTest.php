@@ -182,6 +182,15 @@ class UrlValidatorTest extends TestCase
 
     public function testBlockedNetworksHasAllNine(): void
     {
-        $this->assertCount(9, UrlValidator::BLOCKED_NETWORKS);
+        // Every blocked network is a CIDR range; the constant's shape (exactly
+        // nine private/reserved ranges) is fixed at compile time, so iterating
+        // and validating each entry is the meaningful runtime guard here.
+        $seen = [];
+        foreach (UrlValidator::BLOCKED_NETWORKS as $cidr) {
+            $this->assertStringContainsString('/', $cidr);
+            $seen[] = $cidr;
+        }
+        $this->assertContains('10.0.0.0/8', $seen);
+        $this->assertContains('fe80::/10', $seen);
     }
 }

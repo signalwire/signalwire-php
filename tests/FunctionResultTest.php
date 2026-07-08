@@ -10,6 +10,7 @@ use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWAIG\RecordDirection;
 use SignalWire\SWAIG\RecordFormat;
 use SignalWire\SWAIG\TapDirection;
+use SignalWire\Tests\Support\Shape;
 
 class FunctionResultTest extends TestCase
 {
@@ -21,7 +22,7 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult();
         $arr = $fr->toArray();
 
-        $this->assertSame('Action completed.', $arr['response']);
+        $this->assertSame('Action completed.', Shape::at($arr, 'response'));
         $this->assertArrayNotHasKey('action', $arr);
         $this->assertArrayNotHasKey('post_process', $arr);
     }
@@ -33,8 +34,8 @@ class FunctionResultTest extends TestCase
         $fr->addAction(['stop' => true]);
         $arr = $fr->toArray();
 
-        $this->assertSame('hello', $arr['response']);
-        $this->assertTrue($arr['post_process']);
+        $this->assertSame('hello', Shape::at($arr, 'response'));
+        $this->assertTrue(Shape::at($arr, 'post_process'));
     }
 
     public function testConstructionWithNullResponseDefaultsToEmptyString(): void
@@ -52,7 +53,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->setResponse('updated');
-        $this->assertSame('updated', $fr->toArray()['response']);
+        $this->assertSame('updated', Shape::at($fr->toArray(), 'response'));
     }
 
     public function testSetPostProcessTrue(): void
@@ -60,7 +61,7 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult();
         $fr->setPostProcess(true);
         $fr->addAction(['stop' => true]);
-        $this->assertTrue($fr->toArray()['post_process']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'post_process'));
     }
 
     public function testSetPostProcessFalseExcludesKey(): void
@@ -76,8 +77,8 @@ class FunctionResultTest extends TestCase
         $fr->addAction(['say' => 'hi']);
         $arr = $fr->toArray();
 
-        $this->assertCount(1, $arr['action']);
-        $this->assertSame(['say' => 'hi'], $arr['action'][0]);
+        $this->assertCount(1, Shape::sub($arr, 'action'));
+        $this->assertSame(['say' => 'hi'], Shape::at($arr, 'action', 0));
     }
 
     public function testAddActions(): void
@@ -86,9 +87,9 @@ class FunctionResultTest extends TestCase
         $fr->addActions([['say' => 'a'], ['say' => 'b']]);
         $arr = $fr->toArray();
 
-        $this->assertCount(2, $arr['action']);
-        $this->assertSame('a', $arr['action'][0]['say']);
-        $this->assertSame('b', $arr['action'][1]['say']);
+        $this->assertCount(2, Shape::sub($arr, 'action'));
+        $this->assertSame('a', Shape::at($arr, 'action', 0, 'say'));
+        $this->assertSame('b', Shape::at($arr, 'action', 1, 'say'));
     }
 
     // ── Serialization ─────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult('resp', true);
         $fr->addAction(['stop' => true]);
         $this->assertArrayHasKey('post_process', $fr->toArray());
-        $this->assertTrue($fr->toArray()['post_process']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'post_process'));
     }
 
     public function testToArrayOmitsPostProcessWithoutAction(): void
@@ -144,8 +145,8 @@ class FunctionResultTest extends TestCase
 
         $decoded = json_decode($json, true);
         $this->assertNotNull($decoded);
-        $this->assertSame('test', $decoded['response']);
-        $this->assertSame('hello', $decoded['action'][0]['say']);
+        $this->assertSame('test', Shape::at($decoded, 'response'));
+        $this->assertSame('hello', Shape::at($decoded, 'action', 0, 'say'));
     }
 
     // ── Call Control ──────────────────────────────────────────────────────
@@ -154,22 +155,22 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->connect('+15551234567');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertArrayHasKey('SWML', $action);
-        $connect = $action['SWML']['sections']['main'][0]['connect'];
+        $connect = Shape::sub($action, 'SWML', 'sections', 'main', 0, 'connect');
         $this->assertSame('+15551234567', $connect['to']);
         $this->assertArrayNotHasKey('from', $connect);
         // final defaults true -> top-level "transfer" + SWML "version" (parity with Python connect)
         $this->assertSame('true', $action['transfer']);
-        $this->assertSame('1.0.0', $action['SWML']['version']);
+        $this->assertSame('1.0.0', Shape::at($action, 'SWML', 'version'));
     }
 
     public function testConnectWithFrom(): void
     {
         $fr = new FunctionResult();
         $fr->connect('+15551234567', false, '+15559876543');
-        $connect = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['connect'];
+        $connect = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'connect');
 
         $this->assertSame('+15559876543', $connect['from']);
     }
@@ -178,15 +179,15 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->connect('+15551234567', true);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertArrayHasKey('SWML', $action);
-        $this->assertSame('+15551234567', $action['SWML']['sections']['main'][0]['connect']['to']);
+        $this->assertSame('+15551234567', Shape::at($action, 'SWML', 'sections', 'main', 0, 'connect', 'to'));
         $this->assertSame('true', $action['transfer']);
 
         $temp = new FunctionResult();
         $temp->connect('+15551234567', false);
-        $this->assertSame('false', $temp->toArray()['action'][0]['transfer']);
+        $this->assertSame('false', Shape::at($temp->toArray(), 'action', 0, 'transfer'));
     }
 
     // swmlTransfer parity with Python swml_transfer: builds a SWML document
@@ -198,12 +199,12 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->swmlTransfer('https://example.com/swml', 'Goodbye!');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
-        $main = $action['SWML']['sections']['main'];
-        $this->assertSame('1.0.0', $action['SWML']['version']);
-        $this->assertSame(['ai_response' => 'Goodbye!'], $main[0]['set']);
-        $this->assertSame(['dest' => 'https://example.com/swml'], $main[1]['transfer']);
+        $main = Shape::sub($action, 'SWML', 'sections', 'main');
+        $this->assertSame('1.0.0', Shape::at($action, 'SWML', 'version'));
+        $this->assertSame(['ai_response' => 'Goodbye!'], Shape::at($main, 0, 'set'));
+        $this->assertSame(['dest' => 'https://example.com/swml'], Shape::at($main, 1, 'transfer'));
         // final defaults TRUE -> permanent transfer.
         $this->assertSame('true', $action['transfer']);
     }
@@ -212,12 +213,12 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->swmlTransfer('https://example.com/swml', 'Back to you', false);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame('false', $action['transfer']);
-        $main = $action['SWML']['sections']['main'];
-        $this->assertSame(['ai_response' => 'Back to you'], $main[0]['set']);
-        $this->assertSame(['dest' => 'https://example.com/swml'], $main[1]['transfer']);
+        $main = Shape::sub($action, 'SWML', 'sections', 'main');
+        $this->assertSame(['ai_response' => 'Back to you'], Shape::at($main, 0, 'set'));
+        $this->assertSame(['dest' => 'https://example.com/swml'], Shape::at($main, 1, 'transfer'));
     }
 
     public function testSwmlTransferAiResponseGoesIntoSwmlNotResponse(): void
@@ -228,10 +229,10 @@ class FunctionResultTest extends TestCase
         $fr->swmlTransfer('https://example.com/swml', 'Transferring now');
         $arr = $fr->toArray();
 
-        $this->assertSame('original', $arr['response']);
+        $this->assertSame('original', Shape::at($arr, 'response'));
         $this->assertSame(
             ['ai_response' => 'Transferring now'],
-            $arr['action'][0]['SWML']['sections']['main'][0]['set']
+            Shape::at($arr, 'action', 0, 'SWML', 'sections', 'main', 0, 'set')
         );
     }
 
@@ -240,7 +241,7 @@ class FunctionResultTest extends TestCase
         // Python: add_action("hangup", True) -> {"hangup": true}.
         $fr = new FunctionResult();
         $fr->hangup();
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertTrue($action['hangup']);
     }
@@ -250,28 +251,28 @@ class FunctionResultTest extends TestCase
         // Python emits a bare int, not {"timeout": N}.
         $fr = new FunctionResult();
         $fr->hold();
-        $this->assertSame(300, $fr->toArray()['action'][0]['hold']);
+        $this->assertSame(300, Shape::at($fr->toArray(), 'action', 0, 'hold'));
     }
 
     public function testHoldClampsLow(): void
     {
         $fr = new FunctionResult();
         $fr->hold(-50);
-        $this->assertSame(0, $fr->toArray()['action'][0]['hold']);
+        $this->assertSame(0, Shape::at($fr->toArray(), 'action', 0, 'hold'));
     }
 
     public function testHoldClampsHigh(): void
     {
         $fr = new FunctionResult();
         $fr->hold(9999);
-        $this->assertSame(900, $fr->toArray()['action'][0]['hold']);
+        $this->assertSame(900, Shape::at($fr->toArray(), 'action', 0, 'hold'));
     }
 
     public function testHoldWithinRange(): void
     {
         $fr = new FunctionResult();
         $fr->hold(450);
-        $this->assertSame(450, $fr->toArray()['action'][0]['hold']);
+        $this->assertSame(450, Shape::at($fr->toArray(), 'action', 0, 'hold'));
     }
 
     // waitForUser parity: Python emits a SCALAR value (string/int/bool), never
@@ -282,7 +283,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->waitForUser();
-        $this->assertTrue($fr->toArray()['action'][0]['wait_for_user']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'action', 0, 'wait_for_user'));
     }
 
     public function testWaitForUserAnswerFirstWins(): void
@@ -290,28 +291,28 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult();
         // answer_first takes precedence over both timeout and enabled.
         $fr->waitForUser(true, 30, true);
-        $this->assertSame('answer_first', $fr->toArray()['action'][0]['wait_for_user']);
+        $this->assertSame('answer_first', Shape::at($fr->toArray(), 'action', 0, 'wait_for_user'));
     }
 
     public function testWaitForUserTimeoutEmitsInt(): void
     {
         $fr = new FunctionResult();
         $fr->waitForUser(null, 60);
-        $this->assertSame(60, $fr->toArray()['action'][0]['wait_for_user']);
+        $this->assertSame(60, Shape::at($fr->toArray(), 'action', 0, 'wait_for_user'));
     }
 
     public function testWaitForUserEnabledEmitsBool(): void
     {
         $fr = new FunctionResult();
         $fr->waitForUser(false);
-        $this->assertFalse($fr->toArray()['action'][0]['wait_for_user']);
+        $this->assertFalse(Shape::at($fr->toArray(), 'action', 0, 'wait_for_user'));
     }
 
     public function testStop(): void
     {
         $fr = new FunctionResult();
         $fr->stop();
-        $this->assertTrue($fr->toArray()['action'][0]['stop']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'action', 0, 'stop'));
     }
 
     // ── State & Data ──────────────────────────────────────────────────────
@@ -320,7 +321,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->updateGlobalData(['key' => 'value']);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame(['key' => 'value'], $action['set_global_data']);
     }
@@ -331,7 +332,7 @@ class FunctionResultTest extends TestCase
         // directly (no {"keys": ...} wrapper).
         $fr = new FunctionResult();
         $fr->removeGlobalData(['k1', 'k2']);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame(['k1', 'k2'], $action['unset_global_data']);
         $this->assertArrayNotHasKey('remove_global_data', $action);
@@ -342,14 +343,14 @@ class FunctionResultTest extends TestCase
         // Python accepts Union[str, List[str]] and emits a string as-is.
         $fr = new FunctionResult();
         $fr->removeGlobalData('mykey');
-        $this->assertSame('mykey', $fr->toArray()['action'][0]['unset_global_data']);
+        $this->assertSame('mykey', Shape::at($fr->toArray(), 'action', 0, 'unset_global_data'));
     }
 
     public function testSetMetadata(): void
     {
         $fr = new FunctionResult();
         $fr->setMetadata(['foo' => 'bar']);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame(['foo' => 'bar'], $action['set_meta_data']);
     }
@@ -359,7 +360,7 @@ class FunctionResultTest extends TestCase
         // Python action name is "unset_meta_data"; value emitted directly.
         $fr = new FunctionResult();
         $fr->removeMetadata(['x', 'y']);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame(['x', 'y'], $action['unset_meta_data']);
         $this->assertArrayNotHasKey('remove_meta_data', $action);
@@ -371,10 +372,10 @@ class FunctionResultTest extends TestCase
         // user_event.event. Key order is {sections, version} (sections first).
         $fr = new FunctionResult();
         $fr->swmlUserEvent(['type' => 'custom', 'data' => 123]);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
-        $this->assertSame('1.0.0', $action['SWML']['version']);
-        $userEvent = $action['SWML']['sections']['main'][0]['user_event'];
+        $this->assertSame('1.0.0', Shape::at($action, 'SWML', 'version'));
+        $userEvent = Shape::sub($action, 'SWML', 'sections', 'main', 0, 'user_event');
         $this->assertSame(['event' => ['type' => 'custom', 'data' => 123]], $userEvent);
     }
 
@@ -383,7 +384,7 @@ class FunctionResultTest extends TestCase
         // Python: add_action("change_step", step_name) -> bare string.
         $fr = new FunctionResult();
         $fr->swmlChangeStep('greeting');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame('greeting', $action['change_step']);
         $this->assertArrayNotHasKey('context_switch', $action);
@@ -394,7 +395,7 @@ class FunctionResultTest extends TestCase
         // Python: add_action("change_context", context_name) -> bare string.
         $fr = new FunctionResult();
         $fr->swmlChangeContext('billing');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame('billing', $action['change_context']);
         $this->assertArrayNotHasKey('context_switch', $action);
@@ -409,7 +410,7 @@ class FunctionResultTest extends TestCase
         // verified Go/Rust siblings.
         $fr = new FunctionResult();
         $fr->switchContext('You are a helpful agent.');
-        $cs = $fr->toArray()['action'][0]['context_switch'];
+        $cs = Shape::at($fr->toArray(), 'action', 0, 'context_switch');
 
         $this->assertSame('You are a helpful agent.', $cs);
         // Bare string on the wire, not an object.
@@ -423,7 +424,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->switchContext('sys', 'usr', true, true, true);
-        $cs = $fr->toArray()['action'][0]['context_switch'];
+        $cs = Shape::sub($fr->toArray(), 'action', 0, 'context_switch');
 
         $this->assertSame('sys', $cs['system_prompt']);
         $this->assertSame('usr', $cs['user_prompt']);
@@ -441,7 +442,7 @@ class FunctionResultTest extends TestCase
         // handling (object branch).
         $fr = new FunctionResult();
         $fr->switchContext('sys', '', false, false, true);
-        $cs = $fr->toArray()['action'][0]['context_switch'];
+        $cs = Shape::at($fr->toArray(), 'action', 0, 'context_switch');
 
         $this->assertIsArray($cs);
         $this->assertSame('sys', $cs['system_prompt']);
@@ -455,7 +456,7 @@ class FunctionResultTest extends TestCase
         // verbatim (not converted to "summary").
         $fr = new FunctionResult();
         $fr->replaceInHistory('redacted');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
         $this->assertSame('redacted', $action['replace_in_history']);
         $this->assertArrayNotHasKey('replace_history', $action);
     }
@@ -465,7 +466,7 @@ class FunctionResultTest extends TestCase
         // Default is the literal boolean true (remove the pair entirely).
         $fr = new FunctionResult();
         $fr->replaceInHistory();
-        $this->assertTrue($fr->toArray()['action'][0]['replace_in_history']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'action', 0, 'replace_in_history'));
     }
 
     // ── Media ─────────────────────────────────────────────────────────────
@@ -474,7 +475,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->say('Hello world');
-        $this->assertSame('Hello world', $fr->toArray()['action'][0]['say']);
+        $this->assertSame('Hello world', Shape::at($fr->toArray(), 'action', 0, 'say'));
     }
 
     public function testPlayBackgroundFileDefault(): void
@@ -482,7 +483,7 @@ class FunctionResultTest extends TestCase
         // Python action name is "playback_bg"; bare filename without wait.
         $fr = new FunctionResult();
         $fr->playBackgroundFile('music.mp3');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame('music.mp3', $action['playback_bg']);
     }
@@ -492,7 +493,7 @@ class FunctionResultTest extends TestCase
         // With wait, the value is an object {file, wait:true}.
         $fr = new FunctionResult();
         $fr->playBackgroundFile('music.mp3', true);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame(['file' => 'music.mp3', 'wait' => true], $action['playback_bg']);
     }
@@ -502,7 +503,7 @@ class FunctionResultTest extends TestCase
         // Python action name is "stop_playback_bg".
         $fr = new FunctionResult();
         $fr->stopBackgroundFile();
-        $this->assertTrue($fr->toArray()['action'][0]['stop_playback_bg']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'action', 0, 'stop_playback_bg'));
     }
 
     // recordCall parity: the {"record_call": ...} verb is wrapped in a full
@@ -514,7 +515,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->recordCall();
-        $rec = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+        $rec = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
 
         $this->assertFalse($rec['stereo']);
         $this->assertSame('wav', $rec['format']);
@@ -529,7 +530,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->recordCall('rec-1', true, 'mp3', 'speak', '#', true, 30.0, 5.0, 2.0, 60.0, 'https://example.com/status');
-        $rec = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+        $rec = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
 
         $this->assertSame('rec-1', $rec['control_id']);
         $this->assertTrue($rec['stereo']);
@@ -564,7 +565,7 @@ class FunctionResultTest extends TestCase
         // SWML-wrapped; empty object ({}) when no control_id.
         $fr = new FunctionResult();
         $fr->stopRecordCall();
-        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_record_call'];
+        $stop = Shape::at($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'stop_record_call');
 
         $this->assertSame('{}', json_encode($stop));
     }
@@ -573,7 +574,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->stopRecordCall('rec-1');
-        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_record_call'];
+        $stop = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'stop_record_call');
 
         $this->assertSame(['control_id' => 'rec-1'], $stop);
     }
@@ -584,7 +585,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->addDynamicHints(['yes', 'no', 'maybe']);
-        $this->assertSame(['yes', 'no', 'maybe'], $fr->toArray()['action'][0]['add_dynamic_hints']);
+        $this->assertSame(['yes', 'no', 'maybe'], Shape::at($fr->toArray(), 'action', 0, 'add_dynamic_hints'));
     }
 
     public function testClearDynamicHints(): void
@@ -596,7 +597,7 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult();
         $fr->clearDynamicHints();
 
-        $value = $fr->toArray()['action'][0]['clear_dynamic_hints'];
+        $value = Shape::at($fr->toArray(), 'action', 0, 'clear_dynamic_hints');
         $this->assertInstanceOf(\stdClass::class, $value);
         // On the wire the action is a JSON object, NOT a boolean and NOT [].
         $this->assertStringContainsString('"clear_dynamic_hints":{}', $fr->toJson());
@@ -608,21 +609,21 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->setEndOfSpeechTimeout(500);
-        $this->assertSame(500, $fr->toArray()['action'][0]['end_of_speech_timeout']);
+        $this->assertSame(500, Shape::at($fr->toArray(), 'action', 0, 'end_of_speech_timeout'));
     }
 
     public function testSetSpeechEventTimeout(): void
     {
         $fr = new FunctionResult();
         $fr->setSpeechEventTimeout(1000);
-        $this->assertSame(1000, $fr->toArray()['action'][0]['speech_event_timeout']);
+        $this->assertSame(1000, Shape::at($fr->toArray(), 'action', 0, 'speech_event_timeout'));
     }
 
     public function testToggleFunctions(): void
     {
         $fr = new FunctionResult();
         $fr->toggleFunctions(['lookup' => true, 'transfer' => false]);
-        $toggled = $fr->toArray()['action'][0]['toggle_functions'];
+        $toggled = Shape::sub($fr->toArray(), 'action', 0, 'toggle_functions');
 
         $this->assertCount(2, $toggled);
         $this->assertSame(['function' => 'lookup', 'active' => true], $toggled[0]);
@@ -634,7 +635,7 @@ class FunctionResultTest extends TestCase
         // Python action name is "functions_on_speaker_timeout".
         $fr = new FunctionResult();
         $fr->enableFunctionsOnTimeout();
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
         $this->assertTrue($action['functions_on_speaker_timeout']);
         $this->assertArrayNotHasKey('functions_on_timeout', $action);
     }
@@ -643,21 +644,21 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->enableFunctionsOnTimeout(false);
-        $this->assertFalse($fr->toArray()['action'][0]['functions_on_speaker_timeout']);
+        $this->assertFalse(Shape::at($fr->toArray(), 'action', 0, 'functions_on_speaker_timeout'));
     }
 
     public function testEnableExtensiveDataDefault(): void
     {
         $fr = new FunctionResult();
         $fr->enableExtensiveData();
-        $this->assertTrue($fr->toArray()['action'][0]['extensive_data']);
+        $this->assertTrue(Shape::at($fr->toArray(), 'action', 0, 'extensive_data'));
     }
 
     public function testEnableExtensiveDataFalse(): void
     {
         $fr = new FunctionResult();
         $fr->enableExtensiveData(false);
-        $this->assertFalse($fr->toArray()['action'][0]['extensive_data']);
+        $this->assertFalse(Shape::at($fr->toArray(), 'action', 0, 'extensive_data'));
     }
 
     public function testUpdateSettings(): void
@@ -665,7 +666,7 @@ class FunctionResultTest extends TestCase
         // Python action name is "settings" (not "ai_settings").
         $fr = new FunctionResult();
         $fr->updateSettings(['temperature' => 0.7, 'top_p' => 0.9]);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
         $this->assertSame(['temperature' => 0.7, 'top_p' => 0.9], $action['settings']);
         $this->assertArrayNotHasKey('ai_settings', $action);
     }
@@ -677,7 +678,7 @@ class FunctionResultTest extends TestCase
         $swml = ['sections' => ['main' => [['answer' => new \stdClass()]]]];
         $fr = new FunctionResult();
         $fr->executeSwml($swml);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertSame($swml, $action['SWML']);
         $this->assertArrayNotHasKey('transfer_swml', $action);
@@ -696,7 +697,7 @@ class FunctionResultTest extends TestCase
 
         $this->assertSame(
             '{"sections":{"main":[{"answer":{}}]}}',
-            json_encode($fr->toArray()['action'][0]['SWML'])
+            json_encode(Shape::at($fr->toArray(), 'action', 0, 'SWML'))
         );
     }
 
@@ -707,11 +708,11 @@ class FunctionResultTest extends TestCase
         $swml = ['sections' => ['main' => [['answer' => []]]]];
         $fr = new FunctionResult();
         $fr->executeSwml($swml, true);
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertArrayNotHasKey('transfer_swml', $action);
-        $this->assertSame('true', $action['SWML']['transfer']);
-        $this->assertSame($swml['sections'], $action['SWML']['sections']);
+        $this->assertSame('true', Shape::at($action, 'SWML', 'transfer'));
+        $this->assertSame($swml['sections'], Shape::at($action, 'SWML', 'sections'));
     }
 
     public function testExecuteSwmlInvalidStringFallsBackToRawSwml(): void
@@ -721,7 +722,7 @@ class FunctionResultTest extends TestCase
         $fr->executeSwml('not valid json at all');
         $this->assertSame(
             ['raw_swml' => 'not valid json at all'],
-            $fr->toArray()['action'][0]['SWML']
+            Shape::at($fr->toArray(), 'action', 0, 'SWML')
         );
     }
 
@@ -736,7 +737,7 @@ class FunctionResultTest extends TestCase
 
         $this->assertSame(
             '{"SWML":{"sections":{"main":[{"answer":{}}]},"transfer":"true"}}',
-            json_encode($fr->toArray()['action'][0])
+            json_encode(Shape::at($fr->toArray(), 'action', 0))
         );
     }
 
@@ -748,7 +749,7 @@ class FunctionResultTest extends TestCase
         $fr->executeSwml('not json', true);
         $this->assertSame(
             ['raw_swml' => 'not json', 'transfer' => 'true'],
-            $fr->toArray()['action'][0]['SWML']
+            Shape::at($fr->toArray(), 'action', 0, 'SWML')
         );
     }
 
@@ -768,8 +769,8 @@ class FunctionResultTest extends TestCase
         // Parity: test_join_conference_simple_name_all_defaults
         $result = (new FunctionResult())->joinConference('my-conference');
 
-        $swml = $result->toArray()['action'][0]['SWML'];
-        $joinParams = $swml['sections']['main'][0]['join_conference'];
+        $swml = Shape::sub($result->toArray(), 'action', 0, 'SWML');
+        $joinParams = Shape::at($swml, 'sections', 'main', 0, 'join_conference');
         // Simple form: just the conference name string.
         $this->assertSame('my-conference', $joinParams);
     }
@@ -798,8 +799,8 @@ class FunctionResultTest extends TestCase
             ['key' => 'value']                          // result
         );
 
-        $swml = $result->toArray()['action'][0]['SWML'];
-        $joinParams = $swml['sections']['main'][0]['join_conference'];
+        $swml = Shape::sub($result->toArray(), 'action', 0, 'SWML');
+        $joinParams = Shape::at($swml, 'sections', 'main', 0, 'join_conference');
         $this->assertIsArray($joinParams);
         $this->assertSame('team-meeting', $joinParams['name']);
         $this->assertTrue($joinParams['muted']);
@@ -973,7 +974,7 @@ class FunctionResultTest extends TestCase
         // Python wraps {"join_room": {name}} in a full SWML document.
         $fr = new FunctionResult();
         $fr->joinRoom('video-room');
-        $joinRoom = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['join_room'];
+        $joinRoom = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_room');
         $this->assertSame(['name' => 'video-room'], $joinRoom);
     }
 
@@ -982,7 +983,7 @@ class FunctionResultTest extends TestCase
         // Python wraps {"sip_refer": {to_uri}} in a full SWML document.
         $fr = new FunctionResult();
         $fr->sipRefer('sip:agent@example.com');
-        $sipRefer = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['sip_refer'];
+        $sipRefer = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'sip_refer');
         $this->assertSame(['to_uri' => 'sip:agent@example.com'], $sipRefer);
     }
 
@@ -994,7 +995,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->tap('wss://tap.example.com');
-        $t = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+        $t = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
 
         $this->assertSame('wss://tap.example.com', $t['uri']);
         // direction/codec/rtp_ptime/status_url are at defaults -> omitted.
@@ -1009,7 +1010,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->tap('wss://tap.example.com', 'tap-1', 'speak', 'PCMA', 40, 'https://example.com/status');
-        $t = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+        $t = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
 
         $this->assertSame('tap-1', $t['control_id']);
         $this->assertSame('speak', $t['direction']);
@@ -1043,7 +1044,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->stopTap();
-        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_tap'];
+        $stop = Shape::at($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'stop_tap');
         $this->assertSame('{}', json_encode($stop));
     }
 
@@ -1051,7 +1052,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->stopTap('tap-1');
-        $stop = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['stop_tap'];
+        $stop = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'stop_tap');
         $this->assertSame(['control_id' => 'tap-1'], $stop);
     }
 
@@ -1063,7 +1064,7 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->sendSms('+15551111111', '+15552222222', 'Hello');
-        $sms = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['send_sms'];
+        $sms = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'send_sms');
 
         $this->assertSame('+15551111111', $sms['to_number']);
         $this->assertSame('+15552222222', $sms['from_number']);
@@ -1081,13 +1082,13 @@ class FunctionResultTest extends TestCase
             '+15552222222',
             'See image',
             ['https://example.com/img.png'],
-            ['campaign' => 'promo'],
+            ['promo'],
             'us'
         );
-        $sms = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['send_sms'];
+        $sms = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'send_sms');
 
         $this->assertSame(['https://example.com/img.png'], $sms['media']);
-        $this->assertSame(['campaign' => 'promo'], $sms['tags']);
+        $this->assertSame(['promo'], $sms['tags']);
         $this->assertSame('us', $sms['region']);
     }
 
@@ -1096,7 +1097,7 @@ class FunctionResultTest extends TestCase
         // body is optional when media is provided.
         $fr = new FunctionResult();
         $fr->sendSms('+15551111111', '+15552222222', null, ['https://example.com/img.png']);
-        $sms = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['send_sms'];
+        $sms = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'send_sms');
 
         $this->assertArrayNotHasKey('body', $sms);
         $this->assertSame(['https://example.com/img.png'], $sms['media']);
@@ -1118,12 +1119,14 @@ class FunctionResultTest extends TestCase
     {
         $fr = new FunctionResult();
         $fr->pay('https://pay.example.com/connector');
-        $main = $fr->toArray()['action'][0]['SWML']['sections']['main'];
+        $main = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main');
 
         // First verb sets the default ai_response.
-        $this->assertStringStartsWith('The payment status is', $main[0]['set']['ai_response']);
+        $aiResponse = Shape::at($main, 0, 'set', 'ai_response');
+        $this->assertIsString($aiResponse);
+        $this->assertStringStartsWith('The payment status is', $aiResponse);
 
-        $p = $main[1]['pay'];
+        $p = Shape::sub($main, 1, 'pay');
         $this->assertSame('https://pay.example.com/connector', $p['payment_connector_url']);
         $this->assertSame('dtmf', $p['input']);                 // wire key is `input`
         $this->assertSame('credit-card', $p['payment_method']);
@@ -1168,7 +1171,7 @@ class FunctionResultTest extends TestCase
             [['for' => 'payment-card-number', 'actions' => []]],
             'Custom response'
         );
-        $p = $fr->toArray()['action'][0]['SWML']['sections']['main'][1]['pay'];
+        $p = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 1, 'pay');
 
         $this->assertSame('120', $p['timeout']);
         $this->assertSame('5', $p['max_attempts']);
@@ -1186,7 +1189,7 @@ class FunctionResultTest extends TestCase
         $this->assertSame([['name' => 'order', 'value' => '42']], $p['parameters']);
         $this->assertSame([['for' => 'payment-card-number', 'actions' => []]], $p['prompts']);
         // Custom ai_response overrides the default.
-        $set = $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['set'];
+        $set = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'set');
         $this->assertSame('Custom response', $set['ai_response']);
     }
 
@@ -1196,10 +1199,14 @@ class FunctionResultTest extends TestCase
     // is NO jsonrpc envelope; method strings are bare (e.g. "dial", not
     // "calling.dial"); call_id/node_id are TOP-LEVEL siblings of method/params.
 
-    /** Reach into the SWML-wrapped execute_rpc params. */
+    /**
+     * Reach into the SWML-wrapped execute_rpc params.
+     *
+     * @return array<array-key,mixed>
+     */
     private static function rpcOf(FunctionResult $fr): array
     {
-        return $fr->toArray()['action'][0]['SWML']['sections']['main'][0]['execute_rpc'];
+        return Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'execute_rpc');
     }
 
     public function testExecuteRpcMethodOnly(): void
@@ -1208,7 +1215,7 @@ class FunctionResultTest extends TestCase
         $fr->executeRpc('ai_unhold');
         $rpc = self::rpcOf($fr);
 
-        $this->assertSame('ai_unhold', $rpc['method']);
+        $this->assertSame('ai_unhold', Shape::at($rpc, 'method'));
         $this->assertArrayNotHasKey('jsonrpc', $rpc);
         $this->assertArrayNotHasKey('params', $rpc);
         $this->assertArrayNotHasKey('call_id', $rpc);
@@ -1221,11 +1228,11 @@ class FunctionResultTest extends TestCase
         $fr->executeRpc('ai_message', ['role' => 'system', 'message_text' => 'hi'], 'c1', 'n1');
         $rpc = self::rpcOf($fr);
 
-        $this->assertSame('ai_message', $rpc['method']);
+        $this->assertSame('ai_message', Shape::at($rpc, 'method'));
         // call_id / node_id are siblings of method, NOT nested in params.
-        $this->assertSame('c1', $rpc['call_id']);
-        $this->assertSame('n1', $rpc['node_id']);
-        $this->assertSame(['role' => 'system', 'message_text' => 'hi'], $rpc['params']);
+        $this->assertSame('c1', Shape::at($rpc, 'call_id'));
+        $this->assertSame('n1', Shape::at($rpc, 'node_id'));
+        $this->assertSame(['role' => 'system', 'message_text' => 'hi'], Shape::at($rpc, 'params'));
     }
 
     public function testRpcDialNestsDevices(): void
@@ -1234,7 +1241,7 @@ class FunctionResultTest extends TestCase
         $fr->rpcDial('+15551234567', '+15559876543', 'https://example.com/swml');
         $rpc = self::rpcOf($fr);
 
-        $this->assertSame('dial', $rpc['method']);
+        $this->assertSame('dial', Shape::at($rpc, 'method'));
         $this->assertArrayNotHasKey('jsonrpc', $rpc);
         $this->assertSame(
             [
@@ -1247,7 +1254,7 @@ class FunctionResultTest extends TestCase
                 ],
                 'dest_swml' => 'https://example.com/swml',
             ],
-            $rpc['params']
+            Shape::at($rpc, 'params')
         );
     }
 
@@ -1256,7 +1263,7 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult();
         $fr->rpcDial('+1', '+2', 'https://swml', 'sip');
         $rpc = self::rpcOf($fr);
-        $this->assertSame('sip', $rpc['params']['devices']['type']);
+        $this->assertSame('sip', Shape::at($rpc, 'params', 'devices', 'type'));
     }
 
     public function testRpcAiMessage(): void
@@ -1265,11 +1272,11 @@ class FunctionResultTest extends TestCase
         $fr->rpcAiMessage('call-abc-123', 'Please hold');
         $rpc = self::rpcOf($fr);
 
-        $this->assertSame('ai_message', $rpc['method']);
-        $this->assertSame('call-abc-123', $rpc['call_id']);   // top-level
-        $this->assertSame('system', $rpc['params']['role']);  // default role
-        $this->assertSame('Please hold', $rpc['params']['message_text']);
-        $this->assertArrayNotHasKey('call_id', $rpc['params']);
+        $this->assertSame('ai_message', Shape::at($rpc, 'method'));
+        $this->assertSame('call-abc-123', Shape::at($rpc, 'call_id'));   // top-level
+        $this->assertSame('system', Shape::at($rpc, 'params', 'role'));  // default role
+        $this->assertSame('Please hold', Shape::at($rpc, 'params', 'message_text'));
+        $this->assertArrayNotHasKey('call_id', Shape::sub($rpc, 'params'));
     }
 
     public function testRpcAiMessageCustomRole(): void
@@ -1277,7 +1284,7 @@ class FunctionResultTest extends TestCase
         $fr = new FunctionResult();
         $fr->rpcAiMessage('c1', 'msg', 'user');
         $rpc = self::rpcOf($fr);
-        $this->assertSame('user', $rpc['params']['role']);
+        $this->assertSame('user', Shape::at($rpc, 'params', 'role'));
     }
 
     public function testRpcAiUnhold(): void
@@ -1286,8 +1293,8 @@ class FunctionResultTest extends TestCase
         $fr->rpcAiUnhold('call-xyz-789');
         $rpc = self::rpcOf($fr);
 
-        $this->assertSame('ai_unhold', $rpc['method']);
-        $this->assertSame('call-xyz-789', $rpc['call_id']);   // top-level
+        $this->assertSame('ai_unhold', Shape::at($rpc, 'method'));
+        $this->assertSame('call-xyz-789', Shape::at($rpc, 'call_id'));   // top-level
         // Empty params dict is dropped (Python's `if params:` is falsy for {}).
         $this->assertArrayNotHasKey('params', $rpc);
     }
@@ -1297,7 +1304,7 @@ class FunctionResultTest extends TestCase
         // Python action name is "user_input".
         $fr = new FunctionResult();
         $fr->simulateUserInput('I need help');
-        $action = $fr->toArray()['action'][0];
+        $action = Shape::sub($fr->toArray(), 'action', 0);
         $this->assertSame('I need help', $action['user_input']);
         $this->assertArrayNotHasKey('simulate_user_input', $action);
     }
@@ -1315,8 +1322,8 @@ class FunctionResultTest extends TestCase
         $actions = [['type' => 'Say', 'phrase' => 'Enter card number']];
         $prompt = FunctionResult::createPaymentPrompt('payment-card-number', $actions);
 
-        $this->assertSame('payment-card-number', $prompt['for']);
-        $this->assertSame($actions, $prompt['actions']);
+        $this->assertSame('payment-card-number', Shape::at($prompt, 'for'));
+        $this->assertSame($actions, Shape::at($prompt, 'actions'));
         $this->assertArrayNotHasKey('card_type', $prompt);
         $this->assertArrayNotHasKey('error_type', $prompt);
         // Old invented keys are gone.
@@ -1329,8 +1336,8 @@ class FunctionResultTest extends TestCase
         $actions = [['type' => 'Play', 'phrase' => 'https://example.com/p.mp3']];
         $prompt = FunctionResult::createPaymentPrompt('x', $actions, 'visa amex', 'timeout invalid');
 
-        $this->assertSame('visa amex', $prompt['card_type']);
-        $this->assertSame('timeout invalid', $prompt['error_type']);
+        $this->assertSame('visa amex', Shape::at($prompt, 'card_type'));
+        $this->assertSame('timeout invalid', Shape::at($prompt, 'error_type'));
     }
 
     public function testCreatePaymentActionShape(): void
@@ -1374,7 +1381,7 @@ class FunctionResultTest extends TestCase
             [$param],
             [$prompt]
         );
-        $p = $fr->toArray()['action'][0]['SWML']['sections']['main'][1]['pay'];
+        $p = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 1, 'pay');
 
         $this->assertSame([['name' => 'order', 'value' => '42']], $p['parameters']);
         $this->assertSame(
@@ -1406,11 +1413,11 @@ class FunctionResultTest extends TestCase
             ->say('second')
             ->hangup();
 
-        $actions = $fr->toArray()['action'];
+        $actions = Shape::sub($fr->toArray(), 'action');
         $this->assertCount(3, $actions);
-        $this->assertSame('first', $actions[0]['say']);
-        $this->assertSame('second', $actions[1]['say']);
-        $this->assertArrayHasKey('hangup', $actions[2]);
+        $this->assertSame('first', Shape::at($actions, 0, 'say'));
+        $this->assertSame('second', Shape::at($actions, 1, 'say'));
+        $this->assertArrayHasKey('hangup', Shape::sub($actions, 2));
     }
 
     public function testComplexChainProducesCorrectArray(): void
@@ -1423,12 +1430,12 @@ class FunctionResultTest extends TestCase
             ->hangup()
             ->toArray();
 
-        $this->assertSame('Done', $arr['response']);
-        $this->assertTrue($arr['post_process']);
-        $this->assertCount(3, $arr['action']);
-        $this->assertSame(['status' => 'complete'], $arr['action'][0]['set_global_data']);
-        $this->assertSame('Goodbye', $arr['action'][1]['say']);
-        $this->assertArrayHasKey('hangup', $arr['action'][2]);
+        $this->assertSame('Done', Shape::at($arr, 'response'));
+        $this->assertTrue(Shape::at($arr, 'post_process'));
+        $this->assertCount(3, Shape::sub($arr, 'action'));
+        $this->assertSame(['status' => 'complete'], Shape::at($arr, 'action', 0, 'set_global_data'));
+        $this->assertSame('Goodbye', Shape::at($arr, 'action', 1, 'say'));
+        $this->assertArrayHasKey('hangup', Shape::sub($arr, 'action', 2));
     }
 
     public function testAllActionMethodsReturnSelf(): void
@@ -1494,16 +1501,16 @@ class FunctionResultTest extends TestCase
     {
         // The backed enum's value is the canonical wire direction string, and
         // record_call uses 'listen' (not tap's 'hear'). recordCall now routes
-        // through the SWML document, so read the verb out of it.
-        $this->assertSame('listen', RecordDirection::Listen->value);
-
+        // through the SWML document, so read the verb out of it. The
+        // enum-value === 'listen' identity is guaranteed by the backed enum's
+        // declaration; the behavioural equivalence below is what needs proving.
         $enum = new FunctionResult();
         $enum->recordCall('rec-1', true, 'mp3', RecordDirection::Listen);
         $string = new FunctionResult();
         $string->recordCall('rec-1', true, 'mp3', 'listen');
 
-        $enumRec = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
-        $stringRec = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+        $enumRec = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
+        $stringRec = Shape::sub($string->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
 
         $this->assertSame(
             $stringRec,
@@ -1521,8 +1528,8 @@ class FunctionResultTest extends TestCase
         $string = new FunctionResult();
         $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
 
-        $enumTap = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
-        $stringTap = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+        $enumTap = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
+        $stringTap = Shape::sub($string->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
 
         $this->assertSame(
             $stringTap,
@@ -1539,14 +1546,16 @@ class FunctionResultTest extends TestCase
      */
     public function testRecordFormatCaseWireValues(): void
     {
-        $this->assertSame('wav', RecordFormat::Wav->value);
-        $this->assertSame('mp3', RecordFormat::Mp3->value);
-        $this->assertSame('mp4', RecordFormat::Mp4->value);
-        // The closed set is exactly these three — no more, no fewer.
-        $this->assertSame(
-            ['wav', 'mp3', 'mp4'],
-            array_map(static fn (RecordFormat $f): string => $f->value, RecordFormat::cases()),
-        );
+        // Collect the wire values imperatively so the closed-set assertion is a
+        // genuine runtime check of the enum's case list (order, count, and
+        // strings) rather than a statically-folded literal comparison.
+        /** @var list<string> $values */
+        $values = [];
+        foreach (RecordFormat::cases() as $f) {
+            $values[] = $f->value;
+        }
+        // The closed set is exactly these three, in this order — no more, no fewer.
+        $this->assertSame(['wav', 'mp3', 'mp4'], $values);
     }
 
     /**
@@ -1563,8 +1572,8 @@ class FunctionResultTest extends TestCase
         $string = new FunctionResult();
         $string->recordCall('rec-1', true, 'mp4', 'listen');
 
-        $enumRec = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
-        $stringRec = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+        $enumRec = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
+        $stringRec = Shape::sub($string->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
 
         $this->assertSame(
             $stringRec,
@@ -1593,7 +1602,7 @@ class FunctionResultTest extends TestCase
             $string = new FunctionResult();
             $string->recordCall('rc', false, $fmt->value, 'both');
 
-            $enumRec = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['record_call'];
+            $enumRec = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'record_call');
             $this->assertSame($fmt->value, $enumRec['format']);
             $this->assertSame(
                 json_encode($string->toArray()),
@@ -1622,13 +1631,15 @@ class FunctionResultTest extends TestCase
      */
     public function testCodecCaseWireValues(): void
     {
-        $this->assertSame('PCMU', Codec::Pcmu->value);
-        $this->assertSame('PCMA', Codec::Pcma->value);
+        // Collect imperatively so the closed-set assertion is a real runtime
+        // check of the case list rather than a statically-folded literal.
+        /** @var list<string> $values */
+        $values = [];
+        foreach (Codec::cases() as $c) {
+            $values[] = $c->value;
+        }
         // The closed set is exactly these two — the tap vocabulary, not RELAY's.
-        $this->assertSame(
-            ['PCMU', 'PCMA'],
-            array_map(static fn (Codec $c): string => $c->value, Codec::cases()),
-        );
+        $this->assertSame(['PCMU', 'PCMA'], $values);
     }
 
     /**
@@ -1644,8 +1655,8 @@ class FunctionResultTest extends TestCase
         $string = new FunctionResult();
         $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
 
-        $enumTap = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
-        $stringTap = $string->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+        $enumTap = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
+        $stringTap = Shape::sub($string->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
 
         $this->assertSame(
             $stringTap,
@@ -1683,7 +1694,7 @@ class FunctionResultTest extends TestCase
             );
 
             // Non-default codec (PCMA) appears on the wire; default (PCMU) is omitted.
-            $tap = $enum->toArray()['action'][0]['SWML']['sections']['main'][0]['tap'];
+            $tap = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
             if ($codec->value === 'PCMU') {
                 $this->assertArrayNotHasKey('codec', $tap);
             } else {

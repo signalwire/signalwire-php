@@ -35,8 +35,8 @@ $context = $ctx->addContext('default');
 $step1 = $context->addStep('demographics');
 $step1->setText('Collect the patient\'s basic information.');
 $step1->setGatherInfo(
-    outputKey: 'patient_demographics',
-    prompt:    'Please collect the following patient information.',
+    output_key: 'patient_demographics',
+    prompt:     'Please collect the following patient information.',
 );
 $step1->addGatherQuestion('full_name', 'What is your full name?', type: 'string');
 $step1->addGatherQuestion('date_of_birth', 'What is your date of birth?', type: 'string');
@@ -48,8 +48,8 @@ $step1->setValidSteps(['symptoms']);
 $step2 = $context->addStep('symptoms');
 $step2->setText('Ask about the patient\'s current symptoms and reason for visit.');
 $step2->setGatherInfo(
-    outputKey: 'patient_symptoms',
-    prompt:    "Now let's talk about why you're visiting today.",
+    output_key: 'patient_symptoms',
+    prompt:     "Now let's talk about why you're visiting today.",
 );
 $step2->addGatherQuestion('reason_for_visit', 'What is the main reason for your visit today?', type: 'string');
 $step2->addGatherQuestion('symptom_duration', 'How long have you been experiencing these symptoms?', type: 'string');

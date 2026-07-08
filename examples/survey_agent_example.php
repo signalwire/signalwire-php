@@ -98,14 +98,13 @@ $agent->defineTool(
     },
 );
 
-$agent->onSummary(function ($summary, $raw) {
+$agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
         echo "Survey completed: " . json_encode($summary, JSON_PRETTY_PRINT) . "\n";
     }
 });
 
-$user = $agent->basicAuthUser();
-$pass = $agent->basicAuthPassword();
+[$user, $pass] = $agent->getBasicAuthCredentials();
 
 echo "Starting Product Survey Agent\n";
 echo "URL: http://localhost:3000/product_survey\n";

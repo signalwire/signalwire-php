@@ -92,70 +92,104 @@ class FAQBotAgent extends AgentBase
             );
         }
 
-        // Tool: search_faqs (keyword scoring)
-        $capturedFaqs    = $this->faqs;
-        $capturedSuggest = $this->suggestRelated;
+        // Tool: search_faqs — dispatches to the named handler method.
         $this->defineTool(
             name: 'search_faqs',
             description: 'Search the FAQ knowledge base by keyword matching and return the best answer',
             parameters: [
                 'query' => ['type' => 'string', 'description' => 'The question or keywords to search'],
             ],
-            handler: function (array $args, array $rawData) use ($capturedFaqs, $capturedSuggest): FunctionResult {
-                $query = strtolower(trim($args['query'] ?? ''));
-
-                if ($query === '') {
-                    return new FunctionResult('Please provide a search query.');
-                }
-
-                $keywords = preg_split('/\s+/', $query) ?: [];
-
-                // Score each FAQ by keyword matches
-                $scored = [];
-                foreach ($capturedFaqs as $index => $faq) {
-                    $questionLower = strtolower($faq['question']);
-                    $score = 0;
-
-                    // Exact substring match gets highest score
-                    if (str_contains($questionLower, $query)) {
-                        $score += 10;
-                    }
-
-                    // Individual keyword matches
-                    foreach ($keywords as $keyword) {
-                        if ($keyword !== '' && str_contains($questionLower, $keyword)) {
-                            $score++;
-                        }
-                    }
-
-                    if ($score > 0) {
-                        $scored[] = ['index' => $index, 'score' => $score, 'faq' => $faq];
-                    }
-                }
-
-                if (empty($scored)) {
-                    return new FunctionResult("No FAQ found matching: {$args['query']}");
-                }
-
-                // Sort by score descending
-                usort($scored, fn (array $a, array $b): int => $b['score'] <=> $a['score']);
-
-                $best = $scored[0]['faq'];
-                $response = $best['answer'];
-
-                // Suggest related questions if enabled
-                if ($capturedSuggest && count($scored) > 1) {
-                    $related = array_slice($scored, 1, 3);
-                    $suggestions = array_map(
-                        fn (array $item): string => $item['faq']['question'],
-                        $related,
-                    );
-                    $response .= "\n\nRelated questions: " . implode('; ', $suggestions);
-                }
-
-                return new FunctionResult($response);
-            },
+            handler: fn (array $args, array $rawData): FunctionResult => $this->searchFaqs($args, $rawData),
         );
+    }
+
+    /**
+     * Search for FAQs matching a query and return the best answer.
+     *
+     * Mirrors Python `FAQBotAgent.search_faqs`: keyword-scored substring
+     * matching over the configured FAQ set. The PHP port's FAQ data model is
+     * {question, answer}, so it returns the best-matching answer (and, when
+     * enabled, related questions) rather than Python's list of question texts.
+     *
+     * @param array<string, mixed> $args
+     * @param array<string, mixed> $rawData
+     */
+    public function searchFaqs(array $args, array $rawData): FunctionResult
+    {
+        $rawQuery = is_string($args['query'] ?? null) ? $args['query'] : '';
+        $query = strtolower(trim($rawQuery));
+
+        if ($query === '') {
+            return new FunctionResult('Please provide a search query.');
+        }
+
+        $keywords = preg_split('/\s+/', $query) ?: [];
+
+        // Score each FAQ by keyword matches.
+        $scored = [];
+        foreach ($this->faqs as $index => $faq) {
+            $questionLower = strtolower($faq['question']);
+            $score = 0;
+
+            // Exact substring match gets the highest score.
+            if (str_contains($questionLower, $query)) {
+                $score += 10;
+            }
+
+            // Individual keyword matches.
+            foreach ($keywords as $keyword) {
+                if ($keyword !== '' && str_contains($questionLower, $keyword)) {
+                    $score++;
+                }
+            }
+
+            if ($score > 0) {
+                $scored[] = ['index' => $index, 'score' => $score, 'faq' => $faq];
+            }
+        }
+
+        if (empty($scored)) {
+            return new FunctionResult("No FAQ found matching: {$rawQuery}");
+        }
+
+        // Sort by score descending.
+        usort($scored, fn (array $a, array $b): int => $b['score'] <=> $a['score']);
+
+        $best = $scored[0]['faq'];
+        $response = $best['answer'];
+
+        // Suggest related questions if enabled.
+        if ($this->suggestRelated && count($scored) > 1) {
+            $related = array_slice($scored, 1, 3);
+            $suggestions = array_map(
+                fn (array $item): string => $item['faq']['question'],
+                $related,
+            );
+            $response .= "\n\nRelated questions: " . implode('; ', $suggestions);
+        }
+
+        return new FunctionResult($response);
+    }
+
+    /**
+     * Process the interaction summary.
+     *
+     * Mirrors Python `FAQBotAgent.on_summary`: logs the structured or
+     * free-form summary. Subclasses can override to persist the interaction.
+     *
+     * @param array<string,mixed>|string|null $summary
+     * @param array<string,mixed>|null        $rawData
+     */
+    public function onSummary(array|string|null $summary, ?array $rawData = null): void
+    {
+        if ($summary === null || $summary === '') {
+            return;
+        }
+        if (is_array($summary)) {
+            $this->logger->info('FAQ interaction summary: ' . json_encode($summary, JSON_PRETTY_PRINT));
+        } else {
+            $this->logger->info("FAQ interaction summary: {$summary}");
+        }
     }
 
     /**

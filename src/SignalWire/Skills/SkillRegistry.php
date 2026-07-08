@@ -25,7 +25,6 @@ class SkillRegistry
         'info_gatherer',
         'joke',
         'math',
-        'mcp_gateway',
         'native_vector_search',
         'play_background_file',
         'spider',
@@ -35,13 +34,112 @@ class SkillRegistry
         'wikipedia_search',
     ];
 
-    private function __construct()
+    /**
+     * Construct a fresh registry.
+     *
+     * Mirrors Python's `SkillRegistry.__init__` (registry.py:26), which
+     * initializes the skill map and external-path list. PHP keeps a
+     * process-wide singleton via {@see instance()}, but the constructor is
+     * public — like Python's module-global `skill_registry = SkillRegistry()`,
+     * a fresh registry can be constructed directly. {@see instance()} still
+     * returns one shared instance.
+     */
+    public function __construct()
     {
     }
 
     public function registerSkill(string $name, string $className): void
     {
         $this->registeredSkills[$name] = $className;
+    }
+
+    /**
+     * Discover and return all available skills.
+     *
+     * Mirrors Python's `SkillRegistry.discover_skills` (registry.py:136):
+     * skills load on-demand, so there is nothing to eagerly register; this
+     * scans the built-in skill set and returns each skill's name so callers
+     * can enumerate what is available.
+     *
+     * @return list<array{name: string}>
+     */
+    public function discoverSkills(): array
+    {
+        $out = [];
+        foreach ($this->listSkills() as $name) {
+            $out[] = ['name' => $name];
+        }
+        return $out;
+    }
+
+    /**
+     * Get a skill's implementing class by name, loading on-demand if needed.
+     *
+     * Mirrors Python's `SkillRegistry.get_skill_class` (registry.py:239):
+     * returns the fully-qualified class name for the skill, or null when no
+     * such skill is registered or discoverable. PHP returns the class-string
+     * (autoloadable FQCN) rather than a Python `type` object.
+     *
+     * @return class-string<SkillBase>|null
+     */
+    public function getSkillClass(string $skillName): ?string
+    {
+        $className = $this->getFactory($skillName);
+        if ($className !== null && class_exists($className)) {
+            /** @var class-string<SkillBase> $className */
+            return $className;
+        }
+        return null;
+    }
+
+    /**
+     * List all skill sources and the skills available from each.
+     *
+     * Mirrors Python's `SkillRegistry.list_all_skill_sources` (registry.py:506):
+     * returns a map of source type -> list of skill names. PHP discovers
+     * built-ins from the {@see BUILTIN_SKILL_NAMES} table, external skills
+     * from directories registered via {@see addSkillDirectory()}, and any
+     * directly-registered skills that aren't built-ins.
+     *
+     * @return array{'built-in': list<string>, external_paths: list<string>, entry_points: list<string>, registered: list<string>}
+     */
+    public function listAllSkillSources(): array
+    {
+        $sources = [
+            'built-in' => self::BUILTIN_SKILL_NAMES,
+            'external_paths' => [],
+            'entry_points' => [],
+            'registered' => [],
+        ];
+
+        // External path skills: each registered directory contributes its
+        // immediate sub-directories that look like a skill package.
+        foreach ($this->externalPaths as $path) {
+            if (!is_dir($path)) {
+                continue;
+            }
+            $entries = scandir($path);
+            if ($entries === false) {
+                continue;
+            }
+            foreach ($entries as $item) {
+                if ($item === '.' || $item === '..' || str_starts_with($item, '__')) {
+                    continue;
+                }
+                if (is_dir($path . DIRECTORY_SEPARATOR . $item)) {
+                    $sources['external_paths'][] = $item;
+                }
+            }
+        }
+
+        // Directly-registered skills that aren't built-ins.
+        foreach (array_keys($this->registeredSkills) as $skillName) {
+            if (!in_array($skillName, $sources['built-in'], true)) {
+                $sources['registered'][] = $skillName;
+            }
+        }
+
+        return $sources;
     }
 
     public function getFactory(string $name): ?string
@@ -122,7 +220,6 @@ class SkillRegistry
 
     /**
      * Returns the registered external skill directories.
-     * Parity surface for Python's `_external_paths`.
      *
      * @return list<string>
      */

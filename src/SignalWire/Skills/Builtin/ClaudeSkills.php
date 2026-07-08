@@ -85,8 +85,102 @@ class ClaudeSkills extends SkillBase
         return true;
     }
 
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `ClaudeSkillsSkill.get_instance_key` (skill.py:695): the
+     * skills_path differentiates instances. Python hashes the path modulo
+     * 10000; PHP uses crc32 (a stable, reproducible hash — Python's builtin
+     * hash() is process-seeded and non-reproducible) so distinct paths yield
+     * distinct keys.
+     */
+    public function getInstanceKey(): string
+    {
+        $skillsPath = $this->params['skills_path'] ?? 'default';
+        $skillsPath = is_string($skillsPath) ? $skillsPath : 'default';
+        return 'claude_skills_' . (crc32($skillsPath) % 10000);
+    }
+
+    /**
+     * Parameter schema for the Claude skills loader.
+     *
+     * Mirrors Python `ClaudeSkillsSkill.get_parameter_schema` (skill.py:702):
+     * merges the base schema with the loader's configuration parameters.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'skills_path' => [
+                'type' => 'string',
+                'description' => 'Path to directory containing Claude skill folders (each with SKILL.md)',
+                'required' => true,
+            ],
+            'include' => [
+                'type' => 'array',
+                'description' => "Glob patterns for skills to include (default: ['*'])",
+                'default' => ['*'],
+                'required' => false,
+            ],
+            'exclude' => [
+                'type' => 'array',
+                'description' => 'Glob patterns for skills to exclude',
+                'default' => [],
+                'required' => false,
+            ],
+            'prompt_title' => [
+                'type' => 'string',
+                'description' => 'Title for the prompt section listing skills',
+                'default' => 'Claude Skills',
+                'required' => false,
+            ],
+            'prompt_intro' => [
+                'type' => 'string',
+                'description' => 'Introductory text for the prompt section',
+                'default' => "You have access to specialized skills. Call the appropriate tool when the user's question matches:",
+                'required' => false,
+            ],
+            'skill_descriptions' => [
+                'type' => 'object',
+                'description' => 'Override descriptions for specific skills (skill_name -> description)',
+                'default' => [],
+                'required' => false,
+            ],
+            'tool_prefix' => [
+                'type' => 'string',
+                'description' => "Prefix for generated tool names (default: 'claude_'). Use empty string for no prefix.",
+                'default' => 'claude_',
+                'required' => false,
+            ],
+            'response_prefix' => [
+                'type' => 'string',
+                'description' => 'Text to prepend to skill results (e.g., instructions for the AI)',
+                'default' => '',
+                'required' => false,
+            ],
+            'response_postfix' => [
+                'type' => 'string',
+                'description' => 'Text to append to skill results (e.g., reminders or constraints)',
+                'default' => '',
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
     public function setup(): bool
     {
+        // Mirror Python `ClaudeSkillsSkill.setup` (skill.py:63): validate the
+        // declared package requirements before touching the load path.
+        if (!$this->validatePackages()) {
+            return false;
+        }
+
+        // Load-path validation: skills_path is required, must exist, and must
+        // be a directory (Python skill.py:72-89).
         $skillsPath = $this->params['skills_path'] ?? null;
         if (!is_string($skillsPath) || $skillsPath === '') {
             return false;

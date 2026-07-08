@@ -1,0 +1,151 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SignalWire\Tests;
+
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use SignalWire\Agents\BedrockAgent;
+use SignalWire\Tests\Support\Shape;
+
+/**
+ * Tests for the Amazon Bedrock voice-to-voice prefab agent (item I).
+ */
+class BedrockAgentTest extends TestCase
+{
+    private function makeAgent(): BedrockAgent
+    {
+        return new BedrockAgent(
+            name: 'bedrock',
+            systemPrompt: 'You are a helpful voice assistant.',
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass',
+        );
+    }
+
+    #[Test]
+    public function rendersAmazonBedrockVerbInsteadOfAi(): void
+    {
+        $agent = $this->makeAgent();
+        $swml = $agent->renderSwml();
+
+        $main = Shape::sub($swml, 'sections', 'main');
+        // No `ai` verb should remain; it must be transformed to amazon_bedrock.
+        $hasAi = false;
+        $bedrock = null;
+        foreach ($main as $verb) {
+            $verb = Shape::arr($verb);
+            if (isset($verb['ai'])) {
+                $hasAi = true;
+            }
+            if (isset($verb['amazon_bedrock'])) {
+                $bedrock = $verb['amazon_bedrock'];
+            }
+        }
+        $this->assertFalse($hasAi, 'ai verb should be replaced by amazon_bedrock');
+        $this->assertNotNull($bedrock, 'amazon_bedrock verb should be present');
+    }
+
+    #[Test]
+    public function voiceAndInferenceParamsLiveInsideThePrompt(): void
+    {
+        $agent = new BedrockAgent(
+            name: 'bedrock',
+            voiceId: 'joanna',
+            temperature: 0.5,
+            topP: 0.95,
+            basicAuthUser: 'u',
+            basicAuthPassword: 'p',
+        );
+        $swml = $agent->renderSwml();
+
+        $bedrock = null;
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            $verb = Shape::arr($verb);
+            if (isset($verb['amazon_bedrock'])) {
+                $bedrock = $verb['amazon_bedrock'];
+            }
+        }
+        $this->assertNotNull($bedrock);
+        $this->assertSame('joanna', Shape::at($bedrock, 'prompt', 'voice_id'));
+        $this->assertSame(0.5, Shape::at($bedrock, 'prompt', 'temperature'));
+        $this->assertSame(0.95, Shape::at($bedrock, 'prompt', 'top_p'));
+    }
+
+    #[Test]
+    public function setVoiceUpdatesTheRenderedVoiceId(): void
+    {
+        $agent = $this->makeAgent();
+        $ret = $agent->setVoice('kevin');
+        $this->assertSame($agent, $ret);
+
+        $bedrock = $this->bedrockVerb($agent);
+        $this->assertSame('kevin', Shape::at($bedrock, 'prompt', 'voice_id'));
+    }
+
+    #[Test]
+    public function setInferenceParamsUpdatesOnlyProvidedValues(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setInferenceParams(temperature: 0.2);
+
+        $bedrock = $this->bedrockVerb($agent);
+        $this->assertSame(0.2, Shape::at($bedrock, 'prompt', 'temperature'));
+        // top_p unchanged from the 0.9 default.
+        $this->assertSame(0.9, Shape::at($bedrock, 'prompt', 'top_p'));
+    }
+
+    #[Test]
+    public function setLlmTemperatureRedirectsToInferenceParams(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->setLlmTemperature(0.33);
+
+        $bedrock = $this->bedrockVerb($agent);
+        $this->assertSame(0.33, Shape::at($bedrock, 'prompt', 'temperature'));
+    }
+
+    #[Test]
+    public function inapplicableSettersReturnSelfAndAreNoOps(): void
+    {
+        $agent = $this->makeAgent();
+        // These log a warning and do nothing but must stay fluent (return self).
+        $this->assertSame($agent, $agent->setLlmModel('gpt-4'));
+        $this->assertSame($agent, $agent->setPromptLlmParams(['temperature' => 1]));
+        $this->assertSame($agent, $agent->setPostPromptLlmParams(['temperature' => 1]));
+    }
+
+    #[Test]
+    public function textModelSpecificPromptFieldsAreFilteredOut(): void
+    {
+        $agent = $this->makeAgent();
+        // Seed prompt-level LLM params that don't apply to Bedrock's V2V model.
+        $agent->setPromptLlmParams([
+            'barge_confidence'   => 0.5,
+            'presence_penalty'   => 0.1,
+            'frequency_penalty'  => 0.2,
+        ]);
+
+        $bedrock = $this->bedrockVerb($agent);
+        $prompt = Shape::sub($bedrock, 'prompt');
+        $this->assertArrayNotHasKey('barge_confidence', $prompt);
+        $this->assertArrayNotHasKey('presence_penalty', $prompt);
+        $this->assertArrayNotHasKey('frequency_penalty', $prompt);
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function bedrockVerb(BedrockAgent $agent): array
+    {
+        $swml = $agent->renderSwml();
+        foreach (Shape::sub($swml, 'sections', 'main') as $verb) {
+            $verb = Shape::arr($verb);
+            if (isset($verb['amazon_bedrock'])) {
+                return Shape::arr($verb['amazon_bedrock']);
+            }
+        }
+        $this->fail('amazon_bedrock verb not found');
+    }
+}

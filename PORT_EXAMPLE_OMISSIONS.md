@@ -3,7 +3,7 @@
 Per Phase 13 of the porting checklist, every Python example must have a
 port-equivalent under `examples/` OR be recorded here with a one-line
 rationale. The audit tool that validates this is
-`/usr/local/home/devuser/src/porting-sdk/scripts/audit_example_parity.py`.
+`../porting-sdk/scripts/audit_example_parity.py`.
 
 Format: one Markdown list item per omission, normalized stem only.
 

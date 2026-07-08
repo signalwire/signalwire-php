@@ -10,24 +10,35 @@ Framework: None (standalone, PSR-7 compatible)
 
 ## Development Commands
 
+Test / lint / format go through the canonical `scripts/run-*.sh` entry points.
+They self-bootstrap their tool environment (resolve the repo root from the
+script's own path, put `vendor/bin` on PATH, `composer install` if `vendor/` is
+missing) and run correctly from ANY directory — call them instead of
+`phpunit` / `php-cs-fixer` / `phpstan` directly (see
+porting-sdk/RUN_LINT_FORMAT_SPEC.md). `scripts/run-ci.sh` invokes these same
+scripts for its TEST/FMT/LINT gates, so local == CI.
+
 ```bash
-# Install dependencies
+# Install dependencies (the run-*.sh scripts also do this automatically on first
+# use if vendor/ is missing)
 composer install
 
-# Run all tests
-composer test
+# Run the full test suite (canonical entry point; self-bootstraps, any CWD)
+bash scripts/run-tests.sh
 
-# Run tests verbose
-composer test:verbose
+# Run a subset — pass a filter (phpunit --filter): a test name / class / regex
+bash scripts/run-tests.sh LoggerTest
 
-# Run specific test file
-./vendor/bin/phpunit tests/LoggerTest.php
+# Format (php-cs-fixer): APPLY in place (default) — reformats the tree
+bash scripts/run-format.sh
+# Format VERIFY-ONLY (what CI runs): fails if anything is unformatted
+bash scripts/run-format.sh --check
 
-# Syntax check
+# Lint (phpstan level 9, zero findings): report findings, non-zero on any finding
+bash scripts/run-lint.sh
+
+# Syntax check a single file
 php -l src/SignalWire/Logging/Logger.php
-
-# Lint all source files
-find src -name '*.php' -exec php -l {} \;
 ```
 
 ## Architecture

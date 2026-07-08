@@ -27,6 +27,48 @@ class Joke extends SkillBase
         return true;
     }
 
+    /**
+     * Speech-recognition hints for this skill.
+     *
+     * Mirrors Python `JokeSkill.get_hints` (skill.py:101): no hints provided.
+     *
+     * @return list<string>
+     */
+    public function getHints(): array
+    {
+        return [];
+    }
+
+    /**
+     * Parameter schema for the joke skill.
+     *
+     * Mirrors Python `JokeSkill.get_parameter_schema` (skill.py:29): merges the
+     * base schema with api_key + tool_name.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'api_key' => [
+                'type' => 'string',
+                'description' => 'API Ninjas API key for joke service',
+                'required' => true,
+                'hidden' => true,
+                'env_var' => 'API_NINJAS_KEY',
+            ],
+            'tool_name' => [
+                'type' => 'string',
+                'description' => 'Custom name for the joke tool',
+                'default' => 'get_joke',
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
     public function registerTools(): void
     {
         $toolName = $this->getToolName('get_joke');

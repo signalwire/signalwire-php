@@ -12,7 +12,7 @@ namespace SignalWire\POM;
  * ``signalwire.pom.pom.Section`` byte-for-byte for ``render_markdown``,
  * ``render_xml``, ``to_dict`` (and indirectly ``to_json`` / ``to_yaml``).
  *
- * Python parity: signalwire/signalwire/pom/pom.py::Section
+ * Mirrors signalwire/signalwire/pom/pom.py::Section
  *
  * Constructor params (``params`` array — PHP idiom for kwargs):
  *   - title  (?string)         section title; null is permitted only on the

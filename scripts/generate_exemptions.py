@@ -80,9 +80,8 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.mcp_gateway.",
-        "MCP gateway server is not ported. PHP's AgentBase exposes the "
-        "client-side `mcp_gateway` skill; running the gateway service itself "
-        "is delegated to Python.",
+        "approved: Python-only MCP gateway subsystem, not ported to any SDK "
+        "— user, 2026-07 pass (§I.1)",
     ),
     (
         "signalwire.web.web_service.",
@@ -173,9 +172,11 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.auth_handler.",
-        "Python AuthHandler class wraps uvicorn middleware. PHP's basic "
-        "auth is enforced inline in Service::handle_request via "
-        "`hash_equals` (timing-safe).",
+        "PHP ships the AuthHandler class (Security\\AuthHandler) with the "
+        "verify_api_key / verify_basic_auth / verify_bearer_token / "
+        "get_auth_info surface; only the framework-coupled Python entrypoints "
+        "(flask_decorator, get_fastapi_dependency) are omitted — PHP ships a "
+        "framework-agnostic native middleware() instead (see PORT_ADDITIONS.md).",
     ),
     (
         "signalwire.core.config_loader.",
@@ -224,9 +225,10 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.swaig_function.",
-        "Python SWAIGFunction DTO; PHP stores tool metadata as plain "
-        "associative arrays via `Service::define_tool` and serializes "
-        "directly — no dedicated DTO class.",
+        "PHP ships the SwaigFunction class (SWAIG\\SwaigFunction) with the "
+        "execute / to_swaig / validate_args surface; only the Python "
+        "`__call__` dunder (a thin handler passthrough) is omitted — PHP "
+        "callers invoke execute() which is the capability.",
     ),
     (
         "signalwire.core.swml_builder.",
@@ -242,8 +244,9 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.swml_renderer.",
-        "SWML rendering is owned by PHP's Document class directly "
-        "(Document::render / Document::render_pretty).",
+        "PHP ships the SwmlRenderer class (SWML\\SwmlRenderer) with "
+        "render_swml / render_function_response_swml, delegating to the "
+        "Service Document model.",
     ),
     (
         "signalwire.core.swml_service.SWMLService.add_section",
@@ -289,12 +292,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "signalwire.core.swml_service.SWMLService.stop",
         "Python helper for graceful HTTP-server shutdown; PHP's `php -S` "
         "and FPM lifecycles are managed externally.",
-    ),
-    (
-        "signalwire.core.swml_service.SWMLService.as_router",
-        "Python helper for FastAPI/Starlette router-mounting; PHP's web "
-        "framework integration is handled at the request level via "
-        "Service::handle_request.",
     ),
     (
         "signalwire.core.swml_service.SWMLService.manual_set_proxy_url",
@@ -366,9 +363,22 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.logging_config.",
-        "Python logging bootstrap helpers; PHP uses its own Logger class "
-        "(monolog-compatible API) configured via the SIGNALWIRE_LOG_LEVEL "
-        "env var.",
+        "idiomatic_divergence: Python ships these as module-level free "
+        "functions; PHP has no module-level free functions (PSR-4 "
+        "file-per-class), so they are hosted as static methods on the "
+        "LoggingConfig class (configureLogging / getLogger / "
+        "resetLoggingConfiguration / stripControlChars / getExecutionMode) and "
+        "projected to the module-level Python names via the enumerator's "
+        "FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.",
+    ),
+    (
+        "signalwire.core.agent.tools.type_inference.",
+        "idiomatic_divergence: Python ships infer_schema / "
+        "create_typed_handler_wrapper as module-level free functions; PHP has "
+        "no module-level free functions (PSR-4), so they are hosted as static "
+        "methods on the TypeInference class (SWAIG\\TypeInference) using native "
+        "Reflection and projected to the module-level Python names via "
+        "FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.",
     ),
 
     # --- REST namespaces: PHP merges Python's per-resource classes ---
@@ -423,11 +433,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "PHP's Fabric exposes subresources through CrudResource accessors "
         "instead of Python's per-subresource class; see rest/docs/fabric.md "
         "for the mapping.",
-    ),
-    (
-        "signalwire.rest.namespaces.compat.",
-        "PHP exposes the Compat (LAML) API through a single Compat "
-        "CrudResource wrapper; Python splits into one class per resource.",
     ),
     (
         "signalwire.rest.namespaces.video.",
@@ -670,12 +675,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     (
         "signalwire.skills.datetime.",
         "PHP ships DateTimeSkill (get_current_time + get_current_date).",
-    ),
-    (
-        "signalwire.skills.mcp_gateway.",
-        "PHP's McpGatewaySkill proxies to a running gateway service; the "
-        "gateway server itself is not bundled (see signalwire.mcp_gateway "
-        "omission).",
     ),
     (
         "signalwire.skills.registry.",
@@ -1199,7 +1198,7 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument(
         "--porting-sdk", type=Path,
-        default=Path("/usr/local/home/devuser/src/porting-sdk"),
+        default=(Path(__file__).resolve().parent.parent.parent / "porting-sdk"),
     )
     args = parser.parse_args(argv)
 

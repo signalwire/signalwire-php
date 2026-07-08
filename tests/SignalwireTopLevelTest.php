@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SignalWire\Tests;
 
 use PHPUnit\Framework\TestCase;
-use SignalWire\REST\RestClient;
 use SignalWire\SignalWire;
 use SignalWire\Skills\SkillBase;
 use SignalWire\Skills\SkillRegistry;
@@ -35,13 +34,16 @@ class SignalwireTopLevelTest extends TestCase
             'token'   => 't-456',
             'space'   => 'demo.signalwire.com',
         ]);
-        $this->assertInstanceOf(RestClient::class, $client);
+        // Return type is RESTClient, so instanceof is redundant; assert the
+        // keyword credentials actually reached the constructed client.
+        $this->assertSame('p-123', $client->getProjectId());
     }
 
     public function testRestClientFromPositionalCredentials(): void
     {
         $client = SignalWire::RestClient(['proj', 'tok', 'pos.signalwire.com']);
-        $this->assertInstanceOf(RestClient::class, $client);
+        // Return type is RESTClient; assert the positional credentials landed.
+        $this->assertSame('proj', $client->getProjectId());
     }
 
     public function testRestClientThrowsOnMissingCredentials(): void
@@ -86,10 +88,10 @@ class SignalwireTopLevelTest extends TestCase
     public function testListSkillsWithParamsReturnsSchemaArray(): void
     {
         $schema = SignalWire::list_skills_with_params();
-        $this->assertIsArray($schema);
+        // Declared return is array<string, array<string, mixed>>, so
+        // assertIsArray on $schema and each $entry is redundant.
         $this->assertNotEmpty($schema);
         foreach ($schema as $name => $entry) {
-            $this->assertIsArray($entry);
             $this->assertEquals($name, $entry['name']);
             $this->assertArrayHasKey('parameters', $entry);
         }

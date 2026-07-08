@@ -279,9 +279,16 @@ class PlayAction extends Action
         return 'calling.play.stop';
     }
 
-    public function pause(): void
+    /**
+     * Pause playback.
+     *
+     * Mirrors Python's ``PausableAction.pause(behavior=None)``: the optional
+     * ``$behavior`` string is only sent on the wire when non-empty.
+     */
+    public function pause(?string $behavior = null): void
     {
-        $this->executeSubcommand('calling.play.pause');
+        $extra = ($behavior !== null && $behavior !== '') ? ['behavior' => $behavior] : [];
+        $this->executeSubcommand('calling.play.pause', $extra);
     }
 
     public function resume(): void
@@ -313,11 +320,15 @@ class RecordAction extends Action
     }
 
     /**
-     * @param array<string,mixed> $extra Additional params to merge onto
-     *   the wire (e.g. ``['behavior' => 'continuous']``).
+     * Pause the recording.
+     *
+     * Mirrors Python's ``PausableAction.pause(behavior=None)``: the optional
+     * ``$behavior`` string (e.g. ``'continuous'``) is only sent on the wire
+     * when non-empty.
      */
-    public function pause(array $extra = []): void
+    public function pause(?string $behavior = null): void
     {
+        $extra = ($behavior !== null && $behavior !== '') ? ['behavior' => $behavior] : [];
         $this->executeSubcommand('calling.record.pause', $extra);
     }
 
@@ -373,6 +384,47 @@ class CollectAction extends Action
     }
 
     /**
+     * The RELAY command prefix (e.g. ``calling.play_and_collect``) shared by
+     * this action's pause/resume/volume sub-commands. Derived from the stop
+     * method so play_and_collect vs standalone-collect route correctly, and so
+     * pause/resume/volume mirror Python's ``_command_prefix`` behaviour.
+     */
+    protected function commandPrefix(): string
+    {
+        $stop = $this->getStopMethod();
+        return str_ends_with($stop, '.stop') ? substr($stop, 0, -strlen('.stop')) : $stop;
+    }
+
+    /**
+     * Pause the collect.
+     *
+     * Mirrors Python's ``CollectAction`` (a ``VolumeAction``): the optional
+     * ``$behavior`` string is only sent on the wire when non-empty.
+     */
+    public function pause(?string $behavior = null): void
+    {
+        $extra = ($behavior !== null && $behavior !== '') ? ['behavior' => $behavior] : [];
+        $this->executeSubcommand($this->commandPrefix() . '.pause', $extra);
+    }
+
+    public function resume(): void
+    {
+        $this->executeSubcommand($this->commandPrefix() . '.resume');
+    }
+
+    /**
+     * Adjust the play volume of an active play_and_collect.
+     *
+     * @param float $db Volume adjustment in dB.
+     */
+    public function volume(float $db): void
+    {
+        $this->executeSubcommand($this->commandPrefix() . '.volume', [
+            'volume' => $db,
+        ]);
+    }
+
+    /**
      * Notify the server to start input timers now rather than waiting
      * for the initial-timeout to expire naturally.
      */
@@ -402,6 +454,45 @@ class CollectAction extends Action
         }
 
         parent::handleEvent($event);
+    }
+}
+
+/**
+ * Handle for a standalone ``calling.collect`` operation (a collect without an
+ * accompanying play).
+ *
+ * Mirrors Python's ``StandaloneCollectAction``: unlike {@see CollectAction}
+ * (which backs ``play_and_collect`` and shares a control_id across the play
+ * and collect phases), this handle backs a bare ``calling.collect`` and uses
+ * the ``collect`` command prefix for its stop/start-input-timers sub-commands.
+ */
+class StandaloneCollectAction extends CollectAction
+{
+    /**
+     * Construct a standalone-collect action handle.
+     *
+     * Declared explicitly (rather than inheriting {@see Action::__construct})
+     * so the surface enumerator records this subclass's ``__init__`` — the
+     * Python reference records ``StandaloneCollectAction.__init__`` as its own
+     * member. Forwards to the base constructor and pins the standalone-collect
+     * stop method.
+     */
+    public function __construct(string $controlId, string $callId, string $nodeId, object $client)
+    {
+        parent::__construct($controlId, $callId, $nodeId, $client);
+        $this->setStopMethod('calling.collect.stop');
+    }
+
+    /**
+     * Start the initial_timeout timer on an active standalone collect.
+     *
+     * Mirrors Python's ``StandaloneCollectAction.start_input_timers`` (which
+     * sends the ``collect.start_input_timers`` command). Same wire sub-command
+     * as {@see CollectAction::startInputTimers}.
+     */
+    public function startInputTimers(): void
+    {
+        $this->executeSubcommand('calling.collect.start_input_timers');
     }
 }
 

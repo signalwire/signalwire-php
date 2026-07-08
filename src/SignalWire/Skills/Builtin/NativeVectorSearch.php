@@ -66,6 +66,267 @@ class NativeVectorSearch extends SkillBase
         return true;
     }
 
+    /**
+     * Unique instance key for this skill instance.
+     *
+     * Mirrors Python `NativeVectorSearchSkill.get_instance_key` (skill.py:234):
+     * the tool name and index file together differentiate instances.
+     */
+    public function getInstanceKey(): string
+    {
+        $toolName = $this->getToolName('search_knowledge');
+        $indexFile = $this->paramString('index_file', 'default');
+        if ($indexFile === '') {
+            $indexFile = 'default';
+        }
+        return 'native_vector_search_' . $toolName . '_' . $indexFile;
+    }
+
+    /**
+     * Data to add to the agent's global context.
+     *
+     * Mirrors Python `NativeVectorSearchSkill.get_global_data` (skill.py:879),
+     * which enriches with search-engine stats when an engine is loaded. The
+     * PHP skill runs in network mode (no in-process engine), so there are no
+     * local stats to add and this returns an empty map.
+     *
+     * @return array<string,mixed>
+     */
+    public function getGlobalData(): array
+    {
+        return [];
+    }
+
+    /**
+     * Prompt sections for the agent.
+     *
+     * Mirrors Python `NativeVectorSearchSkill.get_prompt_sections`
+     * (skill.py:892): the skill adds its prompt section during register_tools
+     * (once the agent is set), so this returns an empty list.
+     *
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
+    public function getPromptSections(): array
+    {
+        return [];
+    }
+
+    /**
+     * Release resources when the skill is unloaded.
+     *
+     * Mirrors Python `NativeVectorSearchSkill.cleanup` (skill.py:914), which
+     * removes any temp directories it created during indexing. The PHP skill
+     * creates no temp state (network mode), so cleanup is a no-op.
+     */
+    public function cleanup(): void
+    {
+    }
+
+    /**
+     * Parameter schema for the Native Vector Search skill.
+     *
+     * Mirrors Python `NativeVectorSearchSkill.get_parameter_schema`
+     * (skill.py:38): advertises every configuration parameter across the
+     * network / pgvector / SQLite modes.
+     *
+     * @return array<string,mixed>
+     */
+    public function getParameterSchema(): array
+    {
+        $schema = parent::getParameterSchema();
+        $properties = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+        $schema['properties'] = array_merge($properties, [
+            'index_file' => [
+                'type' => 'string',
+                'description' => 'Path to .swsearch index file (SQLite backend only). Use this for local file-based search',
+                'required' => false,
+            ],
+            'build_index' => [
+                'type' => 'boolean',
+                'description' => 'Whether to build index from source files',
+                'default' => false,
+                'required' => false,
+            ],
+            'source_dir' => [
+                'type' => 'string',
+                'description' => 'Directory containing documents to index (required if build_index=True)',
+                'required' => false,
+            ],
+            'remote_url' => [
+                'type' => 'string',
+                'description' => 'URL of remote search server for network mode (e.g., http://localhost:8001). Use this instead of index_file or pgvector for centralized search',
+                'required' => false,
+            ],
+            'index_name' => [
+                'type' => 'string',
+                'description' => 'Name of index on remote server (network mode only, used with remote_url)',
+                'default' => 'default',
+                'required' => false,
+            ],
+            'count' => [
+                'type' => 'integer',
+                'description' => 'Number of search results to return',
+                'default' => 5,
+                'required' => false,
+                'minimum' => 1,
+                'maximum' => 20,
+            ],
+            'similarity_threshold' => [
+                'type' => 'number',
+                'description' => 'Minimum similarity score for results (0.0 = no limit, 1.0 = exact match)',
+                'default' => 0.0,
+                'required' => false,
+                'minimum' => 0.0,
+                'maximum' => 1.0,
+            ],
+            'tags' => [
+                'type' => 'array',
+                'description' => 'Tags to filter search results',
+                'default' => [],
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'global_tags' => [
+                'type' => 'array',
+                'description' => 'Tags to apply to all indexed documents',
+                'default' => [],
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'file_types' => [
+                'type' => 'array',
+                'description' => 'File extensions to include when building index',
+                'default' => ['md', 'txt', 'pdf', 'docx', 'html'],
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'exclude_patterns' => [
+                'type' => 'array',
+                'description' => 'Patterns to exclude when building index',
+                // NB: the glob values embed a slash-star sequence, which the
+                // surface enumerator's naive block-comment stripper would treat
+                // as a comment opener and desync brace-depth. Build the
+                // identical string values via concatenation so the source text
+                // carries no slash-star token. Runtime values are byte-identical
+                // to Python's node_modules / dot-git / dist / build glob set.
+                'default' => [
+                    '**' . '/node_modules/' . '**',
+                    '**' . '/.git/' . '**',
+                    '**' . '/dist/' . '**',
+                    '**' . '/build/' . '**',
+                ],
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'no_results_message' => [
+                'type' => 'string',
+                'description' => 'Message when no results are found',
+                'default' => "No information found for '{query}'",
+                'required' => false,
+            ],
+            'response_prefix' => [
+                'type' => 'string',
+                'description' => 'Prefix to add to search results',
+                'default' => '',
+                'required' => false,
+            ],
+            'response_postfix' => [
+                'type' => 'string',
+                'description' => 'Postfix to add to search results',
+                'default' => '',
+                'required' => false,
+            ],
+            'max_content_length' => [
+                'type' => 'integer',
+                'description' => 'Maximum total response size in characters (distributed across all results)',
+                'default' => 32768,
+                'required' => false,
+                'minimum' => 1000,
+            ],
+            'response_format_callback' => [
+                'type' => 'callable',
+                'description' => 'Optional callback function to format/transform the response. Called with (response, agent, query, results, args). Must return a string.',
+                'required' => false,
+            ],
+            'description' => [
+                'type' => 'string',
+                'description' => 'Tool description',
+                'default' => 'Search the knowledge base for information',
+                'required' => false,
+            ],
+            'hints' => [
+                'type' => 'array',
+                'description' => 'Speech recognition hints',
+                'default' => [],
+                'required' => false,
+                'items' => ['type' => 'string'],
+            ],
+            'nlp_backend' => [
+                'type' => 'string',
+                'description' => 'NLP backend for query processing',
+                'default' => 'basic',
+                'required' => false,
+                'enum' => ['basic', 'spacy', 'nltk'],
+            ],
+            'query_nlp_backend' => [
+                'type' => 'string',
+                'description' => 'NLP backend for query expansion',
+                'required' => false,
+                'enum' => ['basic', 'spacy', 'nltk'],
+            ],
+            'index_nlp_backend' => [
+                'type' => 'string',
+                'description' => 'NLP backend for indexing',
+                'required' => false,
+                'enum' => ['basic', 'spacy', 'nltk'],
+            ],
+            'backend' => [
+                'type' => 'string',
+                'description' => "Storage backend for local database mode: 'sqlite' for file-based or 'pgvector' for PostgreSQL. Ignored if remote_url is set",
+                'default' => 'sqlite',
+                'required' => false,
+                'enum' => ['sqlite', 'pgvector'],
+            ],
+            'connection_string' => [
+                'type' => 'string',
+                'description' => "PostgreSQL connection string (pgvector backend only, e.g., 'postgresql://user:pass@localhost:5432/dbname'). Required when backend='pgvector'",
+                'required' => false,
+            ],
+            'collection_name' => [
+                'type' => 'string',
+                'description' => 'Collection/table name in PostgreSQL (pgvector backend only). Required when backend=\'pgvector\'',
+                'required' => false,
+            ],
+            'verbose' => [
+                'type' => 'boolean',
+                'description' => 'Enable verbose logging',
+                'default' => false,
+                'required' => false,
+            ],
+            'keyword_weight' => [
+                'type' => 'number',
+                'description' => 'Manual keyword weight (0.0-1.0). Overrides automatic weight detection',
+                'default' => null,
+                'required' => false,
+                'minimum' => 0.0,
+                'maximum' => 1.0,
+            ],
+            'model_name' => [
+                'type' => 'string',
+                'description' => "Embedding model to use. Options: 'mini' (fastest, 384 dims), 'base' (balanced, 768 dims), 'large' (same as base). Or specify full model name like 'sentence-transformers/all-MiniLM-L6-v2'",
+                'default' => 'mini',
+                'required' => false,
+            ],
+            'overwrite' => [
+                'type' => 'boolean',
+                'description' => 'Overwrite existing pgvector collection when building index (pgvector backend only)',
+                'default' => false,
+                'required' => false,
+            ],
+        ]);
+        return $schema;
+    }
+
     public function setup(): bool
     {
         // Either remote_url is set (network mode, supported), or

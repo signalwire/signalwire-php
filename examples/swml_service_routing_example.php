@@ -10,7 +10,7 @@
 
 require 'vendor/autoload.php';
 
-use SignalWire\SWML\SWMLService;
+use SignalWire\SWML\Service as SWMLService;
 
 $service = new SWMLService(
     name:  'routing-example',
@@ -20,19 +20,19 @@ $service = new SWMLService(
 );
 
 // Default document for /main
-$service->addAnswerVerb();
+$service->answer();
 $service->addVerb('play', ['url' => 'say:Welcome to our main line.']);
 $service->addVerb('prompt', [
     'play'       => 'say:Press 1 for customer service, or 2 for product information.',
     'max_digits' => 1,
     'terminators' => '#',
 ]);
-$service->addHangupVerb();
+$service->hangup();
 
 // Register routing callback for /customer
 $service->registerRoutingCallback('/customer', function (?array $requestData) use ($service) {
     $service->resetDocument();
-    $service->addAnswerVerb();
+    $service->answer();
 
     $name = $requestData['customer_name'] ?? null;
     if ($name) {
@@ -46,14 +46,14 @@ $service->registerRoutingCallback('/customer', function (?array $requestData) us
         'to'      => '+15551234567',
         'timeout' => 30,
     ]);
-    $service->addHangupVerb();
+    $service->hangup();
     return null;
 });
 
 // Register routing callback for /product
 $service->registerRoutingCallback('/product', function (?array $requestData) use ($service) {
     $service->resetDocument();
-    $service->addAnswerVerb();
+    $service->answer();
 
     $product = $requestData['product_id'] ?? null;
     if ($product) {
@@ -67,7 +67,7 @@ $service->registerRoutingCallback('/product', function (?array $requestData) use
         'max_digits' => 1,
         'terminators' => '#',
     ]);
-    $service->addHangupVerb();
+    $service->hangup();
     return null;
 });
 

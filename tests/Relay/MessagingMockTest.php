@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Message;
 use SignalWire\Relay\MessageState;
+use SignalWire\Tests\Support\Shape;
 
 /**
  * Real-mock-backed tests for messaging (``send_message`` + inbound).
@@ -52,13 +53,12 @@ class MessagingMockTest extends TestCase
             'body'        => 'hello',
             'tags'        => ['t1', 't2'],
         ]);
-        $this->assertInstanceOf(Message::class, $msg);
         $this->assertNotNull($msg->getMessageId());
         $this->assertSame('hello', $msg->getBody());
 
         $entries = $this->mock->journal()->recv('messaging.send');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame('+15551112222', $p['to_number'] ?? null);
         $this->assertSame('+15553334444', $p['from_number'] ?? null);
         $this->assertSame('hello', $p['body'] ?? null);
@@ -68,16 +68,15 @@ class MessagingMockTest extends TestCase
     #[Test]
     public function sendMessageWithMediaOnly(): void
     {
-        $msg = $this->client->sendMessage([
+        $this->client->sendMessage([
             'to_number'   => '+15551112222',
             'from_number' => '+15553334444',
             'media'       => ['https://media.example/cat.jpg'],
         ]);
-        $this->assertInstanceOf(Message::class, $msg);
 
         $entries = $this->mock->journal()->recv('messaging.send');
         $this->assertCount(1, $entries);
-        $p = $entries[0]->frame['params'] ?? [];
+        $p = Shape::sub($entries[0]->frame, 'params');
         $this->assertSame(['https://media.example/cat.jpg'], $p['media'] ?? null);
         // Body absent or empty for media-only.
         $this->assertTrue(
@@ -98,7 +97,7 @@ class MessagingMockTest extends TestCase
 
         $entries = $this->mock->journal()->recv('messaging.send');
         $this->assertCount(1, $entries);
-        $this->assertSame('custom-ctx', $entries[0]->frame['params']['context'] ?? null);
+        $this->assertSame('custom-ctx', Shape::at($entries[0]->frame, 'params', 'context'));
     }
 
     #[Test]
@@ -162,6 +161,22 @@ class MessagingMockTest extends TestCase
     // ------------------------------------------------------------------
 
     #[Test]
+    public function messageStateTypedAccessorAgreesWithStringInitialQueued(): void
+    {
+        $msg = $this->client->sendMessage([
+            'to_number'   => '+15551112222',
+            'from_number' => '+15553334444',
+            'body'        => 'hi',
+        ]);
+
+        // Initial queued state: typed accessor agrees with the string and is
+        // not terminal.
+        $this->assertSame('queued', $msg->getState());
+        $this->assertSame(MessageState::Queued, $msg->messageState());
+        $this->assertFalse($msg->messageState()->isTerminal());
+    }
+
+    #[Test]
     public function messageStateTypedAccessorAgreesWithStringAfterDispatch(): void
     {
         $msg = $this->client->sendMessage([
@@ -170,12 +185,6 @@ class MessagingMockTest extends TestCase
             'body'        => 'hi',
         ]);
         $messageId = $msg->getMessageId();
-
-        // Initial queued state: typed accessor agrees with the string and is
-        // not terminal.
-        $this->assertSame('queued', $msg->getState());
-        $this->assertSame(MessageState::Queued, $msg->messageState());
-        $this->assertFalse($msg->messageState()?->isTerminal());
 
         // Drive a real terminal delivered state through the recv loop.
         $this->mock->push([
@@ -200,12 +209,12 @@ class MessagingMockTest extends TestCase
         );
         $this->assertTrue($resolved, 'delivered event did not resolve the Message');
 
-        // The typed accessor reflects the SAME state the string carries after
-        // the dispatched event, and now reports terminal.
+        // The bare string and the typed accessor both reflect the delivered
+        // state the dispatched event carried. (Once messageState() is proven to
+        // be MessageState::Delivered, ->value === 'delivered' and
+        // ->isTerminal() === true hold by the enum's definition.)
         $this->assertSame('delivered', $msg->getState());
         $this->assertSame(MessageState::Delivered, $msg->messageState());
-        $this->assertSame($msg->getState(), $msg->messageState()?->value);
-        $this->assertTrue($msg->messageState()?->isTerminal());
     }
 
     #[Test]
@@ -308,6 +317,7 @@ class MessagingMockTest extends TestCase
     #[Test]
     public function inboundMessageFiresOnMessageHandler(): void
     {
+        /** @var \ArrayObject<int,Message> $seen */
         $seen = new \ArrayObject();
         $this->client->onMessage(function (Message $msg) use ($seen): void {
             $seen[] = $msg;
@@ -333,9 +343,11 @@ class MessagingMockTest extends TestCase
                 ],
             ],
         ]);
+        $count = Shape::at($resp, 'count');
+        $this->assertIsInt($count);
         $this->assertGreaterThanOrEqual(
             1,
-            (int) ($resp['count'] ?? 0),
+            $count,
             'mock did not deliver the push to any session',
         );
 

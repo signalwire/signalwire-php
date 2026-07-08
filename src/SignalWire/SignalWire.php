@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire;
 
+use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 use SignalWire\REST\RestClient as RESTClient;
 use SignalWire\Skills\SkillBase;
@@ -123,5 +124,44 @@ final class SignalWire
     public static function list_skills_with_params(): array
     {
         return SkillRegistry::instance()->getAllSkillsSchema();
+    }
+
+    /**
+     * List all available skills with metadata.
+     *
+     * Mirrors Python's ``signalwire.list_skills()``: one associative array per
+     * skill with name, description, version, required env vars, and
+     * multi-instance support — the lighter summary that shares the skill
+     * registry as its source with {@see list_skills_with_params}.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function list_skills(): array
+    {
+        $registry = SkillRegistry::instance();
+        $agent = new AgentBase('skill-lister');
+        $out = [];
+        foreach ($registry->listSkills() as $name) {
+            $className = $registry->getFactory($name);
+            if ($className === null || !\class_exists($className)) {
+                $out[] = ['name' => $name];
+                continue;
+            }
+            try {
+                /** @var SkillBase $skill */
+                $skill = new $className($agent);
+                $out[] = [
+                    'name'                         => $skill->getName(),
+                    'description'                  => $skill->getDescription(),
+                    'version'                      => $skill->getVersion(),
+                    'required_env_vars'            => $skill->getRequiredEnvVars(),
+                    'supports_multiple_instances'  => $skill->supportsMultipleInstances(),
+                ];
+            } catch (\Throwable $e) {
+                // Skip skills that cannot be introspected without config.
+                $out[] = ['name' => $name];
+            }
+        }
+        return $out;
     }
 }
