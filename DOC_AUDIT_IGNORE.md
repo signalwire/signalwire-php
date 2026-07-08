@@ -15,6 +15,7 @@ These are PHP built-ins or stdlib methods that show up in PHP example files
 and `` ```php `` code blocks. They are not part of the SignalWire SDK
 surface and never will be.
 
+__construct: PHP constructor / `parent::__construct(...)` — language keyword, not an SDK method (dynamic_swml_service example)
 getMessage: \Throwable::getMessage() — exception inspection in error-handling examples
 toArray: PHP collection idiom — many doc examples assume arrays support toArray() (cast to array)
 from: PHP enum::from() / fluent argument naming — not a SDK method
@@ -96,3 +97,12 @@ handleServerlessRequest: serverless adapter helper (Adapter::dispatch)
                           — internal to the Adapter class
 resetDocument: Document::reset alias used in dynamic_swml_service example
 setQuestionCallback: dynamic-info-gatherer callback hook (per-request question hook)
+
+## Real public methods the audit resolver can't match by `Class::method()` static-call form
+
+These ARE public methods present in `port_surface.json` and called correctly in docs; the
+doc-audit resolver matches instance-call `$obj->method()` but not the `Class::method()`
+static-reference form the doc uses, so it can't resolve them. The method is real; this is a
+resolver-syntax limitation, not doc rot or a missing symbol.
+
+serveStatic: `AgentServer::serveStatic(string $directory, string $urlPrefix)` — real public method (src/SignalWire/Server/AgentServer.php:257), on the surface + python-oracle (serve_static); referenced as `AgentServer::serveStatic()` in docs/web_service.md
