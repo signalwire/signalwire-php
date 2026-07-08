@@ -168,8 +168,8 @@ $client = new RestClient(
 );
 
 $client->fabric()->aiAgents()->create(['name' => 'Support Bot', 'prompt' => ['text' => 'You are helpful.']]);
-$client->calling()->play($callId, play: [['type' => 'tts', 'text' => 'Hello!']]);
-$client->phoneNumbers()->search(['areaCode' => '512']);
+$client->calling()->play($callId, play: [['type' => 'tts', 'params' => ['text' => 'Hello!']]]);
+$client->phoneNumbers()->search(['areacode' => '512']);
 $client->datasphere()->documents()->search(queryString: 'billing policy');
 ```
 

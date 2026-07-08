@@ -37,7 +37,7 @@ $client->chat()->...             // Chat tokens
 
 ```php
 // Search
-$available = $client->phoneNumbers()->search(['area_code' => '512', 'max_results' => 5]);
+$available = $client->phoneNumbers()->search(['areacode' => '512', 'max_results' => 5]);
 
 // Purchase
 $number = $client->phoneNumbers()->create(['number' => '+15125551234']);
