@@ -44,7 +44,7 @@ if ($numbers) {
 // 2. Search available numbers
 echo "\nSearching available numbers...\n";
 safe('Search 512', function () use ($client) {
-    $avail = $client->phoneNumbers->search(areaCode: '512', maxResults: 3);
+    $avail = $client->phoneNumbers->search(['areacode' => '512', 'max_results' => 3]);
     foreach (($avail['data'] ?? []) as $n) {
         echo "    - " . ($n['e164'] ?? $n['number'] ?? 'unknown') . "\n";
     }

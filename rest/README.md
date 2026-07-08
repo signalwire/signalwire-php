@@ -23,7 +23,7 @@ $agent = $client->fabric->aiAgents->create(
 );
 
 // Search for a phone number
-$results = $client->phoneNumbers->search(areaCode: '512');
+$results = $client->phoneNumbers->search(['areacode' => '512']);
 
 // Place a call via REST
 $client->calling->dial(

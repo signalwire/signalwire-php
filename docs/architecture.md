@@ -109,7 +109,7 @@ $client = new RestClient(
 );
 
 $client->fabric()->aiAgents()->create(['name' => 'Bot', 'prompt' => ['text' => 'You are helpful.']]);
-$client->phoneNumbers()->search(['area_code' => '512']);
+$client->phoneNumbers()->search(['areacode' => '512']);
 $client->calling()->dial(['from' => '+15559876543', 'to' => '+15551234567', 'url' => 'https://example.com/handler']);
 ```
 

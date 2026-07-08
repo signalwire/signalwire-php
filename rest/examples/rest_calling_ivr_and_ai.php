@@ -40,7 +40,7 @@ function safe(string $label, callable $fn): mixed
 echo "Collecting DTMF input...\n";
 safe('Collect', fn() => $client->calling->collect($CALL_ID,
     digits: ['max' => 4, 'terminators' => '#'],
-    play:   [['type' => 'tts', 'text' => 'Enter your PIN followed by pound.']],
+    play:   [['type' => 'tts', 'params' => ['text' => 'Enter your PIN followed by pound.']]],
 ));
 safe('Start input timers', fn() => $client->calling->collectStartInputTimers($CALL_ID));
 safe('Stop collect',       fn() => $client->calling->collectStop($CALL_ID));
