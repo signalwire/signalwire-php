@@ -4,24 +4,25 @@ Real-time call control and messaging over WebSocket. The RELAY client connects t
 
 ## Quick Start
 
+<!-- snippet: no-run connect()/run() open a live WebSocket to SIGNALWIRE_SPACE and block serving inbound calls — a long-running server, not a standalone script -->
 ```php
 <?php
 require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
 
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:    $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:     $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 
 $client->onCall(function ($call) {
-    echo "Incoming call: " . $call->callId() . "\n";
+    echo "Incoming call: " . $call->callId . "\n";
     $call->answer();
 
-    $action = $call->play(media: [
+    $action = $call->play([
         ['type' => 'tts', 'params' => ['text' => 'Welcome to SignalWire!']],
     ]);
     $action->wait();
@@ -29,8 +30,7 @@ $client->onCall(function ($call) {
     $call->hangup();
 });
 
-$client->connectWs();
-$client->authenticate();
+$client->connect();
 echo "Waiting for inbound calls on context 'default' ...\n";
 $client->run();
 ```

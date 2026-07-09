@@ -13,3 +13,5 @@ not fail them). Anything NOT here must load + start against the mock.
 - examples/joke_agent.php — needs real API_NINJAS_KEY creds, not mockable (approver: user, 2026-07-07)
 - examples/joke_skill_demo.php — needs real API_NINJAS_KEY creds, not mockable (approver: user, 2026-07-07)
 - examples/web_search_agent.php — needs real GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_ENGINE_ID creds, not mockable (approver: user, 2026-07-07)
+- examples/quickstart_rest.php — issues live fabric()->aiAgents()->create() + calling()->play() REST calls on load; RestClient derives its base URL from SIGNALWIRE_SPACE with no plain-HTTP mock override, so it 401s/can't reach the loopback REST mock (mirrors python quickstart_rest.py allow, mike 2026-07-08)
+- examples/quickstart_relay.php — connect() opens a live WebSocket to SIGNALWIRE_SPACE and throws on failure; the shared harness runs only mock_signalwire (REST), no mock_relay, so this canonical README RELAY quickstart needs a real relay endpoint (approver: user, 2026-07-09)

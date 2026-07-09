@@ -6,6 +6,7 @@ The DataMap system provides declarative SWAIG tools that execute on SignalWire's
 
 ## Creating a DataMap Tool
 
+<!-- snippet: no-run illustrative usage of the assumed `$agent` the surrounding prose established (registerSwaigFunction on the agent you built) -->
 ```php
 <?php
 require 'vendor/autoload.php';

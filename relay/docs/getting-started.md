@@ -22,6 +22,7 @@ The `Client` constructor takes a single options array. `connect()` opens the
 WebSocket *and* runs the authentication handshake — there is no separate
 connect/authenticate step.
 
+<!-- snippet: no-run connect()/run() open a live WebSocket to SIGNALWIRE_SPACE and block serving inbound calls — a long-running server, not a standalone script -->
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -56,6 +57,7 @@ $client->run();
 
 ## First Outbound Call
 
+<!-- snippet: no-run connect() opens a live WebSocket to SIGNALWIRE_SPACE and dial() places a real outbound call — cannot reach the loopback mock standalone -->
 ```php
 <?php
 require 'vendor/autoload.php';
