@@ -431,17 +431,14 @@ sched_gate RELEASE-FRESH res=dayone desc="release hygiene (report-only: php has 
 # report-only). EXAMPLES-RUN loads/starts every shipped example against the mock
 # (a blocking server surviving the timeout = PASS; modulo EXAMPLES_RUN_ALLOW.md) →
 # defer=1 heavy wave, blocking.
-sched_gate SNIPPET-COMPILE desc="documented code snippets syntax-check (php -l)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/snippet_compile.py" --port php --repo "$PORT_ROOT"
+sched_gate SNIPPET-COMPILE tier=nightly desc="documented code snippets syntax-check (php -l)" \    -- python3 "$PORTING_SDK_DIR/scripts/snippet_compile.py" --port php --repo "$PORT_ROOT"
 
 sched_gate DOC-CLI desc="documented swaig-test invocations parse against the real CLI" \
     -- python3 "$PORTING_SDK_DIR/scripts/doc_cli.py" --port php --repo "$PORT_ROOT"
 
-sched_gate SNIPPET-RUN defer=1 desc="php doc snippets run to a zero exit against the mock" \
-    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
+sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero exit against the mock" \    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
 
-sched_gate EXAMPLES-RUN defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
+sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \    -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
 
 # ---- §G anti-laundering ledger + §D1 packaging -------------------------------
 # SUPPRESSION-LEDGER (no un-ledgered analyzer suppressions) is cheap → cheap wave.
