@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 3511c34fe7be2e967d80d164881f87787b659be4",
+  "generated_from": "signalwire-php @ a78e9b7efe4382acaa8f9888ca8aa717a69e9eda",
   "modules": {
     "signalwire": {
       "classes": {
@@ -249,6 +249,7 @@
           "set_enter_fillers",
           "set_exit_fillers",
           "set_full_reset",
+          "set_history",
           "set_initial_step",
           "set_isolated",
           "set_post_prompt",
@@ -295,6 +296,7 @@
           "set_end",
           "set_functions",
           "set_gather_info",
+          "set_history",
           "set_reset_consolidate",
           "set_reset_full_reset",
           "set_reset_system_prompt",

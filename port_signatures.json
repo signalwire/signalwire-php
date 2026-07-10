@@ -2082,6 +2082,20 @@
               ],
               "returns": "any"
             },
+            "set_history": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "history",
+                  "type": "string",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
             "set_initial_step": {
               "params": [
                 {
@@ -2337,6 +2351,12 @@
                   "type": "optional<string>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "isolated",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
                 }
               ],
               "returns": "void"
@@ -2436,6 +2456,12 @@
                   "type": "optional<any>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "isolated",
+                  "type": "optional<bool>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -2532,6 +2558,12 @@
                 {
                   "name": "functions",
                   "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "isolated",
+                  "type": "optional<bool>",
                   "required": false,
                   "default": null
                 }
@@ -2653,6 +2685,26 @@
                   "type": "optional<string>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "isolated",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                }
+              ],
+              "returns": "any"
+            },
+            "set_history": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "history",
+                  "type": "string",
+                  "required": true
                 }
               ],
               "returns": "any"
@@ -10628,24 +10680,6 @@
               ],
               "returns": "string"
             },
-            "audible_debug": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "audible_latency": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
             "background_file": {
               "params": [
                 {
@@ -10692,15 +10726,6 @@
               "returns": "string"
             },
             "barge_min_words": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "cache_mode": {
               "params": [
                 {
                   "name": "self",
@@ -10809,15 +10834,6 @@
               "returns": "any"
             },
             "eleven_labs_stability": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "enable_accounting": {
               "params": [
                 {
                   "name": "self",
@@ -11302,15 +11318,6 @@
                 }
               ],
               "returns": "string"
-            },
-            "verbose_logs": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             },
             "video_idle_file": {
               "params": [
@@ -36667,24 +36674,6 @@
               ],
               "returns": "string"
             },
-            "audible_debug": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "audible_latency": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
             "background_file": {
               "params": [
                 {
@@ -36731,15 +36720,6 @@
               "returns": "string"
             },
             "barge_min_words": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "cache_mode": {
               "params": [
                 {
                   "name": "self",
@@ -36848,15 +36828,6 @@
               "returns": "any"
             },
             "eleven_labs_stability": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "enable_accounting": {
               "params": [
                 {
                   "name": "self",
@@ -37341,15 +37312,6 @@
                 }
               ],
               "returns": "string"
-            },
-            "verbose_logs": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             },
             "video_idle_file": {
               "params": [
@@ -48963,24 +48925,6 @@
               ],
               "returns": "string"
             },
-            "audible_debug": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "audible_latency": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
             "background_file": {
               "params": [
                 {
@@ -49027,15 +48971,6 @@
               "returns": "string"
             },
             "barge_min_words": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "cache_mode": {
               "params": [
                 {
                   "name": "self",
@@ -49144,15 +49079,6 @@
               "returns": "any"
             },
             "eleven_labs_stability": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "enable_accounting": {
               "params": [
                 {
                   "name": "self",
@@ -49637,15 +49563,6 @@
                 }
               ],
               "returns": "string"
-            },
-            "verbose_logs": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             },
             "video_idle_file": {
               "params": [

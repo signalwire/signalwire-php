@@ -1204,4 +1204,66 @@ class ContextsTest extends TestCase
         $this->assertSame(['log_response'], $arr['functions']);
         $this->assertSame(['next'], $arr['valid_steps']);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  set_history (parity with Python Step/Context.set_history)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public function testStepSetHistoryEmitsEachMode(): void
+    {
+        foreach (['keep', 'default', 'hide'] as $mode) {
+            $step = (new Step('s'))->setText('do it')->setHistory($mode);
+            $arr = $step->toArray();
+            $this->assertSame($mode, $arr['history']);
+        }
+    }
+
+    public function testStepSetHistoryIsFluent(): void
+    {
+        $step = new Step('s');
+        $this->assertSame($step, $step->setHistory('keep'));
+    }
+
+    public function testStepOmitsHistoryWhenUnset(): void
+    {
+        $arr = (new Step('s'))->setText('do it')->toArray();
+        $this->assertArrayNotHasKey('history', $arr);
+    }
+
+    public function testStepSetHistoryRejectsInvalidMode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        (new Step('s'))->setHistory('nonsense');
+    }
+
+    public function testContextSetHistoryEmitsEachMode(): void
+    {
+        foreach (['keep', 'default', 'hide'] as $mode) {
+            $ctx = new Context('default');
+            $ctx->addStep('s', task: 'do it');
+            $ctx->setHistory($mode);
+            $arr = $ctx->toArray();
+            $this->assertSame($mode, $arr['history']);
+        }
+    }
+
+    public function testContextSetHistoryIsFluent(): void
+    {
+        $ctx = new Context('default');
+        $this->assertSame($ctx, $ctx->setHistory('hide'));
+    }
+
+    public function testContextOmitsHistoryWhenUnset(): void
+    {
+        $ctx = new Context('default');
+        $ctx->addStep('s', task: 'do it');
+        $arr = $ctx->toArray();
+        $this->assertArrayNotHasKey('history', $arr);
+    }
+
+    public function testContextSetHistoryRejectsInvalidMode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        (new Context('default'))->setHistory('nonsense');
+    }
 }
