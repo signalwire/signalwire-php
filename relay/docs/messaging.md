@@ -11,6 +11,7 @@ The RELAY client supports SMS and MMS messaging. You can send outbound messages,
 `sendMessage()` takes a single params array and returns a `Message` tracking
 object.
 
+<!-- snippet: no-run connect() opens a live WebSocket to SIGNALWIRE_SPACE and sendMessage() places a real send over it — cannot reach the loopback mock standalone -->
 ```php
 <?php
 require 'vendor/autoload.php';

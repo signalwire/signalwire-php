@@ -41,5 +41,8 @@
     "config": {
         "sort-packages": true
     },
+    "archive": {
+        "exclude": ["/.sw-tmp", "/.git", "/vendor"]
+    },
     "minimum-stability": "stable"
 }

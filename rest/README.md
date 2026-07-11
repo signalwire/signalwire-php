@@ -4,6 +4,7 @@ Synchronous REST client for managing SignalWire resources, controlling live call
 
 ## Quick Start
 
+<!-- snippet: no-run makes live REST calls (create/search/dial) — the SDK derives its base URL from SIGNALWIRE_SPACE and has no plain-HTTP mock override, so it can't reach the loopback mock standalone -->
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -11,25 +12,25 @@ require 'vendor/autoload.php';
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'],
+    $_ENV['SIGNALWIRE_PROJECT_ID'],
+    $_ENV['SIGNALWIRE_API_TOKEN'],
+    $_ENV['SIGNALWIRE_SPACE'],
 );
 
 // Create an AI agent
-$agent = $client->fabric->aiAgents->create(
-    name:   'Support Bot',
-    prompt: ['text' => 'You are a helpful support agent.'],
-);
+$agent = $client->fabric()->aiAgents()->create([
+    'name'   => 'Support Bot',
+    'prompt' => ['text' => 'You are a helpful support agent.'],
+]);
 
 // Search for a phone number
-$results = $client->phoneNumbers->search(['areacode' => '512']);
+$results = $client->phoneNumbers()->search(['area_code' => '512']);
 
 // Place a call via REST
-$client->calling->dial(
-    from: '+15559876543',
-    to:   '+15551234567',
-    url:  'https://example.com/call-handler',
+$client->calling()->dial(
+    from_: '+15559876543',
+    to:    '+15551234567',
+    url:   'https://example.com/call-handler',
 );
 ```
 

@@ -3,10 +3,11 @@
 ## Overview
 
 The `$client->calling()` namespace provides REST-based call control: dial, play,
-record, collect, detect, AI, transcribe, tap, stream, and more. With the
-exception of `dial()` and `update()` (which take a single params array), each
-command takes the call id as its first argument followed by a params array:
-`play(string $callId, array $params = [])`.
+record, collect, detect, AI, transcribe, tap, stream, and more. `dial()` and
+`update()` take typed keyword parameters (`dial(from_:, to:, url:, ...)`); every
+other command takes the call id as its first positional argument followed by that
+command's typed parameters — `play(string $callId, array $play, ...)`,
+`record(string $callId, ?string $controlId = null, ?array $audio = null, ...)`.
 
 ## Placing a Call
 
@@ -152,6 +153,7 @@ $client->calling()->receiveFaxStop($callId);
 
 ## Complete Example
 
+<!-- snippet: no-run makes live REST calls (dial/play/record/end) — the SDK derives its base URL from SIGNALWIRE_SPACE and has no plain-HTTP mock override, so it can't reach the loopback mock standalone -->
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -165,21 +167,21 @@ $client = new RestClient(
 );
 
 // Dial a call
-$call = $client->calling()->dial([
-    'from' => '+15559876543',
-    'to'   => '+15551234567',
-    'url'  => 'https://example.com/handler',
-]);
+$call = $client->calling()->dial(
+    from_: '+15559876543',
+    to:    '+15551234567',
+    url:   'https://example.com/handler',
+);
 $callId = $call['id'];
 
 // Play a greeting
 $client->calling()->play($callId, [
-    'play' => [['type' => 'tts', 'text' => 'Welcome to our service.']],
+    ['type' => 'tts', 'text' => 'Welcome to our service.'],
 ]);
 
 // Record the call
-$client->calling()->record($callId, ['beep' => true, 'format' => 'mp3']);
+$client->calling()->record($callId, audio: ['beep' => true, 'format' => 'mp3']);
 
 // End the call
-$client->calling()->end($callId, ['reason' => 'hangup']);
+$client->calling()->end($callId, reason: 'hangup');
 ```

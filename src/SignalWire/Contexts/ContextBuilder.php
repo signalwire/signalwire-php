@@ -22,6 +22,23 @@ const RESERVED_NATIVE_TOOL_NAMES = [
     'gather_submit',
 ];
 
+/**
+ * Valid values for a step's or context's `history` visibility mode.
+ *
+ *   - keep     nothing is cleared — every prior step's instructions *and*
+ *              dialogue stay in the model's context.
+ *   - default  prior step instructions are hidden; the dialogue is kept.
+ *   - hide     prior instructions hidden **and** the prior dialogue pulled
+ *              out of the model's context. The only way back in is an
+ *              explicit `${step_history.*}` reference in the new prompt.
+ *
+ * Mirrors Python's module-level HISTORY_MODES tuple. Validation lives as a
+ * private static on Step/Context (Python's `_validate_history` is a private
+ * module helper) rather than a public namespace-level free function, so it
+ * stays off the port's public surface.
+ */
+const HISTORY_MODES = ['keep', 'default', 'hide'];
+
 // ── GatherQuestion ──────────────────────────────────────────────────────────
 
 class GatherQuestion
@@ -33,6 +50,8 @@ class GatherQuestion
     private ?string $prompt;
     /** @var list<string>|null */
     private ?array $functions;
+    // Tri-state: null means "inherit the gather_info default".
+    private ?bool $isolated;
 
     /**
      * @param string $key       Key name for storing the answer in global_data.
@@ -41,6 +60,11 @@ class GatherQuestion
      * @param bool   $confirm   If true, the model must confirm the answer.
      * @param ?string $prompt   Extra instruction text appended after the question.
      * @param list<string>|null $functions Functions to unlock for this question.
+     * @param ?bool  $isolated  Override the gather's isolated default for this
+     *                          one question. True hides the sibling Q&A while
+     *                          this question is asked; false keeps it visible
+     *                          even in an isolated gather; null (default)
+     *                          inherits the gather's setting.
      */
     public function __construct(
         string $key,
@@ -48,7 +72,8 @@ class GatherQuestion
         string $type = 'string',
         bool $confirm = false,
         ?string $prompt = null,
-        ?array $functions = null
+        ?array $functions = null,
+        ?bool $isolated = null
     ) {
         $this->key = $key;
         $this->question = $question;
@@ -56,6 +81,7 @@ class GatherQuestion
         $this->confirm = $confirm;
         $this->prompt = $prompt;
         $this->functions = $functions;
+        $this->isolated = $isolated;
     }
 
     public function getKey(): string
@@ -85,6 +111,10 @@ class GatherQuestion
         if ($this->functions !== null && !empty($this->functions)) {
             $map['functions'] = $this->functions;
         }
+        // Emitted even when false, so it can override an isolated gather.
+        if ($this->isolated !== null) {
+            $map['isolated'] = $this->isolated;
+        }
 
         return $map;
     }
@@ -99,15 +129,18 @@ class GatherInfo
     private ?string $outputKey;
     private ?string $completionAction;
     private ?string $prompt;
+    private bool $isolated;
 
     public function __construct(
         ?string $outputKey = null,
         ?string $completionAction = null,
-        ?string $prompt = null
+        ?string $prompt = null,
+        bool $isolated = false
     ) {
         $this->outputKey = $outputKey;
         $this->completionAction = $completionAction;
         $this->prompt = $prompt;
+        $this->isolated = $isolated;
     }
 
     /**
@@ -115,7 +148,7 @@ class GatherInfo
      *
      * @param string $key       Key name for storing the answer in global_data.
      * @param string $question  The question text to ask.
-     * @param array{type?:string,confirm?:bool,prompt?:?string,functions?:?list<string>} $kwargs
+     * @param array{type?:string,confirm?:bool,prompt?:?string,functions?:?list<string>,isolated?:?bool} $kwargs
      *                          Optional named arguments forwarded to GatherQuestion.
      */
     public function addQuestion(string $key, string $question, array $kwargs = []): self
@@ -126,7 +159,8 @@ class GatherInfo
             $kwargs['type'] ?? 'string',
             $kwargs['confirm'] ?? false,
             $kwargs['prompt'] ?? null,
-            $kwargs['functions'] ?? null
+            $kwargs['functions'] ?? null,
+            $kwargs['isolated'] ?? null
         );
         return $this;
     }
@@ -166,6 +200,9 @@ class GatherInfo
         if ($this->completionAction !== null) {
             $map['completion_action'] = $this->completionAction;
         }
+        if ($this->isolated) {
+            $map['isolated'] = true;
+        }
 
         return $map;
     }
@@ -202,6 +239,9 @@ class Step
     private ?string $resetUserPrompt = null;
     private bool $resetConsolidate = false;
     private bool $resetFullReset = false;
+
+    // History visibility mode (unset by default)
+    private ?string $history = null;
 
     public function __construct(string $name)
     {
@@ -373,13 +413,18 @@ class Step
      *                              answered ('next_step', a step name, or null).
      * @param ?string $prompt      Preamble text injected once when entering
      *                              the gather step.
+     * @param bool    $isolated    Default for every question in this gather.
+     *                              When true, a question is asked with the
+     *                              sibling Q&A hidden from the model. A
+     *                              question's own isolated overrides this.
      */
     public function setGatherInfo(
         ?string $output_key = null,
         ?string $completion_action = null,
-        ?string $prompt = null
+        ?string $prompt = null,
+        bool $isolated = false
     ): self {
-        $this->gatherInfo = new GatherInfo($output_key, $completion_action, $prompt);
+        $this->gatherInfo = new GatherInfo($output_key, $completion_action, $prompt, $isolated);
         return $this;
     }
 
@@ -407,6 +452,11 @@ class Step
      *   this question.
      *
      * @param list<string>|null $functions
+     * @param ?bool $isolated Override the gather's isolated default for this
+     *                        one question. True hides the sibling Q&A while
+     *                        this question is asked; false keeps it visible
+     *                        even in an isolated gather; null (default)
+     *                        inherits the gather's setting.
      */
     public function addGatherQuestion(
         string $key,
@@ -414,7 +464,8 @@ class Step
         string $type = 'string',
         bool $confirm = false,
         ?string $prompt = null,
-        ?array $functions = null
+        ?array $functions = null,
+        ?bool $isolated = null
     ): self {
         if ($this->gatherInfo === null) {
             throw new \LogicException(
@@ -426,8 +477,50 @@ class Step
             'confirm' => $confirm,
             'prompt' => $prompt,
             'functions' => $functions,
+            'isolated' => $isolated,
         ]);
         return $this;
+    }
+
+    /**
+     * Control what the model still sees when this step is entered.
+     *
+     * The mode applies at the moment this step is entered and governs
+     * everything that came before it — including the turn that triggered the
+     * transition. It does not affect this step's own turns, which accumulate
+     * fresh. Nothing is deleted: the call log keeps every message.
+     *
+     * @param string $history One of:
+     *   - "keep":    clear nothing. Every prior step's instructions and
+     *                dialogue stay visible to the model.
+     *   - "default": hide the prior step *instructions*, keep the
+     *                user/assistant dialogue. This is the default when unset.
+     *   - "hide":    hide the prior instructions *and* pull the prior dialogue
+     *                out of the model's context. Pair it with a
+     *                `${step_history.*}` reference in this step's text to
+     *                choose exactly what comes back.
+     *
+     * @throws \InvalidArgumentException if $history is not one of the three modes.
+     */
+    public function setHistory(string $history): self
+    {
+        $this->history = self::validateHistory($history);
+        return $this;
+    }
+
+    /**
+     * Validate a history visibility mode, returning it unchanged when valid.
+     *
+     * @throws \InvalidArgumentException if $mode is not one of HISTORY_MODES.
+     */
+    private static function validateHistory(string $mode): string
+    {
+        if (!in_array($mode, HISTORY_MODES, true)) {
+            throw new \InvalidArgumentException(
+                "history must be one of ['" . implode("', '", HISTORY_MODES) . "'], got '{$mode}'"
+            );
+        }
+        return $mode;
     }
 
     public function setResetSystemPrompt(string $systemPrompt): self
@@ -543,6 +636,10 @@ class Step
             $map['skip_to_next_step'] = true;
         }
 
+        if ($this->history !== null) {
+            $map['history'] = $this->history;
+        }
+
         // Reset object
         $resetObj = [];
         if ($this->resetSystemPrompt !== null) {
@@ -596,6 +693,9 @@ class Context
     private bool $fullReset = false;
     private ?string $userPrompt = null;
     private bool $isolated = false;
+
+    // History visibility mode default for every step (unset by default)
+    private ?string $history = null;
 
     // Context prompt (plain text or POM)
     private ?string $promptText = null;
@@ -901,6 +1001,37 @@ class Context
         return $this;
     }
 
+    /**
+     * Set the default visibility mode for every step in this context.
+     *
+     * A step's own setHistory() overrides this. See Step::setHistory for what
+     * each mode does.
+     *
+     * @param string $history One of "keep", "default", or "hide".
+     *
+     * @throws \InvalidArgumentException if $history is not one of the three modes.
+     */
+    public function setHistory(string $history): self
+    {
+        $this->history = self::validateHistory($history);
+        return $this;
+    }
+
+    /**
+     * Validate a history visibility mode, returning it unchanged when valid.
+     *
+     * @throws \InvalidArgumentException if $mode is not one of HISTORY_MODES.
+     */
+    private static function validateHistory(string $mode): string
+    {
+        if (!in_array($mode, HISTORY_MODES, true)) {
+            throw new \InvalidArgumentException(
+                "history must be one of ['" . implode("', '", HISTORY_MODES) . "'], got '{$mode}'"
+            );
+        }
+        return $mode;
+    }
+
     // ── Fillers ─────────────────────────────────────────────────────────
 
     /**
@@ -1086,6 +1217,10 @@ class Context
         }
         if ($this->exitFillers !== null) {
             $map['exit_fillers'] = $this->exitFillers;
+        }
+
+        if ($this->history !== null) {
+            $map['history'] = $this->history;
         }
 
         return $map;

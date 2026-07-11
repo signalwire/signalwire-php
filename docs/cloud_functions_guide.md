@@ -116,6 +116,7 @@ my-agent-function/
 ```
 
 2. **Create `agent/index.php`**:
+<!-- snippet: no-run illustrative deployment file — `$request` is the Azure Functions HTTP request array supplied by the runtime (established in the prose below), not defined in this fragment -->
 ```php
 <?php
 require __DIR__ . '/../vendor/autoload.php';
