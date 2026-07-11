@@ -768,6 +768,28 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
                 "returns": "void",
             }
 
+        # Flatten the inherited ReadResource::paginate() onto each concrete
+        # read-only resource. PHP reflection only reports own-declared methods,
+        # so paginate() (defined once on the ReadResource base) is invisible per
+        # subclass — but the Python reference oracle records it per-subclass on
+        # exactly the classes whose DIRECT base is ReadResource (the read-only
+        # resources: FabricAddresses/FaxLogs/MessageLogs/VideoRoomSessions/
+        # VoiceLogs — NOT the CrudResource/FabricResource subclasses). Mirror
+        # that: inject the real inherited method where the direct parent is
+        # ReadResource. (list/get are crud_base-satisfied by the diff; paginate
+        # is outside _CRUD_METHODS so it needs the explicit per-subclass entry.)
+        parents = type_entry.get("parents", [])
+        if (
+            parents
+            and parents[0] == "ReadResource"
+            and mod.endswith("_resources_generated")
+            and "paginate" not in methods_out
+        ):
+            methods_out["paginate"] = {
+                "params": [{"name": "self", "kind": "self"}],
+                "returns": "class:signalwire.rest._pagination.PaginatedIterator",
+            }
+
         out_modules.setdefault(mod, {"classes": {}})
         out_modules[mod]["classes"][canonical_name] = {
             "methods": dict(sorted(methods_out.items())),

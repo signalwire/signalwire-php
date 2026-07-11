@@ -58,11 +58,15 @@ Config values support `${VAR|default}` syntax:
 
 ### Core Settings
 
+The built-in HTTP server binds to the `host`/`port` passed to the agent
+constructor (defaulting to `0.0.0.0` / the `PORT` env var if set, else `3000`).
+Logging is controlled by `SIGNALWIRE_LOG_LEVEL` (see below).
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SWML_HOST` | `0.0.0.0` | Listen address |
-| `SWML_PORT` | `3000` | Listen port |
-| `SWML_LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
+| `PORT` | `3000` | Listen port (read when the constructor `port` is not set) |
+| `SWML_PROXY_URL_BASE` | - | External base URL when behind a reverse proxy |
+| `SWML_SERVICE_ENTRY` | - | Entry-file path used by the multi-agent server to re-exec workers |
 
 ### SignalWire Credentials
 
@@ -71,6 +75,7 @@ Config values support `${VAR|default}` syntax:
 | `SIGNALWIRE_PROJECT_ID` | Project ID for REST/RELAY authentication |
 | `SIGNALWIRE_API_TOKEN` | API token for REST/RELAY authentication |
 | `SIGNALWIRE_SPACE` | Space hostname (e.g. `example.signalwire.com`) |
+| `SIGNALWIRE_SIGNING_KEY` | Shared key used to validate inbound SWAIG webhook signatures |
 
 ### Agent Configuration
 
@@ -88,6 +93,9 @@ Config values support `${VAR|default}` syntax:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SIGNALWIRE_LOG_LEVEL` | - | Log level for RELAY (`debug` for WebSocket traffic) |
+| `SIGNALWIRE_LOG_MODE` | - | Log output mode (e.g. `off` to silence RELAY logging) |
+| `SIGNALWIRE_RELAY_HOST` | `relay.signalwire.com` | RELAY WebSocket host override |
+| `SIGNALWIRE_RELAY_SCHEME` | `wss` | RELAY WebSocket scheme (`ws`/`wss`; tests point it at `ws`) |
 
 ## Constructor-Based Configuration
 
@@ -153,15 +161,13 @@ Use different config files per environment:
 
 ```bash
 # Development
-export SWML_HOST=0.0.0.0
-export SWML_PORT=3000
-export LOG_LEVEL=debug
+export PORT=3000
+export SIGNALWIRE_LOG_LEVEL=debug
 
 # Production
-export SWML_HOST=0.0.0.0
-export SWML_PORT=8080
-export SSL_ENABLED=true
-export LOG_LEVEL=info
+export PORT=8080
+export SWML_SSL_ENABLED=true
+export SIGNALWIRE_LOG_LEVEL=info
 ```
 
 ## Docker Configuration
@@ -171,8 +177,7 @@ FROM php:8.2-cli
 WORKDIR /app
 COPY . .
 RUN composer install --no-dev
-ENV SWML_HOST=0.0.0.0
-ENV SWML_PORT=3000
+ENV PORT=3000
 CMD ["php", "agent.php"]
 ```
 

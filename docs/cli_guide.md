@@ -45,8 +45,7 @@ $agent = new AgentBase(
 Or via environment:
 
 ```bash
-export SWML_HOST=0.0.0.0
-export SWML_PORT=8080
+export PORT=8080
 php agent.php
 ```
 
@@ -170,7 +169,7 @@ composer install
 ### Enable Debug Logging
 
 ```bash
-export SWML_LOG_LEVEL=debug
+export SIGNALWIRE_LOG_LEVEL=debug
 php agent.php
 ```
 

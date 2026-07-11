@@ -52,7 +52,7 @@ php -l src/SignalWire/Logging/Logger.php
 5. **FunctionResult** (`src/SignalWire/SWAIG/FunctionResult.php`) -- Fluent builder for tool responses (40+ actions)
 6. **DataMap** (`src/SignalWire/DataMap/DataMap.php`) -- Server-side API tools
 7. **Contexts** (`src/SignalWire/Contexts/`) -- Multi-step conversation workflows
-8. **Skills** (`src/SignalWire/Skills/`) -- 18 built-in skills with registry/manager
+8. **Skills** (`src/SignalWire/Skills/`) -- 17 built-in skills with registry/manager
 9. **Prefabs** (`src/SignalWire/Prefabs/`) -- 5 ready-made agent patterns
 10. **AgentServer** (`src/SignalWire/Server/AgentServer.php`) -- Multi-agent hosting
 11. **RelayClient** (`src/SignalWire/Relay/Client.php`) -- WebSocket real-time call control
@@ -63,7 +63,7 @@ php -l src/SignalWire/Logging/Logger.php
 - **Method chaining**: All config methods return `$this`
 - **Auto-vivification**: SWML verb methods generated from `schema.json` via `__call()`
 - **Dynamic config**: Per-request agent cloning for multi-tenancy
-- **Timing-safe auth**: Use `hash_equals()` for all credential comparisons
+- **Timing-safe auth**: Use PHP's built-in `hash_equals` for all credential comparisons
 - **Schema-driven**: 38 SWML verbs extracted from embedded schema at runtime
 
 ### PHP-Specific Conventions

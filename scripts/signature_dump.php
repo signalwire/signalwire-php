@@ -121,12 +121,26 @@ foreach ($classes as $fqcn) {
         ];
     }
 
+    // Ancestor short-names (parent chain) — lets the enumerator flatten a
+    // genuinely-inherited method the reference oracle records per-subclass
+    // (e.g. ReadResource::paginate) onto each concrete descendant, mirroring
+    // Python's MRO-flattened surface. ReflectionMethod::IS_PUBLIC above only
+    // reports own-declared methods, so inherited-but-real surface would
+    // otherwise be invisible per subclass.
+    $parents = [];
+    $p0 = $r->getParentClass();
+    while ($p0 !== false) {
+        $parents[] = $p0->getShortName();
+        $p0 = $p0->getParentClass();
+    }
+
     $out['types'][] = [
         'namespace' => $r->getNamespaceName(),
         'name' => $r->getShortName(),
         'kind' => $kind,
         'methods' => $methods,
         'properties' => $properties,
+        'parents' => $parents,
     ];
 }
 

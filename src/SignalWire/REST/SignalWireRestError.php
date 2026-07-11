@@ -6,28 +6,66 @@ namespace SignalWire\REST;
 
 /**
  * Exception thrown when a SignalWire REST API request fails with a non-2xx status.
+ *
+ * Carries the full failure envelope — status code, response body, request URL,
+ * and HTTP method — so a caller can branch on it (distinguish 400/404/422 and
+ * read the server's error body) rather than parsing a bare message. Mirrors the
+ * Python reference's ``SignalWireRestError(status_code, body, url, method)``.
  */
 class SignalWireRestError extends \RuntimeException
 {
     private int $statusCode;
-    private string $responseBody;
+    private string $body;
+    private string $url;
+    private string $method;
 
-    public function __construct(string $message, int $statusCode = 0, string $responseBody = '')
-    {
+    public function __construct(
+        string $message,
+        int $statusCode = 0,
+        string $body = '',
+        string $url = '',
+        string $method = ''
+    ) {
         $this->statusCode = $statusCode;
-        $this->responseBody = $responseBody;
+        $this->body = $body;
+        $this->url = $url;
+        $this->method = $method;
 
         parent::__construct($message, $statusCode);
     }
 
+    /** HTTP status code of the failed response (0 for a transport-level failure). */
     public function getStatusCode(): int
     {
         return $this->statusCode;
     }
 
+    /** Raw response body returned by the server (may be JSON or plain text). */
+    public function getBody(): string
+    {
+        return $this->body;
+    }
+
+    /**
+     * Alias for {@see getBody()} — retained for backward compatibility.
+     *
+     * @deprecated use getBody()
+     */
     public function getResponseBody(): string
     {
-        return $this->responseBody;
+        return $this->body;
+    }
+
+    /** Request URL (or path) that produced the failure. */
+    public function getUrl(): string
+    {
+        return $this->url;
+    }
+
+    /** HTTP method of the failed request. */
+    public function getMethod(): string
+    {
+        return $this->method;
     }
 
     public function __toString(): string
@@ -36,7 +74,7 @@ class SignalWireRestError extends \RuntimeException
             'SignalWireRestError: %s (HTTP %d): %s',
             $this->getMessage(),
             $this->statusCode,
-            $this->responseBody
+            $this->body
         );
     }
 }

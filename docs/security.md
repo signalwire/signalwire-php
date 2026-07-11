@@ -42,12 +42,27 @@ export SWML_BASIC_AUTH_PASSWORD=mysecurepassword
 | `SWML_BASIC_AUTH_USER` | `signalwire` | Basic auth username |
 | `SWML_BASIC_AUTH_PASSWORD` | *auto-generated* | Basic auth password (32-char token) |
 
-### Security Headers
+### Security Headers & Request Hardening
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SWML_ALLOWED_ORIGINS` | `*` | CORS allowed origins |
-| `SWML_RATE_LIMIT` | `100` | Requests per minute per IP |
+| `SWML_CORS_ORIGINS` | `*` | CORS allowed origins (comma-separated) |
+| `SWML_ALLOWED_HOSTS` | `*` | Allowed `Host` header values (comma-separated) |
+| `SWML_RATE_LIMIT` | `60` | Requests per minute per IP |
+| `SWML_MAX_REQUEST_SIZE` | `10485760` | Max request body size in bytes (10 MiB) |
+| `SWML_REQUEST_TIMEOUT` | `30` | Per-request timeout in seconds |
+| `SWML_USE_HSTS` | `true` | Emit the HSTS response header when serving over TLS |
+| `SWML_HSTS_MAX_AGE` | `31536000` | HSTS `max-age` in seconds (1 year) |
+| `SWML_SSL_VERIFY_MODE` | `CERT_REQUIRED` | TLS peer-certificate verification mode |
+
+### Security Toggles
+
+These knobs relax a default-secure behavior — set them only when you understand the exposure.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SWML_ALLOW_PRIVATE_URLS` | `false` | Allow SDK fetches to private/loopback IPs (SSRF guard off) |
+| `SWML_SKIP_SCHEMA_VALIDATION` | `false` | Skip SWML schema validation (`1`/`true`/`yes` to disable) |
 
 ## Retrieving Credentials
 

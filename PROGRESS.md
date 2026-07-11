@@ -98,7 +98,7 @@ The purpose of tests, examples, and docs is to **prove** complete implementation
 - [x] BaseSkill with default implementations
 - [x] SkillManager: LoadSkill, UnloadSkill, ListLoadedSkills, HasSkill, GetSkill
 - [x] SkillRegistry: RegisterSkill, GetSkillFactory, ListSkills
-- [x] All 18 built-in skills (see SKILLS_MANIFEST.md for exact specifications):
+- [x] All 17 built-in skills (see SKILLS_MANIFEST.md for exact specifications):
   - [x] datetime (get_current_time, get_current_date)
   - [x] math (calculate — safe evaluator, no eval)
   - [x] joke (tell_joke)
@@ -259,7 +259,7 @@ Tests are proof of implementation. The port must test **everything the Python SD
   - [x] DataMap: data_map (all builder methods, serialization)
   - [x] Contexts: contexts (steps, navigation, validation, gather_info)
   - [x] Mixins/Config: prompt, tool, web, auth, serverless, state, ai_config, skill
-  - [x] Skills: registry, manager, each of the 18 built-in skills individually
+  - [x] Skills: registry, manager, each of the 17 built-in skills individually
   - [x] Prefabs: each of the 5 prefab agents
   - [x] AgentServer: registration, routing, SIP, static files
   - [x] RELAY: client, call, action types, events, messages
@@ -274,8 +274,8 @@ Tests are proof of implementation. The port must test **everything the Python SD
 - [x] All 40+ SwaigFunctionResult action methods present (including payment helpers)
 - [x] All 38 SWML verb methods present and schema-validated
 - [x] RELAY client: 4 correlation mechanisms implemented
-- [x] REST client: all 21+ namespaces initialized with correct paths
-- [x] Skills registry: all 18 built-in skills registered
+- [x] REST client: all 20 namespaces initialized with correct paths
+- [x] Skills registry: all 17 built-in skills registered
 - [x] agent.AddSkill() one-liner integration works (not just manual SkillManager)
 - [x] SIP username extraction utility exists
 - [x] Static file serving in AgentServer with path traversal protection

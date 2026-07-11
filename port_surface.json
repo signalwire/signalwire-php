@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ a78e9b7efe4382acaa8f9888ca8aa717a69e9eda",
+  "generated_from": "signalwire-php @ 444e760fe0247515a1bc9712f0daec99c877a024",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1722,13 +1722,17 @@
           "__init__",
           "get",
           "get_client",
-          "list"
+          "list",
+          "paginate"
         ],
         "SignalWireRestError": [
           "__init__",
           "__str__",
+          "get_body",
+          "get_method",
           "get_response_body",
-          "get_status_code"
+          "get_status_code",
+          "get_url"
         ]
       },
       "functions": []
