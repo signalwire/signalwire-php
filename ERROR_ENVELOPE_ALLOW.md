@@ -1,6 +1,0 @@
-# ERROR-ENVELOPE allowlist
-
-Justified non-findings for the ERROR-ENVELOPE gate (`error_envelope.py`).
-Format: `- <check-id> — reason (approver, date)`.
-
-- missing-error-type — Gate gap, not a real finding. The port's REST error type is `SignalWireRestError` (in `src/SignalWire/REST/SignalWireRestError.php`) — the exact name of the Python reference (`signalwire.rest._base.SignalWireRestError`) and of the ruby/perl/rust/cpp ports, all of which list it in the gate's `error_names`. The gate's `php` (and `dotnet`) `error_names` list omits `SignalWireRestError`, listing only `SignalWireRestException`/`RestException`/`RestError`, so `class SignalWireRestError` fails the `class\s+(<name>)\b` match. The type DOES carry the full (status, body, url, method) envelope via `getStatusCode()`/`getBody()`/`getUrl()`/`getMethod()` and IS thrown on every HTTP >= 400 in `HttpClient::request()`. Renaming to `...Exception` would diverge from both the reference name and the port's documented `...Error extends \RuntimeException` idiom (PORT_PHILOSOPHY_PHP.md — RelayError/SignalWireRestError/SchemaValidationError). Preferred fix is a one-line porting-sdk change: add `"SignalWireRestError"` to php's `error_names`. Flagged to the orchestrator. (approver: PENDING-SIGNOFF, 2026-07-11)
