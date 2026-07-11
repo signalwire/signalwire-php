@@ -34229,6 +34229,21 @@
                 }
               ],
               "returns": "any"
+            },
+            "paginate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "params",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "class:signalwire.rest._pagination.PaginatedIterator"
             }
           }
         },
@@ -34252,7 +34267,19 @@
                   "default": 0
                 },
                 {
-                  "name": "response_body",
+                  "name": "body",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "method",
                   "type": "string",
                   "required": false,
                   "default": ""
@@ -34261,6 +34288,24 @@
               "returns": "void"
             },
             "__str__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "get_body": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "get_method": {
               "params": [
                 {
                   "name": "self",
@@ -34286,6 +34331,15 @@
                 }
               ],
               "returns": "int"
+            },
+            "get_url": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }
@@ -47305,6 +47359,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "paginate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.rest._pagination.PaginatedIterator"
             }
           }
         },
@@ -65799,6 +65862,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "paginate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.rest._pagination.PaginatedIterator"
             }
           }
         }
@@ -67071,6 +67143,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "paginate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.rest._pagination.PaginatedIterator"
             }
           }
         }
@@ -79373,6 +79454,15 @@
                 }
               ],
               "returns": "any"
+            },
+            "paginate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.rest._pagination.PaginatedIterator"
             }
           }
         },
@@ -83098,6 +83188,15 @@
                 }
               ],
               "returns": "any"
+            },
+            "paginate": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.rest._pagination.PaginatedIterator"
             }
           }
         }

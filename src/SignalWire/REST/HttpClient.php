@@ -279,7 +279,9 @@ class HttpClient
             throw new SignalWireRestError(
                 sprintf('%s %s failed: %s', $method, $path, $curlError),
                 0,
-                ''
+                '',
+                $url,
+                $method
             );
         }
 
@@ -288,7 +290,9 @@ class HttpClient
             throw new SignalWireRestError(
                 sprintf('%s %s returned %d', $method, $path, $httpCode),
                 $httpCode,
-                (string) $responseBody
+                (string) $responseBody,
+                $url,
+                $method
             );
         }
 

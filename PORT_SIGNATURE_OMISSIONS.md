@@ -9,7 +9,7 @@ Categories used in rationales:
   * `PHP-idiom-args-trim` / `PHP-idiom-args-rename` — PHP signature uses fewer args or renamed args; same call surface.
   * `PHP-idiom-noargs` — PHP method takes no args; Python's optional positional/kwargs are exposed via separate setters/configuration.
   * `PHP-idiom-fluent-builder` — PHP returns a builder for fluent chaining where Python takes/returns dicts.
-  * `PHP-idiom-getter` / `PHP-idiom-internal` — Python `@property` accessor; PHP exposes as explicit `getX()` method (already in PORT_ADDITIONS) or keeps it internal.
+  * `PHP-idiom-getter` / `PHP-idiom-internal` — Python `@property` accessor; PHP exposes as an explicit `get<Name>` accessor method (already in PORT_ADDITIONS) or keeps it internal.
   * `PHP-idiom-method-split` — PHP splits a multi-mode Python method into two named methods (e.g. `get_basic_auth_credentials` + `get_basic_auth_credentials_with_source`).
   * `PHP-callable-typing` — PHP's reflection emits a typed-callable class where Python uses canonical `callable<...>` shape; same call contract.
   * `PHP-pattern-typing` — PHP doesn't ship a Pattern class; regex stays a string.

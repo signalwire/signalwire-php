@@ -44,6 +44,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use SignalWire\REST\HttpClient;
+use SignalWire\REST\PaginatedIterator;
 use SignalWire\REST\RestClient;
 
 const SENTINEL = '{id}';
@@ -291,6 +292,12 @@ final class TestPlan
                 return 'infra';
             }
             if (is_a($tn, HttpClient::class, true)) {
+                return 'infra';
+            }
+            // paginate() returns a PaginatedIterator: a terminal iterator over the
+            // SAME list route already reached via list(), dispatching no new route.
+            // Not a navigable sub-resource — exclude structurally (like HttpClient).
+            if (is_a($tn, PaginatedIterator::class, true)) {
                 return 'infra';
             }
             if ($this->hasNoRequiredParams($m)) {

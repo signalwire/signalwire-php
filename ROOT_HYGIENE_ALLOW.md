@@ -22,3 +22,5 @@ audit pipeline (which this repo cannot edit). Verified reader per file below.
 - META_CONSISTENT_ALLOW.md — gate-control file for the meta_consistent gate (orchestrator, 2026-07-06)
 - ROOT_HYGIENE_ALLOW.md — gate-control file for this root_hygiene gate (orchestrator, 2026-07-06)
 - EXAMPLES_RUN_ALLOW.md — gate-control allowlist read at repo root by porting-sdk examples_run.py (approver: user 2026-07-06 audit-contract class; ruby already has it)
+- DOC_ENV_ALLOW.md — gate-control allowlist read at repo root by porting-sdk doc_env.py (Wave-3 DOC-ENV gate; same audit-contract class as the other *_ALLOW.md files)
+- ERROR_ENVELOPE_ALLOW.md — gate-control allowlist read at repo root by porting-sdk error_envelope.py (Wave-3 ERROR-ENVELOPE gate; same audit-contract class as the other *_ALLOW.md files)

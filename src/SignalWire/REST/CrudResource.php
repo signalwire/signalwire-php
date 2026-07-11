@@ -81,6 +81,34 @@ class ReadResource extends BaseResource
     }
 
     /**
+     * Iterate every item across all pages of this resource's list endpoint.
+     *
+     * ``list()`` returns a single raw page (the server's first response). For
+     * endpoints that paginate on the wire (a ``links.next`` / ``page_token`` in
+     * the response), ``paginate()`` follows those links and yields each item:
+     *
+     *   foreach ($client->fabric->addresses->paginate() as $address) {
+     *       // ...
+     *   }
+     *
+     * Wires the resource layer to the tested {@see PaginatedIterator} (which
+     * walks ``resp["data"]`` and follows ``resp["links"]["next"]``), so callers
+     * no longer hand-construct the path + token loop. Mirrors Python's
+     * ``ReadResource.paginate(**params) -> PaginatedIterator``.
+     *
+     * @param array<string,mixed> $params Initial query-string parameters.
+     */
+    public function paginate(array $params = []): PaginatedIterator
+    {
+        return new PaginatedIterator(
+            $this->client,
+            $this->basePath,
+            $params === [] ? null : $params,
+            'data'
+        );
+    }
+
+    /**
      * Retrieve a single resource by ID (GET basePath/{id}).
      *
      * @return array<string,mixed>

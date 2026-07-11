@@ -47,6 +47,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use SignalWire\REST\HttpClient;
+use SignalWire\REST\PaginatedIterator;
 use SignalWire\REST\RestClient;
 
 // Path-param sentinel — one segment, no slash; already in {id} template form so
@@ -348,6 +349,14 @@ final class RouteRegistry
             // A class return type. HttpClient is infra; any other SDK class is a
             // sub-resource accessor — but only if it needs no arguments to reach.
             if (is_a($tn, HttpClient::class, true)) {
+                return 'infra';
+            }
+            // paginate() returns a PaginatedIterator: a terminal iterator that
+            // walks the SAME list route already registered via list(), dispatching
+            // no NEW route. It is not a navigable sub-resource — exclude it
+            // structurally (like HttpClient) so the registry neither recurses into
+            // the iterator nor invokes it against the empty mock.
+            if (is_a($tn, PaginatedIterator::class, true)) {
                 return 'infra';
             }
             if ($this->hasNoRequiredParams($m)) {

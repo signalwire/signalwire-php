@@ -247,7 +247,7 @@ signalwire.core.swml_service.SWMLService.on_function_call: idiomatic PHP surface
 signalwire.core.swml_service.SWMLService.on_swml_request: PHP-hook: SWMLService.on_swml_request is the standard hook for SWML callback handling; Python exposes equivalent via WebMixin.on_swml_request which projects to SWMLService
 signalwire.core.swml_service.SWMLService.register_swaig_function: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_service.SWMLService.remove_function: PHP-tool-registry: SWMLService exposes the internal tool-registry methods ('remove_function') as public API for testing and reflection; Python keeps the registry internal
-signalwire.core.swml_service.SWMLService.render: PHP method exposing the canonical `render()` entry point — Python uses `render_document()` for the same purpose.
+signalwire.core.swml_service.SWMLService.render: PHP method exposing the canonical `render()` entry point — Python uses `render_document` (not `render`) for the same purpose.
 signalwire.core.swml_service.SWMLService.render_pretty: PHP convenience for human-readable JSON output; Python equivalent is `render_document(pretty=True)`.
 signalwire.core.swml_service.SWMLService.render_swml: PHP alias for the SWML render path; equivalent of Python's `render_document`.
 signalwire.core.swml_service.SWMLService.run: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -481,8 +481,11 @@ signalwire.rest._base.HttpClient.get_project_id: PHP idiomatic accessor on HttpC
 signalwire.rest._base.HttpClient.get_token: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.HttpClient.list_all: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.SignalWireRestError.__str__: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.rest._base.SignalWireRestError.get_body: PHP getter for the response-body envelope field; Python's SignalWireRestError exposes `body` as a plain attribute (not a surface method)
+signalwire.rest._base.SignalWireRestError.get_method: PHP getter for the request-method envelope field; Python's SignalWireRestError exposes `method` as a plain attribute (not a surface method)
 signalwire.rest._base.SignalWireRestError.get_response_body: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._base.SignalWireRestError.get_status_code: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.rest._base.SignalWireRestError.get_url: PHP getter for the request-URL envelope field; Python's SignalWireRestError exposes `url` as a plain attribute (not a surface method)
 signalwire.rest._pagination.PaginatedIterator.current: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
 signalwire.rest._pagination.PaginatedIterator.get_data_key: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
 signalwire.rest._pagination.PaginatedIterator.get_http: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator

@@ -63,7 +63,7 @@ php -l src/SignalWire/Logging/Logger.php
 - **Method chaining**: All config methods return `$this`
 - **Auto-vivification**: SWML verb methods generated from `schema.json` via `__call()`
 - **Dynamic config**: Per-request agent cloning for multi-tenancy
-- **Timing-safe auth**: Use `hash_equals()` for all credential comparisons
+- **Timing-safe auth**: Use PHP's built-in `hash_equals` for all credential comparisons
 - **Schema-driven**: 38 SWML verbs extracted from embedded schema at runtime
 
 ### PHP-Specific Conventions

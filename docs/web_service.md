@@ -79,7 +79,7 @@ $agent = new AgentBase(
 $ok = $agent->validateBasicAuth($user, $pass);
 ```
 
-Comparisons use `hash_equals()` for timing-safe credential checks.
+Internally, credential comparisons use PHP's built-in timing-safe `hash_equals` string-compare, so they are not vulnerable to timing attacks.
 
 ## Hosting Multiple Agents
 

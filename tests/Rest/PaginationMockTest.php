@@ -139,6 +139,81 @@ class PaginationMockTest extends TestCase
     }
 
     #[Test]
+    public function resourcePaginateWalksAllPagesFollowingCursor(): void
+    {
+        // Exercises ReadResource::paginate() (php idiom of Python's
+        // ReadResource.paginate()) end-to-end through the real resource layer:
+        // fabric().addresses()->paginate() must build a PaginatedIterator wired
+        // to the resource's base path and follow links.next across two pages.
+        $this->mock->scenarios()->set(
+            self::FABRIC_ADDRESSES_ENDPOINT_ID,
+            200,
+            [
+                'data' => [
+                    ['id' => 'addr-1', 'name' => 'first'],
+                    ['id' => 'addr-2', 'name' => 'second'],
+                ],
+                'links' => [
+                    'next' => 'http://example.com/api/fabric/addresses?cursor=page2',
+                ],
+            ]
+        );
+        $this->mock->scenarios()->set(
+            self::FABRIC_ADDRESSES_ENDPOINT_ID,
+            200,
+            [
+                'data' => [
+                    ['id' => 'addr-3', 'name' => 'third'],
+                ],
+                'links' => new \stdClass(),
+            ]
+        );
+
+        $iterator = $this->client->fabric()->addresses()->paginate();
+
+        $collected = [];
+        foreach ($iterator as $row) {
+            $collected[] = $row;
+        }
+        // paginate() followed the cursor and yielded every item across both pages.
+        $ids = array_map(fn ($r) => $r['id'], $collected);
+        $this->assertSame(['addr-1', 'addr-2', 'addr-3'], $ids);
+
+        // Exactly two GETs against the addresses collection path.
+        $gets = array_values(array_filter(
+            $this->mock->journal()->all(),
+            fn ($e) => $e->path === self::FABRIC_ADDRESSES_PATH
+        ));
+        $this->assertCount(2, $gets, 'paginate() should have fetched two pages');
+        // The second fetch carries the cursor parsed from the first page's next link.
+        $this->assertSame(['page2'], $gets[1]->queryParams['cursor'] ?? null);
+    }
+
+    #[Test]
+    public function resourcePaginateForwardsInitialParams(): void
+    {
+        // paginate($params) must seed the first request's query string.
+        $this->mock->scenarios()->set(
+            self::FABRIC_ADDRESSES_ENDPOINT_ID,
+            200,
+            [
+                'data' => [['id' => 'addr-1']],
+                'links' => new \stdClass(),
+            ]
+        );
+
+        $iterator = $this->client->fabric()->addresses()->paginate(['page_size' => 2]);
+        iterator_to_array($iterator, false);
+
+        $gets = array_values(array_filter(
+            $this->mock->journal()->all(),
+            fn ($e) => $e->path === self::FABRIC_ADDRESSES_PATH
+        ));
+        $this->assertCount(1, $gets);
+        $this->assertSame(['2'], $gets[0]->queryParams['page_size'] ?? null);
+    }
+
+    #[Test]
     public function valIsFalseWhenNoMoreItems(): void
     {
         // One terminal page.

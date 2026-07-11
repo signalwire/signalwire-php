@@ -532,8 +532,8 @@ signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_instance_key: PHP sh
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_parameter_schema: PHP ships InfoGathererSkill (stateful start_questions + submit_answer); Python exposes additional state-machine helpers.
 signalwire.skills.joke.skill.JokeSkill.get_hints: PHP ships JokeSkill (DataMap-driven via API Ninjas).
 signalwire.skills.joke.skill.JokeSkill.get_parameter_schema: PHP ships JokeSkill (DataMap-driven via API Ninjas).
-signalwire.skills.math.skill.MathSkill.get_hints: PHP ships MathSkill (safe-evaluator built on top of `eval()`-free expression parsing).
-signalwire.skills.math.skill.MathSkill.get_parameter_schema: PHP ships MathSkill (safe-evaluator built on top of `eval()`-free expression parsing).
+signalwire.skills.math.skill.MathSkill.get_hints: PHP ships MathSkill (safe-evaluator built on eval-free expression parsing (no `eval`)).
+signalwire.skills.math.skill.MathSkill.get_parameter_schema: PHP ships MathSkill (safe-evaluator built on eval-free expression parsing (no `eval`)).
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.cleanup: PHP ships NativeVectorSearchSkill in network-only mode (remote_url required). Python adds local SQLite/pgvector backends and embedding helpers — see PORT_OMISSIONS top entry for the full rationale.
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_global_data: PHP ships NativeVectorSearchSkill in network-only mode (remote_url required). Python adds local SQLite/pgvector backends and embedding helpers — see PORT_OMISSIONS top entry for the full rationale.
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_instance_key: PHP ships NativeVectorSearchSkill in network-only mode (remote_url required). Python adds local SQLite/pgvector backends and embedding helpers — see PORT_OMISSIONS top entry for the full rationale.
