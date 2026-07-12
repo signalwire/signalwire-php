@@ -437,6 +437,22 @@ sched_gate SNIPPET-COMPILE tier=nightly desc="documented code snippets syntax-ch
 sched_gate DOC-CLI desc="documented swaig-test invocations parse against the real CLI" \
     -- python3 "$PORTING_SDK_DIR/scripts/doc_cli.py" --port php --repo "$PORT_ROOT"
 
+# Wave-3 doc/API-truth gates — deterministic source/doc analysis (no build, no
+# mock, ~1.3s for all six). Per-PR tier: cheap enough to catch doc/API drift at
+# PR time rather than a day later in nightly.
+sched_gate ERROR-ENVELOPE desc="REST error carries the full (status,body,url,method) envelope + raised on >=400" \
+    -- python3 "$PORTING_SDK_DIR/scripts/error_envelope.py" --port php --repo "$PORT_ROOT"
+sched_gate DEAD-PUBLIC-ERROR desc="exported error types are raised/caught/user-signalled (no dead error surface)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/dead_public_error.py" --port php --repo "$PORT_ROOT"
+sched_gate PAGINATION-WIRED desc="shipped iterator-protocol paginator is wired into list()" \
+    -- python3 "$PORTING_SDK_DIR/scripts/pagination_wired.py" --port php --repo "$PORT_ROOT"
+sched_gate DOC-ENV desc="documented SIGNALWIRE_*/SWML_* env vars <=> code-read vars agree" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_env.py" --port php --repo "$PORT_ROOT"
+sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match reality" \
+    -- python3 "$PORTING_SDK_DIR/scripts/count_claim.py" --port php --repo "$PORT_ROOT"
+sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in source" \
+    -- python3 "$PORTING_SDK_DIR/scripts/accessor_truth.py" --port php --repo "$PORT_ROOT"
+
 sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero exit against the mock" \
     -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
 
