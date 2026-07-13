@@ -1,11 +1,23 @@
 {
     "name": "signalwire/sdk",
     "description": "SignalWire AI Agents SDK for PHP",
-    "version": "1.1.0",
+    "version": "3.0.2",
     "type": "library",
     "license": "MIT",
     "keywords": ["signalwire", "ai", "agents", "swml", "swaig", "voip", "telephony"],
     "homepage": "https://github.com/signalwire/signalwire-php",
+    "authors": [
+        {
+            "name": "SignalWire",
+            "email": "support@signalwire.com",
+            "homepage": "https://signalwire.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/signalwire/signalwire-php/issues",
+        "source": "https://github.com/signalwire/signalwire-php",
+        "email": "support@signalwire.com"
+    },
     "require": {
         "php": ">=8.2",
         "ext-json": "*",

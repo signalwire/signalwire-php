@@ -394,8 +394,8 @@ sched_gate README-INCLUDE res=dayone desc="doc code blocks are byte-identical to
     -- python3 "$PORTING_SDK_DIR/scripts/readme_include.py" --port php --repo "$PORT_ROOT"
 sched_gate ROOT-HYGIENE res=dayone desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
     -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port php --repo "$PORT_ROOT"
-sched_gate IGNORE-LEDGER-VERIFY res=dayone desc="no laundered false-absence entries in DOC_AUDIT_IGNORE.md" \
-    -- python3 "$PORTING_SDK_DIR/scripts/ignore_ledger_verify.py" --port php --repo "$PORT_ROOT"
+sched_gate IGNORE-LEDGER-VERIFY res=dayone desc="no laundered false-absence entries in DOC_AUDIT_IGNORE.md (strict: structured reason/approver/date required)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/ignore_ledger_verify.py" --port php --repo "$PORT_ROOT" --require-fields
 sched_gate META-CONSISTENT res=dayone desc="package metadata consistency" \
     -- python3 "$PORTING_SDK_DIR/scripts/meta_consistent.py" --port php --repo "$PORT_ROOT"
 sched_gate ARTIFACT-DENY res=dayone desc="no porting artifacts in the PUBLISHED package (authoritative listing)" \
@@ -420,8 +420,10 @@ sched_gate PUBLIC-JARGON res=dayone desc="no internal porting jargon in public p
     -- python3 "$PORTING_SDK_DIR/scripts/public_jargon.py" --port php --repo "$PORT_ROOT"
 sched_gate GEN-IDIOM res=dayone desc="generated code is NOT lint-excluded (phpstan runs over it)" \
     -- python3 "$PORTING_SDK_DIR/scripts/gen_idiom.py" --port php --repo "$PORT_ROOT"
-sched_gate RELEASE-FRESH res=dayone desc="release hygiene (report-only: php has no publish workflow to gate)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port php --repo "$PORT_ROOT" --report-only
+sched_gate RELEASE-FRESH res=dayone desc="release hygiene (blocking: publish workflow must run gates before publishing)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port php --repo "$PORT_ROOT"
+sched_gate SEMVER-DIFF res=dayone desc="version bump matches API surface change vs port_signatures.baseline.json floor" \
+    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port php --repo "$PORT_ROOT"
 
 # ---- §C1 doc/example/CLI execution gates -------------------------------------
 # SNIPPET-COMPILE (php -l on every fenced block) + DOC-CLI (probe documented

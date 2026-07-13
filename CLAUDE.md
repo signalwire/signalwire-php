@@ -5,7 +5,7 @@
 PHP port of the SignalWire AI Agents SDK. Generates SWML documents, handles SWAIG webhooks, and provides RELAY/REST clients for the SignalWire platform.
 
 Package: `signalwire/sdk` (Composer)
-PHP: >= 8.1
+PHP: >= 8.2
 Framework: None (standalone, PSR-7 compatible)
 
 ## Development Commands

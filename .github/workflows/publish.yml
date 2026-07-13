@@ -1,0 +1,115 @@
+name: Publish Release
+
+# Release workflow for signalwire/sdk (Composer / Packagist).
+#
+# Packagist publishing is TAG-DRIVEN: Packagist tracks this GitHub repo and
+# ingests a new version automatically when a `v*` git tag is pushed (there is no
+# `composer publish` step to run here). This workflow therefore does NOT push to
+# a registry with a secret. Its job is to GATE a release: the full CI gate set
+# (`bash scripts/run-ci.sh`) must pass BEFORE the dist tarball is built/validated
+# and a GitHub Release is cut. If the gates fail, no release is cut and the tag
+# is not endorsed.
+#
+# Triggered by a `v*` tag push or manually (workflow_dispatch). It intentionally
+# does NOT auto-publish credentials anywhere — Packagist ingestion happens on the
+# tag independently; this workflow only proves the tagged tree is releasable.
+
+env:
+  # Opt into Node.js 24 ahead of GitHub's 2026-06-02 default switch.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  # Gate job — the release is only cut if the full CI gate set passes.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout signalwire-php
+        uses: actions/checkout@v6
+        with:
+          path: signalwire-php
+
+      - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses)
+        uses: actions/checkout@v6
+        with:
+          repository: signalwire/porting-sdk
+          path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
+
+      - name: Checkout signalwire-python (EMISSION oracle)
+        uses: actions/checkout@v6
+        with:
+          repository: signalwire/signalwire-python
+          path: signalwire-python
+          ref: main
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, openssl, mbstring
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Python (porting-sdk audit scripts)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install Python test harnesses (mock_relay + mock_signalwire)
+        run: |
+          pip install -e porting-sdk/test_harness/mock_relay
+          pip install -e porting-sdk/test_harness/mock_signalwire
+
+      - name: Install signalwire-python (EMISSION oracle) if not importable
+        run: |
+          if python -c "import signalwire.core.function_result" 2>/dev/null; then
+            echo "signalwire-python already importable; skipping install"
+          else
+            pip install ./signalwire-python
+          fi
+
+      - name: Composer install (PHP deps)
+        working-directory: signalwire-php
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run CI gate set (blocking — release is not cut unless this passes)
+        working-directory: signalwire-php
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
+        run: bash scripts/run-ci.sh
+
+  # Release job — depends on the gate job; only runs if `test` succeeds.
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout signalwire-php
+        uses: actions/checkout@v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, openssl, mbstring
+          tools: composer:v2
+
+      - name: Validate composer manifest
+        run: composer validate --strict --no-check-publish
+
+      - name: Build dist tarball (the exact artifact Packagist serves)
+        # `git archive HEAD` honours `.gitattributes export-ignore`, matching the
+        # Packagist "dist" tarball. Building it here proves the package assembles.
+        run: git archive --format=tar --prefix=signalwire-sdk/ HEAD | tar -tv | head -n 50
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
