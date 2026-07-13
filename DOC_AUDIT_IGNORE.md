@@ -58,4 +58,3 @@ doc-audit resolver matches instance-call `$obj->method()` but not the `Class::me
 static-reference form the doc uses, so it can't resolve them. The method is real; this is a
 resolver-syntax limitation, not doc rot or a missing symbol.
 
-serveStatic: `AgentServer::serveStatic(string $directory, string $urlPrefix)` — real public method (src/SignalWire/Server/AgentServer.php:257), on the surface + python-oracle (serve_static); referenced as `AgentServer::serveStatic()` in docs/web_service.md

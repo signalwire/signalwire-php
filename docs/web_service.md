@@ -9,7 +9,7 @@ The PHP SDK serves agents over HTTP through two classes:
   its own route, and can also serve static files.
 
 > There is no standalone `WebService` class in the PHP port. Static-file serving
-> is provided by `AgentServer::serveStatic()`.
+> is provided by `AgentServer::serveStaticFiles()`.
 
 ## Serving a Single Agent
 
@@ -112,14 +112,14 @@ $server->run(); // serves both agents
 | `unregister(string $route): self` | Remove an agent. |
 | `getAgents(): array` | List registered routes. |
 | `getAgent(string $route): ?AgentBase` | Look up an agent by route. |
-| `serveStatic(string $directory, string $urlPrefix): self` | Serve static files from a directory under a URL prefix. |
+| `serveStaticFiles(string $directory, string $urlPrefix): self` | Serve static files from a directory under a URL prefix. |
 | `setupSipRouting(string $route = '/sip', bool $auto_map = true): self` | Enable central SIP-based routing. |
 | `handleRequest(string $method, string $path, array $headers = [], ?string $body = null): array` | Route one request to the matching agent. |
 | `run(): void` / `serve(): void` | Start the server. |
 
 ## Serving Static Files
 
-Call `serveStatic(string $directory, string $urlPrefix)` on an `AgentServer`
+Call `serveStaticFiles(string $directory, string $urlPrefix)` on an `AgentServer`
 after registering your agents to mount a directory of static assets under a
 URL prefix. For example, mounting `./public` at `/assets` serves
 `./public/logo.png` at `http://localhost:3000/assets/logo.png`. The method
