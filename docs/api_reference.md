@@ -79,8 +79,7 @@ new AgentBase(
 | Method | Description |
 |--------|-------------|
 | `run()` | Start the agent HTTP server |
-| `basicAuthUser(): string` | Get the basic auth username |
-| `basicAuthPassword(): string` | Get the basic auth password |
+| `getBasicAuthCredentials(): array` | Get the basic auth `[username, password]` pair |
 
 ---
 

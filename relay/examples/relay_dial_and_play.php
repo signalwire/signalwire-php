@@ -16,34 +16,33 @@ use SignalWire\Relay\Client;
 $fromNumber = $_ENV['RELAY_FROM_NUMBER'] ?? die("Set RELAY_FROM_NUMBER\n");
 $toNumber   = $_ENV['RELAY_TO_NUMBER']   ?? die("Set RELAY_TO_NUMBER\n");
 
-$client = new Client(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:   $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:    $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
-);
+$client = new Client([
+    'project' => $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
+    'token'   => $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
+    'host'    => $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
+]);
 
-$client->connectWs()  or die("Connection failed\n");
-$client->authenticate();
-echo "Connected -- protocol: " . $client->protocol() . "\n";
+$client->connect();  // opens the WebSocket and authenticates (throws on failure)
+echo "Connected\n";
 
 // Dial the number
 try {
     $call = $client->dial(
-        devices: [[
+        [[
             ['type' => 'phone', 'params' => [
                 'to_number'   => $toNumber,
                 'from_number' => $fromNumber,
             ]],
         ]],
-        timeout: 30,
+        ['dial_timeout' => 30],
     );
 } catch (\Exception $e) {
     echo "Dial failed: " . $e->getMessage() . "\n";
-    $client->disconnectWs();
+    $client->disconnect();
     exit(1);
 }
 
-echo "Dialing {$toNumber} from {$fromNumber} -- call_id: " . $call->callId() . "\n";
+echo "Dialing {$toNumber} from {$fromNumber} -- call_id: " . $call->callId . "\n";
 echo "Call answered -- playing TTS\n";
 
 // Play TTS
@@ -59,12 +58,12 @@ $call->hangup();
 
 // Allow the ended event to arrive
 for ($i = 0; $i < 50; $i++) {
-    if ($call->state() === 'ended') {
+    if ($call->state === 'ended') {
         break;
     }
     $client->readOnce();
 }
 echo "Call ended\n";
 
-$client->disconnectWs();
+$client->disconnect();
 echo "Disconnected\n";

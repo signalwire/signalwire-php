@@ -240,8 +240,7 @@ $agent->onDebugEvent(function ($event) {
 
 ```php
 // Print connection info
-$user = $agent->basicAuthUser();
-$pass = $agent->basicAuthPassword();
+[$user, $pass] = $agent->getBasicAuthCredentials();
 echo "Agent: http://localhost:3000/agent\n";
 echo "Auth: {$user}:{$pass}\n";
 
