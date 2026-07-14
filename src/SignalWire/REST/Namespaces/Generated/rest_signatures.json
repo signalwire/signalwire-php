@@ -2412,6 +2412,14 @@
         "default": {}
       }
     ],
+    "Projects::rotateSigningKey": [
+      {
+        "name": "id",
+        "kind": "positional",
+        "type": "string",
+        "required": true
+      }
+    ],
     "PubSub::createToken": [
       {
         "name": "ttl",
