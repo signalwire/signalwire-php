@@ -20,12 +20,12 @@ use SignalWire\Relay\Client;
 
 $AGENT_NUMBER = '+19184238080';
 
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:    $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:     $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
+    'host'     => $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 
 /** Helper to build a TTS play element */
 function tts(string $text): array
@@ -34,7 +34,7 @@ function tts(string $text): array
 }
 
 $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
-    echo "Incoming call: " . $call->callId() . "\n";
+    echo "Incoming call: " . $call->callId . "\n";
     $call->answer();
 
     // Play greeting and collect a single digit
@@ -81,25 +81,25 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
         );
         $action->wait();
 
-        $fromNumber = ($call->device()['params'] ?? [])['to_number'] ?? '';
+        $fromNumber = ($call->device['params'] ?? [])['to_number'] ?? '';
         echo "Connecting to {$AGENT_NUMBER} from {$fromNumber}\n";
 
-        $call->connect(
-            devices: [[
+        $call->connect([
+            'devices' => [[
                 ['type' => 'phone', 'params' => [
                     'to_number'   => $AGENT_NUMBER,
                     'from_number' => $fromNumber,
                     'timeout'     => 30,
                 ]],
             ]],
-            ringback: [tts('Please wait while we connect your call.')],
-        );
+            'ringback' => [tts('Please wait while we connect your call.')],
+        ]);
 
         // Stay on the call until the bridge ends
-        while ($call->state() !== 'ended') {
+        while ($call->state !== 'ended') {
             $client->readOnce();
         }
-        echo "Connected call ended: " . $call->callId() . "\n";
+        echo "Connected call ended: " . $call->callId . "\n";
         return;
     } else {
         // No input or invalid
@@ -110,10 +110,9 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
     }
 
     $call->hangup();
-    echo "Call ended: " . $call->callId() . "\n";
+    echo "Call ended: " . $call->callId . "\n";
 });
 
-$client->connectWs()  or die("Connection failed\n");
-$client->authenticate();
+$client->connect();  // opens the WebSocket and authenticates (throws on failure)
 echo "Waiting for inbound calls on context 'default' ...\n";
 $client->run();

@@ -155,7 +155,7 @@ docker run -p 3000:3000 \
 ```json
 {
     "require": {
-        "signalwire/signalwire-php": "^1.0"
+        "signalwire/sdk": "^3.0"
     }
 }
 ```

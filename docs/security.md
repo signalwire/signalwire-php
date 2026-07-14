@@ -69,8 +69,7 @@ These knobs relax a default-secure behavior — set them only when you understan
 ```php
 $agent = new AgentBase(name: 'secure-agent', route: '/agent');
 
-$user = $agent->basicAuthUser();
-$pass = $agent->basicAuthPassword();
+[$user, $pass] = $agent->getBasicAuthCredentials();
 echo "Auth: {$user}:{$pass}\n";
 ```
 

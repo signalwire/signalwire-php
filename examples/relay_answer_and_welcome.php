@@ -15,15 +15,15 @@ require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
 
-$client = new Client(
-    project:  $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:    $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:     $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
-    contexts: ['default'],
-);
+$client = new Client([
+    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
+    'token'    => $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
+    'host'     => $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
+    'contexts' => ['default'],
+]);
 
 $client->onCall(function ($call) {
-    echo "Incoming call from RELAY: " . $call->callId() . "\n";
+    echo "Incoming call from RELAY: " . $call->callId . "\n";
     $call->answer();
 
     // Play a welcome message
@@ -45,11 +45,10 @@ $client->onCall(function ($call) {
     $bye->wait();
 
     $call->hangup();
-    echo "Call ended: " . $call->callId() . "\n";
+    echo "Call ended: " . $call->callId . "\n";
 });
 
-$client->connectWs()  or die("WebSocket connection failed\n");
-$client->authenticate();
+$client->connect();  // opens the WebSocket and authenticates (throws on failure)
 
 echo "RELAY Demo: Waiting for inbound calls...\n";
 $client->run();

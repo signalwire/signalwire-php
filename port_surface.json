@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 444e760fe0247515a1bc9712f0daec99c877a024",
+  "generated_from": "signalwire-php @ ee2f35f29fbca007b5d51c06825da88b70bf9cc4",
   "modules": {
     "signalwire": {
       "classes": {

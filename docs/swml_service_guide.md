@@ -31,9 +31,9 @@ The `Document` class builds SWML documents programmatically:
 use SignalWire\SWML\Document;
 
 $doc = new Document();
-$doc->addApplication('main', 'answer', []);
-$doc->addApplication('main', 'play', ['url' => 'say:Hello World!']);
-$doc->addApplication('main', 'hangup', []);
+$doc->addVerbToSection('main', 'answer', []);
+$doc->addVerbToSection('main', 'play', ['url' => 'say:Hello World!']);
+$doc->addVerbToSection('main', 'hangup', []);
 
 echo json_encode($doc->render(), JSON_PRETTY_PRINT);
 ```
@@ -150,14 +150,15 @@ A SWML document has named sections. The `main` section runs first:
 $doc = new Document();
 
 // Main section
-$doc->addApplication('main', 'answer', []);
-$doc->addApplication('main', 'ai', [
+$doc->addVerbToSection('main', 'answer', []);
+$doc->addVerbToSection('main', 'ai', [
     'prompt' => ['text' => 'You are helpful.'],
     'SWAIG' => ['functions' => [/* ... */]],
 ]);
 
-// Other sections can be referenced
-$doc->addApplication('transfer', 'connect', [
+// Other sections must be created before verbs are added to them
+$doc->addSection('transfer');
+$doc->addVerbToSection('transfer', 'connect', [
     'to' => '+15551234567',
 ]);
 ```

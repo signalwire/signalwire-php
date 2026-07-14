@@ -252,9 +252,13 @@ class AgentServer
     /**
      * Serve static files from a directory under a URL prefix.
      *
+     * Mirrors the Python reference's ``serve_static_files`` (and the go/java/ts/…
+     * ports' serveStaticFiles / serve_static_files) so the method name is
+     * consistent across the matrix.
+     *
      * @throws \RuntimeException If the directory does not exist.
      */
-    public function serveStatic(string $directory, string $urlPrefix): self
+    public function serveStaticFiles(string $directory, string $urlPrefix): self
     {
         $realDir = realpath($directory);
         if ($realDir === false || !is_dir($realDir)) {
@@ -265,6 +269,17 @@ class AgentServer
         $this->staticRoutes[$urlPrefix] = $realDir;
 
         return $this;
+    }
+
+    /**
+     * Back-compat alias for {@see serveStaticFiles()}. Retained so existing
+     * callers keep working after the method was renamed to match the reference.
+     *
+     * @throws \RuntimeException If the directory does not exist.
+     */
+    public function serveStatic(string $directory, string $urlPrefix): self
+    {
+        return $this->serveStaticFiles($directory, $urlPrefix);
     }
 
     // ======================================================================

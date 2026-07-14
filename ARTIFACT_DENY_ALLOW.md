@@ -28,6 +28,7 @@ root, so it must stay tracked.
 - audit_coverage.json — audit contract; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - audit_coverage_baseline.json — audit contract; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - port_signatures.json — audit contract; export-ignore in .gitattributes (orchestrator, 2026-07-06)
+- port_signatures.baseline.json — porting release-floor snapshot read by scripts/run-ci.sh SEMVER-DIFF and porting-sdk semver_diff.py; audit-pipeline artifact, not shipped library code (orchestrator, 2026-07-14)
 - port_surface.json — audit contract; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - examples/RelayAuditHarness.php — in-repo audit tooling; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - examples/RestAuditHarness.php — in-repo audit tooling; export-ignore in .gitattributes (orchestrator, 2026-07-06)
