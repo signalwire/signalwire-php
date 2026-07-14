@@ -23,6 +23,7 @@ PORT_EXAMPLE_OMISSIONS.md export-ignore
 
 # --- generated audit oracles / coverage data ---
 port_signatures.json    export-ignore
+port_signatures.baseline.json export-ignore
 port_surface.json       export-ignore
 audit_coverage.json     export-ignore
 audit_coverage_baseline.json export-ignore
