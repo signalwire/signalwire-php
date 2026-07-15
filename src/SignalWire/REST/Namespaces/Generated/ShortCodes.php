@@ -45,28 +45,28 @@ class ShortCodes extends \SignalWire\REST\BaseResource
      */
     public function update(string $id, string $name, string $messageHandler, ?string $messageRequestUrl = null, ?string $messageRequestMethod = null, ?string $messageFallbackUrl = null, ?string $messageFallbackMethod = null, ?string $messageLamlApplicationId = null, ?string $messageRelayContext = null, array $extras = []): array
     {
-        $body = [];
-        $body['name'] = $name;
-        $body['message_handler'] = $messageHandler;
+        $__body = [];
+        $__body['name'] = $name;
+        $__body['message_handler'] = $messageHandler;
         if ($messageRequestUrl !== null) {
-            $body['message_request_url'] = $messageRequestUrl;
+            $__body['message_request_url'] = $messageRequestUrl;
         }
         if ($messageRequestMethod !== null) {
-            $body['message_request_method'] = $messageRequestMethod;
+            $__body['message_request_method'] = $messageRequestMethod;
         }
         if ($messageFallbackUrl !== null) {
-            $body['message_fallback_url'] = $messageFallbackUrl;
+            $__body['message_fallback_url'] = $messageFallbackUrl;
         }
         if ($messageFallbackMethod !== null) {
-            $body['message_fallback_method'] = $messageFallbackMethod;
+            $__body['message_fallback_method'] = $messageFallbackMethod;
         }
         if ($messageLamlApplicationId !== null) {
-            $body['message_laml_application_id'] = $messageLamlApplicationId;
+            $__body['message_laml_application_id'] = $messageLamlApplicationId;
         }
         if ($messageRelayContext !== null) {
-            $body['message_relay_context'] = $messageRelayContext;
+            $__body['message_relay_context'] = $messageRelayContext;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->put($this->path($id), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->path($id), $__body);
     }
 }

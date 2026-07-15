@@ -27,43 +27,43 @@ class FabricTokens extends \SignalWire\REST\BaseResource
      */
     public function createSubscriberToken(string $reference, ?int $expireAt = null, ?string $applicationId = null, ?string $password = null, ?string $firstName = null, ?string $lastName = null, ?string $displayName = null, ?string $jobTitle = null, ?string $timeZone = null, ?string $country = null, ?string $region = null, ?string $companyName = null, array $extras = []): array
     {
-        $body = [];
-        $body['reference'] = $reference;
+        $__body = [];
+        $__body['reference'] = $reference;
         if ($expireAt !== null) {
-            $body['expire_at'] = $expireAt;
+            $__body['expire_at'] = $expireAt;
         }
         if ($applicationId !== null) {
-            $body['application_id'] = $applicationId;
+            $__body['application_id'] = $applicationId;
         }
         if ($password !== null) {
-            $body['password'] = $password;
+            $__body['password'] = $password;
         }
         if ($firstName !== null) {
-            $body['first_name'] = $firstName;
+            $__body['first_name'] = $firstName;
         }
         if ($lastName !== null) {
-            $body['last_name'] = $lastName;
+            $__body['last_name'] = $lastName;
         }
         if ($displayName !== null) {
-            $body['display_name'] = $displayName;
+            $__body['display_name'] = $displayName;
         }
         if ($jobTitle !== null) {
-            $body['job_title'] = $jobTitle;
+            $__body['job_title'] = $jobTitle;
         }
         if ($timeZone !== null) {
-            $body['time_zone'] = $timeZone;
+            $__body['time_zone'] = $timeZone;
         }
         if ($country !== null) {
-            $body['country'] = $country;
+            $__body['country'] = $country;
         }
         if ($region !== null) {
-            $body['region'] = $region;
+            $__body['region'] = $region;
         }
         if ($companyName !== null) {
-            $body['company_name'] = $companyName;
+            $__body['company_name'] = $companyName;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens', $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post('/api/fabric/subscribers/tokens', $__body);
     }
 
     /**
@@ -72,10 +72,10 @@ class FabricTokens extends \SignalWire\REST\BaseResource
      */
     public function refreshSubscriberToken(string $refreshToken, array $extras = []): array
     {
-        $body = [];
-        $body['refresh_token'] = $refreshToken;
-        $body = array_merge($body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $body);
+        $__body = [];
+        $__body['refresh_token'] = $refreshToken;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body);
     }
 
     /**
@@ -84,13 +84,13 @@ class FabricTokens extends \SignalWire\REST\BaseResource
      */
     public function createInviteToken(string $addressId, ?int $expiresAt = null, array $extras = []): array
     {
-        $body = [];
-        $body['address_id'] = $addressId;
+        $__body = [];
+        $__body['address_id'] = $addressId;
         if ($expiresAt !== null) {
-            $body['expires_at'] = $expiresAt;
+            $__body['expires_at'] = $expiresAt;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post('/api/fabric/subscriber/invites', $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post('/api/fabric/subscriber/invites', $__body);
     }
 
     /**
@@ -100,13 +100,13 @@ class FabricTokens extends \SignalWire\REST\BaseResource
      */
     public function createGuestToken(array $allowedAddresses, ?int $expireAt = null, array $extras = []): array
     {
-        $body = [];
-        $body['allowed_addresses'] = $allowedAddresses;
+        $__body = [];
+        $__body['allowed_addresses'] = $allowedAddresses;
         if ($expireAt !== null) {
-            $body['expire_at'] = $expireAt;
+            $__body['expire_at'] = $expireAt;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post('/api/fabric/guests/tokens', $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post('/api/fabric/guests/tokens', $__body);
     }
 
     /**
@@ -115,9 +115,9 @@ class FabricTokens extends \SignalWire\REST\BaseResource
      */
     public function createEmbedToken(string $token, array $extras = []): array
     {
-        $body = [];
-        $body['token'] = $token;
-        $body = array_merge($body, $extras);
-        return $this->http->post('/api/fabric/embeds/tokens', $body);
+        $__body = [];
+        $__body['token'] = $token;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post('/api/fabric/embeds/tokens', $__body);
     }
 }

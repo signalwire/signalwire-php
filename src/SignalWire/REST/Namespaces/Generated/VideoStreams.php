@@ -36,10 +36,10 @@ class VideoStreams extends \SignalWire\REST\BaseResource
      */
     public function update(string $id, string $url, array $extras = []): array
     {
-        $body = [];
-        $body['url'] = $url;
-        $body = array_merge($body, $extras);
-        return $this->http->put($this->path($id), $body);
+        $__body = [];
+        $__body['url'] = $url;
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->path($id), $__body);
     }
 
     /**

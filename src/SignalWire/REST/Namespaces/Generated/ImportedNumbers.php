@@ -28,13 +28,13 @@ class ImportedNumbers extends \SignalWire\REST\BaseResource
      */
     public function create(string $number, string $numberType, ?array $capabilities = null, array $extras = []): array
     {
-        $body = [];
-        $body['number'] = $number;
-        $body['number_type'] = $numberType;
+        $__body = [];
+        $__body['number'] = $number;
+        $__body['number_type'] = $numberType;
         if ($capabilities !== null) {
-            $body['capabilities'] = $capabilities;
+            $__body['capabilities'] = $capabilities;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->basePath, $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->basePath, $__body);
     }
 }

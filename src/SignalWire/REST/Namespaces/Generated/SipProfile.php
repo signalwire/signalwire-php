@@ -38,23 +38,23 @@ class SipProfile extends \SignalWire\REST\BaseResource
      */
     public function update(?string $domainIdentifier = null, ?array $defaultCodecs = null, ?array $defaultCiphers = null, ?string $defaultEncryption = null, ?string $defaultSendAs = null, array $extras = []): array
     {
-        $body = [];
+        $__body = [];
         if ($domainIdentifier !== null) {
-            $body['domain_identifier'] = $domainIdentifier;
+            $__body['domain_identifier'] = $domainIdentifier;
         }
         if ($defaultCodecs !== null) {
-            $body['default_codecs'] = $defaultCodecs;
+            $__body['default_codecs'] = $defaultCodecs;
         }
         if ($defaultCiphers !== null) {
-            $body['default_ciphers'] = $defaultCiphers;
+            $__body['default_ciphers'] = $defaultCiphers;
         }
         if ($defaultEncryption !== null) {
-            $body['default_encryption'] = $defaultEncryption;
+            $__body['default_encryption'] = $defaultEncryption;
         }
         if ($defaultSendAs !== null) {
-            $body['default_send_as'] = $defaultSendAs;
+            $__body['default_send_as'] = $defaultSendAs;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->put($this->basePath, $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->basePath, $__body);
     }
 }

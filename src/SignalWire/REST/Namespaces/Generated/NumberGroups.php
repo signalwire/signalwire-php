@@ -36,10 +36,10 @@ class NumberGroups extends \SignalWire\REST\CrudResource
      */
     public function addMembership(string $groupId, string $phoneNumberId, array $extras = []): array
     {
-        $body = [];
-        $body['phone_number_id'] = $phoneNumberId;
-        $body = array_merge($body, $extras);
-        return $this->client->post($this->path($groupId, 'number_group_memberships'), $body);
+        $__body = [];
+        $__body['phone_number_id'] = $phoneNumberId;
+        $__body = array_merge($__body, $extras);
+        return $this->client->post($this->path($groupId, 'number_group_memberships'), $__body);
     }
 
     /**

@@ -29,16 +29,16 @@ class PubSub extends \SignalWire\REST\BaseResource
      */
     public function createToken(int $ttl, array $channels, ?string $memberId = null, ?array $state = null, array $extras = []): array
     {
-        $body = [];
-        $body['ttl'] = $ttl;
-        $body['channels'] = $channels;
+        $__body = [];
+        $__body['ttl'] = $ttl;
+        $__body['channels'] = $channels;
         if ($memberId !== null) {
-            $body['member_id'] = $memberId;
+            $__body['member_id'] = $memberId;
         }
         if ($state !== null) {
-            $body['state'] = $state;
+            $__body['state'] = $state;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->basePath, $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->basePath, $__body);
     }
 }

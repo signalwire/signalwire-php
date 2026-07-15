@@ -51,51 +51,51 @@ class CxmlApplications extends \SignalWire\REST\BaseResource
      */
     public function update(string $id, ?string $displayName = null, ?string $accountSid = null, ?string $voiceUrl = null, ?array $voiceMethod = null, ?string $voiceFallbackUrl = null, ?array $voiceFallbackMethod = null, ?string $statusCallback = null, ?array $statusCallbackMethod = null, ?string $smsUrl = null, ?array $smsMethod = null, ?string $smsFallbackUrl = null, ?array $smsFallbackMethod = null, ?string $smsStatusCallback = null, ?array $smsStatusCallbackMethod = null, array $extras = []): array
     {
-        $body = [];
+        $__body = [];
         if ($displayName !== null) {
-            $body['display_name'] = $displayName;
+            $__body['display_name'] = $displayName;
         }
         if ($accountSid !== null) {
-            $body['account_sid'] = $accountSid;
+            $__body['account_sid'] = $accountSid;
         }
         if ($voiceUrl !== null) {
-            $body['voice_url'] = $voiceUrl;
+            $__body['voice_url'] = $voiceUrl;
         }
         if ($voiceMethod !== null) {
-            $body['voice_method'] = $voiceMethod;
+            $__body['voice_method'] = $voiceMethod;
         }
         if ($voiceFallbackUrl !== null) {
-            $body['voice_fallback_url'] = $voiceFallbackUrl;
+            $__body['voice_fallback_url'] = $voiceFallbackUrl;
         }
         if ($voiceFallbackMethod !== null) {
-            $body['voice_fallback_method'] = $voiceFallbackMethod;
+            $__body['voice_fallback_method'] = $voiceFallbackMethod;
         }
         if ($statusCallback !== null) {
-            $body['status_callback'] = $statusCallback;
+            $__body['status_callback'] = $statusCallback;
         }
         if ($statusCallbackMethod !== null) {
-            $body['status_callback_method'] = $statusCallbackMethod;
+            $__body['status_callback_method'] = $statusCallbackMethod;
         }
         if ($smsUrl !== null) {
-            $body['sms_url'] = $smsUrl;
+            $__body['sms_url'] = $smsUrl;
         }
         if ($smsMethod !== null) {
-            $body['sms_method'] = $smsMethod;
+            $__body['sms_method'] = $smsMethod;
         }
         if ($smsFallbackUrl !== null) {
-            $body['sms_fallback_url'] = $smsFallbackUrl;
+            $__body['sms_fallback_url'] = $smsFallbackUrl;
         }
         if ($smsFallbackMethod !== null) {
-            $body['sms_fallback_method'] = $smsFallbackMethod;
+            $__body['sms_fallback_method'] = $smsFallbackMethod;
         }
         if ($smsStatusCallback !== null) {
-            $body['sms_status_callback'] = $smsStatusCallback;
+            $__body['sms_status_callback'] = $smsStatusCallback;
         }
         if ($smsStatusCallbackMethod !== null) {
-            $body['sms_status_callback_method'] = $smsStatusCallbackMethod;
+            $__body['sms_status_callback_method'] = $smsStatusCallbackMethod;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->put($this->path($id), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->path($id), $__body);
     }
 
     /**

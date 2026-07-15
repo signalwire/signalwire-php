@@ -3,6 +3,18 @@
 All notable changes to the SignalWire PHP SDK (`signalwire/sdk`) are documented
 in this file.
 
+## [3.2.0] - 2026-07-14
+
+### REST
+- Added the **Messages** resource (`$client->messages()`) — send and redact
+  messages over the native `/api/messaging/messages` API: `create(...)` (POST
+  `/api/messaging/messages`, send an outbound SMS/MMS) and `update($messageId,
+  $body)` (PATCH `/api/messaging/messages/{message_id}`, redact a message body).
+  A send/redact subset of CRUD (no list/get/delete). Distinct from the message
+  *logs* namespace (`$client->logs()->messages`). Both routes are covered by
+  success and error wire tests over the shared mock. Generated from the canonical
+  `rest-apis/messages` spec via the spec-driven REST generator.
+
 ## [3.1.0] - 2026-07-14
 
 ### REST

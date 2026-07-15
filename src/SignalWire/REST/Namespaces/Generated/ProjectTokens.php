@@ -28,14 +28,14 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
      */
     public function create(string $name, array $permissions, ?string $subprojectId = null, array $extras = []): array
     {
-        $body = [];
-        $body['name'] = $name;
-        $body['permissions'] = $permissions;
+        $__body = [];
+        $__body['name'] = $name;
+        $__body['permissions'] = $permissions;
         if ($subprojectId !== null) {
-            $body['subproject_id'] = $subprojectId;
+            $__body['subproject_id'] = $subprojectId;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->basePath, $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->basePath, $__body);
     }
 
     /**
@@ -45,15 +45,15 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
      */
     public function update(string $tokenId, ?string $name = null, ?array $permissions = null, array $extras = []): array
     {
-        $body = [];
+        $__body = [];
         if ($name !== null) {
-            $body['name'] = $name;
+            $__body['name'] = $name;
         }
         if ($permissions !== null) {
-            $body['permissions'] = $permissions;
+            $__body['permissions'] = $permissions;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->patch($this->path($tokenId), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->patch($this->path($tokenId), $__body);
     }
 
     /**
