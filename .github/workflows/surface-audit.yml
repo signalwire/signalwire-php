@@ -29,12 +29,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout signalwire-php
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: signalwire-php
 
       - name: Checkout porting-sdk (contains python_surface.json)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
           path: porting-sdk
