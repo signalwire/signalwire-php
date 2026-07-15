@@ -36,12 +36,12 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
      */
     public function update(string $id, ?string $name = null, array $extras = []): array
     {
-        $body = [];
+        $__body = [];
         if ($name !== null) {
-            $body['name'] = $name;
+            $__body['name'] = $name;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->put($this->path($id), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->path($id), $__body);
     }
 
     /**
@@ -69,14 +69,14 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
      */
     public function createOrder(string $id, ?array $phoneNumbers = null, ?string $statusCallbackUrl = null, array $extras = []): array
     {
-        $body = [];
+        $__body = [];
         if ($phoneNumbers !== null) {
-            $body['phone_numbers'] = $phoneNumbers;
+            $__body['phone_numbers'] = $phoneNumbers;
         }
         if ($statusCallbackUrl !== null) {
-            $body['status_callback_url'] = $statusCallbackUrl;
+            $__body['status_callback_url'] = $statusCallbackUrl;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->path($id, 'orders'), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path($id, 'orders'), $__body);
     }
 }

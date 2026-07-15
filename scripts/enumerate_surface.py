@@ -209,6 +209,9 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # datasphere (NOTE: short name `Datasphere` = the skill; the REST resource
     # class is `DatasphereDocuments`, no collision).
     "DatasphereDocuments": "signalwire.rest.namespaces.datasphere_resources_generated",
+    # messages (the /api/messaging send/redact resource, flat `client->messages()`;
+    # DISTINCT from MessageLogs `client->logs->messages` below).
+    "Messages": "signalwire.rest.namespaces.messages_resources_generated",
     # logs family (split across message/voice/fax/logs specs, grouped by client)
     "MessageLogs": "signalwire.rest.namespaces.message_resources_generated",
     "VoiceLogs": "signalwire.rest.namespaces.voice_resources_generated",
@@ -674,6 +677,7 @@ _TYPES_SUB_TO_MODULE: dict[str, str] = {
     "Datasphere": "signalwire.rest.namespaces.datasphere_types_generated",
     "Logs": "signalwire.rest.namespaces.logs_types_generated",
     "Message": "signalwire.rest.namespaces.message_types_generated",
+    "Messages": "signalwire.rest.namespaces.messages_types_generated",
     "Voice": "signalwire.rest.namespaces.voice_types_generated",
     "Fax": "signalwire.rest.namespaces.fax_types_generated",
     "Project": "signalwire.rest.namespaces.project_types_generated",

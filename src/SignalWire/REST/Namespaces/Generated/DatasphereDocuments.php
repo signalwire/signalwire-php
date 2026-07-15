@@ -29,31 +29,31 @@ class DatasphereDocuments extends \SignalWire\REST\CrudResource
      */
     public function search(string $queryString, ?array $tags = null, ?string $documentId = null, ?float $distance = null, ?int $count = null, ?string $language = null, ?array $posToExpand = null, ?int $maxSynonyms = null, array $extras = []): array
     {
-        $body = [];
-        $body['query_string'] = $queryString;
+        $__body = [];
+        $__body['query_string'] = $queryString;
         if ($tags !== null) {
-            $body['tags'] = $tags;
+            $__body['tags'] = $tags;
         }
         if ($documentId !== null) {
-            $body['document_id'] = $documentId;
+            $__body['document_id'] = $documentId;
         }
         if ($distance !== null) {
-            $body['distance'] = $distance;
+            $__body['distance'] = $distance;
         }
         if ($count !== null) {
-            $body['count'] = $count;
+            $__body['count'] = $count;
         }
         if ($language !== null) {
-            $body['language'] = $language;
+            $__body['language'] = $language;
         }
         if ($posToExpand !== null) {
-            $body['pos_to_expand'] = $posToExpand;
+            $__body['pos_to_expand'] = $posToExpand;
         }
         if ($maxSynonyms !== null) {
-            $body['max_synonyms'] = $maxSynonyms;
+            $__body['max_synonyms'] = $maxSynonyms;
         }
-        $body = array_merge($body, $extras);
-        return $this->client->post($this->path('search'), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->client->post($this->path('search'), $__body);
     }
 
     /**

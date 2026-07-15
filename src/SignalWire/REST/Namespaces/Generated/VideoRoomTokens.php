@@ -30,60 +30,60 @@ class VideoRoomTokens extends \SignalWire\REST\BaseResource
      */
     public function create(string $roomName, ?string $userName = null, ?array $permissions = null, ?string $joinFrom = null, ?string $joinUntil = null, ?string $removeAt = null, ?int $removeAfterSecondsElapsed = null, ?bool $joinAudioMuted = null, ?bool $joinVideoMuted = null, ?bool $autoCreateRoom = null, ?bool $enableRoomPreviews = null, ?string $roomDisplayName = null, ?bool $endRoomSessionOnLeave = null, ?string $joinAs = null, ?string $mediaAllowed = null, ?array $roomMeta = null, ?array $meta = null, ?bool $syncAudioVideo = null, array $extras = []): array
     {
-        $body = [];
-        $body['room_name'] = $roomName;
+        $__body = [];
+        $__body['room_name'] = $roomName;
         if ($userName !== null) {
-            $body['user_name'] = $userName;
+            $__body['user_name'] = $userName;
         }
         if ($permissions !== null) {
-            $body['permissions'] = $permissions;
+            $__body['permissions'] = $permissions;
         }
         if ($joinFrom !== null) {
-            $body['join_from'] = $joinFrom;
+            $__body['join_from'] = $joinFrom;
         }
         if ($joinUntil !== null) {
-            $body['join_until'] = $joinUntil;
+            $__body['join_until'] = $joinUntil;
         }
         if ($removeAt !== null) {
-            $body['remove_at'] = $removeAt;
+            $__body['remove_at'] = $removeAt;
         }
         if ($removeAfterSecondsElapsed !== null) {
-            $body['remove_after_seconds_elapsed'] = $removeAfterSecondsElapsed;
+            $__body['remove_after_seconds_elapsed'] = $removeAfterSecondsElapsed;
         }
         if ($joinAudioMuted !== null) {
-            $body['join_audio_muted'] = $joinAudioMuted;
+            $__body['join_audio_muted'] = $joinAudioMuted;
         }
         if ($joinVideoMuted !== null) {
-            $body['join_video_muted'] = $joinVideoMuted;
+            $__body['join_video_muted'] = $joinVideoMuted;
         }
         if ($autoCreateRoom !== null) {
-            $body['auto_create_room'] = $autoCreateRoom;
+            $__body['auto_create_room'] = $autoCreateRoom;
         }
         if ($enableRoomPreviews !== null) {
-            $body['enable_room_previews'] = $enableRoomPreviews;
+            $__body['enable_room_previews'] = $enableRoomPreviews;
         }
         if ($roomDisplayName !== null) {
-            $body['room_display_name'] = $roomDisplayName;
+            $__body['room_display_name'] = $roomDisplayName;
         }
         if ($endRoomSessionOnLeave !== null) {
-            $body['end_room_session_on_leave'] = $endRoomSessionOnLeave;
+            $__body['end_room_session_on_leave'] = $endRoomSessionOnLeave;
         }
         if ($joinAs !== null) {
-            $body['join_as'] = $joinAs;
+            $__body['join_as'] = $joinAs;
         }
         if ($mediaAllowed !== null) {
-            $body['media_allowed'] = $mediaAllowed;
+            $__body['media_allowed'] = $mediaAllowed;
         }
         if ($roomMeta !== null) {
-            $body['room_meta'] = $roomMeta;
+            $__body['room_meta'] = $roomMeta;
         }
         if ($meta !== null) {
-            $body['meta'] = $meta;
+            $__body['meta'] = $meta;
         }
         if ($syncAudioVideo !== null) {
-            $body['sync_audio_video'] = $syncAudioVideo;
+            $__body['sync_audio_video'] = $syncAudioVideo;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->basePath, $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->basePath, $__body);
     }
 }

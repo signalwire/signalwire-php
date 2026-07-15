@@ -62,11 +62,11 @@ class GenericResources extends \SignalWire\REST\BaseResource
      */
     public function assignPhoneRoute(string $id, string $phoneRouteId, string $handler, array $extras = []): array
     {
-        $body = [];
-        $body['phone_route_id'] = $phoneRouteId;
-        $body['handler'] = $handler;
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->path($id, 'phone_routes'), $body);
+        $__body = [];
+        $__body['phone_route_id'] = $phoneRouteId;
+        $__body['handler'] = $handler;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path($id, 'phone_routes'), $__body);
     }
 
     /**
@@ -75,9 +75,9 @@ class GenericResources extends \SignalWire\REST\BaseResource
      */
     public function assignDomainApplication(string $id, string $domainApplicationId, array $extras = []): array
     {
-        $body = [];
-        $body['domain_application_id'] = $domainApplicationId;
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->path($id, 'domain_applications'), $body);
+        $__body = [];
+        $__body['domain_application_id'] = $domainApplicationId;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path($id, 'domain_applications'), $__body);
     }
 }

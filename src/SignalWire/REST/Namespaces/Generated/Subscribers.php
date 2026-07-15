@@ -38,26 +38,26 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
      */
     public function createSipEndpoint(string $subscriberId, string $username, string $password, ?string $callerId = null, ?string $sendAs = null, ?array $ciphers = null, ?array $codecs = null, ?string $encryption = null, array $extras = []): array
     {
-        $body = [];
-        $body['username'] = $username;
-        $body['password'] = $password;
+        $__body = [];
+        $__body['username'] = $username;
+        $__body['password'] = $password;
         if ($callerId !== null) {
-            $body['caller_id'] = $callerId;
+            $__body['caller_id'] = $callerId;
         }
         if ($sendAs !== null) {
-            $body['send_as'] = $sendAs;
+            $__body['send_as'] = $sendAs;
         }
         if ($ciphers !== null) {
-            $body['ciphers'] = $ciphers;
+            $__body['ciphers'] = $ciphers;
         }
         if ($codecs !== null) {
-            $body['codecs'] = $codecs;
+            $__body['codecs'] = $codecs;
         }
         if ($encryption !== null) {
-            $body['encryption'] = $encryption;
+            $__body['encryption'] = $encryption;
         }
-        $body = array_merge($body, $extras);
-        return $this->client->post($this->path($subscriberId, 'sip_endpoints'), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->client->post($this->path($subscriberId, 'sip_endpoints'), $__body);
     }
 
     /**
@@ -77,30 +77,30 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
      */
     public function updateSipEndpoint(string $subscriberId, string $id, ?string $username = null, ?string $password = null, ?string $callerId = null, ?string $sendAs = null, ?array $ciphers = null, ?array $codecs = null, ?string $encryption = null, array $extras = []): array
     {
-        $body = [];
+        $__body = [];
         if ($username !== null) {
-            $body['username'] = $username;
+            $__body['username'] = $username;
         }
         if ($password !== null) {
-            $body['password'] = $password;
+            $__body['password'] = $password;
         }
         if ($callerId !== null) {
-            $body['caller_id'] = $callerId;
+            $__body['caller_id'] = $callerId;
         }
         if ($sendAs !== null) {
-            $body['send_as'] = $sendAs;
+            $__body['send_as'] = $sendAs;
         }
         if ($ciphers !== null) {
-            $body['ciphers'] = $ciphers;
+            $__body['ciphers'] = $ciphers;
         }
         if ($codecs !== null) {
-            $body['codecs'] = $codecs;
+            $__body['codecs'] = $codecs;
         }
         if ($encryption !== null) {
-            $body['encryption'] = $encryption;
+            $__body['encryption'] = $encryption;
         }
-        $body = array_merge($body, $extras);
-        return $this->client->patch($this->path($subscriberId, 'sip_endpoints', $id), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->client->patch($this->path($subscriberId, 'sip_endpoints', $id), $__body);
     }
 
     /**

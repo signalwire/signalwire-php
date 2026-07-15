@@ -35,9 +35,9 @@ class VerifiedCallers extends \SignalWire\REST\CrudResource
      */
     public function submitVerification(string $id, string $verificationCode, array $extras = []): array
     {
-        $body = [];
-        $body['verification_code'] = $verificationCode;
-        $body = array_merge($body, $extras);
-        return $this->client->put($this->path($id, 'verification'), $body);
+        $__body = [];
+        $__body['verification_code'] = $verificationCode;
+        $__body = array_merge($__body, $extras);
+        return $this->client->put($this->path($id, 'verification'), $__body);
     }
 }

@@ -27,28 +27,28 @@ class Mfa extends \SignalWire\REST\BaseResource
      */
     public function sms(string $to, ?string $from_ = null, ?string $message = null, ?int $tokenLength = null, ?int $validFor = null, ?int $maxAttempts = null, ?bool $allowAlphas = null, array $extras = []): array
     {
-        $body = [];
-        $body['to'] = $to;
+        $__body = [];
+        $__body['to'] = $to;
         if ($from_ !== null) {
-            $body['from'] = $from_;
+            $__body['from'] = $from_;
         }
         if ($message !== null) {
-            $body['message'] = $message;
+            $__body['message'] = $message;
         }
         if ($tokenLength !== null) {
-            $body['token_length'] = $tokenLength;
+            $__body['token_length'] = $tokenLength;
         }
         if ($validFor !== null) {
-            $body['valid_for'] = $validFor;
+            $__body['valid_for'] = $validFor;
         }
         if ($maxAttempts !== null) {
-            $body['max_attempts'] = $maxAttempts;
+            $__body['max_attempts'] = $maxAttempts;
         }
         if ($allowAlphas !== null) {
-            $body['allow_alphas'] = $allowAlphas;
+            $__body['allow_alphas'] = $allowAlphas;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->path('sms'), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path('sms'), $__body);
     }
 
     /**
@@ -57,28 +57,28 @@ class Mfa extends \SignalWire\REST\BaseResource
      */
     public function call(string $to, ?string $from_ = null, ?string $message = null, ?int $tokenLength = null, ?int $validFor = null, ?int $maxAttempts = null, ?bool $allowAlphas = null, array $extras = []): array
     {
-        $body = [];
-        $body['to'] = $to;
+        $__body = [];
+        $__body['to'] = $to;
         if ($from_ !== null) {
-            $body['from'] = $from_;
+            $__body['from'] = $from_;
         }
         if ($message !== null) {
-            $body['message'] = $message;
+            $__body['message'] = $message;
         }
         if ($tokenLength !== null) {
-            $body['token_length'] = $tokenLength;
+            $__body['token_length'] = $tokenLength;
         }
         if ($validFor !== null) {
-            $body['valid_for'] = $validFor;
+            $__body['valid_for'] = $validFor;
         }
         if ($maxAttempts !== null) {
-            $body['max_attempts'] = $maxAttempts;
+            $__body['max_attempts'] = $maxAttempts;
         }
         if ($allowAlphas !== null) {
-            $body['allow_alphas'] = $allowAlphas;
+            $__body['allow_alphas'] = $allowAlphas;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->path('call'), $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path('call'), $__body);
     }
 
     /**
@@ -87,9 +87,9 @@ class Mfa extends \SignalWire\REST\BaseResource
      */
     public function verify(string $requestId, string $token, array $extras = []): array
     {
-        $body = [];
-        $body['token'] = $token;
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->path($requestId, 'verify'), $body);
+        $__body = [];
+        $__body['token'] = $token;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path($requestId, 'verify'), $__body);
     }
 }

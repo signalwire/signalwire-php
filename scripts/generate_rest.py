@@ -79,7 +79,7 @@ except ImportError:  # pragma: no cover
 # resource spec dir is picked up automatically and only needs an order placement.
 _NS_ORDER = (
     "relay-rest", "fabric", "calling", "video", "datasphere",
-    "logs", "message", "voice", "fax", "project", "projects", "chat", "pubsub",
+    "logs", "message", "messages", "voice", "fax", "project", "projects", "chat", "pubsub",
     "swml-webhooks",
 )
 
@@ -653,7 +653,13 @@ def body_params(spec: Spec, cls: str, php_method: str,
     build: list[str] = []
     doc: list[str] = []
     records: list[dict] = list(leading)
-    build.append("        $body = [];")
+    # The request-body dict local is named ``$__body`` (leading underscore) so it
+    # can NEVER collide with a spec field's PHP param: field params come from
+    # escape_param()/snake_to_camel(), which strips leading underscores and so
+    # never yields a leading-underscore identifier. A field literally named
+    # ``body`` (the messages spec has one) would otherwise shadow a plain ``$body``
+    # local, producing nonsense like ``$body['body'] = $body;``.
+    build.append("        $__body = [];")
     for wire_name, schema, required in ordered_fields(fields):
         ident = escape_param(wire_name)
         pt = php_param_type(spec, schema, required)
@@ -664,12 +670,12 @@ def body_params(spec: Spec, cls: str, php_method: str,
         rec: dict = {"name": wire_name, "kind": "keyword", "type": ct, "required": required}
         if required:
             php_params.append(f"{pt} ${ident}")
-            build.append(f"        $body[{php_str(wire_name)}] = ${ident};")
+            build.append(f"        $__body[{php_str(wire_name)}] = ${ident};")
         else:
             php_params.append(f"{pt} ${ident} = null")
             rec["default"] = None
             build.append(f"        if (${ident} !== null) {{")
-            build.append(f"            $body[{php_str(wire_name)}] = ${ident};")
+            build.append(f"            $__body[{php_str(wire_name)}] = ${ident};")
             build.append("        }")
         records.append(rec)
     # trailing forward-compat door (the oracle's keyword ``extras`` + the
@@ -687,7 +693,7 @@ def body_params(spec: Spec, cls: str, php_method: str,
         "name": "kwargs", "kind": "var_keyword", "type": "any",
         "required": False, "default": {},
     })
-    build.append("        $body = array_merge($body, $extras);")
+    build.append("        $__body = array_merge($__body, $extras);")
     _register_sidecar(cls, php_method, records)
     return php_params, build, records, doc
 
@@ -786,7 +792,7 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
             field_php, build, _, field_doc = body_params(spec, cls, name, fields, id_records)
             params = id_params + field_php
             body_ml = build
-            body_arg = "$body"
+            body_arg = "$__body"  # the collision-free request-body dict local (see body_params)
             doc.extend(field_doc)
         else:
             # §5.2 union body → a single positional ``body`` param.

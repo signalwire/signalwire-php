@@ -36,9 +36,9 @@ class VideoRooms extends \SignalWire\REST\CrudResource
      */
     public function createStream(string $id, string $url, array $extras = []): array
     {
-        $body = [];
-        $body['url'] = $url;
-        $body = array_merge($body, $extras);
-        return $this->client->post($this->path($id, 'streams'), $body);
+        $__body = [];
+        $__body['url'] = $url;
+        $__body = array_merge($__body, $extras);
+        return $this->client->post($this->path($id, 'streams'), $__body);
     }
 }

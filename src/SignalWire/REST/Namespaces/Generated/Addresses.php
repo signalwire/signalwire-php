@@ -36,24 +36,24 @@ class Addresses extends \SignalWire\REST\BaseResource
      */
     public function create(string $label, string $country, string $firstName, string $lastName, string $streetNumber, string $streetName, string $city, string $state, string $postalCode, ?string $addressType = null, ?string $addressNumber = null, array $extras = []): array
     {
-        $body = [];
-        $body['label'] = $label;
-        $body['country'] = $country;
-        $body['first_name'] = $firstName;
-        $body['last_name'] = $lastName;
-        $body['street_number'] = $streetNumber;
-        $body['street_name'] = $streetName;
-        $body['city'] = $city;
-        $body['state'] = $state;
-        $body['postal_code'] = $postalCode;
+        $__body = [];
+        $__body['label'] = $label;
+        $__body['country'] = $country;
+        $__body['first_name'] = $firstName;
+        $__body['last_name'] = $lastName;
+        $__body['street_number'] = $streetNumber;
+        $__body['street_name'] = $streetName;
+        $__body['city'] = $city;
+        $__body['state'] = $state;
+        $__body['postal_code'] = $postalCode;
         if ($addressType !== null) {
-            $body['address_type'] = $addressType;
+            $__body['address_type'] = $addressType;
         }
         if ($addressNumber !== null) {
-            $body['address_number'] = $addressNumber;
+            $__body['address_number'] = $addressNumber;
         }
-        $body = array_merge($body, $extras);
-        return $this->http->post($this->basePath, $body);
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->basePath, $__body);
     }
 
     /**
