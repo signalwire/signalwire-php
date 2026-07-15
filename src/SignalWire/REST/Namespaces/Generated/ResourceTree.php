@@ -30,6 +30,7 @@ trait ResourceTree
     private ?SipProfile $sipProfile = null;
     private ?VerifiedCallers $verifiedCallers = null;
     private ?Calling $calling = null;
+    private ?Projects $projects = null;
     private ?Chat $chat = null;
     private ?PubSub $pubsub = null;
     private ?RegistryNamespace $registry = null;
@@ -135,6 +136,14 @@ trait ResourceTree
             $this->calling = new Calling($this->generatedHttpClient());
         }
         return $this->calling;
+    }
+
+    public function projects(): Projects
+    {
+        if ($this->projects === null) {
+            $this->projects = new Projects($this->generatedHttpClient());
+        }
+        return $this->projects;
     }
 
     public function chat(): Chat

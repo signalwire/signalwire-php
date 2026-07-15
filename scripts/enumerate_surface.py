@@ -214,8 +214,10 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "VoiceLogs": "signalwire.rest.namespaces.voice_resources_generated",
     "FaxLogs": "signalwire.rest.namespaces.fax_resources_generated",
     "ConferenceLogs": "signalwire.rest.namespaces.logs_resources_generated",
-    # project tokens
+    # project tokens (singular `project` namespace) + projects (plural /api/projects
+    # full-CRUD project-management resource, flat `client->projects()`)
     "ProjectTokens": "signalwire.rest.namespaces.project_resources_generated",
+    "Projects": "signalwire.rest.namespaces.projects_resources_generated",
     # video namespace
     "VideoRooms": "signalwire.rest.namespaces.video_resources_generated",
     "VideoRoomTokens": "signalwire.rest.namespaces.video_resources_generated",
@@ -675,6 +677,7 @@ _TYPES_SUB_TO_MODULE: dict[str, str] = {
     "Voice": "signalwire.rest.namespaces.voice_types_generated",
     "Fax": "signalwire.rest.namespaces.fax_types_generated",
     "Project": "signalwire.rest.namespaces.project_types_generated",
+    "Projects": "signalwire.rest.namespaces.projects_types_generated",
     "Chat": "signalwire.rest.namespaces.chat_types_generated",
     "PubSub": "signalwire.rest.namespaces.pubsub_types_generated",
     "SwmlWebhooks": "signalwire.rest.namespaces.swml_webhooks_types_generated",
