@@ -19,9 +19,9 @@ require 'vendor/autoload.php';
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    projectId: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:     $_ENV['SIGNALWIRE_API_TOKEN'],
-    space:     $_ENV['SIGNALWIRE_SPACE'],
+    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
+    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
+    host:    $_ENV['SIGNALWIRE_SPACE'],
 );
 
 $client->fabric()->aiAgents()->create(['name' => 'Support Bot', 'prompt' => ['text' => 'You are helpful.']]);

@@ -35,19 +35,19 @@ function safe(string $label, callable $fn): mixed
 
 // 1. Register a brand
 echo "Registering 10DLC brand...\n";
-$brand = safe('Brand', fn() => $client->registry->brands->create(
-    companyName: 'Acme Corp',
-    ein:         '12-3456789',
-    entityType:  'PRIVATE_PROFIT',
-    vertical:    'TECHNOLOGY',
-    website:     'https://acme.example.com',
-    country:     'US',
-));
-$brandId = $brand ? $brand['id'] : null;
+$brand = safe('Brand', fn() => $client->registry()->brands()->create([
+    'company_name' => 'Acme Corp',
+    'ein'          => '12-3456789',
+    'entity_type'  => 'PRIVATE_PROFIT',
+    'vertical'     => 'TECHNOLOGY',
+    'website'      => 'https://acme.example.com',
+    'country'      => 'US',
+]));
+$brandId = $brand ? ($brand['id'] ?? null) : null;
 
 // 2. List brands
 echo "\nListing brands...\n";
-$brands = safe('List brands', fn() => $client->registry->brands->list());
+$brands = safe('List brands', fn() => $client->registry()->brands()->list());
 if ($brands) {
     foreach (($brands['data'] ?? []) as $b) {
         echo "  - {$b['id']}: " . ($b['name'] ?? 'unnamed') . "\n";
@@ -59,7 +59,7 @@ if ($brands) {
 
 // 3. Get brand details
 if ($brandId) {
-    $detail = safe('Brand detail', fn() => $client->registry->brands->get($brandId));
+    $detail = safe('Brand detail', fn() => $client->registry()->brands()->get($brandId));
     if ($detail) {
         echo "\nBrand detail: " . ($detail['name'] ?? 'N/A')
             . " (" . ($detail['state'] ?? 'N/A') . ")\n";
@@ -70,20 +70,22 @@ if ($brandId) {
 $campaignId = null;
 if ($brandId) {
     echo "\nCreating campaign...\n";
-    $campaign = safe('Campaign', fn() => $client->registry->brands->createCampaign(
+    $campaign = safe('Campaign', fn() => $client->registry()->brands()->createCampaign(
         $brandId,
-        useCase:       'MIXED',
-        description:   'Customer notifications and support messages',
-        sampleMessage: 'Your order #12345 has shipped.',
+        [
+            'use_case'       => 'MIXED',
+            'description'    => 'Customer notifications and support messages',
+            'sample_message' => 'Your order #12345 has shipped.',
+        ],
     ));
-    $campaignId = $campaign ? $campaign['id'] : null;
+    $campaignId = $campaign ? ($campaign['id'] ?? null) : null;
 }
 
 // 5. List campaigns for the brand
 if ($brandId) {
     echo "\nListing brand campaigns...\n";
     $campaigns = safe('List campaigns', fn() =>
-        $client->registry->brands->listCampaigns($brandId)
+        $client->registry()->brands()->listCampaigns($brandId)
     );
     if ($campaigns) {
         foreach (($campaigns['data'] ?? []) as $c) {
@@ -95,13 +97,13 @@ if ($brandId) {
 
 // 6. Get and update campaign
 if ($campaignId) {
-    $campDetail = safe('Get campaign', fn() => $client->registry->campaigns->get($campaignId));
+    $campDetail = safe('Get campaign', fn() => $client->registry()->campaigns()->get($campaignId));
     if ($campDetail) {
         echo "\nCampaign: " . ($campDetail['name'] ?? 'N/A')
             . " (" . ($campDetail['state'] ?? 'N/A') . ")\n";
     }
     safe('Update campaign', fn() =>
-        $client->registry->campaigns->update($campaignId, description: 'Updated: customer notifications')
+        $client->registry()->campaigns()->update($campaignId, name: 'Updated Campaign')
     );
 }
 
@@ -110,14 +112,14 @@ $orderId = null;
 if ($campaignId) {
     echo "\nCreating number assignment order...\n";
     $order = safe('Order', fn() =>
-        $client->registry->campaigns->createOrder($campaignId, phoneNumbers: ['+15125551234'])
+        $client->registry()->campaigns()->createOrder($campaignId, phoneNumbers: ['+15125551234'])
     );
-    $orderId = $order ? $order['id'] : null;
+    $orderId = $order ? ($order['id'] ?? null) : null;
 }
 
 // 8. Get order status
 if ($orderId) {
-    $orderDetail = safe('Order status', fn() => $client->registry->orders->get($orderId));
+    $orderDetail = safe('Order status', fn() => $client->registry()->orders()->get($orderId));
     if ($orderDetail) {
         echo "  Order status: " . ($orderDetail['status'] ?? 'N/A') . "\n";
     }
@@ -126,14 +128,14 @@ if ($orderId) {
 // 9. List campaign numbers and orders
 if ($campaignId) {
     echo "\nListing campaign numbers...\n";
-    $numbers = safe('List numbers', fn() => $client->registry->campaigns->listNumbers($campaignId));
+    $numbers = safe('List numbers', fn() => $client->registry()->campaigns()->listNumbers($campaignId));
     if ($numbers) {
         foreach (($numbers['data'] ?? []) as $n) {
             echo "  - " . ($n['phone_number'] ?? $n['id'] ?? 'unknown') . "\n";
         }
     }
 
-    $orders = safe('List orders', fn() => $client->registry->campaigns->listOrders($campaignId));
+    $orders = safe('List orders', fn() => $client->registry()->campaigns()->listOrders($campaignId));
     if ($orders) {
         foreach (($orders['data'] ?? []) as $o) {
             echo "  - Order {$o['id']}: " . ($o['status'] ?? 'unknown') . "\n";
@@ -144,10 +146,10 @@ if ($campaignId) {
 // 10. Unassign numbers (clean up)
 if ($campaignId) {
     echo "\nUnassigning numbers...\n";
-    $nums = safe('Get numbers', fn() => $client->registry->campaigns->listNumbers($campaignId));
+    $nums = safe('Get numbers', fn() => $client->registry()->campaigns()->listNumbers($campaignId));
     if ($nums) {
         foreach (($nums['data'] ?? []) as $n) {
-            safe("Unassign {$n['id']}", fn() => $client->registry->numbers->delete($n['id']));
+            safe("Unassign {$n['id']}", fn() => $client->registry()->numbers()->delete($n['id']));
         }
     }
 }

@@ -12,7 +12,12 @@ use SignalWire\Skills\SkillRegistry;
 
 final class SignalWire
 {
-    public const VERSION = '1.0.0';
+    /**
+     * The SDK release version. Single source of truth — kept in lockstep with
+     * ``composer.json``'s ``version`` and the REST ``User-Agent`` string
+     * (``HttpClient`` derives its UA from this constant).
+     */
+    public const VERSION = '3.2.0';
 
     /**
      * Get a logger instance.

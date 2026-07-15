@@ -33,19 +33,23 @@ class RestClient
     private HttpClient $http;
 
     /**
-     * @param string $projectId Project ID (falls back to SIGNALWIRE_PROJECT_ID env var).
-     * @param string $token     API token  (falls back to SIGNALWIRE_API_TOKEN env var).
-     * @param string $space     Space host or full base URL.
-     *                          - "mycompany.signalwire.com" → https://mycompany.signalwire.com
-     *                          - "https://example.com:8080" → used verbatim
-     *                          - "http://127.0.0.1:8080"   → used verbatim (test fixtures)
-     *                          Falls back to SIGNALWIRE_SPACE env var.
+     * @param string $project Project ID (falls back to SIGNALWIRE_PROJECT_ID env var).
+     * @param string $token   API token  (falls back to SIGNALWIRE_API_TOKEN env var).
+     * @param string $host    Space host or full base URL.
+     *                        - "mycompany.signalwire.com" → https://mycompany.signalwire.com
+     *                        - "https://example.com:8080" → used verbatim
+     *                        - "http://127.0.0.1:8080"   → used verbatim (test fixtures)
+     *                        Falls back to SIGNALWIRE_SPACE env var.
+     *
+     * Parameter names mirror the Python reference's
+     * ``RestClient(project=, token=, host=)`` so named-argument call sites are
+     * cross-port identical; the constructor also accepts these positionally.
      */
-    public function __construct(string $projectId = '', string $token = '', string $space = '', ?string $caBundle = null)
+    public function __construct(string $project = '', string $token = '', string $host = '', ?string $caBundle = null)
     {
-        $this->projectId = $projectId !== '' ? $projectId : (string) getenv('SIGNALWIRE_PROJECT_ID');
-        $this->token     = $token     !== '' ? $token : (string) getenv('SIGNALWIRE_API_TOKEN');
-        $this->space     = $space     !== '' ? $space : (string) getenv('SIGNALWIRE_SPACE');
+        $this->projectId = $project !== '' ? $project : (string) getenv('SIGNALWIRE_PROJECT_ID');
+        $this->token     = $token   !== '' ? $token : (string) getenv('SIGNALWIRE_API_TOKEN');
+        $this->space     = $host    !== '' ? $host : (string) getenv('SIGNALWIRE_SPACE');
 
         if ($this->projectId === '') {
             throw new \InvalidArgumentException(
