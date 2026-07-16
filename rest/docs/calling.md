@@ -25,7 +25,7 @@ $callId = $call['id'];
 ```php
 // Play TTS
 $client->calling()->play($callId, [
-    'play' => [['type' => 'tts', 'text' => 'Welcome to SignalWire.']],
+    ['type' => 'tts', 'params' => ['text' => 'Welcome to SignalWire.']],
 ]);
 
 // Playback control
@@ -51,10 +51,11 @@ $client->calling()->recordStop($callId);
 
 ```php
 // Collect DTMF
-$client->calling()->collect($callId, [
-    'digits' => ['max' => 4, 'terminators' => '#'],
-    'play'   => [['type' => 'tts', 'text' => 'Enter your PIN followed by pound.']],
-]);
+$client->calling()->collect(
+    $callId,
+    digits: ['max' => 4, 'terminators' => '#'],
+    initialTimeout: 5.0,
+);
 
 $client->calling()->collectStartInputTimers($callId);
 $client->calling()->collectStop($callId);
@@ -65,27 +66,27 @@ $client->calling()->collectStop($callId);
 ```php
 // Answering machine detection
 $client->calling()->detect($callId, ['type' => 'machine']);
-$client->calling()->detectStop($callId);
+$client->calling()->detectStop($callId, 'detect-1');
 ```
 
 ## Transcription
 
 ```php
-$client->calling()->transcribe($callId, ['language' => 'en-US']);
-$client->calling()->transcribeStop($callId);
+$client->calling()->transcribe($callId, controlId: 'transcribe-1');
+$client->calling()->transcribeStop($callId, 'transcribe-1');
 ```
 
 ## Live Transcription and Translation
 
 ```php
-$client->calling()->liveTranscribe($callId, ['language' => 'en-US']);
-$client->calling()->liveTranslate($callId, ['language' => 'es']);
+$client->calling()->liveTranscribe($callId, ['start' => ['lang' => 'en-US']]);
+$client->calling()->liveTranslate($callId, ['start' => ['from_lang' => 'en-US', 'to_lang' => 'es-ES']]);
 ```
 
 ## AI Operations
 
 ```php
-$client->calling()->aiMessage($callId, ['message' => 'Customer wants to check their balance.']);
+$client->calling()->aiMessage($callId, role: 'system', messageText: 'Customer wants to check their balance.');
 $client->calling()->aiHold($callId);
 $client->calling()->aiUnhold($callId);
 $client->calling()->aiStop($callId);
@@ -101,47 +102,50 @@ $client->calling()->denoiseStop($callId);
 ## Tap (Media Fork)
 
 ```php
-$client->calling()->tap($callId, [
-    'tap'    => ['type' => 'audio', 'direction' => 'both'],
-    'device' => ['type' => 'rtp', 'addr' => '192.168.1.100', 'port' => 9000],
-]);
-$client->calling()->tapStop($callId);
+$client->calling()->tap(
+    $callId,
+    tap: ['type' => 'audio', 'params' => ['direction' => 'both']],
+    device: ['type' => 'rtp', 'params' => ['addr' => '192.168.1.100', 'port' => 9000]],
+);
+$client->calling()->tapStop($callId, 'tap-1');
 ```
 
 ## Stream (WebSocket)
 
 ```php
-$client->calling()->stream($callId, ['url' => 'wss://example.com/audio-stream']);
-$client->calling()->streamStop($callId);
+$client->calling()->stream($callId, 'wss://example.com/audio-stream');
+$client->calling()->streamStop($callId, 'stream-1');
 ```
 
 ## Transfer and Disconnect
 
 ```php
-$client->calling()->transfer($callId, ['dest' => '+15559999999']);
+// `dest` accepts an inline SWML object (the string-URI form of the spec's
+// `anyOf` collapses to the object branch in the generated typed surface).
+$client->calling()->transfer($callId, ['transfer' => ['dest' => 'sip:destination@example.com']]);
 $client->calling()->disconnect($callId);
 ```
 
 ## SIP Refer
 
 ```php
-$client->calling()->refer($callId, ['sip_uri' => 'sip:support@example.com']);
+$client->calling()->refer($callId, ['type' => 'sip', 'params' => ['to' => 'sip:support@example.com']]);
 ```
 
 ## User Events
 
 ```php
 $client->calling()->userEvent($callId, [
-    'event_name' => 'agent_note',
-    'data'       => ['note' => 'VIP caller'],
+    'action' => 'agent_note',
+    'data'   => ['note' => 'VIP caller'],
 ]);
 ```
 
 ## Call Management
 
 ```php
-$client->calling()->update(['id' => $callId, 'metadata' => ['priority' => 'high']]);
-$client->calling()->end($callId, ['reason' => 'hangup']);
+$client->calling()->update($callId, status: 'completed');
+$client->calling()->end($callId, reason: 'hangup');
 ```
 
 ## Fax
@@ -176,7 +180,7 @@ $callId = $call['id'];
 
 // Play a greeting
 $client->calling()->play($callId, [
-    ['type' => 'tts', 'text' => 'Welcome to our service.'],
+    ['type' => 'tts', 'params' => ['text' => 'Welcome to our service.']],
 ]);
 
 // Record the call

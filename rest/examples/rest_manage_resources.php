@@ -32,16 +32,16 @@ function safe(string $label, callable $fn): mixed
 
 // 1. Create an AI agent
 echo "Creating AI agent...\n";
-$agent = $client->fabric->aiAgents->create(
-    name:   'Demo Support Bot',
-    prompt: ['text' => 'You are a friendly support agent for Acme Corp.'],
-);
-$agentId = $agent['id'];
+$agent = $client->fabric()->aiAgents()->create([
+    'name'   => 'Demo Support Bot',
+    'prompt' => ['text' => 'You are a friendly support agent for Acme Corp.'],
+]);
+$agentId = $agent['id'] ?? 'demo-agent-id';
 echo "  Created agent: {$agentId}\n";
 
 // 2. List all AI agents
 echo "\nListing AI agents...\n";
-$agents = $client->fabric->aiAgents->list();
+$agents = $client->fabric()->aiAgents()->list();
 foreach (($agents['data'] ?? []) as $a) {
     echo "  - {$a['id']}: " . ($a['name'] ?? 'unnamed') . "\n";
 }
@@ -49,7 +49,7 @@ foreach (($agents['data'] ?? []) as $a) {
 // 3. Search for a phone number
 echo "\nSearching for available phone numbers...\n";
 $available = safe('Search numbers', fn() =>
-    $client->phoneNumbers->search(areaCode: '512', maxResults: 3)
+    $client->phoneNumbers()->search(['areacode' => '512', 'max_results' => 3])
 );
 if ($available) {
     foreach (($available['data'] ?? []) as $num) {
@@ -60,14 +60,14 @@ if ($available) {
 // 4. Place a test call (requires valid numbers)
 echo "\nPlacing a test call...\n";
 safe('Dial', fn() =>
-    $client->calling->dial(
-        from: '+15559876543',
-        to:   '+15551234567',
-        url:  'https://example.com/call-handler',
+    $client->calling()->dial(
+        from_: '+15559876543',
+        to:    '+15551234567',
+        url:   'https://example.com/call-handler',
     )
 );
 
 // 5. Clean up
 echo "\nDeleting agent {$agentId}...\n";
-$client->fabric->aiAgents->delete($agentId);
+$client->fabric()->aiAgents()->delete($agentId);
 echo "  Deleted.\n";

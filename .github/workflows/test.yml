@@ -25,6 +25,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: signalwire-php
+          # SEMVER-DIFF's baseline anchor (port_signatures.baseline.json's
+          # generated_from_tag=v3.2.0) is verified with `git rev-parse
+          # v3.2.0^{commit}`, so the release tags must be present in the checkout.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses)
         uses: actions/checkout@v7

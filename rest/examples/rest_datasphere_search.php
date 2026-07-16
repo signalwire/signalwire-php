@@ -20,18 +20,18 @@ $client = new RestClient(
 
 // 1. Upload a document
 echo "Uploading document to Datasphere...\n";
-$doc = $client->datasphere->documents->create(
-    url:  'https://filesamples.com/samples/document/txt/sample3.txt',
-    tags: ['support', 'demo'],
-);
-$docId = $doc['id'];
+$doc = $client->datasphere()->documents()->create([
+    'url'  => 'https://filesamples.com/samples/document/txt/sample3.txt',
+    'tags' => ['support', 'demo'],
+]);
+$docId = $doc['id'] ?? 'demo-doc-id';
 echo "  Document created: {$docId} (status: " . ($doc['status'] ?? 'unknown') . ")\n";
 
 // 2. Wait for vectorization to complete
 echo "\nWaiting for document to be vectorized...\n";
 for ($i = 1; $i <= 30; $i++) {
     sleep(2);
-    $docStatus = $client->datasphere->documents->get($docId);
+    $docStatus = $client->datasphere()->documents()->get($docId);
     $status = $docStatus['status'] ?? 'unknown';
     echo "  Poll {$i}: status={$status}\n";
 
@@ -41,20 +41,20 @@ for ($i = 1; $i <= 30; $i++) {
     }
     if ($status === 'error' || $status === 'failed') {
         echo "  Document processing failed: {$status}\n";
-        $client->datasphere->documents->delete($docId);
+        $client->datasphere()->documents()->delete($docId);
         exit(1);
     }
 
     if ($i === 30) {
         echo "  Timed out waiting for vectorization.\n";
-        $client->datasphere->documents->delete($docId);
+        $client->datasphere()->documents()->delete($docId);
         exit(1);
     }
 }
 
 // 3. List chunks
 echo "\nListing chunks for document {$docId}...\n";
-$chunks = $client->datasphere->documents->listChunks($docId);
+$chunks = $client->datasphere()->documents()->listChunks($docId);
 $chunkList = $chunks['data'] ?? [];
 foreach (array_slice($chunkList, 0, 5) as $chunk) {
     $content = $chunk['content'] ?? '';
@@ -66,7 +66,7 @@ foreach (array_slice($chunkList, 0, 5) as $chunk) {
 
 // 4. Semantic search
 echo "\nSearching Datasphere...\n";
-$results = $client->datasphere->documents->search(
+$results = $client->datasphere()->documents()->search(
     queryString: 'lorem ipsum dolor sit amet',
     count:       3,
 );
@@ -80,5 +80,5 @@ foreach (($results['chunks'] ?? []) as $chunk) {
 
 // 5. Clean up
 echo "\nDeleting document {$docId}...\n";
-$client->datasphere->documents->delete($docId);
+$client->datasphere()->documents()->delete($docId);
 echo "  Deleted.\n";

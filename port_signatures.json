@@ -34503,7 +34503,7 @@
                   "kind": "self"
                 },
                 {
-                  "name": "project_id",
+                  "name": "project",
                   "type": "string",
                   "required": false,
                   "default": ""
@@ -34515,7 +34515,7 @@
                   "default": ""
                 },
                 {
-                  "name": "space",
+                  "name": "host",
                   "type": "string",
                   "required": false,
                   "default": ""

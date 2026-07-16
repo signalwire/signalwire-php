@@ -1,0 +1,291 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * wait-liveness-dump — the PHP port's WAIT-LIVENESS dump program for the
+ * cross-port behavioral differ (porting-sdk/scripts/diff_port_wait_liveness.py).
+ *
+ * The differ runs the wait_liveness_corpus against signalwire-python to build the
+ * golden LIVENESS classification, then runs THIS program (which embeds the same
+ * corpus) and structurally compares our per-case classification. The artifact is a
+ * CLASSIFICATION (not raw ms), so the golden is deterministic while the timing
+ * that produces it is real and unfakeable: a wait() that is a no-op returns at
+ * t~=0 (blocked_until_event=false => RED); a wait() that hangs blows the deadline
+ * (timed_out=true => RED); a correct wait() blocks until the deferred completing
+ * event arrives, then returns with the finished state (the golden => GREEN).
+ *
+ * Unlike bin/wire-relay-dump (which RECORDS the send-side frame with no socket),
+ * this gate MUST exercise real liveness — so we drive the SDK against a real
+ * mock_relay server and arm the completing event as a DEFERRED (delay_ms)
+ * scenario. That delivers the event through the SAME socket-read => event-dispatch
+ * path the real server drives; a wait() that never pumps the loop cannot observe
+ * it. This is the exact mechanism
+ * tests/Relay/ActionsMockTest::playResolvesOnFinishedEvent /
+ * recordResolvesOnFinishedEvent use.
+ *
+ * Protocol: stdout = ONE JSON object mapping case_id => classification. Only
+ * stdout carries JSON. All setup/logging is routed to stderr; the final JSON is
+ * emitted to the real stdout at the very end. The corpus cases are embedded here
+ * (mirroring porting-sdk/scripts/wait_liveness_corpus.py) exactly as
+ * bin/wire-relay-dump embeds the wire_relay corpus — the differ does not feed the
+ * corpus in; it keys our output by case-id against the python oracle.
+ *
+ * Run from the signalwire-php repo root (with a mock_relay reachable via
+ * MOCK_RELAY_PORT / MOCK_RELAY_HTTP_PORT, or auto-spawned by the harness):
+ *
+ *   php bin/wait-liveness-dump
+ *
+ * Copyright (c) 2025 SignalWire
+ * Licensed under the MIT License.
+ */
+
+use SignalWire\Relay\Call;
+use SignalWire\Relay\Client as RelayClient;
+use SignalWire\Relay\Event;
+use SignalWire\Tests\Relay\MockTest;
+use SignalWire\Tests\Relay\RelayHarness;
+
+// ---------------------------------------------------------------------------
+// Keep stdout PURE JSON: the differ does json.loads(proc.stdout). Save a handle
+// to the real stdout, then capture any incidental stdout via an output buffer
+// that forwards to stderr — so only our final JSON reaches the real stdout.
+// ---------------------------------------------------------------------------
+$REAL_STDOUT = fopen('php://stdout', 'w');
+if ($REAL_STDOUT === false) {
+    // Fall back to the STDOUT constant if the stream can't be reopened.
+    $REAL_STDOUT = STDOUT;
+}
+// Any echo/print during setup gets pushed to stderr instead of stdout.
+ob_start(function (string $chunk): string {
+    if ($chunk !== '') {
+        fwrite(STDERR, $chunk);
+    }
+    return '';
+}, 1);
+
+// ---------------------------------------------------------------------------
+// Bootstrap the autoloader (registers SignalWire\ and, from a dev install,
+// SignalWire\Tests\). Require the MockTest harness file directly as a backstop
+// so the harness classes resolve even under a --no-dev autoloader.
+// ---------------------------------------------------------------------------
+$autoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (is_file($autoload)) {
+    require_once $autoload;
+} else {
+    fwrite(STDERR, "wait-liveness-dump: vendor/autoload.php not found; run composer install\n");
+    exit(1);
+}
+$mockTestFile = dirname(__DIR__) . '/tests/Relay/MockTest.php';
+if (is_file($mockTestFile)) {
+    require_once $mockTestFile;
+}
+
+// ---------------------------------------------------------------------------
+// Classification tolerances — must match
+// porting-sdk/scripts/diff_port_wait_liveness.py.
+// ---------------------------------------------------------------------------
+const DEADLINE_S   = 5.0;
+const BLOCK_TOL_MS = 40;
+
+// The deferred-event delay — must match wait_liveness_corpus.DELAY_MS.
+const DELAY_MS = 150;
+const CID = 'ctl-live-1';
+
+/**
+ * The corpus, mirroring porting-sdk/scripts/wait_liveness_corpus.py CORPUS. Two
+ * distinct action types (play, record) so a port can't hardcode one surface.
+ *
+ * @return list<array<string,mixed>>
+ */
+function corpus(): array
+{
+    return [
+        [
+            'id'   => 'live_play_wait',
+            'verb' => 'play',
+            'kwargs' => [
+                'media'      => [['type' => 'audio', 'params' => ['url' => 'https://x/a.mp3']]],
+                'control_id' => CID,
+            ],
+            'delay_ms' => DELAY_MS,
+            'terminal' => ['event_type' => 'calling.call.play', 'state' => 'finished'],
+        ],
+        [
+            'id'   => 'live_record_wait',
+            'verb' => 'record',
+            'kwargs' => ['audio' => ['format' => 'mp3'], 'control_id' => CID],
+            'delay_ms' => DELAY_MS,
+            'terminal' => ['event_type' => 'calling.call.record', 'state' => 'finished'],
+        ],
+    ];
+}
+
+/**
+ * Map a corpus verb to the RELAY method whose scenario carries its terminal
+ * event.
+ */
+function verbMethod(string $verb): string
+{
+    return match ($verb) {
+        'play'   => 'calling.play',
+        'record' => 'calling.record',
+        default  => throw new \RuntimeException("wait-liveness-dump: unsupported verb {$verb}"),
+    };
+}
+
+/**
+ * Derive the deterministic liveness classification from the measured instants.
+ * Mirrors classify_liveness() in the differ byte-for-byte.
+ *
+ * @return array<string,mixed>
+ */
+function classify(
+    int $delayMs,
+    float $tWaitStart,
+    ?float $tReturn,
+    string $completedState,
+    bool $timedOut,
+): array {
+    if ($timedOut || $tReturn === null) {
+        return [
+            'blocked_until_event'  => false,
+            'returned_after_event' => false,
+            'completed_state'      => '',
+            'timed_out'            => true,
+        ];
+    }
+    $elapsedMs = ($tReturn - $tWaitStart) * 1000.0;
+    $blocked = $elapsedMs >= ($delayMs - BLOCK_TOL_MS);
+    return [
+        'blocked_until_event'  => $blocked,
+        'returned_after_event' => true,
+        'completed_state'      => $completedState,
+        'timed_out'            => false,
+    ];
+}
+
+/**
+ * Start the Action-returning verb for a case against an answered call.
+ *
+ * @param array<string,mixed> $kwargs
+ */
+function startAction(Call $call, string $verb, array $kwargs): \SignalWire\Relay\Action
+{
+    $controlId = $kwargs['control_id'];
+    switch ($verb) {
+        case 'play':
+            return $call->play($kwargs['media'], ['control_id' => $controlId]);
+        case 'record':
+            return $call->record($kwargs['audio'], ['control_id' => $controlId]);
+        default:
+            throw new \RuntimeException("wait-liveness-dump: unsupported verb {$verb}");
+    }
+}
+
+/**
+ * Establish an answered inbound call (mirrors
+ * ActionsMockTest::answeredInboundCall).
+ */
+function answeredInboundCall(RelayClient $client, RelayHarness $mock, string $callId): Call
+{
+    /** @var \ArrayObject<string,Call> $captured */
+    $captured = new \ArrayObject();
+    $client->onCall(function (Call $call) use ($captured): void {
+        $captured['call'] = $call;
+        $call->answer();
+    });
+
+    $mock->inboundCall(['call_id' => $callId, 'auto_states' => ['created']]);
+    $arrived = MockTest::pumpUntil(
+        $client,
+        fn () => isset($captured['call']),
+        DEADLINE_S,
+    );
+    if (!$arrived) {
+        throw new \RuntimeException("wait-liveness-dump: inbound call {$callId} did not reach handler");
+    }
+    /** @var Call $call */
+    $call = $captured['call'];
+    // Force the SDK side to "answered" so the subsequent action send fires
+    // (the mock does not push a state(answered) on its own).
+    $call->state = 'answered';
+    return $call;
+}
+
+/**
+ * Drive ONE liveness case against the real mock and return its classification.
+ *
+ * @param array<string,mixed> $kase
+ * @return array<string,mixed>
+ */
+function runCase(RelayClient $client, RelayHarness $mock, array $kase): array
+{
+    $delayMs  = (int) $kase['delay_ms'];
+    $terminal = $kase['terminal'];
+    $verb     = (string) $kase['verb'];
+    $method   = verbMethod($verb);
+
+    $call = answeredInboundCall($client, $mock, "live-{$verb}");
+
+    // Arm the DEFERRED completing event: the mock emits {state: terminal.state}
+    // for this method after delay_ms, delivered through the SDK's real
+    // socket-read => event-dispatch path. A no-op / non-pumping wait() cannot
+    // observe it.
+    $mock->scenarios()->arm($method, [
+        ['emit' => ['state' => $terminal['state']], 'delay_ms' => $delayMs],
+    ]);
+
+    $action = startAction($call, $verb, $kase['kwargs'] ?? []);
+
+    $tWaitStart = hrtime(true) / 1e9; // monotonic seconds
+    $timedOut = false;
+    $tReturn = null;
+    $completedState = '';
+
+    $event = $action->wait(DEADLINE_S);
+    $tReturnNow = hrtime(true) / 1e9;
+    if ($event instanceof Event) {
+        $tReturn = $tReturnNow;
+        $completedState = (string) ($event->getParams()['state'] ?? '');
+    } else {
+        // wait() returning null within the deadline is a no-op / hung
+        // equivalent: treat it as timed_out so the classification is honest.
+        $timedOut = true;
+    }
+
+    return classify($delayMs, $tWaitStart, $tReturn, $completedState, $timedOut);
+}
+
+/**
+ * @return int  Process exit code.
+ */
+function main($realStdout): int
+{
+    $out = [];
+    // A fresh client/session per case so a scoped scenario/journal never crosses
+    // between cases (mirrors the per-test client isolation in ActionsMockTest).
+    foreach (corpus() as $kase) {
+        [$client, $mock] = MockTest::scopedClient();
+        try {
+            $out[$kase['id']] = runCase($client, $mock, $kase);
+        } finally {
+            try {
+                $client->disconnect();
+            } catch (\Throwable) {
+                // best-effort teardown; do not let it corrupt the JSON.
+            }
+        }
+    }
+
+    // Flush/close the capture buffer (any stray output already went to stderr),
+    // then emit the pure-JSON result to the real stdout.
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    fwrite($realStdout, json_encode($out, JSON_UNESCAPED_SLASHES) . "\n");
+    return 0;
+}
+
+exit(main($REAL_STDOUT));

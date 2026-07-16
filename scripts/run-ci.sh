@@ -37,6 +37,13 @@ PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$PORT_ROOT/.sw-tmp"  # repo-local CI scratch (never /tmp)
 PORT_NAME="signalwire-php"
 
+# Wave-A gate widenings are BLOCKING for php: the red list is burned to zero
+# (flat-tts, area_code→areacode, package-name, doc method/ctor idiom), so the
+# newly-widened findings count toward the exit code instead of being logged
+# report-only. Flip this back to 1 only to temporarily re-open the report-only
+# escape hatch while burning a fresh red list.
+export SW_WAVE_A_REPORT_ONLY=0
+
 # Shared FMT/LINT/TEST tool-environment bootstrap (puts vendor/bin on PATH,
 # composer-installs on first miss). The run-{format,lint,tests}.sh scripts source
 # this same file, so the FMT/LINT/TEST env lives in ONE place and is identical
@@ -365,6 +372,22 @@ sched_gate DOC-AUDIT res=surface desc="audit_docs vs port_surface.json" \
         --surface "$PORT_ROOT/port_surface.json" \
         --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
 
+# DOC-WIRE (§A1) — the documented REST fixtures put the SPEC wire shape on the
+# wire (areacode not area_code; nested params:{text} not a flat {text}). The gate
+# spawns mock_signalwire in FLAG mode, exports MOCK_SIGNALWIRE_PORT, runs our
+# doc_wire_runner (which replays the wire-bearing README/rest-docs REST calls),
+# then fails on any journaled wire_violations. Cheap → per-PR tier, blocking.
+sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_wire.py" --port php --repo "$PORT_ROOT" \
+        --runner "php $PORT_ROOT/scripts/doc_wire_runner.php"
+
+# STATUS-CLAIM (§C2) — no false capability/status claims in docs (e.g. a doc that
+# says a shipped method is "not implemented" / "coming soon"). Deterministic
+# source/doc analysis, cheap → per-PR tier, blocking.
+sched_gate STATUS-CLAIM desc="doc status/capability claims match the shipped surface" \
+    -- python3 "$PORTING_SDK_DIR/scripts/status_claim.py" --port php --repo "$PORT_ROOT" \
+        --surface "$PORT_ROOT/port_surface.json"
+
 sched_gate SURFACE-DIFF res=surface desc="diff_port_surface vs python reference" \
     --fn surface_diff_gate
 
@@ -455,11 +478,27 @@ sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match realit
 sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in source" \
     -- python3 "$PORTING_SDK_DIR/scripts/accessor_truth.py" --port php --repo "$PORT_ROOT"
 
-sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero exit against the mock" \
-    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
+# STRICT-MOCKS (§2.x) rides the nightly execution gates: MOCK_RELAY_STRICT=1 makes
+# the RELAY mock journal (and, for the REST mock, flag) spec wire-shape violations
+# so a snippet/example that runs but puts a wrong key on the wire fails LOUD rather
+# than being silently ignored by the server. Nightly (heavy execution wave).
+sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero exit against the mock (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
 
-sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
+sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
+
+# WAIT-LIVENESS (§2.4) — the RELAY Action::wait() liveness contract: wait() BLOCKS
+# until the deferred completing event arrives, then returns the finished state
+# (never a no-op that returns at t~=0, never a hang). bin/wait-liveness-dump drives
+# the play/record corpus against a real mock_relay with the completing event armed
+# as a delayed scenario and prints the per-case classification; the differ builds
+# the python golden and compares. Nightly (spawns a mock + the dump; needs the
+# signalwire-python oracle, present in nightly).
+sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="RELAY Action::wait() blocks-until-event liveness matches the python golden" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --port php \
+        --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php $PORT_ROOT/bin/wait-liveness-dump"
 
 # ---- §G anti-laundering ledger + §D1 packaging -------------------------------
 # SUPPRESSION-LEDGER (no un-ledgered analyzer suppressions) is cheap → cheap wave.

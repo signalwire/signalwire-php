@@ -18,8 +18,12 @@ class HttpClient
     private string $baseUrl;
     private string $authHeader;
 
-    /** @var string User-Agent header sent with every request. */
-    private string $userAgent = 'signalwire-agents-php-rest/1.0';
+    /**
+     * @var string User-Agent header sent with every request. Version derived
+     *   from the single-source ``SignalWire\SignalWire::VERSION`` constant so
+     *   the UA, the ``VERSION`` constant, and ``composer.json`` never drift.
+     */
+    private string $userAgent = 'signalwire-agents-php-rest/' . \SignalWire\SignalWire::VERSION;
 
     /** @var int Request timeout in seconds. */
     private int $timeout = 30;

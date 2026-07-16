@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-composer require signalwire/signalwire-php
+composer require signalwire/sdk
 ```
 
 ## Configuration
@@ -47,7 +47,7 @@ foreach (($numbers['data'] ?? []) as $num) {
 }
 
 // Search available numbers
-$available = $client->phoneNumbers()->search(['area_code' => '512', 'max_results' => 3]);
+$available = $client->phoneNumbers()->search(['areacode' => '512', 'max_results' => 3]);
 foreach (($available['data'] ?? []) as $num) {
     echo "- " . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
 }
