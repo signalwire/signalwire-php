@@ -149,12 +149,12 @@ $agent->setDynamicConfigCallback(function ($qp, $bp, $headers, $a)
             'Show decision-making process when appropriate',
             'Explain feature availability based on tier',
         ]);
-        $a->addHints('debug', 'verbose', 'capabilities');
+        $a->addHints(['debug', 'verbose', 'capabilities']);
     }
 
     // --- A/B Testing ---
     if ($testGroup === 'B') {
-        $a->addHints('enhanced', 'personalised', 'proactive');
+        $a->addHints(['enhanced', 'personalised', 'proactive']);
         $a->promptAddSection('Enhanced Interaction Style', 'You are using an enhanced conversation style:', bullets: [
             'Ask clarifying questions more frequently',
             'Offer proactive suggestions when appropriate',

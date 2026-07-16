@@ -27,7 +27,7 @@ new AgentBase(
 | `setPostPrompt(string $prompt)` | Set the post-conversation summary prompt |
 | `setParams(array $params)` | Set AI behavior parameters |
 | `setGlobalData(array $data)` | Set global data available to the AI |
-| `addHints(string ...$hints)` | Add speech recognition hints |
+| `addHints(array $hints)` | Add speech recognition hints (list of strings) |
 | `addPronunciation(string $word, string $pronunciation, bool $ignoreCase = true)` | Add pronunciation mapping |
 
 ### Language Methods
