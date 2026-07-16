@@ -419,7 +419,7 @@ sched_gate ROOT-HYGIENE res=dayone desc="no audit/scratch clutter tracked at rep
     -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port php --repo "$PORT_ROOT"
 sched_gate IGNORE-LEDGER-VERIFY res=dayone desc="no laundered false-absence entries in DOC_AUDIT_IGNORE.md (strict: structured reason/approver/date required)" \
     -- python3 "$PORTING_SDK_DIR/scripts/ignore_ledger_verify.py" --port php --repo "$PORT_ROOT" --require-fields
-sched_gate META-CONSISTENT res=dayone desc="package metadata consistency" \
+sched_gate META-CONSISTENT res=dayone tier=nightly desc="package metadata consistency" \
     -- python3 "$PORTING_SDK_DIR/scripts/meta_consistent.py" --port php --repo "$PORT_ROOT"
 sched_gate ARTIFACT-DENY res=dayone desc="no porting artifacts in the PUBLISHED package (authoritative listing)" \
     --fn dayone_artifact_deny
@@ -507,7 +507,7 @@ sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="RELAY Action::wait() blocks-
 sched_gate SUPPRESSION-LEDGER res=dayone desc="no un-ledgered analyzer suppressions" \
     -- python3 "$PORTING_SDK_DIR/scripts/suppression_ledger.py" --port php --repo "$PORT_ROOT"
 
-sched_gate PACKAGE-SMOKE defer=1 desc="real dist artifact builds, installs, and imports from a clean prefix" \
+sched_gate PACKAGE-SMOKE defer=1 tier=nightly desc="real dist artifact builds, installs, and imports from a clean prefix" \
     -- python3 "$PORTING_SDK_DIR/scripts/package_smoke.py" --port php --repo "$PORT_ROOT"
 
 # ROUTE-COLLISION — NOT wired for php. The gate has no default registry command for
