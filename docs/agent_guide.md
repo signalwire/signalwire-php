@@ -198,7 +198,7 @@ $agent->setDynamicConfigCallback(function ($queryParams, $bodyParams, $headers, 
 ```php
 $agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
 $agent->addLanguage(name: 'Spanish', code: 'es', voice: 'inworld.Sarah');
-$agent->addHints('SignalWire', 'SWML', 'SWAIG');
+$agent->addHints(['SignalWire', 'SWML', 'SWAIG']);
 $agent->addPronunciation('API', 'A P I', ignoreCase: false);
 ```
 

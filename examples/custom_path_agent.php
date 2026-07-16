@@ -53,7 +53,7 @@ $agent->setDynamicConfigCallback(function ($qp, $bp, $headers, $a) {
         'session_type' => 'chat',
     ]);
 
-    $a->addHints('chat', 'assistant', 'help', 'conversation', 'question');
+    $a->addHints(['chat', 'assistant', 'help', 'conversation', 'question']);
 });
 
 echo "Starting Chat Agent\n";

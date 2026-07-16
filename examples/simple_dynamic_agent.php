@@ -31,7 +31,7 @@ $agent->setDynamicConfigCallback(function ($queryParams, $bodyParams, $headers, 
     ]);
 
     // Hints for speech recognition
-    $agentClone->addHints('SignalWire', 'SWML', 'API', 'webhook', 'SIP');
+    $agentClone->addHints(['SignalWire', 'SWML', 'API', 'webhook', 'SIP']);
 
     // Global data
     $agentClone->setGlobalData([
