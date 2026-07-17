@@ -58,7 +58,7 @@ $agent->setDynamicConfigCallback(function ($qp, $bp, $headers, $a) {
     } else {
         array_push($hints, 'support', 'technical', 'troubleshoot', 'configuration');
     }
-    $a->addHints(...$hints);
+    $a->addHints($hints);
 
     // --- Global Data ---
     $globalData = [
