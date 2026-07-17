@@ -9,7 +9,7 @@
  * Required environment variables:
  *   SIGNALWIRE_SPACE_NAME   - Your SignalWire space name
  *   SIGNALWIRE_PROJECT_ID   - Your SignalWire project ID
- *   SIGNALWIRE_TOKEN        - Your SignalWire authentication token
+ *   SIGNALWIRE_API_TOKEN    - Your SignalWire authentication token
  *   DATASPHERE_DOCUMENT_ID  - The DataSphere document ID to search
  *
  * Optional:
@@ -29,7 +29,7 @@ function requireEnv(string $name): string
     if (!$value) {
         echo "Error: Required environment variable {$name} is not set\n\n";
         echo "Required:\n";
-        echo "  SIGNALWIRE_SPACE_NAME, SIGNALWIRE_PROJECT_ID, SIGNALWIRE_TOKEN, DATASPHERE_DOCUMENT_ID\n";
+        echo "  SIGNALWIRE_SPACE_NAME, SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, DATASPHERE_DOCUMENT_ID\n";
         echo "Optional:\n";
         echo "  DATASPHERE_COUNT, DATASPHERE_DISTANCE, DATASPHERE_TAGS, DATASPHERE_LANGUAGE\n";
         exit(1);
@@ -39,7 +39,7 @@ function requireEnv(string $name): string
 
 $spaceName  = requireEnv('SIGNALWIRE_SPACE_NAME');
 $projectId  = requireEnv('SIGNALWIRE_PROJECT_ID');
-$token      = requireEnv('SIGNALWIRE_TOKEN');
+$token      = requireEnv('SIGNALWIRE_API_TOKEN');
 $documentId = requireEnv('DATASPHERE_DOCUMENT_ID');
 
 $count    = (int) ($_ENV['DATASPHERE_COUNT'] ?? getenv('DATASPHERE_COUNT') ?: 3);
