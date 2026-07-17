@@ -228,7 +228,9 @@ class HttpClient
      * @param array<string,mixed> $params  Query-string parameters.
      * @param array<string,mixed>|null $body JSON body (for POST/PUT/PATCH).
      * @return array<string,mixed>
-     * @throws SignalWireRestError on non-2xx responses.
+     * @throws SignalWireRestError on a non-2xx response; a SignalWireRestTransportError
+     *   (a member of that family) on a transport-level failure (connection
+     *   refused / DNS / reset / TLS — the request never reached a response).
      */
     private function request(string $method, string $path, array $params = [], ?array $body = null): array
     {
@@ -278,12 +280,14 @@ class HttpClient
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        // cURL-level failure (network error, DNS, etc.)
+        // Transport-level failure: the request never reached a response
+        // (connection refused, DNS failure, connection reset, TLS error). Wrap
+        // it in the typed SignalWireRestError family (SignalWireRestTransportError,
+        // status 0 == no HTTP response) so a caller catching SignalWireRestError
+        // handles it too, instead of a bare cURL error leaking out.
         if ($responseBody === false) {
-            throw new SignalWireRestError(
-                sprintf('%s %s failed: %s', $method, $path, $curlError),
-                0,
-                '',
+            throw new SignalWireRestTransportError(
+                sprintf('%s %s failed to reach the server: %s', $method, $path, $curlError),
                 $url,
                 $method
             );

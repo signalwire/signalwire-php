@@ -360,6 +360,11 @@ sched_gate BEHAVIORAL-WIRE-RELAY desc="diff_port_wire_relay vs python oracle (La
         --port php --python-sdk "$PYTHON_SDK_DIR" \
         --dump-cmd "php scripts/wire_relay_dump.php"
 
+sched_gate BEHAVIORAL-ENVELOPE desc="diff_port_envelope: REST error-envelope + transport error typed (Layer D)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_envelope.py" \
+        --port php --python-sdk "$PYTHON_SDK_DIR" \
+        --dump-cmd "php scripts/emit_error_envelope.php"
+
 sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
     -- bash scripts/run-format.sh ${CI:+--check}
 
