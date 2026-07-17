@@ -234,7 +234,24 @@ rest_coverage_gate() {
         --spec-root "$PORTING_SDK_DIR/rest-apis" \
         --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
         --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md" \
-        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md"
+        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md" || return 1
+    # STRICT-MOCKS §2.2a — fail the gate on ANY journaled wire_violation. Re-run
+    # tests/Rest EXCLUDING the `wire-regression-pin` group into a freshly-reset
+    # journal first: those hand-authored pins (BaseResourceTest's generic
+    # CrudWithAddresses probe, PaginationMockTest's fabric cursor/page_size walk,
+    # SmallNamespacesMockTest's recordingsList) deliberately send params the spec
+    # doesn't declare yet (parked fabric-pagination + recordings spec gaps — see
+    # WIRE_VIOLATIONS_ALLOW.md), same class as python's wire_regression_pins_test.py
+    # exclusion. They still ran above for coverage counting and still run under the
+    # plain TEST gate; this second pass only feeds the wire-truth consumer a clean
+    # journal so a REAL accidental violation elsewhere still reds the gate.
+    curl -fsS --max-time 5 -X POST "http://127.0.0.1:$port/__mock__/journal/reset" \
+        >/dev/null || return 1
+    MOCK_SIGNALWIRE_PORT="$port" vendor/bin/phpunit --no-coverage \
+        --exclude-group wire-regression-pin tests/Rest || return 1
+    python3 "$PORTING_SDK_DIR/scripts/assert_no_wire_violations.py" \
+        --rest-mock-url "http://127.0.0.1:$port" \
+        --allowlist "$PORT_ROOT/WIRE_VIOLATIONS_ALLOW.md"
 }
 
 # SPEC-PARITY — implemented routes == canonical spec. route_registry.php drives the
@@ -280,6 +297,14 @@ cd "$PORT_ROOT"
 
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
 
+# STRICT-MOCKS §2.2b — the shared mock_relay (spawned below, consumed only by the
+# TEST gate) runs in STRICT mode: an unknown RELAY frame field / duplicate
+# command-id is rejected with an error frame instead of silently journaled, so a
+# wrong RELAY wire shape fails the RELAY unit tests rather than being accepted.
+# Must be exported BEFORE spawn_mocks so the mock_relay subprocess inherits it
+# (the flag is read server-side, per-frame, from its own environment).
+export MOCK_RELAY_STRICT=1
+
 # Stand up the shared mocks ONCE before scheduling (the parallel TEST gate reuses
 # them). If they never become ready, TEST will fail loudly (test_gate checks MOCKS_UP).
 if spawn_mocks; then
@@ -289,7 +314,7 @@ fi
 # ---- register gates ----------------------------------------------------------
 sched_init "$@"
 
-sched_gate TEST defer=1 desc="run-tests.sh --parallel (paratest -p $PARALLEL_PROCS)" \
+sched_gate TEST defer=1 desc="run-tests.sh --parallel (paratest -p $PARALLEL_PROCS; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     --fn test_gate
 
 sched_gate SIGNATURES desc="regenerate port_signatures.json" \
@@ -482,8 +507,18 @@ sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in sourc
 # the RELAY mock journal (and, for the REST mock, flag) spec wire-shape violations
 # so a snippet/example that runs but puts a wrong key on the wire fails LOUD rather
 # than being silently ignored by the server. Nightly (heavy execution wave).
+#
+# -u MOCK_SIGNALWIRE_PORT: snippet_run.py reuses MOCK_SIGNALWIRE_PORT from its
+# environment when set instead of always spawning its own mock (unlike
+# examples_run.py, which always self-spawns). This script exports
+# MOCK_SIGNALWIRE_PORT process-wide (line ~116) for the shared TEST-gate mocks —
+# without the unset, SNIPPET-RUN would silently attach to that SAME shared mock
+# and its STRICT-MOCKS wire-truth post-pass would read TEST's concurrent traffic
+# (e.g. BaseResourceTest.php's CrudWithAddresses fixture) out of the shared,
+# never-reset journal instead of its own isolated one. Force it to spawn a fresh,
+# dedicated mock so its journal only ever contains ITS OWN snippet traffic.
 sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero exit against the mock (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
-    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
+    -- env -u MOCK_SIGNALWIRE_PORT MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
 
 sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
