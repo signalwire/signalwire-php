@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 6cde88fb5cd34e8f68c6157c525e3fec626c9f32",
+  "generated_from": "signalwire-php @ 167072d61fa0789c832645841f50b9210659418a",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1733,6 +1733,9 @@
           "get_response_body",
           "get_status_code",
           "get_url"
+        ],
+        "SignalWireRestTransportError": [
+          "__init__"
         ]
       },
       "functions": []

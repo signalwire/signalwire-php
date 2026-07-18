@@ -21025,9 +21025,15 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "action",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "kwargs",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "any"
@@ -21039,9 +21045,21 @@
                   "kind": "self"
                 },
                 {
-                  "name": "params",
+                  "name": "action",
                   "type": "any",
                   "required": true
+                },
+                {
+                  "name": "status_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "kwargs",
+                  "type": "any",
+                  "required": false,
+                  "default": []
                 }
               ],
               "returns": "any"
@@ -34340,6 +34358,36 @@
                 }
               ],
               "returns": "string"
+            }
+          }
+        },
+        "SignalWireRestTransportError": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "message",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "url",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "method",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                }
+              ],
+              "returns": "void"
             }
           }
         }
