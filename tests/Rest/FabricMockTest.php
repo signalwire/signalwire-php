@@ -159,9 +159,12 @@ class FabricMockTest extends TestCase
     #[Test]
     public function tokensCreateInviteToken(): void
     {
+        // SubscriberInviteTokenCreateRequest declares address_id (required) +
+        // expires_at (optional) — exercise the real typed expiresAt param
+        // instead of an invented extras key.
         $body = $this->client->fabric()->tokens()->createInviteToken(
             'addr-1',
-            extras: ['email' => 'invitee@example.com']
+            expiresAt: 7200,
         );
 
         $j = $this->mock->journal()->last();
@@ -170,23 +173,22 @@ class FabricMockTest extends TestCase
         $this->assertSame('/api/fabric/subscriber/invites', $j->path);
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
-        $this->assertSame('invitee@example.com', $bm['email'] ?? null);
+        $this->assertSame('addr-1', $bm['address_id'] ?? null);
+        $this->assertSame(7200, $bm['expires_at'] ?? null);
     }
 
     #[Test]
     public function tokensCreateEmbedToken(): void
     {
-        $body = $this->client->fabric()->tokens()->createEmbedToken(
-            'tok-1',
-            extras: ['allowed_addresses' => ['addr-1', 'addr-2']]
-        );
+        // EmbedsTokensRequest declares only 'token'.
+        $body = $this->client->fabric()->tokens()->createEmbedToken('tok-1');
 
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame('/api/fabric/embeds/tokens', $j->path);
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
-        $this->assertSame(['addr-1', 'addr-2'], $bm['allowed_addresses'] ?? null);
+        $this->assertSame('tok-1', $bm['token'] ?? null);
     }
 
     #[Test]

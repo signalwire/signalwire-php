@@ -65,9 +65,11 @@ class RegistryMockTest extends TestCase
     #[Test]
     public function brandsCreateCampaignPostsToBrandSubpath(): void
     {
+        // createCampaign takes the full CreateManagedCampaignRequest body; the
+        // spec field is 'sms_use_case' (not 'usecase').
         $body = $this->client->registry()->brands()->createCampaign(
             'brand-2',
-            ['usecase' => 'LOW_VOLUME', 'description' => 'MFA']
+            ['sms_use_case' => 'LOW_VOLUME', 'description' => 'MFA']
         );
 
         $j = $this->mock->journal()->last();
@@ -75,7 +77,7 @@ class RegistryMockTest extends TestCase
         $this->assertSame(self::REG_BASE . '/brands/brand-2/campaigns', $j->path);
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
-        $this->assertSame('LOW_VOLUME', $bm['usecase'] ?? null);
+        $this->assertSame('LOW_VOLUME', $bm['sms_use_case'] ?? null);
         $this->assertSame('MFA', $bm['description'] ?? null);
     }
 
@@ -95,9 +97,10 @@ class RegistryMockTest extends TestCase
     public function campaignsUpdateUsesPut(): void
     {
         // RegistryCampaigns.update uses PUT (not PATCH).
+        // UpdateCampaignRequest exposes only 'name'.
         $body = $this->client->registry()->campaigns()->update(
             'camp-2',
-            extras: ['description' => 'Updated']
+            name: 'Updated Campaign'
         );
 
         $j = $this->mock->journal()->last();
@@ -105,7 +108,7 @@ class RegistryMockTest extends TestCase
         $this->assertSame(self::REG_BASE . '/campaigns/camp-2', $j->path);
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
-        $this->assertSame('Updated', $bm['description'] ?? null);
+        $this->assertSame('Updated Campaign', $bm['name'] ?? null);
     }
 
     #[Test]
@@ -122,9 +125,10 @@ class RegistryMockTest extends TestCase
     #[Test]
     public function campaignsCreateOrderPostsToOrdersSubpath(): void
     {
+        // CreateOrderRequest's field is 'phone_numbers' (typed param phoneNumbers).
         $body = $this->client->registry()->campaigns()->createOrder(
             'camp-4',
-            extras: ['numbers' => ['pn-1', 'pn-2']]
+            phoneNumbers: ['pn-1', 'pn-2']
         );
 
         $j = $this->mock->journal()->last();
@@ -132,7 +136,7 @@ class RegistryMockTest extends TestCase
         $this->assertSame(self::REG_BASE . '/campaigns/camp-4/orders', $j->path);
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
-        $this->assertSame(['pn-1', 'pn-2'], $bm['numbers'] ?? null);
+        $this->assertSame(['pn-1', 'pn-2'], $bm['phone_numbers'] ?? null);
     }
 
     // ----- orders ----------------------------------------------------

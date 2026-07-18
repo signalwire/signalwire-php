@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Rest;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\BaseResource;
@@ -55,7 +56,14 @@ class BaseResourceTest extends TestCase
     // CrudWithAddresses — list_addresses / list / get / create / etc.
     // ──────────────────────────────────────────────────────────────────
 
+    // wire-regression-pin: this constructs a bare CrudWithAddresses to probe the
+    // BASE-CLASS query-param-forwarding mechanism generically; it happens to
+    // collide with the real fabric.list_subscriber_addresses route (whose spec
+    // has `parameters: []` — a parked fabric-pagination spec gap, same family as
+    // fabric.list_fabric_addresses' cursor). Excluded from the STRICT-MOCKS
+    // wire-truth selector in rest_coverage_gate; still runs under TEST.
     #[Test]
+    #[Group('wire-regression-pin')]
     public function crudWithAddressesListAddressesCallsAddressesSubpath(): void
     {
         $resource = new CrudWithAddresses(
@@ -78,7 +86,10 @@ class BaseResourceTest extends TestCase
         $this->assertSame(['5'], $j->queryParams['page_size'] ?? null);
     }
 
+    // wire-regression-pin: same generic-mechanism probe as above, colliding
+    // with the real fabric.list_subscribers route (also `parameters: []`).
     #[Test]
+    #[Group('wire-regression-pin')]
     public function crudWithAddressesInheritsCrudList(): void
     {
         $resource = new CrudWithAddresses(
