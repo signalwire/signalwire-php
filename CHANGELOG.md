@@ -3,6 +3,22 @@
 All notable changes to the SignalWire PHP SDK (`signalwire/sdk`) are documented
 in this file.
 
+## [3.3.0] - 2026-07-18
+
+### REST
+- Added **`SignalWireRestTransportError`** — a member of the
+  `SignalWireRestError` family raised when a REST request never reaches a
+  response (connection refused, DNS failure, connection reset, TLS error). It
+  carries `status_code = null` and the underlying transport message as `body`,
+  so a caller catching `SignalWireRestError` handles both HTTP-error and
+  transport-error cases with one `catch`.
+
+### RELAY
+- `liveTranscribe()` / `liveTranslate()` now wrap the caller's action under the
+  required `params.action` envelope on the wire, matching the authoritative
+  `calling.live_transcribe` / `live_translate` schema (previously the action was
+  forwarded flat, producing a frame the server rejects).
+
 ## [3.2.0] - 2026-07-14
 
 ### REST
