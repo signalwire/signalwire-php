@@ -33,10 +33,6 @@
 set -u
 set -o pipefail
 
-# STRICT-MOCKS 400-mode (plan §2.2c): strict is the default now.
-export MOCK_SIGNALWIRE_STRICT="${MOCK_SIGNALWIRE_STRICT:-1}"
-export MOCK_RELAY_STRICT="${MOCK_RELAY_STRICT:-1}"
-
 PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$PORT_ROOT/.sw-tmp"  # repo-local CI scratch (never /tmp)
 PORT_NAME="signalwire-php"
@@ -167,17 +163,6 @@ source "$PORTING_SDK_DIR/scripts/gate_scheduler.sh"
 
 # ---- gate helper functions ---------------------------------------------------
 
-# ARTIFACT-DENY (day-one) — feed the AUTHORITATIVE published-package listing to
-# artifact_deny.py --listing. Packagist/Composer serve the "dist" tarball produced
-# by `git archive HEAD`, which honours `.gitattributes export-ignore` (composer
-# archive of the working dir does NOT — it ships vendor/, caches, and .sw-tmp). So
-# `git archive HEAD` IS the real package listing; pipe its paths in.
-dayone_artifact_deny() {
-    git -C "$PORT_ROOT" archive --format=tar HEAD \
-        | tar -t \
-        | python3 "$PORTING_SDK_DIR/scripts/artifact_deny.py" --port php --listing -
-}
-
 # TEST — run the full suite in PARALLEL via paratest against the pre-spawned shared
 # mocks (stood up below before sched_run). $MOCKS_UP gates whether the mocks came up.
 MOCKS_UP=0
@@ -189,125 +174,22 @@ test_gate() {
     PARATEST_PROCS="$PARALLEL_PROCS" bash scripts/run-tests.sh --parallel
 }
 
-# SURFACE-FRESH — regenerate port_surface.json in place, assert the committed copy
-# still matches a fresh regen (modulo the generated_from git-sha), restore the file.
-surface_fresh_gate() {
-    (
-        set -e
-        if git show HEAD:port_surface.json > "$PORT_ROOT/.sw-tmp/committed_surface.json" 2>/dev/null; then
-            :
-        else
-            cp port_surface.json "$PORT_ROOT/.sw-tmp/committed_surface.json"
-        fi
-        python3 scripts/enumerate_surface.py
-        rc=0
-        python3 "$PORTING_SDK_DIR/scripts/check_surface_freshness.py" \
-            --committed "$PORT_ROOT/.sw-tmp/committed_surface.json" \
-            --fresh port_surface.json || rc=$?
-        git checkout -- port_surface.json
-        exit "$rc"
-    )
-}
-
-# REST-COVERAGE — spins its own dedicated mock, runs tests/Rest serially, replays
-# the journal (independent of the shared TEST mocks above).
-rest_coverage_gate() {
-    local port
-    port="$(pick_free_port)" || return 1
-    [ -n "$port" ] || { echo "FATAL: could not allocate a free port for the REST-coverage mock" >&2; return 1; }
-    local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
-    PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}" \
-        "$PYTHON_BIN" -m mock_signalwire --host 127.0.0.1 --port "$port" \
-        --log-level error >"$PORT_ROOT/.sw-tmp/rest_cov_mock_php.$$.log" 2>&1 &
-    local mock_pid=$!
-    # shellcheck disable=SC2064
-    trap "kill $mock_pid 2>/dev/null" RETURN
-    local i
-    for i in $(seq 1 60); do
-        if probe_mock "http://127.0.0.1:$port/__mock__/health" '"specs_loaded"'; then
-            break
-        fi
-        sleep 0.5
-    done
-    curl -fsS --max-time 5 -X POST "http://127.0.0.1:$port/__mock__/journal/reset" \
-        >/dev/null || return 1
-    MOCK_SIGNALWIRE_PORT="$port" vendor/bin/phpunit --no-coverage tests/Rest || return 1
-    PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}" \
-        "$PYTHON_BIN" -m mock_signalwire.rest_coverage \
-        --mock-url "http://127.0.0.1:$port" \
-        --spec-root "$PORTING_SDK_DIR/rest-apis" \
-        --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
-        --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md" \
-        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md" || return 1
-    # STRICT-MOCKS §2.2a — fail the gate on ANY journaled wire_violation. Re-run
-    # tests/Rest EXCLUDING the `wire-regression-pin` group into a freshly-reset
-    # journal first: those hand-authored pins (BaseResourceTest's generic
-    # CrudWithAddresses probe, PaginationMockTest's fabric cursor/page_size walk,
-    # SmallNamespacesMockTest's recordingsList) deliberately send params the spec
-    # doesn't declare yet (parked fabric-pagination + recordings spec gaps — see
-    # WIRE_VIOLATIONS_ALLOW.md), same class as python's wire_regression_pins_test.py
-    # exclusion. They still ran above for coverage counting and still run under the
-    # plain TEST gate; this second pass only feeds the wire-truth consumer a clean
-    # journal so a REAL accidental violation elsewhere still reds the gate.
-    curl -fsS --max-time 5 -X POST "http://127.0.0.1:$port/__mock__/journal/reset" \
-        >/dev/null || return 1
-    MOCK_SIGNALWIRE_PORT="$port" vendor/bin/phpunit --no-coverage \
-        --exclude-group wire-regression-pin tests/Rest || return 1
-    python3 "$PORTING_SDK_DIR/scripts/assert_no_wire_violations.py" \
-        --rest-mock-url "http://127.0.0.1:$port" \
-        --allowlist "$PORT_ROOT/WIRE_VIOLATIONS_ALLOW.md"
-}
-
-# SPEC-PARITY — implemented routes == canonical spec. route_registry.php drives the
-# live RestClient through a recording HttpClient and captures every dispatched route.
-spec_parity_gate() {
-    local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
-    export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
-    local registry
-    registry="$(mktemp)"
-    SIGNALWIRE_LOG_MODE=off php "$PORT_ROOT/scripts/route_registry.php" >"$registry" 2>/dev/null || {
-        rm -f "$registry"; return 1
-    }
-    "$PYTHON_BIN" "$PORTING_SDK_DIR/scripts/diff_spec_implementation.py" \
-        --registry-json "$registry" \
-        --gaps "$PORTING_SDK_DIR/SPEC_IMPLEMENTATION_GAPS.md"
-    local rc=$?
-    rm -f "$registry"
-    return $rc
-}
-
-# SURFACE-DIFF — diff the port's public surface against the Python reference.
-# Regenerate in place, diff, restore unconditionally.
-surface_diff_gate() {
-    git show HEAD:port_surface.json > "$PORT_ROOT/.sw-tmp/committed_surface_diff.json" 2>/dev/null \
-        || cp "$PORT_ROOT/port_surface.json" "$PORT_ROOT/.sw-tmp/committed_surface_diff.json"
-    python3 scripts/enumerate_surface.py
-    local regen_rc=$?
-    if [ "$regen_rc" -ne 0 ]; then
-        git checkout -- port_surface.json 2>/dev/null
-        return $regen_rc
-    fi
-    python3 "$PORTING_SDK_DIR/scripts/diff_port_surface.py" \
-        --reference "$PORTING_SDK_DIR/python_surface.json" \
-        --port-surface "$PORT_ROOT/port_surface.json" \
-        --omissions "$PORT_ROOT/PORT_OMISSIONS.md" \
-        --additions "$PORT_ROOT/PORT_ADDITIONS.md"
-    local check_rc=$?
-    git checkout -- port_surface.json 2>/dev/null
-    return $check_rc
-}
+# ---- Part 5: the per-gate --fn helpers are now DEAD — reproduced in the suites -
+# surface_fresh_gate (SURFACE-FRESH), surface_diff_gate (SURFACE-DIFF),
+# rest_coverage_gate (REST-COVERAGE), spec_parity_gate (SPEC-PARITY), and
+# dayone_artifact_deny (ARTIFACT-DENY) used to be defined here as the gate bodies.
+# Those exact bodies are now reproduced INSIDE the Part-5 suites (SURFACE →
+# scripts/suites/_surface_fresh.py + the surface command table; BEHAVIORAL →
+# scripts/suites/_rest_coverage.py + _spec_parity.py; PACKAGE →
+# scripts/suites/_artifact_deny.py), so they are no longer defined here.
+# pick_free_port() stays (the shared-mock spawn above still uses it); test_gate
+# stays (TEST is a native-toolchain stay gate, not a suite member).
+# (Byte-identity vs the old per-gate path is proven by porting-sdk's
+# tests/test_suite_parity*.py.)
 
 cd "$PORT_ROOT"
 
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
-
-# STRICT-MOCKS §2.2b — the shared mock_relay (spawned below, consumed only by the
-# TEST gate) runs in STRICT mode: an unknown RELAY frame field / duplicate
-# command-id is rejected with an error frame instead of silently journaled, so a
-# wrong RELAY wire shape fails the RELAY unit tests rather than being accepted.
-# Must be exported BEFORE spawn_mocks so the mock_relay subprocess inherits it
-# (the flag is read server-side, per-frame, from its own environment).
-export MOCK_RELAY_STRICT=1
 
 # Stand up the shared mocks ONCE before scheduling (the parallel TEST gate reuses
 # them). If they never become ready, TEST will fail loudly (test_gate checks MOCKS_UP).
@@ -318,81 +200,85 @@ fi
 # ---- register gates ----------------------------------------------------------
 sched_init "$@"
 
-sched_gate TEST defer=1 desc="run-tests.sh --parallel (paratest -p $PARALLEL_PROCS; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+# TEST stays a standalone native-toolchain gate (paratest against the pre-spawned
+# shared mocks). NOT a suite member.
+sched_gate TEST defer=1 desc="run-tests.sh --parallel (paratest -p $PARALLEL_PROCS)" \
     --fn test_gate
 
-sched_gate SIGNATURES desc="regenerate port_signatures.json" \
-    -- python3 scripts/enumerate_signatures.py
+# ---- Part 5 gate SUITES ------------------------------------------------------
+# The former per-gate SIGNATURES/DRIFT/SURFACE-*/SEMVER-DIFF/GEN-TYPE-DEGENERACY/
+# GEN-IDIOM/GEN-FRESH*/BEHAVIORAL-*/EMISSION/REST-COVERAGE/SPEC-PARITY/SKILL-CONTRACT/
+# SWAIG-*/ERROR-ENVELOPE/PAGINATION-WIRED/DOC-WIRE/WAIT-LIVENESS/DOC-*/COUNT-CLAIM/
+# ACCESSOR-TRUTH/STATUS-CLAIM/README-INCLUDE/*-LEDGER/ARTIFACT-DENY/RELEASE-FRESH/
+# META-CONSISTENT/PACKAGE-SMOKE gates now run under 6 SUITE engines. Each suite emits
+# every original gate NAME as a `[SUITE:RULE] ... PASS/FAIL` rule ID (failure
+# identity + allowlists + finding output unchanged). A suite exits nonzero iff any of
+# its rules fails. Byte-identity vs the old per-gate path is proven by
+# porting-sdk/tests/test_suite_parity*.py.
+#
+# The `--fn` helpers the old gates used (surface_fresh_gate, surface_diff_gate,
+# rest_coverage_gate, spec_parity_gate, dayone_artifact_deny) are reproduced INSIDE
+# the suites, so they are no longer defined here.
+#
+# Former single-gate scheduler features preserved by the suites internally:
+#   * SIGNATURES→DRIFT ordering + the SURFACE-FRESH/SURFACE-DIFF surface mutex live
+#     inside the SURFACE suite (it regenerates + git-restores in order). DOC-AUDIT
+#     reads php's on-disk port_surface.json, which SURFACE regenerates+restores — so
+#     SURFACE and DOC-TRUTH share res=surface (mutually exclusive, exactly as the old
+#     per-gate SURFACE-FRESH/SURFACE-DIFF/DOC-AUDIT surface mutex did).
+#   * mixed tiers are split with --rules: BEHAVIORAL + PACKAGE each schedule a per-PR
+#     line and a nightly line (php's nightly members broken out below).
+# PHP-SPECIFIC vs the ts/go reference: php spells the RELAY rule BEHAVIORAL-WIRE-RELAY
+# (HYPHEN, like ts — only go uses the underscore). php schedules NO ROUTE-COLLISION
+# (unwired for php — see the note after the standalone block).
 
-sched_gate DRIFT deps=SIGNATURES desc="diff_port_signatures vs python reference" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_signatures.py" \
-        --reference "$PORTING_SDK_DIR/python_signatures.json" \
-        --port-signatures "$PORT_ROOT/port_signatures.json" \
-        --surface-omissions "$PORT_ROOT/PORT_OMISSIONS.md" \
-        --surface-additions "$PORT_ROOT/PORT_ADDITIONS.md" \
-        --omissions "$PORT_ROOT/PORT_SIGNATURE_OMISSIONS.md"
+# SURFACE (parity spine): SIGNATURES→DRIFT ordered, SURFACE-FRESH regen/restore,
+# SURFACE-DIFF (re-enumerating --fn), SEMVER-DIFF, GEN-TYPE-DEGENERACY, GEN-IDIOM —
+# all read the one enumeration. res=surface: SURFACE-FRESH/SURFACE-DIFF regenerate
+# port_surface.json in place (and restore it), so this must not overlap DOC-TRUTH's
+# DOC-AUDIT read of port_surface.json.
+sched_gate SURFACE res=surface desc="surface parity suite (SIGNATURES/DRIFT/SURFACE-FRESH/SURFACE-DIFF/SEMVER-DIFF/GEN-TYPE-DEGENERACY/GEN-IDIOM)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/surface.py" --port php --repo "$PORT_ROOT"
 
-sched_gate SURFACE-FRESH res=surface desc="check_surface_freshness vs fresh regen" \
-    --fn surface_fresh_gate
+# GEN (regen-from-specs family): the 5 GEN-FRESH rules. Cheap wave (php's per-gate
+# GEN-FRESH* were not deferred — preserved: no defer).
+sched_gate GEN desc="generated-code freshness suite (GEN-FRESH/-SWML/-RELAY/-SWAIG/-TESTS)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/gen.py" --port php --repo "$PORT_ROOT"
 
-sched_gate GEN-FRESH desc="generated REST tree + rest_signatures.json match canonical specs (--check)" \
-    -- python3 scripts/generate_rest.py --check
+# BEHAVIORAL (one Layer-D pass per rule): the per-PR rules. WAIT-LIVENESS (nightly)
+# is the separate line below. defer=1 (the suite carries REST-COVERAGE/SPEC-PARITY,
+# which were php's defer members; a full behavioral pass is heavy-wave).
+sched_gate BEHAVIORAL defer=1 desc="behavioral suite (BEHAVIORAL-*/EMISSION/ERROR-ENVELOPE/PAGINATION-WIRED/DOC-WIRE/REST-COVERAGE/SPEC-PARITY/SKILL-CONTRACT/SWAIG-COVERAGE/SWAIG-CLI)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port php --repo "$PORT_ROOT" \
+        --rules BEHAVIORAL-WIRE,BEHAVIORAL-SWML,BEHAVIORAL-STATE,BEHAVIORAL-HTTP,BEHAVIORAL-WIRE-RELAY,EMISSION,ERROR-ENVELOPE,PAGINATION-WIRED,DOC-WIRE,REST-COVERAGE,SPEC-PARITY,SKILL-CONTRACT,SWAIG-COVERAGE,SWAIG-CLI
 
-sched_gate GEN-FRESH-SWML desc="generated SWML-verbs config tree matches schema.json \$defs (--check)" \
-    -- python3 scripts/generate_swml_verbs.py --check
+sched_gate BEHAVIORAL-NIGHTLY tier=nightly defer=1 desc="behavioral suite, nightly rules (WAIT-LIVENESS)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port php --repo "$PORT_ROOT" \
+        --rules WAIT-LIVENESS
 
-sched_gate GEN-FRESH-RELAY desc="generated RELAY-protocol tree matches relay-protocol/*.json (--check)" \
-    -- python3 scripts/generate_relay_protocol.py --check
+# DOC-TRUTH (one markdown walk): DOC-AUDIT/DOC-LINKS/DOC-LANG-PURITY/DOC-ENV/
+# COUNT-CLAIM/ACCESSOR-TRUTH/STATUS-CLAIM/README-INCLUDE. res=surface: DOC-AUDIT
+# reads php's on-disk port_surface.json, which the SURFACE suite regenerates.
+sched_gate DOC-TRUTH res=surface desc="doc-truth suite (DOC-AUDIT/DOC-LINKS/DOC-LANG-PURITY/DOC-ENV/COUNT-CLAIM/ACCESSOR-TRUTH/STATUS-CLAIM/README-INCLUDE)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/doc_truth.py" --port php --repo "$PORT_ROOT"
 
-sched_gate GEN-FRESH-SWAIG desc="generated SWAIG-payload tree matches swaig-specs/*.yaml (--check)" \
-    -- python3 scripts/generate_swaig_payloads.py --check
+# LEDGER: SUPPRESSION-LEDGER + IGNORE-LEDGER-VERIFY.
+sched_gate LEDGER res=dayone desc="ledger governance suite (SUPPRESSION-LEDGER/IGNORE-LEDGER-VERIFY)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/ledger.py" --port php --repo "$PORT_ROOT"
 
-sched_gate GEN-FRESH-TESTS desc="generated REST wire-test suite matches the oracle (--check)" \
-    -- python3 scripts/generate_rest_tests.py --check
+# PACKAGE: per-PR rules (ARTIFACT-DENY/RELEASE-FRESH); nightly rules (PACKAGE-SMOKE/
+# META-CONSISTENT) on the separate line below.
+sched_gate PACKAGE res=dayone desc="package suite, per-PR rules (ARTIFACT-DENY/RELEASE-FRESH)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/package.py" --port php --repo "$PORT_ROOT" \
+        --rules ARTIFACT-DENY,RELEASE-FRESH
 
+sched_gate PACKAGE-NIGHTLY tier=nightly defer=1 res=dayone desc="package suite, nightly rules (PACKAGE-SMOKE/META-CONSISTENT)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/package.py" --port php --repo "$PORT_ROOT" \
+        --rules PACKAGE-SMOKE,META-CONSISTENT
+
+# ---- gates that stay standalone (native toolchains + singletons) -------------
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
-
-sched_gate REST-COVERAGE defer=1 desc="every implemented REST route covered success+error (parity + allowlist)" \
-    --fn rest_coverage_gate
-
-sched_gate SPEC-PARITY defer=1 desc="implemented routes == canonical spec (modulo SPEC_IMPLEMENTATION_GAPS.md)" \
-    --fn spec_parity_gate
-
-sched_gate EMISSION desc="diff_port_emission vs python to_dict()" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_emission.py" \
-        --dump-cmd "php scripts/emit_corpus.php" \
-        --port-repo "$PORT_ROOT"
-
-sched_gate BEHAVIORAL-WIRE desc="diff_port_wire vs python oracle (Layer D)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wire.py" \
-        --port php --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php scripts/wire_dump.php"
-
-sched_gate BEHAVIORAL-SWML desc="diff_port_swml vs python oracle (Layer D)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_swml.py" \
-        --port php --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php scripts/swml_dump.php"
-
-sched_gate BEHAVIORAL-STATE desc="diff_port_state vs python oracle (Layer D)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_state.py" \
-        --port php --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php scripts/state_dump.php"
-
-sched_gate BEHAVIORAL-HTTP desc="diff_port_http vs python oracle (Layer D)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_http.py" \
-        --port php --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php scripts/http_dump.php"
-
-sched_gate BEHAVIORAL-WIRE-RELAY desc="diff_port_wire_relay vs python oracle (Layer D)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wire_relay.py" \
-        --port php --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php scripts/wire_relay_dump.php"
-
-sched_gate BEHAVIORAL-ENVELOPE desc="diff_port_envelope: REST error-envelope + transport error typed (Layer D)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_envelope.py" \
-        --port php --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php scripts/emit_error_envelope.php"
 
 sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
     -- bash scripts/run-format.sh ${CI:+--check}
@@ -400,170 +286,48 @@ sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
 sched_gate LINT defer=1 desc="run-lint.sh (phpstan level 9, zero findings)" \
     -- bash scripts/run-lint.sh
 
-sched_gate DOC-AUDIT res=surface desc="audit_docs vs port_surface.json" \
-    -- python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
-        --root "$PORT_ROOT" \
-        --surface "$PORT_ROOT/port_surface.json" \
-        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
-
-# DOC-WIRE (§A1) — the documented REST fixtures put the SPEC wire shape on the
-# wire (areacode not area_code; nested params:{text} not a flat {text}). The gate
-# spawns mock_signalwire in FLAG mode, exports MOCK_SIGNALWIRE_PORT, runs our
-# doc_wire_runner (which replays the wire-bearing README/rest-docs REST calls),
-# then fails on any journaled wire_violations. Cheap → per-PR tier, blocking.
-sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
-    -- python3 "$PORTING_SDK_DIR/scripts/doc_wire.py" --port php --repo "$PORT_ROOT" \
-        --runner "php $PORT_ROOT/scripts/doc_wire_runner.php"
-
-# STATUS-CLAIM (§C2) — no false capability/status claims in docs (e.g. a doc that
-# says a shipped method is "not implemented" / "coming soon"). Deterministic
-# source/doc analysis, cheap → per-PR tier, blocking.
-sched_gate STATUS-CLAIM desc="doc status/capability claims match the shipped surface" \
-    -- python3 "$PORTING_SDK_DIR/scripts/status_claim.py" --port php --repo "$PORT_ROOT" \
-        --surface "$PORT_ROOT/port_surface.json"
-
-sched_gate SURFACE-DIFF res=surface desc="diff_port_surface vs python reference" \
-    --fn surface_diff_gate
-
-sched_gate SKILL-CONTRACT desc="diff_skill_contracts vs python reference" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_skill_contracts.py" \
-        --dump-cmd "php scripts/emit_skills.php" \
-        --port-repo "$PORT_ROOT"
-
-sched_gate SWAIG-CLI desc="swaig-test shared mini-contract (verbs/serverless-reject/default-action)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/audit_swaig_cli_contract.py" \
-        --port php \
-        --cmd "php $PORT_ROOT/bin/swaig-test" \
-        --require-url-model \
-        --default-action-argv='--url|http://user:pass@127.0.0.1:1/' \
-        --no-serverless-argv='--url|http://user:pass@127.0.0.1:1/|--simulate-serverless|lambda|--list-tools'
-
-sched_gate SWAIG-COVERAGE desc="every engine SWAIG action emittable (modulo allowlist)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/swaig_coverage.py" --check \
-        --emission "$PORT_ROOT/src/SignalWire/SWAIG/FunctionResult.php"
-
-sched_gate DOC-LANG-PURITY res=dayone desc="no python-verbatim docs in a non-python port" \
-    -- python3 "$PORTING_SDK_DIR/scripts/doc_lang_purity.py" --port php --repo "$PORT_ROOT"
-sched_gate DOC-LINKS res=dayone desc="every relative markdown link resolves to a tracked file" \
-    -- python3 "$PORTING_SDK_DIR/scripts/doc_links.py" --port php --repo "$PORT_ROOT"
-
-sched_gate README-INCLUDE res=dayone desc="doc code blocks are byte-identical to their gate-compiled fixture regions" \
-    -- python3 "$PORTING_SDK_DIR/scripts/readme_include.py" --port php --repo "$PORT_ROOT"
-sched_gate ROOT-HYGIENE res=dayone desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port php --repo "$PORT_ROOT"
-sched_gate IGNORE-LEDGER-VERIFY res=dayone desc="no laundered false-absence entries in DOC_AUDIT_IGNORE.md (strict: structured reason/approver/date required)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/ignore_ledger_verify.py" --port php --repo "$PORT_ROOT" --require-fields
-sched_gate META-CONSISTENT res=dayone tier=nightly desc="package metadata consistency" \
-    -- python3 "$PORTING_SDK_DIR/scripts/meta_consistent.py" --port php --repo "$PORT_ROOT"
-sched_gate ARTIFACT-DENY res=dayone desc="no porting artifacts in the PUBLISHED package (authoritative listing)" \
-    --fn dayone_artifact_deny
-
-# ---- expansion gates (GATE_EXPANSION_PLAN Tier 5 + release) -------------------
-# Blocking, non-report-only. Backlog burned to zero + allowlists approved
-# (2026-07-07), so these enforce so it can't re-rot. Modeled on the day-one wiring.
-#   GEN-TYPE-DEGENERACY — generated typed surface has no bare loose-alias escape
-#     hatches / no private type leaked into a public field (php: no generated-alias
-#     construct → skips clean).
-#   PUBLIC-JARGON — no porting-project internal jargon leaks into public phpDoc.
-#   GEN-IDIOM — the generated REST/payload tree is NOT lint-excluded (phpstan L9
-#     actually runs over it).
-#   RELEASE-FRESH — report-only for php: php has NO publish/release workflow, so
-#     there is no publish path to gate (absence is a flagged gap, not a RED). Wired
-#     report-only per the brief; flip off --report-only once php gains a publish wf.
-# ROUTE-COLLISION is NOT wired for php — see the note after this block.
-sched_gate GEN-TYPE-DEGENERACY res=dayone desc="generated typed surface: no loose-alias / private-type-in-public-field" \
-    -- python3 "$PORTING_SDK_DIR/scripts/gen_type_degeneracy.py" --port php --repo "$PORT_ROOT"
+# PUBLIC-JARGON stays standalone (public phpDoc analysis, not a suite family).
 sched_gate PUBLIC-JARGON res=dayone desc="no internal porting jargon in public phpDoc doc-comments" \
     -- python3 "$PORTING_SDK_DIR/scripts/public_jargon.py" --port php --repo "$PORT_ROOT"
-sched_gate GEN-IDIOM res=dayone desc="generated code is NOT lint-excluded (phpstan runs over it)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/gen_idiom.py" --port php --repo "$PORT_ROOT"
-sched_gate RELEASE-FRESH res=dayone desc="release hygiene (blocking: publish workflow must run gates before publishing)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port php --repo "$PORT_ROOT"
-sched_gate SEMVER-DIFF res=dayone desc="version bump matches API surface change vs port_signatures.baseline.json floor" \
-    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port php --repo "$PORT_ROOT"
+
+# ROOT-HYGIENE stays standalone (repo-root source analysis).
+sched_gate ROOT-HYGIENE res=dayone desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port php --repo "$PORT_ROOT"
+
+# DEAD-PUBLIC-ERROR stays standalone (source analysis of exported error types — not a
+# doc-truth/behavioral rule). ERROR-ENVELOPE/PAGINATION-WIRED/DOC-WIRE run under the
+# BEHAVIORAL suite; DOC-ENV/COUNT-CLAIM/ACCESSOR-TRUTH/STATUS-CLAIM under DOC-TRUTH.
+sched_gate DEAD-PUBLIC-ERROR desc="exported error types are raised/caught/user-signalled (no dead error surface)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/dead_public_error.py" --port php --repo "$PORT_ROOT"
 
 # ---- §C1 doc/example/CLI execution gates -------------------------------------
-# SNIPPET-COMPILE (php -l on every fenced block) + DOC-CLI (probe documented
-# swaig-test invocations) are cheap → cheap wave, blocking. SNIPPET-RUN executes
-# each php doc snippet against the shared mock (catches wrong named-arg/arity that
-# a syntax check misses); php's backlog is burned to zero → BLOCKING (not
-# report-only). EXAMPLES-RUN loads/starts every shipped example against the mock
-# (a blocking server surviving the timeout = PASS; modulo EXAMPLES_RUN_ALLOW.md) →
-# defer=1 heavy wave, blocking.
+# SNIPPET-COMPILE (php -l on every fenced block) is HEAVY → tier=nightly; DOC-CLI
+# stays per-PR (cheap CLI-parse). SNIPPET-RUN executes each php doc snippet against
+# the shared mock (STRICT-MOCKS: MOCK_RELAY_STRICT=1) → nightly heavy wave.
+# EXAMPLES-RUN loads/starts every shipped example against the mock (STRICT-MOCKS) →
+# nightly, defer, blocking.
 sched_gate SNIPPET-COMPILE tier=nightly desc="documented code snippets syntax-check (php -l)" \
     -- python3 "$PORTING_SDK_DIR/scripts/snippet_compile.py" --port php --repo "$PORT_ROOT"
 
 sched_gate DOC-CLI desc="documented swaig-test invocations parse against the real CLI" \
     -- python3 "$PORTING_SDK_DIR/scripts/doc_cli.py" --port php --repo "$PORT_ROOT"
 
-# Wave-3 doc/API-truth gates — deterministic source/doc analysis (no build, no
-# mock, ~1.3s for all six). Per-PR tier: cheap enough to catch doc/API drift at
-# PR time rather than a day later in nightly.
-sched_gate ERROR-ENVELOPE desc="REST error carries the full (status,body,url,method) envelope + raised on >=400" \
-    -- python3 "$PORTING_SDK_DIR/scripts/error_envelope.py" --port php --repo "$PORT_ROOT"
-sched_gate DEAD-PUBLIC-ERROR desc="exported error types are raised/caught/user-signalled (no dead error surface)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/dead_public_error.py" --port php --repo "$PORT_ROOT"
-sched_gate PAGINATION-WIRED desc="shipped iterator-protocol paginator is wired into list()" \
-    -- python3 "$PORTING_SDK_DIR/scripts/pagination_wired.py" --port php --repo "$PORT_ROOT"
-sched_gate DOC-ENV desc="documented SIGNALWIRE_*/SWML_* env vars <=> code-read vars agree" \
-    -- python3 "$PORTING_SDK_DIR/scripts/doc_env.py" --port php --repo "$PORT_ROOT"
-sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match reality" \
-    -- python3 "$PORTING_SDK_DIR/scripts/count_claim.py" --port php --repo "$PORT_ROOT"
-sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in source" \
-    -- python3 "$PORTING_SDK_DIR/scripts/accessor_truth.py" --port php --repo "$PORT_ROOT"
-
-# STRICT-MOCKS (§2.x) rides the nightly execution gates: MOCK_RELAY_STRICT=1 makes
-# the RELAY mock journal (and, for the REST mock, flag) spec wire-shape violations
-# so a snippet/example that runs but puts a wrong key on the wire fails LOUD rather
-# than being silently ignored by the server. Nightly (heavy execution wave).
-#
-# -u MOCK_SIGNALWIRE_PORT: snippet_run.py reuses MOCK_SIGNALWIRE_PORT from its
-# environment when set instead of always spawning its own mock (unlike
-# examples_run.py, which always self-spawns). This script exports
-# MOCK_SIGNALWIRE_PORT process-wide (line ~116) for the shared TEST-gate mocks —
-# without the unset, SNIPPET-RUN would silently attach to that SAME shared mock
-# and its STRICT-MOCKS wire-truth post-pass would read TEST's concurrent traffic
-# (e.g. BaseResourceTest.php's CrudWithAddresses fixture) out of the shared,
-# never-reset journal instead of its own isolated one. Force it to spawn a fresh,
-# dedicated mock so its journal only ever contains ITS OWN snippet traffic.
 sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero exit against the mock (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
-    -- env -u MOCK_SIGNALWIRE_PORT MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port php --repo "$PORT_ROOT"
 
 sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
 
-# WAIT-LIVENESS (§2.4) — the RELAY Action::wait() liveness contract: wait() BLOCKS
-# until the deferred completing event arrives, then returns the finished state
-# (never a no-op that returns at t~=0, never a hang). bin/wait-liveness-dump drives
-# the play/record corpus against a real mock_relay with the completing event armed
-# as a delayed scenario and prints the per-case classification; the differ builds
-# the python golden and compares. Nightly (spawns a mock + the dump; needs the
-# signalwire-python oracle, present in nightly).
-sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="RELAY Action::wait() blocks-until-event liveness matches the python golden" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --port php \
-        --python-sdk "$PYTHON_SDK_DIR" \
-        --dump-cmd "php $PORT_ROOT/bin/wait-liveness-dump"
-
-# ---- §G anti-laundering ledger + §D1 packaging -------------------------------
-# SUPPRESSION-LEDGER (no un-ledgered analyzer suppressions) is cheap → cheap wave.
-# PACKAGE-SMOKE builds the real `git archive` dist tarball, installs it into a
-# clean prefix, and imports RestClient — a real build → defer=1 heavy wave.
-sched_gate SUPPRESSION-LEDGER res=dayone desc="no un-ledgered analyzer suppressions" \
-    -- python3 "$PORTING_SDK_DIR/scripts/suppression_ledger.py" --port php --repo "$PORT_ROOT"
-
-sched_gate PACKAGE-SMOKE defer=1 tier=nightly desc="real dist artifact builds, installs, and imports from a clean prefix" \
-    -- python3 "$PORTING_SDK_DIR/scripts/package_smoke.py" --port php --repo "$PORT_ROOT"
-
 # ROUTE-COLLISION — NOT wired for php. The gate has no default registry command for
 # php, so standalone it exits 1 ("pass --registry-json with a pre-built registry").
-# php's scripts/route_registry.php (used by SPEC-PARITY) emits a compatible
-# {"routes":[{method,path_template,via}]} shape, so the gate CAN run when fed it —
-# but doing so currently reports 2 real ROUTE-SPLIT findings (callFlows /
-# conferenceRooms list_addresses / listAddresses dispatch to the SINGULAR
-# call_flow/conference_room addresses path, diverging from the plural collection
-# base — the L12 singular-vs-plural archetype). Wiring it blocking would require
-# either resolving those splits or a human-approved ROUTE_COLLISION_ALLOW.md entry;
-# per the wiring brief it is SKIPPED for php as a follow-up (registry-mechanism
+# php's scripts/route_registry.php (used by the BEHAVIORAL suite's SPEC-PARITY rule)
+# emits a compatible {"routes":[{method,path_template,via}]} shape, so the gate CAN
+# run when fed it — but doing so currently reports 2 real ROUTE-SPLIT findings
+# (callFlows / conferenceRooms list_addresses / listAddresses dispatch to the
+# SINGULAR call_flow/conference_room addresses path, diverging from the plural
+# collection base — the L12 singular-vs-plural archetype). Wiring it blocking would
+# require either resolving those splits or a human-approved ROUTE_COLLISION_ALLOW.md
+# entry; per the wiring brief it is SKIPPED for php as a follow-up (registry-mechanism
 # decision + disposition of the 2 splits).
 
 sched_run
