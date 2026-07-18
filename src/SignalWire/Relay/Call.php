@@ -543,20 +543,36 @@ class Call
     }
 
     /**
-     * @param array<string,mixed> $params
+     * Start or stop live transcription on the call.
+     *
+     * @param array<string,mixed> $action The transcribe action spec, e.g.
+     *                                     ``['start' => ['lang' => 'en']]``.
+     * @param array<string,mixed> $kwargs Additional params forwarded to the
+     *                                     wire call.
      * @return array<string,mixed>
      */
-    public function liveTranscribe(array $params): array
+    public function liveTranscribe(array $action, array $kwargs = []): array
     {
+        $params = array_merge(['action' => $action], $kwargs);
         return $this->execute('calling.live_transcribe', $params);
     }
 
     /**
-     * @param array<string,mixed> $params
+     * Start or stop live translation on the call.
+     *
+     * @param array<string,mixed> $action    The translate action spec, e.g.
+     *                                        ``['start' => ['from_lang' => 'en', 'to_lang' => 'es']]``.
+     * @param string|null         $statusUrl Optional webhook URL for translation status updates.
+     * @param array<string,mixed> $kwargs    Additional params forwarded to the wire call.
      * @return array<string,mixed>
      */
-    public function liveTranslate(array $params): array
+    public function liveTranslate(array $action, ?string $statusUrl = null, array $kwargs = []): array
     {
+        $params = ['action' => $action];
+        if ($statusUrl !== null) {
+            $params['status_url'] = $statusUrl;
+        }
+        $params = array_merge($params, $kwargs);
         return $this->execute('calling.live_translate', $params);
     }
 

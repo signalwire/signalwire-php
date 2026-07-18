@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Rest;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\RestClient;
@@ -103,7 +104,13 @@ class SmallNamespacesMockTest extends TestCase
 
     // ----- recordings -------------------------------------------------
 
+    // wire-regression-pin: relay-rest.list_recordings' spec has `parameters: []`
+    // while every sibling list op declares page_size (owner-approved spec gap,
+    // porting-sdk fix/recordings-pagination-spec — not yet on main); excluded
+    // from the STRICT-MOCKS wire-truth selector in rest_coverage_gate, same as
+    // python's wire_regression_pins_test.py. Still runs under the plain TEST gate.
     #[Test]
+    #[Group('wire-regression-pin')]
     public function recordingsList(): void
     {
         $body = $this->client->recordings()->list(['page_size' => '5']);
@@ -184,14 +191,12 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function importedNumbersCreate(): void
     {
+        // ImportPhoneNumberRequest declares number, number_type, capabilities —
+        // no sip_* fields.
         $body = $this->client->importedNumbers()->create(
             '+15551234567',
             'longcode',
-            extras: [
-                'sip_username' => 'alice',
-                'sip_password' => 'secret',
-                'sip_proxy' => 'sip.example.com',
-            ],
+            capabilities: ['sms', 'voice'],
         );
         $this->assertArrayHasKey('id', $body);
 
@@ -201,8 +206,8 @@ class SmallNamespacesMockTest extends TestCase
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
         $this->assertSame('+15551234567', $bm['number'] ?? null);
-        $this->assertSame('alice', $bm['sip_username'] ?? null);
-        $this->assertSame('sip.example.com', $bm['sip_proxy'] ?? null);
+        $this->assertSame('longcode', $bm['number_type'] ?? null);
+        $this->assertSame(['sms', 'voice'], $bm['capabilities'] ?? null);
     }
 
     // ----- mfa --------------------------------------------------------
@@ -210,10 +215,12 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function mfaCall(): void
     {
+        // Spec field is 'from' (a PHP-safe rename); the typed from_ kwarg maps
+        // back to the wire key 'from'.
         $body = $this->client->mfa()->call(
             to: '+15551234567',
+            from_: '+15559876543',
             message: 'Your code is {code}',
-            extras: ['from_' => '+15559876543'],
         );
         $this->assertArrayHasKey('id', $body);
 
@@ -223,7 +230,7 @@ class SmallNamespacesMockTest extends TestCase
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
         $this->assertSame('+15551234567', $bm['to'] ?? null);
-        $this->assertSame('+15559876543', $bm['from_'] ?? null);
+        $this->assertSame('+15559876543', $bm['from'] ?? null);
         $this->assertSame('Your code is {code}', $bm['message'] ?? null);
     }
 
@@ -232,13 +239,14 @@ class SmallNamespacesMockTest extends TestCase
     #[Test]
     public function sipProfileUpdate(): void
     {
+        // UpdateSipProfileRequest's field is 'domain_identifier' (typed param
+        // domainIdentifier), not 'domain'.
         $body = $this->client->sipProfile()->update(
+            domainIdentifier: 'myco',
             defaultCodecs: ['PCMU', 'PCMA'],
-            extras: ['domain' => 'myco.sip.signalwire.com'],
         );
-        // The SIP profile resource has a 'domain' field.
         $this->assertTrue(
-            array_key_exists('domain', $body) || array_key_exists('default_codecs', $body)
+            array_key_exists('domain_identifier', $body) || array_key_exists('default_codecs', $body)
         );
 
         $j = $this->mock->journal()->last();
@@ -246,7 +254,7 @@ class SmallNamespacesMockTest extends TestCase
         $this->assertSame('/api/relay/rest/sip_profile', $j->path);
         $bm = $j->bodyMap();
         $this->assertNotNull($bm);
-        $this->assertSame('myco.sip.signalwire.com', $bm['domain'] ?? null);
+        $this->assertSame('myco', $bm['domain_identifier'] ?? null);
         $this->assertSame(['PCMU', 'PCMA'], $bm['default_codecs'] ?? null);
     }
 

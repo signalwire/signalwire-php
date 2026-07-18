@@ -12,6 +12,7 @@ use SignalWire\REST\Namespaces\Generated\Calling;
 use SignalWire\REST\Namespaces\Generated\FabricNamespace as Fabric;
 use SignalWire\REST\RestClient;
 use SignalWire\REST\SignalWireRestError;
+use SignalWire\REST\SignalWireRestTransportError;
 
 /**
  * Unit tests for the SignalWire PHP REST client.
@@ -101,6 +102,63 @@ class RestClientTest extends TestCase
             $caught = $e;
         }
         $this->assertSame($err, $caught);
+    }
+
+    // =================================================================
+    // SignalWireRestTransportError (transport-level failure family)
+    // =================================================================
+
+    #[Test]
+    public function transportErrorIsRestErrorFamily(): void
+    {
+        // A member of the SignalWireRestError family (subclass) — so a caller
+        // catching that one type handles a transport failure too (plan 1.3b);
+        // the family relationship is proven at runtime by
+        // connectionRefusedRaisesTypedTransportError below, which catches a real
+        // throw as the parent type. Here we pin the transport error's FIELDS.
+        $err = new SignalWireRestTransportError('conn refused', 'https://h/api', 'GET');
+
+        // No HTTP response reached, so no status code (0 == the php idiom for
+        // "no status"); body is empty; url/method are carried.
+        $this->assertSame(0, $err->getStatusCode());
+        $this->assertSame('', $err->getBody());
+        $this->assertSame('https://h/api', $err->getUrl());
+        $this->assertSame('GET', $err->getMethod());
+        $this->assertStringContainsString('conn refused', $err->getMessage());
+    }
+
+    #[Test]
+    public function connectionRefusedRaisesTypedTransportError(): void
+    {
+        // Point the client at a DEAD port (bound then released, nothing
+        // listening) so the connection is refused. A correct client raises its
+        // TYPED transport error — a member of the SignalWireRestError family —
+        // NOT a bare cURL/transport exception.
+        $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($sock, 'could not bind a probe socket');
+        $name = stream_socket_get_name($sock, false);
+        fclose($sock); // release it — now nothing is listening on $deadPort
+        $this->assertIsString($name);
+        $deadPort = (int) substr($name, strrpos($name, ':') + 1);
+        $this->assertGreaterThan(0, $deadPort);
+
+        $http = new HttpClient('proj', 'tok', "http://127.0.0.1:{$deadPort}");
+
+        $caught = null;
+        try {
+            $http->get('/api/fabric/addresses');
+        } catch (SignalWireRestError $e) {
+            $caught = $e;
+        }
+
+        $this->assertInstanceOf(
+            SignalWireRestTransportError::class,
+            $caught,
+            'connection refused must raise the typed SignalWireRestTransportError, '
+            . 'not a bare exception'
+        );
+        $this->assertSame(0, $caught->getStatusCode());
+        $this->assertSame('GET', $caught->getMethod());
     }
 
     // =================================================================

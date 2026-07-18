@@ -157,6 +157,7 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "FabricResource": "signalwire.rest._base",
     "FabricResourcePUT": "signalwire.rest._base",
     "SignalWireRestError": "signalwire.rest._base",
+    "SignalWireRestTransportError": "signalwire.rest._base",
 
     # ---------------------------------------------------------------
     # Generated REST resource layer (adopted from scripts/generate_rest.py).

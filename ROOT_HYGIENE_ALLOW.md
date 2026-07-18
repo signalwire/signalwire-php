@@ -23,3 +23,4 @@ audit pipeline (which this repo cannot edit). Verified reader per file below.
 - META_CONSISTENT_ALLOW.md — gate-control file for the meta_consistent gate (orchestrator, 2026-07-06)
 - ROOT_HYGIENE_ALLOW.md — gate-control file for this root_hygiene gate (orchestrator, 2026-07-06)
 - EXAMPLES_RUN_ALLOW.md — gate-control allowlist read at repo root by porting-sdk examples_run.py (approver: user 2026-07-06 audit-contract class; ruby already has it)
+- WIRE_VIOLATIONS_ALLOW.md — STRICT-MOCKS signed-exception ledger read by porting-sdk assert_no_wire_violations.py / examples_run.py / snippet_run.py at repo root (mike@signalwire.com, 2026-07-18)

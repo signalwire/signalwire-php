@@ -17,7 +17,7 @@ final class SignalWire
      * ``composer.json``'s ``version`` and the REST ``User-Agent`` string
      * (``HttpClient`` derives its UA from this constant).
      */
-    public const VERSION = '3.2.0';
+    public const VERSION = '3.3.0';
 
     /**
      * Get a logger instance.

@@ -241,6 +241,16 @@ $out['relay_tap'] = frame('calling.tap', $client->frames['calling.tap'] ?? null)
 $call->sendFax('https://x/doc.pdf', '+15550001111', ['header_info' => 'Hdr', 'control_id' => CID]);
 $out['relay_send_fax'] = frame('calling.send_fax', $client->frames['calling.send_fax'] ?? null);
 
+// relay_live_transcribe (params.action MUST be wrapped, per the authoritative
+// schema — relay-protocol/calling.live_transcribe.params.json declares `action`
+// REQUIRED).
+$call->liveTranscribe(['start' => ['lang' => 'en']]);
+$out['relay_live_transcribe'] = frame('calling.live_transcribe', $client->frames['calling.live_transcribe'] ?? null);
+
+// relay_live_translate (same contract; status_url is an optional sibling param).
+$call->liveTranslate(['start' => ['from_lang' => 'en', 'to_lang' => 'es']], 'https://x/cb');
+$out['relay_live_translate'] = frame('calling.live_translate', $client->frames['calling.live_translate'] ?? null);
+
 // ---- control-ops (Action methods) ----
 // relay_play_stop
 $pa = $call->play([['type' => 'audio', 'params' => ['url' => 'https://x/a.mp3']]], ['control_id' => CID]);
