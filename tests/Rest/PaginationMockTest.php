@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests\Rest;
 
-use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\PaginatedIterator;
@@ -57,17 +56,13 @@ class PaginationMockTest extends TestCase
         $this->assertSame([], $this->mock->journal()->all());
     }
 
-    // wire-regression-pin: fabric.list_fabric_addresses' spec has
-    // `parameters: []` while the server returns a links.next cursor URL the
-    // generic PaginatedIterator replays as ?cursor= — a parked spec gap (same
-    // family as recordings' page_size), NOT fixed here. Excluded from the
-    // STRICT-MOCKS wire-truth selector in rest_coverage_gate; still runs under
-    // the plain TEST gate, which is where this pagination behavior belongs.
     #[Test]
-    #[Group('wire-regression-pin')]
     public function nextPagesThroughAllItems(): void
     {
-        // Page 1 — has a next cursor.
+        // Page 1 — has a next page. The server's links.next carries the real
+        // wire param the fabric list endpoint round-trips: ``page_token`` (a
+        // cursor token that starts with PA/PB), NOT a ``cursor`` param (which
+        // no SignalWire REST endpoint accepts).
         $this->mock->scenarios()->set(
             self::FABRIC_ADDRESSES_ENDPOINT_ID,
             200,
@@ -77,7 +72,7 @@ class PaginationMockTest extends TestCase
                     ['id' => 'addr-2', 'name' => 'second'],
                 ],
                 'links' => [
-                    'next' => 'http://example.com/api/fabric/addresses?cursor=page2',
+                    'next' => 'http://example.com/api/fabric/addresses?page_token=PA_page2',
                 ],
             ]
         );
@@ -105,7 +100,7 @@ class PaginationMockTest extends TestCase
                     ['id' => 'addr-2', 'name' => 'second'],
                 ],
                 'links' => [
-                    'next' => 'http://example.com/api/fabric/addresses?cursor=page2',
+                    'next' => 'http://example.com/api/fabric/addresses?page_token=PA_page2',
                 ],
             ]
         );
@@ -141,14 +136,13 @@ class PaginationMockTest extends TestCase
             fn ($e) => $e->path === self::FABRIC_ADDRESSES_PATH
         ));
         $this->assertCount(2, $gets, 'expected 2 paginated GETs at addresses path');
-        // The second fetch carries the ``cursor=page2`` param parsed from
-        // the first response's ``links.next``.
-        $this->assertSame(['page2'], $gets[1]->queryParams['cursor'] ?? null);
+        // The second fetch carries the ``page_token`` param parsed from the
+        // first response's ``links.next`` — the real wire token the server
+        // round-trips.
+        $this->assertSame(['PA_page2'], $gets[1]->queryParams['page_token'] ?? null);
     }
 
-    // wire-regression-pin: same parked fabric-pagination cursor gap as above.
     #[Test]
-    #[Group('wire-regression-pin')]
     public function resourcePaginateWalksAllPagesFollowingCursor(): void
     {
         // Exercises ReadResource::paginate() (php idiom of Python's
@@ -164,7 +158,7 @@ class PaginationMockTest extends TestCase
                     ['id' => 'addr-2', 'name' => 'second'],
                 ],
                 'links' => [
-                    'next' => 'http://example.com/api/fabric/addresses?cursor=page2',
+                    'next' => 'http://example.com/api/fabric/addresses?page_token=PA_page2',
                 ],
             ]
         );
@@ -195,13 +189,11 @@ class PaginationMockTest extends TestCase
             fn ($e) => $e->path === self::FABRIC_ADDRESSES_PATH
         ));
         $this->assertCount(2, $gets, 'paginate() should have fetched two pages');
-        // The second fetch carries the cursor parsed from the first page's next link.
-        $this->assertSame(['page2'], $gets[1]->queryParams['cursor'] ?? null);
+        // The second fetch carries the page_token parsed from the first page's next link.
+        $this->assertSame(['PA_page2'], $gets[1]->queryParams['page_token'] ?? null);
     }
 
-    // wire-regression-pin: same parked fabric-pagination gap (page_size, not cursor).
     #[Test]
-    #[Group('wire-regression-pin')]
     public function resourcePaginateForwardsInitialParams(): void
     {
         // paginate($params) must seed the first request's query string.
