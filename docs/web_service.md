@@ -47,6 +47,8 @@ $agent->run();
 ### Constructor Parameters
 
 ```php
+use SignalWire\Agent\AgentBase;
+
 new AgentBase(
     name:              'My Agent',  // required
     route:             '/agent',    // URL route (default '/')
@@ -68,6 +70,8 @@ resolved in this order:
    regenerated-per-process password is the usual cause of unexpected HTTP 401s).
 
 ```php
+use SignalWire\Agent\AgentBase;
+
 $agent = new AgentBase(
     name:              'Secured Agent',
     basicAuthUser:     'admin',

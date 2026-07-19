@@ -106,23 +106,25 @@ The `SkillRegistry` automatically discovers skills from the `SignalWire\Skills\B
 namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
+use SignalWire\SWAIG\FunctionResult;
 
 class MySkill extends SkillBase
 {
-    public function name(): string { return 'my_skill'; }
-    public function description(): string { return 'Does something useful'; }
-    public function requiredConfig(): array { return ['api_key']; }
-    public function requiredEnv(): array { return []; }
+    public function getName(): string { return 'my_skill'; }
+    public function getDescription(): string { return 'Does something useful'; }
 
-    public function register(AgentBase $agent, array $config): void
+    /** Runtime checks (creds present, deps installed). Return false to abort load. */
+    public function setup(): bool { return true; }
+
+    /** Register the SWAIG tools this skill contributes to the agent. */
+    public function registerTools(): void
     {
-        $agent->defineTool(
-            name:        'my_tool',
-            description: 'My custom tool',
-            parameters:  ['type' => 'object', 'properties' => [/* ... */]],
-            handler:     function (array $args, array $raw) use ($config) {
-                // Implementation using $config['api_key']
-                return new FunctionResult('Result');
+        $this->defineTool(
+            'my_tool',
+            'My custom tool',
+            ['input' => ['type' => 'string', 'description' => 'The input to process']],
+            function (array $args, array $raw): FunctionResult {
+                return new FunctionResult('Processed: ' . ($args['input'] ?? ''));
             },
         );
     }

@@ -30,6 +30,9 @@ $agent->registerSwaigFunction($weather->toSwaigFunction());
 Webhook DataMaps make HTTP requests to external APIs:
 
 ```php
+use SignalWire\DataMap\DataMap;
+use SignalWire\SWAIG\FunctionResult;
+
 $lookup = (new DataMap('lookup_order'))
     ->description('Look up an order by ID')
     ->parameter('order_id', 'string', 'Order number', required: true)
@@ -57,6 +60,9 @@ DataMap supports template variable expansion:
 Expression DataMaps match patterns without making API calls:
 
 ```php
+use SignalWire\DataMap\DataMap;
+use SignalWire\SWAIG\FunctionResult;
+
 $fileControl = (new DataMap('file_control'))
     ->description('Control audio/video playback')
     ->parameter('command', 'string', 'Playback command', required: true,
@@ -76,6 +82,9 @@ The expression evaluates `${args.command}` against the regex pattern `play|resum
 You can mix DataMap tools with regular SWAIG functions:
 
 ```php
+use SignalWire\DataMap\DataMap;
+use SignalWire\SWAIG\FunctionResult;
+
 // DataMap tool (runs on SignalWire's servers)
 $weather = (new DataMap('get_weather'))
     ->description('Get weather for a location')
@@ -106,6 +115,9 @@ $agent->defineTool(
 DataMap outputs can include actions via FunctionResult:
 
 ```php
+use SignalWire\DataMap\DataMap;
+use SignalWire\SWAIG\FunctionResult;
+
 $transfer = (new DataMap('route_call'))
     ->description('Route call to department')
     ->parameter('department', 'string', 'Department name', required: true)

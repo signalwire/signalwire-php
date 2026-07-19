@@ -155,6 +155,8 @@ $result->replaceInHistory("I've saved your profile.");
 All action methods return `$this`:
 
 ```php
+use SignalWire\SWAIG\FunctionResult;
+
 $result = (new FunctionResult('Transferring you to billing.'))
     ->setMetadata(['transfer_reason' => 'billing_inquiry'])
     ->updateGlobalData(['last_action' => 'transfer_to_billing'])

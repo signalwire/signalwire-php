@@ -91,34 +91,34 @@ Create a reusable skill by extending `SkillBase`:
 namespace App\Skills;
 
 use SignalWire\Skills\SkillBase;
-use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
 class CrmLookupSkill extends SkillBase
 {
-    public function name(): string { return 'crm_lookup'; }
-    public function description(): string { return 'Look up customer in CRM'; }
-    public function requiredConfig(): array { return ['crm_api_url', 'crm_api_key']; }
+    public function getName(): string { return 'crm_lookup'; }
+    public function getDescription(): string { return 'Look up customer in CRM'; }
 
-    public function register(AgentBase $agent, array $config): void
+    /** Config passed via addSkill('crm_lookup', [...]) lands in $this->params. */
+    public function setup(): bool
     {
-        $agent->defineTool(
-            name:        'lookup_customer',
-            description: 'Look up a customer by name or email',
-            parameters:  [
-                'type' => 'object',
-                'properties' => [
-                    'query' => ['type' => 'string', 'description' => 'Customer name or email'],
-                ],
-                'required' => ['query'],
+        return !empty($this->params['crm_api_url']) && !empty($this->params['crm_api_key']);
+    }
+
+    public function registerTools(): void
+    {
+        $this->defineTool(
+            'lookup_customer',
+            'Look up a customer by name or email',
+            [
+                'query' => ['type' => 'string', 'description' => 'Customer name or email'],
             ],
-            handler: function (array $args, array $raw) use ($config): FunctionResult {
-                // Call CRM API
+            function (array $args, array $raw): FunctionResult {
+                // Call CRM API using the configured credentials.
                 $response = file_get_contents(
-                    $config['crm_api_url'] . '/customers?q=' . urlencode($args['query']),
+                    $this->params['crm_api_url'] . '/customers?q=' . urlencode($args['query']),
                     false,
                     stream_context_create(['http' => [
-                        'header' => "Authorization: Bearer {$config['crm_api_key']}\r\n",
+                        'header' => "Authorization: Bearer {$this->params['crm_api_key']}\r\n",
                     ]])
                 );
                 $data = json_decode($response, true);

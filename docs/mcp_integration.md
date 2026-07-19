@@ -122,6 +122,8 @@ Your tool functions are now available in Claude Desktop conversations.
 The two features are independent:
 
 ```php
+use SignalWire\Agent\AgentBase;
+
 $agent = new AgentBase(name: 'my-agent', route: '/agent');
 
 // Expose my tools as MCP (for Claude Desktop, other agents)

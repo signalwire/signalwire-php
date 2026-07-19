@@ -156,6 +156,7 @@ See the **[RELAY documentation](relay/README.md)** for the full guide, API refer
 Synchronous REST client for managing SignalWire resources and controlling calls over HTTP. No WebSocket required.
 
 <!-- include: examples/quickstart_rest.php#construct -->
+<!-- snippet: no-run issues live REST calls (create/play/search) against the real space; the SDK derives its base URL from SIGNALWIRE_SPACE with no plain-HTTP mock override, so it can't reach the loopback mock — same class as the allowlisted examples/quickstart_rest.php -->
 ```php
 require 'vendor/autoload.php';
 

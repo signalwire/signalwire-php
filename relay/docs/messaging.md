@@ -19,9 +19,9 @@ require 'vendor/autoload.php';
 use SignalWire\Relay\Client;
 
 $client = new Client([
-    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
-    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'project'  => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'    => getenv('SIGNALWIRE_API_TOKEN'),
+    'host'     => getenv('SIGNALWIRE_SPACE') ?: 'relay.signalwire.com',
     'contexts' => ['default'],
 ]);
 
@@ -122,9 +122,11 @@ echo "Initial state: " . $message->getState() . "\n";
 Messages are routed to your handler based on context, similar to calls:
 
 ```php
+use SignalWire\Relay\Client;
+
 $client = new Client([
-    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'project'  => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'    => getenv('SIGNALWIRE_API_TOKEN'),
     'contexts' => ['default', 'notifications'],
 ]);
 ```

@@ -99,6 +99,7 @@ $ctx->addContext('sales', [
 
 The REST client (`SignalWire\REST\RestClient`) provides synchronous HTTP access to all SignalWire APIs:
 
+<!-- snippet: no-run issues live REST calls (create/search/dial) against the real space; the SDK derives its base URL from SIGNALWIRE_SPACE with no plain-HTTP mock override, so it can't reach the loopback mock -->
 ```php
 use SignalWire\REST\RestClient;
 

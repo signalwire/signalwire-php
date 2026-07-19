@@ -102,6 +102,10 @@ Logging is controlled by `SIGNALWIRE_LOG_LEVEL` (see below).
 All settings can be passed directly to constructors:
 
 ```php
+use SignalWire\Agent\AgentBase;
+use SignalWire\REST\RestClient;
+use SignalWire\Relay\Client;
+
 // Agent
 $agent = new AgentBase(
     name:       'my-agent',
@@ -114,16 +118,16 @@ $agent = new AgentBase(
 
 // REST client (positional: projectId, token, space)
 $client = new RestClient(
-    $_ENV['SIGNALWIRE_PROJECT_ID'],
-    $_ENV['SIGNALWIRE_API_TOKEN'],
-    $_ENV['SIGNALWIRE_SPACE'],
+    getenv('SIGNALWIRE_PROJECT_ID'),
+    getenv('SIGNALWIRE_API_TOKEN'),
+    getenv('SIGNALWIRE_SPACE'),
 );
 
 // RELAY client (single options array)
 $relay = new Client([
-    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
-    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'project'  => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'    => getenv('SIGNALWIRE_API_TOKEN'),
+    'host'     => getenv('SIGNALWIRE_SPACE') ?: 'relay.signalwire.com',
     'contexts' => ['default'],
 ]);
 ```
