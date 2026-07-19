@@ -9,11 +9,13 @@ use SignalWire\SWAIG\FunctionResult;
 
 class Math extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'math';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Perform basic mathematical calculations';

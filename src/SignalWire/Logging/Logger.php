@@ -49,11 +49,13 @@ class Logger
         self::$instances = [];
     }
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;
     }
 
+    /** The level. */
     public function getLevel(): string
     {
         return $this->level;
@@ -72,6 +74,7 @@ class Logger
         }
     }
 
+    /** Whether the suppressed. */
     public function isSuppressed(): bool
     {
         return $this->suppressed;

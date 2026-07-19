@@ -35,11 +35,13 @@ class BaseResource
         return $this->basePath . '/' . implode('/', $parts);
     }
 
+    /** The base path. */
     public function getBasePath(): string
     {
         return $this->basePath;
     }
 
+    /** The http. */
     public function getHttp(): HttpClient
     {
         return $this->http;
@@ -64,6 +66,7 @@ class ReadResource extends BaseResource
         $this->client = $client;
     }
 
+    /** The client. */
     public function getClient(): HttpClient
     {
         return $this->client;

@@ -136,26 +136,31 @@ class RestClient
     // Getters
     // -----------------------------------------------------------------
 
+    /** The project ID. */
     public function getProjectId(): string
     {
         return $this->projectId;
     }
 
+    /** The API token. */
     public function getToken(): string
     {
         return $this->token;
     }
 
+    /** The SignalWire space (host). */
     public function getSpace(): string
     {
         return $this->space;
     }
 
+    /** The base URL. */
     public function getBaseUrl(): string
     {
         return $this->baseUrl;
     }
 
+    /** The underlying HTTP client. */
     public function getHttp(): HttpClient
     {
         return $this->http;

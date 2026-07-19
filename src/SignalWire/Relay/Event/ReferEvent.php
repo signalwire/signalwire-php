@@ -24,21 +24,25 @@ class ReferEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The state. */
     public function getState(): string
     {
         return $this->state;
     }
 
+    /** The sip refer to. */
     public function getSipReferTo(): string
     {
         return $this->sipReferTo;
     }
 
+    /** The sip refer response code. */
     public function getSipReferResponseCode(): string
     {
         return $this->sipReferResponseCode;
     }
 
+    /** The sip notify response code. */
     public function getSipNotifyResponseCode(): string
     {
         return $this->sipNotifyResponseCode;

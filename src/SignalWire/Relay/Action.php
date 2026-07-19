@@ -74,6 +74,7 @@ class Action
     // Accessors
     // ------------------------------------------------------------------
 
+    /** Whether the done. */
     public function isDone(): bool
     {
         return $this->completed;
@@ -85,6 +86,7 @@ class Action
         return $this->result;
     }
 
+    /** The state. */
     public function getState(): ?string
     {
         return $this->state;
@@ -102,16 +104,19 @@ class Action
         return $this->events;
     }
 
+    /** The control ID. */
     public function getControlId(): string
     {
         return $this->controlId;
     }
 
+    /** The call ID. */
     public function getCallId(): string
     {
         return $this->callId;
     }
 
+    /** The node ID. */
     public function getNodeId(): string
     {
         return $this->nodeId;
@@ -274,6 +279,7 @@ class Action
  */
 class PlayAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.play.stop';
@@ -314,6 +320,7 @@ class PlayAction extends Action
  */
 class RecordAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.record.stop';
@@ -337,18 +344,21 @@ class RecordAction extends Action
         $this->executeSubcommand('calling.record.resume');
     }
 
+    /** The URL. */
     public function getUrl(): ?string
     {
         $val = $this->payload['url'] ?? null;
         return is_string($val) ? $val : null;
     }
 
+    /** The duration. */
     public function getDuration(): ?float
     {
         $val = $this->payload['duration'] ?? null;
         return is_int($val) || is_float($val) ? (float) $val : null;
     }
 
+    /** The size. */
     public function getSize(): ?int
     {
         $val = $this->payload['size'] ?? null;
@@ -378,6 +388,7 @@ class CollectAction extends Action
         $this->stopMethod = $method;
     }
 
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return $this->stopMethod;
@@ -501,6 +512,7 @@ class StandaloneCollectAction extends CollectAction
  */
 class DetectAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.detect.stop';
@@ -538,11 +550,13 @@ class FaxAction extends Action
         $this->faxType = $faxType;
     }
 
+    /** The fax type. */
     public function getFaxType(): string
     {
         return $this->faxType;
     }
 
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return $this->faxType === 'receive'
@@ -556,6 +570,7 @@ class FaxAction extends Action
  */
 class TapAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.tap.stop';
@@ -567,6 +582,7 @@ class TapAction extends Action
  */
 class StreamAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.stream.stop';
@@ -578,6 +594,7 @@ class StreamAction extends Action
  */
 class PayAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.pay.stop';
@@ -589,6 +606,7 @@ class PayAction extends Action
  */
 class TranscribeAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.transcribe.stop';
@@ -600,6 +618,7 @@ class TranscribeAction extends Action
  */
 class AIAction extends Action
 {
+    /** The stop method. */
     public function getStopMethod(): string
     {
         return 'calling.ai.stop';

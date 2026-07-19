@@ -27,6 +27,7 @@ use SignalWire\SWAIG\FunctionResult;
  */
 class NativeVectorSearch extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'native_vector_search';
@@ -56,6 +57,7 @@ class NativeVectorSearch extends SkillBase
         return is_numeric($value) ? (float) $value : 0.0;
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Search document indexes using vector similarity and keyword search (local or remote)';

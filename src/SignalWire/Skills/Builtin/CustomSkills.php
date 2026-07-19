@@ -8,11 +8,13 @@ use SignalWire\Skills\SkillBase;
 
 class CustomSkills extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'custom_skills';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Register user-defined custom tools';

@@ -16,6 +16,7 @@ class Document
         $this->sections['main'] = [];
     }
 
+    /** The version. */
     public function getVersion(): string
     {
         return $this->version;
@@ -33,6 +34,7 @@ class Document
         return true;
     }
 
+    /** Whether there is a section. */
     public function hasSection(string $name): bool
     {
         return isset($this->sections[$name]);

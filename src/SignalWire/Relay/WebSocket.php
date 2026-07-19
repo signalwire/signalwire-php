@@ -229,6 +229,7 @@ class WebSocket
         }
     }
 
+    /** Whether the connected. */
     public function isConnected(): bool
     {
         return $this->connected && $this->client !== null && $this->client->isConnected();

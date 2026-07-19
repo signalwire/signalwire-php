@@ -31,31 +31,37 @@ class MessageReceiveEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The message ID. */
     public function getMessageId(): string
     {
         return $this->messageId;
     }
 
+    /** The context. */
     public function getContext(): string
     {
         return $this->context;
     }
 
+    /** The direction. */
     public function getDirection(): string
     {
         return $this->direction;
     }
 
+    /** The from number. */
     public function getFromNumber(): string
     {
         return $this->fromNumber;
     }
 
+    /** The to number. */
     public function getToNumber(): string
     {
         return $this->toNumber;
     }
 
+    /** The body. */
     public function getBody(): string
     {
         return $this->body;
@@ -67,11 +73,13 @@ class MessageReceiveEvent extends RelayEvent
         return $this->media;
     }
 
+    /** The segments. */
     public function getSegments(): int
     {
         return $this->segments;
     }
 
+    /** The message state. */
     public function getMessageState(): string
     {
         return $this->messageState;

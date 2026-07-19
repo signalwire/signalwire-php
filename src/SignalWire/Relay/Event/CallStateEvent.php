@@ -33,11 +33,13 @@ class CallStateEvent extends RelayEvent
         return $this->callState;
     }
 
+    /** The end reason. */
     public function getEndReason(): string
     {
         return $this->endReason;
     }
 
+    /** The direction. */
     public function getDirection(): string
     {
         return $this->direction;

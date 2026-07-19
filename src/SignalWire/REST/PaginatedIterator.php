@@ -46,11 +46,13 @@ class PaginatedIterator implements \Iterator
         $this->dataKey = $dataKey;
     }
 
+    /** The http. */
     public function getHttp(): HttpClient
     {
         return $this->http;
     }
 
+    /** The path. */
     public function getPath(): string
     {
         return $this->path;
@@ -62,16 +64,19 @@ class PaginatedIterator implements \Iterator
         return $this->params;
     }
 
+    /** The data key. */
     public function getDataKey(): string
     {
         return $this->dataKey;
     }
 
+    /** Whether the done. */
     public function isDone(): bool
     {
         return $this->done;
     }
 
+    /** The index. */
     public function getIndex(): int
     {
         return $this->index;

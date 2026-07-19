@@ -25,6 +25,7 @@ class ConnectEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The connect state. */
     public function getConnectState(): string
     {
         return $this->connectState;

@@ -9,6 +9,7 @@ use SignalWire\SWAIG\FunctionResult;
 
 class InfoGatherer extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'info_gatherer';
@@ -49,6 +50,7 @@ class InfoGatherer extends SkillBase
         return $default;
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Gather answers to a configurable list of questions';

@@ -39,11 +39,13 @@ class WeatherApi extends SkillBase
         }
     }
 
+    /** The name. */
     public function getName(): string
     {
         return 'weather_api';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Get current weather information from WeatherAPI.com';

@@ -101,21 +101,25 @@ class HttpClient
         return null;
     }
 
+    /** The project ID. */
     public function getProjectId(): string
     {
         return $this->projectId;
     }
 
+    /** The API token. */
     public function getToken(): string
     {
         return $this->token;
     }
 
+    /** The base URL. */
     public function getBaseUrl(): string
     {
         return $this->baseUrl;
     }
 
+    /** The Basic-auth Authorization header value. */
     public function getAuthHeader(): string
     {
         return $this->authHeader;

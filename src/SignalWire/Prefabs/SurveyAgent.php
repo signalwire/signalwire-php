@@ -261,6 +261,7 @@ class SurveyAgent extends AgentBase
         return $this->surveyQuestions;
     }
 
+    /** The survey name. */
     public function getSurveyName(): string
     {
         return $this->surveyName;

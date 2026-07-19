@@ -103,11 +103,13 @@ class SkillManager
         return array_keys($this->loadedSkills);
     }
 
+    /** Whether there is a skill. */
     public function hasSkill(string $key): bool
     {
         return isset($this->loadedSkills[$key]);
     }
 
+    /** The skill. */
     public function getSkill(string $key): ?SkillBase
     {
         return $this->loadedSkills[$key] ?? null;

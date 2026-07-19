@@ -70,11 +70,13 @@ class ClaudeSkills extends SkillBase
 
     private bool $ignoreInvocationControl = false;
 
+    /** The name. */
     public function getName(): string
     {
         return 'claude_skills';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Load Claude SKILL.md files as agent tools';

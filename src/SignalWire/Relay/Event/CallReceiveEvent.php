@@ -31,11 +31,13 @@ class CallReceiveEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The call state. */
     public function getCallState(): string
     {
         return $this->callState;
     }
 
+    /** The direction. */
     public function getDirection(): string
     {
         return $this->direction;
@@ -47,26 +49,31 @@ class CallReceiveEvent extends RelayEvent
         return $this->device;
     }
 
+    /** The node ID. */
     public function getNodeId(): string
     {
         return $this->nodeId;
     }
 
+    /** The project ID. */
     public function getProjectId(): string
     {
         return $this->projectId;
     }
 
+    /** The context. */
     public function getContext(): string
     {
         return $this->context;
     }
 
+    /** The segment ID. */
     public function getSegmentId(): string
     {
         return $this->segmentId;
     }
 
+    /** The tag. */
     public function getTag(): string
     {
         return $this->tag;

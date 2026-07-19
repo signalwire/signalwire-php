@@ -50,6 +50,7 @@ class WebSearch extends SkillBase
     private const ENDPOINT = 'https://www.googleapis.com/customsearch/v1';
     private const BASE_URL_ENV = 'WEB_SEARCH_BASE_URL';
 
+    /** The name. */
     public function getName(): string
     {
         return 'web_search';
@@ -70,11 +71,13 @@ class WebSearch extends SkillBase
         return '';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Search the web for information using Google Custom Search API';
     }
 
+    /** The version. */
     public function getVersion(): string
     {
         return '2.0.0';

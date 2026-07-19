@@ -27,11 +27,13 @@ class CollectEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The control ID. */
     public function getControlId(): string
     {
         return $this->controlId;
     }
 
+    /** The state. */
     public function getState(): string
     {
         return $this->state;

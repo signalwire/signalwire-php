@@ -29,11 +29,13 @@ class Datasphere extends SkillBase
     private const PATH_SEARCH = '/api/datasphere/documents/search';
     private const BASE_URL_ENV = 'DATASPHERE_BASE_URL';
 
+    /** The name. */
     public function getName(): string
     {
         return 'datasphere';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Search knowledge using SignalWire DataSphere RAG stack';

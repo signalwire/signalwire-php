@@ -339,6 +339,17 @@ sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero
 sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
 
+# DOC-SURFACE (plan §6.3): docblock coverage floor on the hand-written public API
+# surface (generated code is excluded — it's documented by the generator). The
+# floor is pinned in .doc_surface_floor (84.3% today) and ratchets up via
+# --write-floor; report-only at graduation, so a doc regression is visible without
+# failing the run yet (never-regress is enforced once the floor flips blocking).
+# GUARDED: doc_surface.py ships on the porting-sdk plan branch; until it merges to
+# porting-sdk main (which CI clones), skip-with-pass rather than red on a not-yet-
+# landed sibling script. Remove the guard once it's on porting-sdk main.
+sched_gate DOC-SURFACE res=dayone desc="docblock coverage floor on the public API surface (report-only, ratchets via .doc_surface_floor)" \
+    -- bash -c 'if [ -f "$1/scripts/doc_surface.py" ]; then python3 "$1/scripts/doc_surface.py" --port php --repo "$2" --report-only; else echo "[doc-surface] doc_surface.py not on porting-sdk main yet — skip-pass (plan-branch dep)"; fi' _ "$PORTING_SDK_DIR" "$PORT_ROOT"
+
 # WIRED-MODES (Part 1.6 / D7): the merge-coherence guard — greps this run-ci.sh for
 # every load-bearing env/mode line declared in WIRED_MODES.md (strict-mocks exports)
 # and fails loud if a merge ever silently drops one, so a wired mode can't vanish and

@@ -111,6 +111,7 @@ abstract class SkillBase
 
     abstract public function getDescription(): string;
 
+    /** The version. */
     public function getVersion(): string
     {
         return '1.0.0';
@@ -187,6 +188,7 @@ abstract class SkillBase
         ];
     }
 
+    /** The instance key. */
     public function getInstanceKey(): string
     {
         $key = $this->getName();

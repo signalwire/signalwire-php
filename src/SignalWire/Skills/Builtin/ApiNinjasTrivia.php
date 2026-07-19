@@ -66,11 +66,13 @@ class ApiNinjasTrivia extends SkillBase
         }
     }
 
+    /** The name. */
     public function getName(): string
     {
         return 'api_ninjas_trivia';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Get trivia questions from API Ninjas';

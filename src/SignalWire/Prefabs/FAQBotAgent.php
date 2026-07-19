@@ -200,6 +200,7 @@ class FAQBotAgent extends AgentBase
         return $this->faqs;
     }
 
+    /** The suggest related. */
     public function getSuggestRelated(): bool
     {
         return $this->suggestRelated;

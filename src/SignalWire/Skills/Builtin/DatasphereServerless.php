@@ -8,11 +8,13 @@ use SignalWire\Skills\SkillBase;
 
 class DatasphereServerless extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'datasphere_serverless';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Search knowledge using SignalWire DataSphere with serverless DataMap execution';

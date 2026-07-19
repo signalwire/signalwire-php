@@ -8,11 +8,13 @@ use SignalWire\Skills\SkillBase;
 
 class Joke extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'joke';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Tell jokes using the API Ninjas joke API';

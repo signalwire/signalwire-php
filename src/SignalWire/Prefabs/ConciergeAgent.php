@@ -277,6 +277,7 @@ class ConciergeAgent extends AgentBase
         }
     }
 
+    /** The venue name. */
     public function getVenueName(): string
     {
         return $this->venueName;

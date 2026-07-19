@@ -56,6 +56,7 @@ class PlayBackgroundFile extends SkillBase
         }
     }
 
+    /** The name. */
     public function getName(): string
     {
         return 'play_background_file';
@@ -76,6 +77,7 @@ class PlayBackgroundFile extends SkillBase
         return $default;
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Control background file playback';

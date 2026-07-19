@@ -26,11 +26,13 @@ class WikipediaSearch extends SkillBase
     private const SEARCH_ENDPOINT = 'https://en.wikipedia.org/w/api.php';
     private const BASE_URL_ENV = 'WIKIPEDIA_BASE_URL';
 
+    /** The name. */
     public function getName(): string
     {
         return 'wikipedia_search';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Search Wikipedia for information about a topic and get article summaries';

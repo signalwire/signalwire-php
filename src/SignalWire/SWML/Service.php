@@ -704,26 +704,31 @@ class Service implements RequestHandlerLike
     // Accessors
     // ------------------------------------------------------------------
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;
     }
 
+    /** The route. */
     public function getRoute(): string
     {
         return $this->route;
     }
 
+    /** The host. */
     public function getHost(): string
     {
         return $this->host;
     }
 
+    /** The port. */
     public function getPort(): int
     {
         return $this->port;
     }
 
+    /** The document. */
     public function getDocument(): Document
     {
         return $this->document;
