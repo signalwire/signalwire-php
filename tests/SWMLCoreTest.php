@@ -170,8 +170,8 @@ class SWMLCoreTest extends TestCase
     public function testBuilderAutoVivifiesSchemaVerb(): void
     {
         $builder = new SWMLBuilder($this->makeService());
-        // `denoise` has no explicit method — dispatched via __call.
-        // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        // `denoise` has no explicit method — dispatched via __call (declared via
+        // the SWMLBuilder `@method` tags, so PHPStan resolves it).
         $doc = $builder->denoise()->build();
         $this->assertSame(['denoise' => []], Shape::at($doc, 'sections', 'main', 0));
     }
@@ -179,7 +179,6 @@ class SWMLCoreTest extends TestCase
     public function testBuilderAutoVivifiedSleepTakesInteger(): void
     {
         $builder = new SWMLBuilder($this->makeService());
-        // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
         $doc = $builder->sleep(2000)->build();
         $this->assertSame(['sleep' => 2000], Shape::at($doc, 'sections', 'main', 0));
     }

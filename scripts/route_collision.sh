@@ -29,7 +29,10 @@ else
 fi
 
 mkdir -p "$PORT_ROOT/.sw-tmp"
-reg="$(mktemp "$PORT_ROOT/.sw-tmp/php_route_registry.XXXXXX.json")"
+# Template's X's must be a trailing run (BSD/macOS mktemp rejects a suffix after
+# them — "File exists"), so mint a name with no extension and let the JSON just
+# live in that file.
+reg="$(mktemp "$PORT_ROOT/.sw-tmp/php_route_registry.XXXXXX")"
 trap 'rm -f "$reg"' EXIT
 
 # Capture ONLY the registry JSON (stdout); route_registry.php's diagnostics go to

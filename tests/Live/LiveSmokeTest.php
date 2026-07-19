@@ -53,9 +53,13 @@ final class LiveSmokeTest extends TestCase
     public function restListAgainstTheRealPlatform(): void
     {
         $client = new RestClient($this->project, $this->token, $this->space);
+        // A successful auth + list against the real platform returns without
+        // throwing; iterating the first page proves the response is traversable.
         $result = $client->phoneNumbers()->list();
-        // A successful call returns an array (paginated envelope / iterator source).
-        $this->assertIsIterable($result);
+        foreach ($result as $_row) {
+            break; // one row is enough to prove the list is traversable
+        }
+        $this->addToAssertionCount(1);
     }
 
     #[Test]
@@ -64,7 +68,6 @@ final class LiveSmokeTest extends TestCase
         // No network — proves the document renders end-to-end.
         $svc = new Service(name: 'smoke', route: '/smoke');
         $swml = $svc->renderSwml();
-        $this->assertIsArray($swml);
         $this->assertArrayHasKey('sections', $swml);
     }
 
@@ -77,9 +80,11 @@ final class LiveSmokeTest extends TestCase
             'host'     => $this->space,
             'contexts' => ['default'],
         ]);
+        // connect() + authenticate() throw on failure; reaching disconnect proves
+        // the RELAY handshake against the real platform succeeded.
         $client->connect();
         $client->authenticate();
-        $this->assertTrue(true, 'RELAY connect + authenticate succeeded');
         $client->disconnect();
+        $this->addToAssertionCount(1);
     }
 }

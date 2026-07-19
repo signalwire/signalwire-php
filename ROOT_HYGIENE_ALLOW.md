@@ -24,3 +24,6 @@ audit pipeline (which this repo cannot edit). Verified reader per file below.
 - ROOT_HYGIENE_ALLOW.md — gate-control file for this root_hygiene gate (orchestrator, 2026-07-06)
 - EXAMPLES_RUN_ALLOW.md — gate-control allowlist read at repo root by porting-sdk examples_run.py (approver: user 2026-07-06 audit-contract class; ruby already has it)
 - WIRE_VIOLATIONS_ALLOW.md — STRICT-MOCKS signed-exception ledger read by porting-sdk assert_no_wire_violations.py / examples_run.py / snippet_run.py at repo root (mike@signalwire.com, 2026-07-18)
+- WIRED_MODES.md — load-bearing run-ci mode manifest read by porting-sdk check_wired_modes.py at repo root (the WIRED-MODES merge-coherence guard, plan a-bar 1.6/D7); must be at root (lane-php, 2026-07-19)
+- .doc_surface_floor — DOC-SURFACE docblock-coverage floor pin, read + ratcheted at repo root by porting-sdk doc_surface.py (plan 6.3, lane-php, 2026-07-19)
+- SNIPPET_RUN_ALLOW.md — gate-control allowlist read at repo root by porting-sdk snippet_run.py (the SNIPPET-RUN no-run ledger; sibling of EXAMPLES_RUN_ALLOW.md) (lane-php, 2026-07-19)
