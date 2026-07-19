@@ -10,6 +10,14 @@
             <directory>tests</directory>
         </testsuite>
     </testsuites>
+    <!-- The `live` group (tests/Live) hits the REAL platform (plan 6.5); it is
+         opt-in and excluded from the default run so a plain phpunit run never
+         needs creds. The live-smoke CI lane runs it explicitly by group. -->
+    <groups>
+        <exclude>
+            <group>live</group>
+        </exclude>
+    </groups>
     <source>
         <include>
             <directory>src</directory>

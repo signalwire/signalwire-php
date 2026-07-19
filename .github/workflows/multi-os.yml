@@ -1,0 +1,164 @@
+name: Multi-OS (nightly)
+
+# Plan a-bar 6.4 — an ubuntu-only CI cannot certify a cross-platform SDK. This
+# nightly lane runs the two OS-SENSITIVE suites (TEST + PACKAGE-SMOKE) on
+# macOS AND Windows so a Darwin/Win32-only regression (path handling, the
+# per-test mock spawn, cURL/OpenSSL, composer archive/dist) surfaces before a
+# release rather than in a user's install.
+#
+# Scope: only TEST + PACKAGE-SMOKE (the suites whose behavior varies by OS), not
+# the full gate set — the parity/doc gates are OS-independent and already run on
+# the ubuntu per-PR lane, so re-running them here would only add runner cost.
+# Runner-cost is why this is nightly + skip-if-unchanged.
+#
+# Skip-if-unchanged: a GREEN run saves the (port, porting-sdk, python) HEAD-SHA
+# triple as a cache key; the next nightly probes it and skips on a hit. A no-op
+# nightly costs a cache probe, not a full multi-OS matrix run.
+
+on:
+  schedule:
+    - cron: '41 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run even if nothing changed since the last successful run'
+        type: boolean
+        default: false
+
+concurrency:
+  group: multi-os-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.decide.outputs.changed }}
+      cache_key: ${{ steps.fp.outputs.cache_key }}
+    steps:
+      - name: Fingerprint input HEAD SHAs (port + porting-sdk + python)
+        id: fp
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PSDK_TOKEN: ${{ secrets.PORTING_SDK_TOKEN }}
+        run: |
+          set -euo pipefail
+          port_sha='${{ github.sha }}'
+          psdk_sha=$(GH_TOKEN="$PSDK_TOKEN" gh api repos/signalwire/porting-sdk/commits/main --jq .sha)
+          py_sha=$(gh api repos/signalwire/signalwire-python/commits/main --jq .sha)
+          echo "cache_key=multi-os-green-v1-${port_sha}-${psdk_sha}-${py_sha}" >> "$GITHUB_OUTPUT"
+      - name: Probe the green-cache (skip if this exact triple already passed)
+        id: check
+        uses: actions/cache/restore@v4
+        with:
+          path: .multi-os-green
+          key: ${{ steps.fp.outputs.cache_key }}
+          lookup-only: true
+      - name: Decide whether to run
+        id: decide
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ] || [ "${{ steps.check.outputs.cache-hit }}" != "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  os-suites:
+    needs: guard
+    if: needs.guard.outputs.changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout signalwire-php
+        uses: actions/checkout@v7
+        with:
+          path: signalwire-php
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Checkout porting-sdk (mock servers + audit scripts)
+        uses: actions/checkout@v7
+        with:
+          repository: signalwire/porting-sdk
+          path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
+
+      - name: Checkout signalwire-python (EMISSION/behavioral oracle)
+        uses: actions/checkout@v7
+        with:
+          repository: signalwire/signalwire-python
+          path: signalwire-python
+          ref: main
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl, mbstring, pcntl
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Python (mock servers)
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install Python test harnesses (mock_relay + mock_signalwire)
+        shell: bash
+        run: |
+          pip install -e porting-sdk/test_harness/mock_relay
+          pip install -e porting-sdk/test_harness/mock_signalwire
+
+      - name: Install signalwire-python (oracle) if not importable
+        shell: bash
+        run: |
+          python -c "import signalwire.core.function_result" 2>/dev/null || pip install ./signalwire-python
+
+      - name: Composer install (PHP deps, incl. workerman for the HTTPS path)
+        working-directory: signalwire-php
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # OS-sensitive suites only, invoked directly (not via the full run-ci gate
+      # set): the parity/doc gates are OS-independent and already green on the
+      # ubuntu per-PR lane.
+      #   * TEST — the phpunit suite spawns the per-test mock; path handling and
+      #     socket/mock-spawn behavior vary by OS.
+      #   * PACKAGE-SMOKE — composer archive/install of the package; archive +
+      #     autoload behavior varies by OS.
+      # scripts/run-tests.sh is invoked via `shell: bash` (git-bash on Windows).
+      - name: TEST suite (phpunit via run-tests.sh)
+        working-directory: signalwire-php
+        shell: bash
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
+        run: bash scripts/run-tests.sh
+
+      - name: PACKAGE-SMOKE suite (composer archive → install → autoload)
+        working-directory: signalwire-php
+        shell: bash
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
+        run: |
+          python3 "$PORTING_SDK/scripts/suites/package.py" \
+            --port php --repo "$PWD" --rules PACKAGE-SMOKE
+
+  save-green:
+    needs: [guard, os-suites]
+    if: needs.guard.outputs.changed == 'true' && needs.os-suites.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark this triple green (save the skip-cache key)
+        run: mkdir -p .multi-os-green && date -u > .multi-os-green/passed
+      - uses: actions/cache/save@v4
+        with:
+          path: .multi-os-green
+          key: ${{ needs.guard.outputs.cache_key }}
