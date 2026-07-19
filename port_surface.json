@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ d6331f4a7cd16a49b68d724f53fd1d2cdbdac174",
+  "generated_from": "signalwire-php @ c7354c5df2b159b80bbbf10c69af474a76a8a28b",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1775,6 +1775,7 @@
     "signalwire.rest.client": {
       "classes": {
         "RestClient": [
+          "__get",
           "__init__",
           "addresses",
           "calling",
@@ -1810,10 +1811,12 @@
     "signalwire.rest.namespaces._client_tree_generated": {
       "classes": {
         "DatasphereNamespace": [
+          "__get",
           "__init__",
           "documents"
         ],
         "FabricNamespace": [
+          "__get",
           "__init__",
           "addresses",
           "ai_agents",
@@ -1833,6 +1836,7 @@
           "tokens"
         ],
         "LogsNamespace": [
+          "__get",
           "__init__",
           "conferences",
           "fax",
@@ -1840,10 +1844,12 @@
           "voice"
         ],
         "ProjectNamespace": [
+          "__get",
           "__init__",
           "tokens"
         ],
         "RegistryNamespace": [
+          "__get",
           "__init__",
           "brands",
           "campaigns",
@@ -1851,6 +1857,7 @@
           "orders"
         ],
         "VideoNamespace": [
+          "__get",
           "__init__",
           "conference_tokens",
           "conferences",

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\CrudResource;
@@ -221,6 +222,91 @@ class RestClientTest extends TestCase
         $this->assertSame('p', $http->getProjectId());
         $this->assertSame('t', $http->getToken());
         $this->assertSame('https://h.signalwire.com', $http->getBaseUrl());
+    }
+
+    // =================================================================
+    // RestClient construction -- bare loopback host uses http:// (mirrors the
+    // python reference `_is_loopback_host`: a bare 127.0.0.1[:port] / localhost
+    // is a local mock/dev server that speaks plain HTTP, so the client targets
+    // http:// for it. Lets a shipped example/doc run verbatim against the local
+    // mock via SIGNALWIRE_SPACE=127.0.0.1:<port> without an explicit scheme.
+    // A real space (<name>.signalwire.com) is never loopback → still https://.)
+    // =================================================================
+
+    /**
+     * @return list<array{0: string, 1: string}>
+     */
+    public static function loopbackHostCases(): array
+    {
+        return [
+            ['127.0.0.1',        'http://127.0.0.1'],
+            ['127.0.0.1:8080',   'http://127.0.0.1:8080'],
+            ['localhost',        'http://localhost'],
+            ['localhost:3000',   'http://localhost:3000'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('loopbackHostCases')]
+    public function bareLoopbackHostUsesHttp(string $host, string $expectedBaseUrl): void
+    {
+        $client = new RestClient('p', 't', $host);
+        $this->assertSame($expectedBaseUrl, $client->getBaseUrl());
+        // The wired HttpClient carries the same http:// base URL.
+        $this->assertSame($expectedBaseUrl, $client->getHttp()->getBaseUrl());
+    }
+
+    // =================================================================
+    // Property-style namespace/resource access (the stripe/twilio + python
+    // attribute idiom): $client->phoneNumbers === $client->phoneNumbers(),
+    // and nested chains $client->fabric->aiAgents work via __get delegation.
+    // =================================================================
+
+    #[Test]
+    public function propertyAccessDelegatesToAccessorMethod(): void
+    {
+        $client = new RestClient('p', 't', '127.0.0.1:8080');
+        // Flat resource: property read returns the same lazy instance as the method.
+        $this->assertSame($client->phoneNumbers(), $client->phoneNumbers);
+        // Namespace container: property read returns the same lazy instance.
+        $this->assertSame($client->fabric(), $client->fabric);
+    }
+
+    #[Test]
+    public function nestedPropertyChainWorks(): void
+    {
+        $client = new RestClient('p', 't', '127.0.0.1:8080');
+        // $client->fabric->aiAgents mirrors python's client.fabric.ai_agents.
+        $this->assertSame(
+            $client->fabric()->aiAgents(),
+            $client->fabric->aiAgents,
+        );
+    }
+
+    #[Test]
+    public function unknownPropertyThrows(): void
+    {
+        $client = new RestClient('p', 't', '127.0.0.1:8080');
+        $this->expectException(\Error::class);
+        /** @phpstan-ignore-next-line property.notFound (intentional: exercising __get's throw) */
+        $client->definitelyNotAResource; // @phpstan-ignore-line
+    }
+
+    #[Test]
+    public function realSpaceHostStillUsesHttps(): void
+    {
+        // A production space that merely CONTAINS a digit octet is not loopback.
+        $client = new RestClient('p', 't', 'acme.signalwire.com');
+        $this->assertSame('https://acme.signalwire.com', $client->getBaseUrl());
+    }
+
+    #[Test]
+    public function explicitSchemeIsAlwaysHonored(): void
+    {
+        // An explicit https:// on a loopback host is honored verbatim (a caller
+        // who WANTS TLS against a local TLS-terminating proxy).
+        $client = new RestClient('p', 't', 'https://127.0.0.1:8443');
+        $this->assertSame('https://127.0.0.1:8443', $client->getBaseUrl());
     }
 
     // =================================================================

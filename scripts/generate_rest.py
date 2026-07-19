@@ -1235,11 +1235,30 @@ def resolve_placement(specs: list[Spec]):
     return placed
 
 
+def _docblock(doc_lines: list[str]) -> str:
+    """Render a PHPDoc block from content lines. An EMPTY content line emits
+    ` *` (no trailing space) so the raw generator output is already
+    php-cs-fixer-clean (a trailing ` * ` would be re-stripped by FMT, breaking
+    the GEN-FRESH/FMT mutual-exclusivity — AGENT_RULES §5)."""
+    out = ["/**"]
+    for ln in doc_lines:
+        out.append(f" * {ln}" if ln else " *")
+    out.append(" */")
+    return "\n".join(out)
+
+
 def emit_container(container: str, members: list[tuple[str, str]]) -> str:
     """members: list of (accessor, class_name)."""
     cls, _ = CONTAINERS[container]
     lines = []
-    lines.append(f"/**\n * {cls} — generated container grouping the {container} namespace resources (§8).\n */")
+    # @property-read docblocks so property-style access ($ns->rooms) is
+    # discoverable by IDEs / PHPStan — the container class then reads exactly
+    # like the python reference's attribute tree (client.fabric.ai_agents).
+    doc = [f"{cls} — generated container grouping the {container} namespace resources (§8)."]
+    doc.append("")
+    for accessor, class_name in members:
+        doc.append(f"@property-read {class_name} ${accessor}")
+    lines.append(_docblock(doc))
     lines.append(f"class {cls}")
     lines.append("{")
     lines.append("    private \\SignalWire\\REST\\HttpClient $http;")
@@ -1259,8 +1278,38 @@ def emit_container(container: str, members: list[tuple[str, str]]) -> str:
         lines.append("        }")
         lines.append(f"        return $this->{accessor};")
         lines.append("    }")
+    # Property-style access ($ns->rooms) delegates to the accessor method, so a
+    # caller may write the python/stripe-style attribute chain
+    # (client.fabric.ai_agents) verbatim. PHP analog of python's attribute
+    # protocol (see PORT_ADDITIONS __get). __get fires only for the private
+    # backing fields (inaccessible from outside); a genuine unknown name throws.
+    lines += _magic_get_lines()
     lines.append("}")
     return GEN_HEADER.format(desc=f"Generated REST client container for the {container} namespace (§8).") + "\n" + "\n".join(lines) + "\n"
+
+
+def _magic_get_lines() -> list[str]:
+    """The __get magic accessor emitted on every REST container + the tree: a
+    property read ($client->phoneNumbers) delegates to the same-named accessor
+    method ($client->phoneNumbers()). Lets the python/stripe attribute-chain
+    idiom work in PHP; a real unknown property throws \\Error as PHP would."""
+    return [
+        "",
+        "    /**",
+        "     * Property-style access to a namespace/resource accessor:",
+        "     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.",
+        "     */",
+        "    public function __get(string $name): mixed",
+        "    {",
+        "        if (\\method_exists($this, $name)) {",
+        "            /** @var callable(): mixed $accessor */",
+        "            $accessor = [$this, $name];",
+        "            return $accessor();",
+        "        }",
+        "        throw new \\Error("
+        "\\sprintf('Undefined property: %s::$%s', static::class, $name));",
+        "    }",
+    ]
 
 
 def flat_accessor(name: str) -> str:
@@ -1287,9 +1336,19 @@ def emit_resource_tree(placed) -> str:
                 containers_seen.append(container)
 
     lines = []
-    lines.append("/**\n * ResourceTree — lazy accessors for every flat REST resource\n"
-                 " * plus the namespace containers. RestClient composes this via\n"
-                 " * `use ResourceTree;`.\n */")
+    tree_doc = ["ResourceTree — lazy accessors for every flat REST resource",
+                "plus the namespace containers. RestClient composes this via",
+                "`use ResourceTree;`.",
+                ""]
+    # @property-read for every flat resource + container so property-style
+    # access ($client->phoneNumbers, $client->fabric) is IDE/PHPStan-visible on
+    # the composing RestClient — mirrors the python reference's attribute tree.
+    for accessor, cls in flats:
+        tree_doc.append(f"@property-read {cls} ${accessor}")
+    for c in containers_seen:
+        clsname, acc = CONTAINERS[c]
+        tree_doc.append(f"@property-read {clsname} ${acc}")
+    lines.append(_docblock(tree_doc))
     lines.append("trait ResourceTree")
     lines.append("{")
     # property declarations
@@ -1319,6 +1378,10 @@ def emit_resource_tree(placed) -> str:
         lines.append("        }")
         lines.append(f"        return $this->{acc};")
         lines.append("    }")
+    # Property-style access ($client->phoneNumbers / $client->fabric) delegates
+    # to the same-named accessor method, so the python/stripe attribute-chain
+    # idiom (client.fabric.ai_agents) works verbatim in PHP.
+    lines += _magic_get_lines()
     lines.append("}")
     return GEN_HEADER.format(desc="Generated REST resource tree trait the hand RestClient composes (§8).") + "\n" + "\n".join(lines) + "\n"
 

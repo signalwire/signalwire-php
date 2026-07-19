@@ -13,6 +13,14 @@ namespace SignalWire\REST\Namespaces\Generated;
 
 /**
  * VideoNamespace — generated container grouping the video namespace resources (§8).
+ *
+ * @property-read VideoConferenceTokens $conferenceTokens
+ * @property-read VideoConferences $conferences
+ * @property-read VideoRoomRecordings $roomRecordings
+ * @property-read VideoRoomSessions $roomSessions
+ * @property-read VideoRoomTokens $roomTokens
+ * @property-read VideoRooms $rooms
+ * @property-read VideoStreams $streams
  */
 class VideoNamespace
 {
@@ -84,5 +92,19 @@ class VideoNamespace
             $this->streams = new VideoStreams($this->http);
         }
         return $this->streams;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }

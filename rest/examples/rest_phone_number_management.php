@@ -101,7 +101,7 @@ safe('Lookup', function () use ($client) {
 echo "\nCreating verified caller...\n";
 $callerId = null;
 safe('Verified caller', function () use ($client, &$callerId) {
-    $caller = $client->verifiedCallers()->create(['phone_number' => '+15125559999']);
+    $caller = $client->verifiedCallers()->create(['number' => '+15125559999']);
     $callerId = $caller['id'] ?? null;
     echo "  Created verified caller: {$callerId}\n";
     if ($callerId) {

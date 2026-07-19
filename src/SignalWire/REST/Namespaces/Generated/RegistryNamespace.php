@@ -13,6 +13,11 @@ namespace SignalWire\REST\Namespaces\Generated;
 
 /**
  * RegistryNamespace — generated container grouping the registry namespace resources (§8).
+ *
+ * @property-read RegistryBrands $brands
+ * @property-read RegistryCampaigns $campaigns
+ * @property-read RegistryNumbers $numbers
+ * @property-read RegistryOrders $orders
  */
 class RegistryNamespace
 {
@@ -57,5 +62,19 @@ class RegistryNamespace
             $this->orders = new RegistryOrders($this->http);
         }
         return $this->orders;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }

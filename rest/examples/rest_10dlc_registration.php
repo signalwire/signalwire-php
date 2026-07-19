@@ -36,12 +36,13 @@ function safe(string $label, callable $fn): mixed
 // 1. Register a brand
 echo "Registering 10DLC brand...\n";
 $brand = safe('Brand', fn() => $client->registry()->brands()->create([
-    'company_name' => 'Acme Corp',
-    'ein'          => '12-3456789',
-    'entity_type'  => 'PRIVATE_PROFIT',
-    'vertical'     => 'TECHNOLOGY',
-    'website'      => 'https://acme.example.com',
-    'country'      => 'US',
+    'name'                => 'Acme Corp',
+    'company_name'        => 'Acme Corp',
+    'ein'                 => '12-3456789',
+    'legal_entity_type'   => 'PRIVATE_PROFIT',
+    'company_vertical'    => 'TECHNOLOGY',
+    'company_website'     => 'https://acme.example.com',
+    'ein_issuing_country' => 'US',
 ]));
 $brandId = $brand ? ($brand['id'] ?? null) : null;
 
@@ -73,9 +74,10 @@ if ($brandId) {
     $campaign = safe('Campaign', fn() => $client->registry()->brands()->createCampaign(
         $brandId,
         [
-            'use_case'       => 'MIXED',
-            'description'    => 'Customer notifications and support messages',
-            'sample_message' => 'Your order #12345 has shipped.',
+            'name'         => 'Order Notifications',
+            'sms_use_case' => 'MIXED',
+            'description'  => 'Customer notifications and support messages',
+            'sample1'      => 'Your order #12345 has shipped.',
         ],
     ));
     $campaignId = $campaign ? ($campaign['id'] ?? null) : null;

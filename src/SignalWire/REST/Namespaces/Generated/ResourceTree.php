@@ -15,6 +15,29 @@ namespace SignalWire\REST\Namespaces\Generated;
  * ResourceTree — lazy accessors for every flat REST resource
  * plus the namespace containers. RestClient composes this via
  * `use ResourceTree;`.
+ *
+ * @property-read Addresses $addresses
+ * @property-read ImportedNumbers $importedNumbers
+ * @property-read Lookup $lookup
+ * @property-read Mfa $mfa
+ * @property-read NumberGroups $numberGroups
+ * @property-read PhoneNumbers $phoneNumbers
+ * @property-read Queues $queues
+ * @property-read Recordings $recordings
+ * @property-read ShortCodes $shortCodes
+ * @property-read SipProfile $sipProfile
+ * @property-read VerifiedCallers $verifiedCallers
+ * @property-read Calling $calling
+ * @property-read Messages $messages
+ * @property-read Projects $projects
+ * @property-read Chat $chat
+ * @property-read PubSub $pubsub
+ * @property-read RegistryNamespace $registry
+ * @property-read FabricNamespace $fabric
+ * @property-read VideoNamespace $video
+ * @property-read DatasphereNamespace $datasphere
+ * @property-read LogsNamespace $logs
+ * @property-read ProjectNamespace $project
  */
 trait ResourceTree
 {
@@ -217,5 +240,19 @@ trait ResourceTree
             $this->project = new ProjectNamespace($this->generatedHttpClient());
         }
         return $this->project;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }

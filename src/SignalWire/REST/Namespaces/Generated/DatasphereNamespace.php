@@ -13,6 +13,8 @@ namespace SignalWire\REST\Namespaces\Generated;
 
 /**
  * DatasphereNamespace — generated container grouping the datasphere namespace resources (§8).
+ *
+ * @property-read DatasphereDocuments $documents
  */
 class DatasphereNamespace
 {
@@ -30,5 +32,19 @@ class DatasphereNamespace
             $this->documents = new DatasphereDocuments($this->http);
         }
         return $this->documents;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }
