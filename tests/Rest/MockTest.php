@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\Tests\Rest;
 
 use PHPUnit\Framework\TestCase;
+use SignalWire\REST\RequestOptions;
 use SignalWire\REST\RestClient;
 
 /**
@@ -106,9 +107,12 @@ class MockTest extends TestCase
      * Tests that assert on the AccountSid in a LAML path must read it from
      * ``$mock->project()`` rather than hard-coding ``test_proj``.
      *
+     * @param RequestOptions|null $requestOptions Optional client-default
+     *   transport options (plan 4.2) threaded onto the RestClient so a test can
+     *   verify per-request override vs client default.
      * @return array{0: RestClient, 1: Harness, 2: string}  [client, mock, project]
      */
-    public static function scopedClient(): array
+    public static function scopedClient(?RequestOptions $requestOptions = null): array
     {
         $h = self::harness();
         // Unique per-test project => unique Basic-Auth header => journal
@@ -116,7 +120,7 @@ class MockTest extends TestCase
         // workers/processes can't collide on the same project name.
         $project = 'test_proj_' . bin2hex(random_bytes(6));
         $token = 'test_tok';
-        $client = new RestClient($project, $token, $h->url());
+        $client = new RestClient($project, $token, $h->url(), $requestOptions);
 
         // Per-call harness view scoped to this client's auth header. No reset
         // is needed: this client starts with zero entries in the (auth-filtered)
@@ -729,6 +733,27 @@ final class Scenarios
         MockHttp::postJson(
             $this->base . '/__mock__/scenarios/' . rawurlencode($operationId) . $q,
             $payload
+        );
+    }
+
+    /**
+     * Stage a raw scenario override with the full payload shape the mock
+     * accepts (status / response / optional headers / optional delay_ms), for
+     * cases that need a Retry-After header or a server-side delay (the
+     * RequestOptions timeout/backoff contract). Scoped to this harness's auth
+     * header like {@see set()}.
+     *
+     * @param array<string,mixed> $payload {status, response, headers?, delay_ms?}
+     */
+    public function setRaw(string $operationId, array $payload): void
+    {
+        $encoded = json_encode($payload, JSON_THROW_ON_ERROR);
+        $q = $this->authHeader !== ''
+            ? '?session_id=' . rawurlencode($this->authHeader)
+            : '';
+        MockHttp::postJson(
+            $this->base . '/__mock__/scenarios/' . rawurlencode($operationId) . $q,
+            $encoded
         );
     }
 
