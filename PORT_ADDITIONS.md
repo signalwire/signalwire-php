@@ -482,7 +482,9 @@ signalwire.rest._base.HttpClient.get_token: PHP idiomatic accessor on HttpClient
 signalwire.rest._base.HttpClient.list_all: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.SignalWireRestError.__str__: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._base.SignalWireRestError.get_body: PHP getter for the response-body envelope field; Python's SignalWireRestError exposes `body` as a plain attribute (not a surface method)
+signalwire.rest._base.SignalWireRestError.get_headers: PHP getter for the response-header map (§6.6 error-observability); Python's SignalWireRestError exposes `headers` as a plain attribute (not a surface method)
 signalwire.rest._base.SignalWireRestError.get_method: PHP getter for the request-method envelope field; Python's SignalWireRestError exposes `method` as a plain attribute (not a surface method)
+signalwire.rest._base.SignalWireRestError.get_request_id: PHP getter for the platform request-id pulled from the response headers (§6.6 error-observability); Python's SignalWireRestError exposes `request_id` as a plain attribute (not a surface method)
 signalwire.rest._base.SignalWireRestError.get_response_body: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._base.SignalWireRestError.get_status_code: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._base.SignalWireRestError.get_url: PHP getter for the request-URL envelope field; Python's SignalWireRestError exposes `url` as a plain attribute (not a surface method)

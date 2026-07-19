@@ -163,6 +163,94 @@ class RestClientTest extends TestCase
     }
 
     // =================================================================
+    // §6.6 error-observability — the platform request-id is captured off the
+    // response headers of a failed (non-2xx) request and exposed on the typed
+    // error, so a caller can quote it to support. Driven against a real one-shot
+    // loopback HTTP server (no transport mock) that returns 400 + x-request-id.
+    // =================================================================
+
+    #[Test]
+    public function restErrorCapturesRequestIdAndHeaders(): void
+    {
+        if (!\function_exists('pcntl_fork')) {
+            self::markTestSkipped('pcntl_fork unavailable (needed to serve a one-shot loopback response)');
+        }
+        // Bind a listener, hand its port to the client, accept one connection and
+        // reply 400 with an x-request-id header, then read the typed error.
+        $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($server, "could not bind a probe server: {$errstr}");
+        $name = stream_socket_get_name($server, false);
+        $this->assertIsString($name);
+        $port = (int) substr($name, strrpos($name, ':') + 1);
+
+        $reqId = 'req-abc123def456';
+        $pid = pcntl_fork();
+        if ($pid === 0) {
+            // Child: serve exactly one request, then exit.
+            $conn = @stream_socket_accept($server, 5);
+            if ($conn !== false) {
+                // Drain the request line/headers (best-effort) then reply.
+                stream_set_timeout($conn, 1);
+                @fread($conn, 4096);
+                $body = '{"errors":[{"code":"bad_request"}]}';
+                $resp = "HTTP/1.1 400 Bad Request\r\n"
+                    . "Content-Type: application/json\r\n"
+                    . 'X-Request-ID: ' . $reqId . "\r\n"
+                    . 'Content-Length: ' . strlen($body) . "\r\n"
+                    . "\r\n" . $body;
+                @fwrite($conn, $resp);
+                @fclose($conn);
+            }
+            fclose($server);
+            exit(0);
+        }
+        fclose($server); // parent doesn't accept
+
+        $http = new HttpClient('proj', 'tok', "http://127.0.0.1:{$port}");
+        $caught = null;
+        try {
+            $http->get('/api/fabric/addresses');
+        } catch (SignalWireRestError $e) {
+            $caught = $e;
+        }
+        pcntl_waitpid($pid, $status);
+
+        $this->assertInstanceOf(SignalWireRestError::class, $caught);
+        $this->assertSame(400, $caught->getStatusCode());
+        $this->assertSame($reqId, $caught->getRequestId());
+        $headers = $caught->getHeaders();
+        $this->assertIsArray($headers);
+        $this->assertArrayHasKey('X-Request-ID', $headers);
+        $this->assertSame($reqId, $headers['X-Request-ID']);
+        // The request-id is surfaced in the exception message for observability.
+        $this->assertStringContainsString($reqId, $caught->getMessage());
+    }
+
+    #[Test]
+    public function transportErrorHasNoRequestIdOrHeaders(): void
+    {
+        // A connection-refused (transport) failure produced no response, so there
+        // are no headers and no request-id.
+        $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($sock);
+        $nm = stream_socket_get_name($sock, false);
+        $this->assertIsString($nm);
+        fclose($sock);
+        $deadPort = (int) substr($nm, strrpos($nm, ':') + 1);
+
+        $http = new HttpClient('p', 't', "http://127.0.0.1:{$deadPort}");
+        $caught = null;
+        try {
+            $http->get('/api/fabric/addresses');
+        } catch (SignalWireRestTransportError $e) {
+            $caught = $e;
+        }
+        $this->assertInstanceOf(SignalWireRestTransportError::class, $caught);
+        $this->assertNull($caught->getRequestId());
+        $this->assertNull($caught->getHeaders());
+    }
+
+    // =================================================================
     // CrudResource
     // =================================================================
 

@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 3c748a20eba0b5ad95f02e759f7498bc793a8bfd",
+  "generated_from": "signalwire-php @ aaf14c4153ca5d447df97076bbcde9fc255ff929",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1729,7 +1729,9 @@
           "__init__",
           "__str__",
           "get_body",
+          "get_headers",
           "get_method",
+          "get_request_id",
           "get_response_body",
           "get_status_code",
           "get_url"
