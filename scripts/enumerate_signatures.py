@@ -284,6 +284,18 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.security.security_utils", "redact_url"),
     ("SignalWire\\Security\\SecurityUtils", "isValidHostname"):
         ("signalwire.core.security.security_utils", "is_valid_hostname"),
+    # RequestOptions envelope helpers (plan 4.2) — Python ships resolve() and
+    # status_is_retryable() as module-level free functions in
+    # signalwire.rest._request_options. PHP is PSR-4 file-per-class (no
+    # module-level functions), so they are hosted as static methods on the
+    # RequestOptions value class and projected onto the canonical module-level
+    # names. The _EffectiveOptions carrier is a signature-only reference type
+    # (not surfaced, like HostAppRouter); re-established via the param/return
+    # overrides below since PHP represents effective options as an assoc array.
+    ("SignalWire\\REST\\RequestOptions", "resolve"):
+        ("signalwire.rest._request_options", "resolve"),
+    ("SignalWire\\REST\\RequestOptions", "statusIsRetryable"):
+        ("signalwire.rest._request_options", "status_is_retryable"),
 }
 
 
@@ -315,6 +327,18 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
         {"name": "signing_key", "kind": "keyword", "type": "string",
          "required": True},
     ],
+    # RequestOptions envelope (plan 4.2). status_is_retryable's ``opts`` is the
+    # resolved _EffectiveOptions carrier; PHP represents it as an assoc array
+    # (``array`` -> ``any``). Re-establish the oracle's signature-only reference
+    # type (the same pattern as HostAppRouter/ConversationRole — a named type the
+    # SURFACE oracle does not surface, so referencing it adds no port surface).
+    ("signalwire.rest._request_options", "status_is_retryable"): [
+        {"name": "method", "type": "string", "required": True},
+        {"name": "status", "type": "int", "required": True},
+        {"name": "opts",
+         "type": "class:signalwire.rest._request_options._EffectiveOptions",
+         "required": True},
+    ],
 }
 
 
@@ -335,6 +359,12 @@ FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
     # generic. Re-establish the oracle's fixed schema-contract tuple.
     ("signalwire.core.agent.tools.type_inference", "infer_schema"):
         "tuple<dict<string,dict<string,any>>,list<string>,optional<string>,bool,bool>",
+    # RequestOptions.resolve() returns the resolved _EffectiveOptions carrier;
+    # PHP returns an assoc array (``array`` -> ``any``). Re-establish the
+    # oracle's signature-only reference type (see the status_is_retryable
+    # param override above for the rationale).
+    ("signalwire.rest._request_options", "resolve"):
+        "class:signalwire.rest._request_options._EffectiveOptions",
 }
 
 
@@ -351,6 +381,14 @@ FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
 # the whole param). The keys mirror the ``@param`` generics on the source method.
 # Keyed by (PHP fully-qualified class, PHP method name) -> {snake_param_name: type}.
 PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
+    # RequestOptions envelope (plan 4.2). The oracle types the ``abort_signal``
+    # constructor param as the _AbortSignal protocol; PHP's ``$abortSignal`` is a
+    # ``callable|object|null`` union (-> ``any``). Re-establish the oracle's
+    # signature-only named type (parallel to the abortSignal PROPERTY_TYPE_REMAP;
+    # _AbortSignal is not surfaced, so this adds no port surface class).
+    ("SignalWire\\REST\\RequestOptions", "__construct"): {
+        "abort_signal": "optional<class:signalwire.rest._request_options._AbortSignal>",
+    },
     ("SignalWire\\Relay\\Event\\MessageReceiveEvent", "__construct"): {
         "media": "list<string>",
         "tags": "list<string>",
@@ -509,6 +547,13 @@ PROPERTY_TYPE_REMAPS: dict[tuple[str, str], str] = {
         "class:signalwire.core.swml_verbs_generated.ConversationRole",
     ("SignalWire\\SWML\\Generated\\StringProperty", "format"):
         "class:signalwire.core.swml_verbs_generated.StringFormat",
+    # RequestOptions envelope (plan 4.2). The oracle records the ``abort_signal``
+    # field as the _AbortSignal protocol (anything with is_set()); PHP's public
+    # ``$abortSignal`` is a ``callable|object|null`` (union -> ``any``). Record
+    # the oracle's named protocol type here — _AbortSignal is a signature-only
+    # reference (not surfaced), so this adds no port surface class.
+    ("SignalWire\\REST\\RequestOptions", "abortSignal"):
+        "optional<class:signalwire.rest._request_options._AbortSignal>",
 }
 
 

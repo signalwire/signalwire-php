@@ -45,6 +45,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use SignalWire\REST\HttpClient;
 use SignalWire\REST\PaginatedIterator;
+use SignalWire\REST\RequestOptions;
 use SignalWire\REST\RestClient;
 
 const SENTINEL = '{id}';
@@ -81,35 +82,35 @@ final class PlanRecordingHttpClient extends HttpClient
     }
 
     /** @param array<string,string> $params @return array<string,mixed> */
-    public function get(string $path, array $params = []): array
+    public function get(string $path, array $params = [], ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['GET', $path];
         return [];
     }
 
     /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function post(string $path, array $data = []): array
+    public function post(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['POST', $path];
         return [];
     }
 
     /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function put(string $path, array $data = []): array
+    public function put(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['PUT', $path];
         return [];
     }
 
     /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function patch(string $path, array $data = []): array
+    public function patch(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['PATCH', $path];
         return [];
     }
 
     /** @return array<string,mixed> */
-    public function delete(string $path): array
+    public function delete(string $path, ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['DELETE', $path];
         return [];

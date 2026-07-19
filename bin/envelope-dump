@@ -1,0 +1,371 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Copyright (c) 2025 SignalWire
+ *
+ * Licensed under the MIT License.
+ * See LICENSE file in the project root for full license information.
+ *
+ * envelope-dump — the PHP port's REST error-ENVELOPE dump program for the
+ * cross-port behavioral differ (porting-sdk/scripts/diff_port_envelope.py,
+ * Layer D).
+ *
+ * For each envelope_corpus case it boots (or reuses) a live mock_signalwire
+ * server via the test harness ({@see SignalWire\Tests\Rest\MockTest}), arms the
+ * case's scenario (status / response body / headers / delay_ms) session-scoped
+ * to this client's auth header, runs the REAL PHP REST client against the mock,
+ * and reduces the raised typed error (or the success) to the shared cross-port
+ * artifact:
+ *
+ *   { "raised": bool, "error_kind": "typed"|"bare:<Class>"|null,
+ *     "status_code": int|null, "body_error_code": str|null, "request_count": int }
+ *
+ * It prints ONE JSON object mapping case-id -> artifact to stdout. The differ
+ * canonicalizes both sides and byte-compares against the Python oracle.
+ *
+ * The corpus mirrors porting-sdk/scripts/envelope_corpus.py exactly (kept in
+ * lock-step — the differ compares each artifact against Python's oracle for the
+ * same id), including the RequestOptions envelope cases (plan 4.2):
+ *   - request_options {retries?, retry_backoff?, timeout?} -> the port's
+ *     RequestOptions for that call,
+ *   - scenario_repeat -> arm the SAME scenario override N times (FIFO) so a
+ *     retry-armed case sees the failure on every attempt,
+ *   - call.body + POST method -> drive a POST for the idempotency-asymmetry
+ *     cases (relay-rest.create_address -> POST /api/relay/rest/addresses).
+ *
+ * The transport case (envelope_transport_refused) points a fresh client at a
+ * DEAD port — a free port bound then released — exercising the
+ * connection-refused path. A correct client raises the TYPED
+ * SignalWireRestTransportError (SignalWireRestError family, status 0 ->
+ * reported null); request_count is 0.
+ *
+ * Run from the signalwire-php repo root:  php bin/envelope-dump
+ */
+
+use SignalWire\REST\RequestOptions;
+use SignalWire\REST\RestClient;
+use SignalWire\REST\SignalWireRestError;
+use SignalWire\Tests\Rest\MockTest;
+
+// Keep stdout PURE JSON: the differ does json.loads(proc.stdout). Buffer any
+// stray byte written during autoload / mock spawn so it never corrupts the
+// parse; we discard the buffer and print only the final JSON.
+ob_start();
+
+$root = dirname(__DIR__);
+require $root . '/vendor/autoload.php';
+
+// The endpoint the mock-armed GET cases target (fabric.list_fabric_addresses ->
+// GET /api/fabric/addresses) and the POST endpoint the idempotency-asymmetry
+// cases target (relay-rest.create_address -> POST /api/relay/rest/addresses).
+const ENDPOINT = 'fabric.list_fabric_addresses';
+const CALL = ['method' => 'GET', 'path' => '/api/fabric/addresses'];
+const CREATE_ENDPOINT = 'relay-rest.create_address';
+const CREATE_CALL = ['method' => 'POST', 'path' => '/api/relay/rest/addresses', 'body' => ['label' => 'x']];
+
+/**
+ * Build a corpus case, mirroring envelope_corpus.py::_case.
+ *
+ * @param array<string,mixed>|null $scenario
+ * @param array<string,mixed>|null $requestOptions
+ * @param array<string,mixed>|null $call
+ * @return array<string,mixed>
+ */
+function ec_case(
+    string $id,
+    ?array $scenario,
+    bool $transport = false,
+    ?array $requestOptions = null,
+    int $scenarioRepeat = 1,
+    string $endpoint = ENDPOINT,
+    ?array $call = null
+): array {
+    $c = [
+        'id' => $id,
+        'endpoint' => $endpoint,
+        'call' => $call ?? CALL,
+    ];
+    if ($scenario !== null) {
+        $c['scenario'] = $scenario;
+        $c['scenario_repeat'] = $scenarioRepeat;
+    }
+    if ($requestOptions !== null) {
+        $c['request_options'] = $requestOptions;
+    }
+    $c['transport'] = $transport;
+    return $c;
+}
+
+/**
+ * @param string $code
+ * @param string $message
+ * @return array<string,mixed>
+ */
+function errors_body(string $code, string $message): array
+{
+    return ['errors' => [['code' => $code, 'message' => $message]]];
+}
+
+/** @return list<array<string,mixed>> */
+function corpus(): array
+{
+    return [
+        ec_case('envelope_200_success', null),
+        ec_case('envelope_404_typed', [
+            'status' => 404,
+            'response' => errors_body('NOT_FOUND', 'no such address'),
+        ]),
+        ec_case('envelope_429_retry_after', [
+            'status' => 429,
+            'response' => errors_body('RATE_LIMITED', 'slow down'),
+            'headers' => ['Retry-After' => '2'],
+        ]),
+        ec_case('envelope_503_unavailable', [
+            'status' => 503,
+            'response' => errors_body('UNAVAILABLE', 'maintenance'),
+        ]),
+        ec_case('envelope_500_malformed_body', [
+            'status' => 500,
+            'response' => 'not-json-at-all <garbage',
+        ]),
+        ec_case('envelope_200_with_error_body', [
+            'status' => 200,
+            'response' => errors_body('SOFT_FAIL', 'ignored on 2xx'),
+        ]),
+        ec_case('envelope_503_delayed', [
+            'status' => 503,
+            'response' => errors_body('UNAVAILABLE', 'slow-fail'),
+            'delay_ms' => 200,
+        ]),
+        ec_case('envelope_transport_refused', null, transport: true),
+
+        // ---- RequestOptions envelope (plan 4.2) -------------------------
+        ec_case(
+            'envelope_get_retry_once_succeeds',
+            ['status' => 503, 'response' => errors_body('UNAVAILABLE', 'transient')],
+            requestOptions: ['retries' => 1, 'retry_backoff' => 0],
+        ),
+        ec_case(
+            'envelope_get_retry_exhausted',
+            ['status' => 503, 'response' => errors_body('UNAVAILABLE', 'down')],
+            requestOptions: ['retries' => 1, 'retry_backoff' => 0],
+            scenarioRepeat: 2,
+        ),
+        ec_case(
+            'envelope_post_500_not_retried',
+            ['status' => 500, 'response' => errors_body('SERVER_ERROR', 'boom')],
+            requestOptions: ['retries' => 2, 'retry_backoff' => 0],
+            endpoint: CREATE_ENDPOINT,
+            call: CREATE_CALL,
+        ),
+        ec_case(
+            'envelope_post_503_retried',
+            ['status' => 503, 'response' => errors_body('UNAVAILABLE', 'throttled')],
+            requestOptions: ['retries' => 1, 'retry_backoff' => 0],
+            endpoint: CREATE_ENDPOINT,
+            call: CREATE_CALL,
+        ),
+    ];
+}
+
+/**
+ * Pull the envelope's error code out of a raw response body (or null) — the PHP
+ * mirror of diff_port_envelope._decode_body_error_code. The PHP REST client
+ * carries the raw body string on the error; parse it if JSON, then read
+ * errors[0].code.
+ */
+function decode_body_error_code(string $body): ?string
+{
+    if ($body === '') {
+        return null;
+    }
+    $decoded = json_decode($body, true);
+    if (!is_array($decoded)) {
+        return null;
+    }
+    $errs = $decoded['errors'] ?? null;
+    if (!is_array($errs) || $errs === [] || !is_array($errs[0] ?? null)) {
+        return null;
+    }
+    $code = $errs[0]['code'] ?? null;
+    return is_string($code) ? $code : null;
+}
+
+/** A free port we bind then immediately release, so nothing is listening. */
+function dead_port(): int
+{
+    $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    if ($sock === false) {
+        throw new RuntimeException("envelope-dump: cannot allocate a dead port: $errstr");
+    }
+    $name = stream_socket_get_name($sock, false);
+    fclose($sock);
+    $port = is_string($name) ? (int) substr($name, (int) strrpos($name, ':') + 1) : 0;
+    if ($port <= 0) {
+        throw new RuntimeException('envelope-dump: could not read a dead port');
+    }
+    return $port;
+}
+
+/**
+ * Arm a scenario (status / response / headers? / delay_ms?) session-scoped to
+ * $sessionId (this client's auth header), so cases don't cross-contaminate.
+ * Mirrors the oracle's POST /__mock__/scenarios/<endpoint>?session_id=<auth>.
+ *
+ * @param array<string,mixed> $scenario
+ */
+function arm_scenario(string $mockUrl, string $endpoint, string $sessionId, array $scenario): void
+{
+    $payload = ['status' => $scenario['status'], 'response' => $scenario['response']];
+    if (isset($scenario['headers'])) {
+        $payload['headers'] = $scenario['headers'];
+    }
+    if (isset($scenario['delay_ms'])) {
+        $payload['delay_ms'] = $scenario['delay_ms'];
+    }
+    $url = $mockUrl . '/__mock__/scenarios/' . rawurlencode($endpoint)
+        . '?session_id=' . rawurlencode($sessionId);
+    mock_post_json($url, (string) json_encode($payload));
+}
+
+function mock_post(string $url): void
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => '', CURLOPT_TIMEOUT => 5]);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+function mock_post_json(string $url, string $payload): void
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_TIMEOUT => 5,
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+/**
+ * Count journal entries for $path, scoped to $sessionId's auth header.
+ */
+function journal_count(string $mockUrl, string $sessionId, string $path): int
+{
+    $ch = curl_init($mockUrl . '/__mock__/journal');
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5]);
+    $body = curl_exec($ch);
+    curl_close($ch);
+    if (!is_string($body)) {
+        return 0;
+    }
+    $decoded = json_decode($body, true);
+    $entries = is_array($decoded) ? ($decoded['entries'] ?? $decoded) : [];
+    if (!is_array($entries)) {
+        return 0;
+    }
+    $count = 0;
+    foreach ($entries as $j) {
+        if (!is_array($j)) {
+            continue;
+        }
+        if (($j['path'] ?? null) !== $path) {
+            continue;
+        }
+        $hdr = $j['headers'] ?? [];
+        $auth = is_array($hdr) ? ($hdr['authorization'] ?? null) : null;
+        if ($auth !== $sessionId) {
+            continue;
+        }
+        $count++;
+    }
+    return $count;
+}
+
+$harness = MockTest::harness();
+$mockUrl = $harness->url();
+
+$out = [];
+
+foreach (corpus() as $case) {
+    $cid = $case['id'];
+    $call = $case['call'];
+    $path = $call['path'];
+    $method = $call['method'];
+
+    $artifact = [
+        'raised' => false,
+        'error_kind' => null,
+        'status_code' => null,
+        'body_error_code' => null,
+        'request_count' => 0,
+    ];
+
+    // Per-case unique project => unique Basic-Auth header => journal + scenario
+    // overrides scoped to THIS case (no global reset needed).
+    $project = 'envelope_proj_' . bin2hex(random_bytes(6));
+    $token = 'envelope_tok';
+    $authHeader = 'Basic ' . base64_encode($project . ':' . $token);
+
+    if ($case['transport'] === true) {
+        $client = new RestClient($project, $token, 'http://127.0.0.1:' . dead_port());
+    } else {
+        $client = new RestClient($project, $token, $mockUrl);
+        if (isset($case['scenario'])) {
+            $repeat = $case['scenario_repeat'] ?? 1;
+            for ($i = 0; $i < $repeat; $i++) {
+                arm_scenario($mockUrl, $case['endpoint'], $authHeader, $case['scenario']);
+            }
+        }
+    }
+
+    // Optional RequestOptions (retries / retry_backoff / timeout). Absent =>
+    // the port default (retries 0).
+    $reqOpts = null;
+    if (isset($case['request_options'])) {
+        $ro = $case['request_options'];
+        $reqOpts = new RequestOptions(
+            timeout: isset($ro['timeout']) ? (float) $ro['timeout'] : null,
+            retries: isset($ro['retries']) ? (int) $ro['retries'] : null,
+            retryBackoff: isset($ro['retry_backoff']) ? (float) $ro['retry_backoff'] : null,
+        );
+    }
+
+    $http = $client->getHttp();
+    try {
+        if ($method === 'POST') {
+            $http->post($path, $call['body'] ?? [], $reqOpts);
+        } else {
+            $http->get($path, [], $reqOpts);
+        }
+    } catch (SignalWireRestError $e) {
+        $artifact['raised'] = true;
+        $artifact['error_kind'] = 'typed';
+        $status = $e->getStatusCode();
+        // status 0 == "no HTTP response" (transport failure) -> report null.
+        $artifact['status_code'] = $status === 0 ? null : $status;
+        $artifact['body_error_code'] = decode_body_error_code($e->getBody());
+    } catch (\Throwable $e) {
+        // A BARE error -> the wrong-type contract violation (records the class).
+        $artifact['raised'] = true;
+        $artifact['error_kind'] = 'bare:' . (new \ReflectionClass($e))->getShortName();
+        $sc = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : null;
+        $artifact['status_code'] = is_int($sc) && $sc !== 0 ? $sc : null;
+    }
+
+    if ($case['transport'] !== true) {
+        $artifact['request_count'] = journal_count($mockUrl, $authHeader, $path);
+    }
+
+    $out[$cid] = $artifact;
+}
+
+// Discard any buffered setup noise, then emit ONLY the artifact JSON.
+ob_end_clean();
+echo json_encode($out, JSON_UNESCAPED_SLASHES) . "\n";

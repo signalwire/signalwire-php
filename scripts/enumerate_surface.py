@@ -158,6 +158,13 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "FabricResourcePUT": "signalwire.rest._base",
     "SignalWireRestError": "signalwire.rest._base",
     "SignalWireRestTransportError": "signalwire.rest._base",
+    # The request-options envelope (plan 4.2). The Python reference houses the
+    # RequestOptions value type in signalwire.rest._request_options; without
+    # this map the namespace-derived fallback misroutes it to
+    # signalwire.rest.request_options. Mapping here also resolves the param/return
+    # type ``class:signalwire.rest._request_options.RequestOptions`` on the
+    # HttpClient/RestClient verbs (via _translate_php_class_ref).
+    "RequestOptions": "signalwire.rest._request_options",
 
     # ---------------------------------------------------------------
     # Generated REST resource layer (adopted from scripts/generate_rest.py).
@@ -369,6 +376,17 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.core.agent.tools.type_inference", "infer_schema"),
     ("TypeInference", "create_typed_handler_wrapper"):
         ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
+    # RequestOptions envelope helpers (plan 4.2) — Python ships resolve /
+    # status_is_retryable as module-level free functions in
+    # signalwire.rest._request_options; PHP hosts them as static methods on the
+    # RequestOptions value class (PSR-4). Project to the canonical module-level
+    # names (parallel to the signature enumerator's FREE_FUNCTION_PROJECTIONS).
+    # NOT every RequestOptions method is projected (merge stays a surfaced class
+    # method), so the RequestOptions class shell is kept.
+    ("RequestOptions", "resolve"):
+        ("signalwire.rest._request_options", "resolve"),
+    ("RequestOptions", "status_is_retryable"):
+        ("signalwire.rest._request_options", "status_is_retryable"),
 }
 
 

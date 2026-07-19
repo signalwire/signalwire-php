@@ -40,13 +40,26 @@ class RestClient
      *                        - "https://example.com:8080" → used verbatim
      *                        - "http://127.0.0.1:8080"   → used verbatim (test fixtures)
      *                        Falls back to SIGNALWIRE_SPACE env var.
+     * @param RequestOptions|null $requestOptions Client-default transport
+     *        options (timeout / retries / retry policy / abort) applied to every
+     *        request; each REST verb also accepts a per-request override that
+     *        shallow-merges over this. Mirrors Python's
+     *        ``RestClient(request_options=...)``. Ordered before ``$caBundle``
+     *        to match the reference's ``(project, token, host, request_options)``
+     *        positional shape; ``$caBundle`` is the php-only trailing extra.
      *
      * Parameter names mirror the Python reference's
-     * ``RestClient(project=, token=, host=)`` so named-argument call sites are
-     * cross-port identical; the constructor also accepts these positionally.
+     * ``RestClient(project=, token=, host=, request_options=)`` so named-argument
+     * call sites are cross-port identical; the constructor also accepts these
+     * positionally.
      */
-    public function __construct(string $project = '', string $token = '', string $host = '', ?string $caBundle = null)
-    {
+    public function __construct(
+        string $project = '',
+        string $token = '',
+        string $host = '',
+        ?RequestOptions $requestOptions = null,
+        ?string $caBundle = null
+    ) {
         $this->projectId = $project !== '' ? $project : (string) getenv('SIGNALWIRE_PROJECT_ID');
         $this->token     = $token   !== '' ? $token : (string) getenv('SIGNALWIRE_API_TOKEN');
         $this->space     = $host    !== '' ? $host : (string) getenv('SIGNALWIRE_SPACE');
@@ -80,7 +93,7 @@ class RestClient
         // rtrim/preg_match, so establish the true type at the source.
         assert($baseUrl !== '');
         $this->baseUrl = $baseUrl;
-        $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl, $caBundle);
+        $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl, $requestOptions, $caBundle);
     }
 
     /**

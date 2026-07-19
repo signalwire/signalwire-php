@@ -56,7 +56,7 @@ final class TlsRestHttpsTest extends TestCase
         TlsSupport::restReset((string) self::$httpsBase, $caCert);
 
         // Real REST client, repointed at the https:// mock, trusting the CA.
-        $client = new RestClient('test_proj', 'test_tok', (string) self::$httpsBase, $caCert);
+        $client = new RestClient('test_proj', 'test_tok', (string) self::$httpsBase, caBundle: $caCert);
 
         // GET a spec-backed collection endpoint over HTTPS.
         $body = $client->addresses()->list(['page_size' => '5']);

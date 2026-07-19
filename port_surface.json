@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 167072d61fa0789c832645841f50b9210659418a",
+  "generated_from": "signalwire-php @ d6331f4a7cd16a49b68d724f53fd1d2cdbdac174",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1759,6 +1759,18 @@
         ]
       },
       "functions": []
+    },
+    "signalwire.rest._request_options": {
+      "classes": {
+        "RequestOptions": [
+          "__init__",
+          "merge"
+        ]
+      },
+      "functions": [
+        "resolve",
+        "status_is_retryable"
+      ]
     },
     "signalwire.rest.client": {
       "classes": {
