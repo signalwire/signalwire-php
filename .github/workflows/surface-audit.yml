@@ -37,11 +37,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # PINNED to the gate-enforcement plan branch: the WIRED-MODES / DOC-SURFACE
-          # gates wired on this branch call porting-sdk scripts (check_wired_modes.py,
-          # doc_surface.py) that live on porting-sdk plan/a-bar-2026-07-18, not yet on
-          # main. REVERT this ref to main when that porting-sdk branch merges.
-          ref: main
+          # PINNED to wave/1-aplus: the A+ campaign branch carries the surface
+          # oracle + gate scripts the wave's gates use, not yet on main.
+          # REVERT this ref to main when porting-sdk wave/1-aplus merges.
+          ref: wave/1-aplus
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
