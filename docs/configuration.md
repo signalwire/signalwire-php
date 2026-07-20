@@ -97,6 +97,17 @@ Logging is controlled by `SIGNALWIRE_LOG_LEVEL` (see below).
 | `SIGNALWIRE_RELAY_HOST` | `relay.signalwire.com` | RELAY WebSocket host override |
 | `SIGNALWIRE_RELAY_SCHEME` | `wss` | RELAY WebSocket scheme (`ws`/`wss`; tests point it at `ws`) |
 
+### TLS / CA trust
+
+Both clients keep peer verification ENABLED; these variables only select WHICH
+CA bundle to trust (the system trust store when unset). They are the exact
+fleet-standard names — no aliases.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SIGNALWIRE_REST_CA_FILE` | *system store* | Path to a CA bundle (PEM) trusted for HTTPS REST calls. Overridden by an explicit `$caBundle` arg to `HttpClient`. |
+| `SIGNALWIRE_RELAY_CA_FILE` | *system store* | Path to a CA bundle (PEM) trusted for `wss://` RELAY connections. Overridden by the `ca_file` client option. |
+
 ## Constructor-Based Configuration
 
 All settings can be passed directly to constructors:
