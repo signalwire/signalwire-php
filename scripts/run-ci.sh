@@ -29,6 +29,17 @@
 #
 # Flags:
 #   --fail-fast   stop launching new gates at the first failure (local dev loop).
+#
+# GATE-INVENTORY NOTE: porting-sdk/GATE_INVENTORY.md is GENERATED (by
+# gen_gate_inventory.py) from the REFERENCE port's run-ci.sh (signalwire-typescript),
+# NOT from this file. This php run-ci intentionally deviates from that inventory in a
+# few port-specific ways, each documented at its gate below: the RELAY behavioral rule
+# keeps php's hyphen spelling BEHAVIORAL-WIRE-RELAY; ROUTE-COLLISION runs as a
+# standalone spec-aware gate (scripts/route_collision.sh, fed by route_registry.php)
+# rather than inside the SURFACE suite; SNIPPET-COMPILE/-RUN + EXAMPLES-RUN are
+# nightly-tier (heavy mock-backed execution). A deviation here is not inventory drift —
+# it is a per-port idiom/disposition recorded in place. Load-bearing env/mode lines are
+# additionally guarded by the WIRED-MODES gate (WIRED_MODES.md).
 
 set -u
 set -o pipefail
@@ -114,6 +125,16 @@ if [ -z "$MOCK_SIGNALWIRE_PORT" ] || [ -z "$MOCK_RELAY_PORT" ] || [ -z "$MOCK_RE
     exit 2
 fi
 export MOCK_SIGNALWIRE_PORT MOCK_RELAY_PORT MOCK_RELAY_HTTP_PORT
+
+# STRICT-MOCKS default (D3): the shared REST mock 400s any wire violation
+# (unknown body key, malformed value) by DEFAULT instead of silently journaling
+# it — so a wrong wire key surfaces LOUD at PR time (in the TEST gate's own mock
+# and any test/gate that spawns one), not just in the REST-COVERAGE journal
+# post-pass. `:-1` keeps it a DEFAULT a caller can still override to 0 for a
+# deliberate non-strict repro. Exported so every scheduler worker subshell (and
+# every mock they spawn) inherits it. This is a WIRED MODE — see WIRED_MODES.md;
+# check_wired_modes.py fails the WIRED-MODES gate if this line is ever silently dropped.
+export MOCK_SIGNALWIRE_STRICT="${MOCK_SIGNALWIRE_STRICT:-1}"
 
 probe_mock() {  # $1 = url, $2 = needle
     curl -fsS --max-time 2 "$1" 2>/dev/null | grep -q "$2"
@@ -318,17 +339,35 @@ sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero
 sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
 
-# ROUTE-COLLISION — NOT wired for php. The gate has no default registry command for
-# php, so standalone it exits 1 ("pass --registry-json with a pre-built registry").
-# php's scripts/route_registry.php (used by the BEHAVIORAL suite's SPEC-PARITY rule)
-# emits a compatible {"routes":[{method,path_template,via}]} shape, so the gate CAN
-# run when fed it — but doing so currently reports 2 real ROUTE-SPLIT findings
-# (callFlows / conferenceRooms list_addresses / listAddresses dispatch to the
-# SINGULAR call_flow/conference_room addresses path, diverging from the plural
-# collection base — the L12 singular-vs-plural archetype). Wiring it blocking would
-# require either resolving those splits or a human-approved ROUTE_COLLISION_ALLOW.md
-# entry; per the wiring brief it is SKIPPED for php as a follow-up (registry-mechanism
-# decision + disposition of the 2 splits).
+# DOC-SURFACE (plan §6.3): docblock coverage floor on the hand-written public API
+# surface (generated code is excluded — it's documented by the generator). The
+# floor is pinned in .doc_surface_floor (84.3% today) and ratchets up via
+# --write-floor; report-only at graduation, so a doc regression is visible without
+# failing the run yet (never-regress is enforced once the floor flips blocking).
+# GUARDED: doc_surface.py ships on the porting-sdk plan branch; until it merges to
+# porting-sdk main (which CI clones), skip-with-pass rather than red on a not-yet-
+# landed sibling script. Remove the guard once it's on porting-sdk main.
+sched_gate DOC-SURFACE res=dayone desc="docblock coverage floor on the public API surface (report-only, ratchets via .doc_surface_floor)" \
+    -- bash -c 'if [ -f "$1/scripts/doc_surface.py" ]; then python3 "$1/scripts/doc_surface.py" --port php --repo "$2" --report-only; else echo "[doc-surface] doc_surface.py not on porting-sdk main yet — skip-pass (plan-branch dep)"; fi' _ "$PORTING_SDK_DIR" "$PORT_ROOT"
+
+# WIRED-MODES (Part 1.6 / D7): the merge-coherence guard — greps this run-ci.sh for
+# every load-bearing env/mode line declared in WIRED_MODES.md (strict-mocks exports)
+# and fails loud if a merge ever silently drops one, so a wired mode can't vanish and
+# leave a gate green-but-vacuous.
+sched_gate WIRED-MODES desc="load-bearing run-ci modes (WIRED_MODES.md) all present" \
+    -- python3 "$PORTING_SDK_DIR/scripts/check_wired_modes.py" --port php --repo .
+
+# ROUTE-COLLISION (spec-aware): build php's route_registry.php → feed the SPEC-AWARE
+# route_collision.py (a split is a finding ONLY when the dispatched path diverges from
+# the SPEC path for the method's operationId). php's 2 splits (callFlows /
+# conferenceRooms list_addresses under the singular call_flow/conference_room sub-paths)
+# are spec-faithful platform routing (fabric/openapi.yaml x-sdk mounts), so the
+# spec-aware engine clears them WITHOUT any allowlist — no ROUTE_COLLISION_ALLOW.md
+# exists or is needed. Now WIRED BLOCKING (the previous "unwired for php" rationale
+# evaporated with the spec-aware engine). res=surface: it reads port_surface.json,
+# which the SURFACE suite regenerates+restores.
+sched_gate ROUTE-COLLISION res=surface desc="no split routes / duplicate CRUD bases (spec-aware; fed by route_registry.php)" \
+    -- bash scripts/route_collision.sh
 
 sched_run
 rc=$?

@@ -192,6 +192,8 @@ Both platforms support HTTP Basic Authentication:
 
 ### Automatic Authentication
 ```php
+use SignalWire\Agent\AgentBase;
+
 $agent = new AgentBase(
     name:              'my-agent',
     basicAuthUser:     'your-username',

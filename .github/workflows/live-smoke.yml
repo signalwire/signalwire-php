@@ -1,0 +1,76 @@
+name: Live smoke (real server, nightly, opt-in)
+
+# Plan a-bar 6.5 — the only lane that catches mock↔production drift the
+# AUTHORITATIVE_SPEC_SOURCING program hasn't closed yet: it exercises the SDK
+# against the REAL SignalWire platform (auth + one REST list + one SWML render +
+# one RELAY connect — tests/Live/LiveSmokeTest.php, the `live` group).
+#
+# Creds-gated and opt-in: it runs only when the SIGNALWIRE_* secrets are present
+# (a fork / secret-less run skips the whole job), and each test itself further
+# gates on SWSDK_LIVE_TESTS=1 + the three env vars, so it can never fail for lack
+# of credentials — it just skips.
+
+on:
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: live-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # Gate the whole job on the secret being configured. `secrets` can't be used in
+  # a job-level `if:`, so surface presence via a guard job output.
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      have_creds: ${{ steps.check.outputs.have_creds }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.SIGNALWIRE_API_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "have_creds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SIGNALWIRE_API_TOKEN secret not configured — skipping live smoke."
+          fi
+
+  live:
+    needs: guard
+    if: needs.guard.outputs.have_creds == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout signalwire-php
+        uses: actions/checkout@v7
+        with:
+          path: signalwire-php
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl, mbstring, pcntl
+          coverage: none
+          tools: composer:v2
+
+      - name: Composer install (PHP deps)
+        working-directory: signalwire-php
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run the live smoke (real server, `live` group)
+        working-directory: signalwire-php
+        env:
+          SWSDK_LIVE_TESTS: '1'
+          SIGNALWIRE_PROJECT_ID: ${{ secrets.SIGNALWIRE_PROJECT_ID }}
+          SIGNALWIRE_API_TOKEN: ${{ secrets.SIGNALWIRE_API_TOKEN }}
+          SIGNALWIRE_SPACE: ${{ secrets.SIGNALWIRE_SPACE }}
+        run: ./vendor/bin/phpunit --no-coverage --group live

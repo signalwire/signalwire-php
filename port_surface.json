@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ d6331f4a7cd16a49b68d724f53fd1d2cdbdac174",
+  "generated_from": "signalwire-php @ 8a98c2d2bcc01d076916c7b56335fb93e0578d5e",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1729,7 +1729,9 @@
           "__init__",
           "__str__",
           "get_body",
+          "get_headers",
           "get_method",
+          "get_request_id",
           "get_response_body",
           "get_status_code",
           "get_url"
@@ -1775,6 +1777,7 @@
     "signalwire.rest.client": {
       "classes": {
         "RestClient": [
+          "__get",
           "__init__",
           "addresses",
           "calling",
@@ -1810,10 +1813,12 @@
     "signalwire.rest.namespaces._client_tree_generated": {
       "classes": {
         "DatasphereNamespace": [
+          "__get",
           "__init__",
           "documents"
         ],
         "FabricNamespace": [
+          "__get",
           "__init__",
           "addresses",
           "ai_agents",
@@ -1833,6 +1838,7 @@
           "tokens"
         ],
         "LogsNamespace": [
+          "__get",
           "__init__",
           "conferences",
           "fax",
@@ -1840,10 +1846,12 @@
           "voice"
         ],
         "ProjectNamespace": [
+          "__get",
           "__init__",
           "tokens"
         ],
         "RegistryNamespace": [
+          "__get",
           "__init__",
           "brands",
           "campaigns",
@@ -1851,6 +1859,7 @@
           "orders"
         ],
         "VideoNamespace": [
+          "__get",
           "__init__",
           "conference_tokens",
           "conferences",

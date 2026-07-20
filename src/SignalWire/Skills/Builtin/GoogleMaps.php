@@ -8,11 +8,13 @@ use SignalWire\Skills\SkillBase;
 
 class GoogleMaps extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'google_maps';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Validate addresses and compute driving routes using Google Maps';

@@ -9,11 +9,13 @@ use SignalWire\SWAIG\FunctionResult;
 
 class Datetime extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'datetime';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Get current date, time, and timezone information';

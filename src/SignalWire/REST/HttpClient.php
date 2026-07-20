@@ -101,21 +101,25 @@ class HttpClient
         return null;
     }
 
+    /** The project ID. */
     public function getProjectId(): string
     {
         return $this->projectId;
     }
 
+    /** The API token. */
     public function getToken(): string
     {
         return $this->token;
     }
 
+    /** The base URL. */
     public function getBaseUrl(): string
     {
         return $this->baseUrl;
     }
 
+    /** The Basic-auth Authorization header value. */
     public function getAuthHeader(): string
     {
         return $this->authHeader;
@@ -289,6 +293,31 @@ class HttpClient
      * header block if present, else null (HTTP-date form falls back to the
      * computed exponential backoff).
      */
+    /**
+     * Parse a raw HTTP response-header block into a name→value map (last header
+     * block wins for redirects; the status line and blank lines are skipped).
+     * §6.6: fed to SignalWireRestError so a caller can read the platform
+     * request-id and other response headers off a failed request.
+     *
+     * @return array<string, string>
+     */
+    private static function parseHeaders(string $rawHeaders): array
+    {
+        $out = [];
+        foreach (preg_split('/\r?\n/', $rawHeaders) ?: [] as $line) {
+            $pos = strpos($line, ':');
+            if ($pos === false) {
+                continue; // status line ("HTTP/1.1 429 ...") or blank
+            }
+            $name = trim(substr($line, 0, $pos));
+            if ($name === '') {
+                continue;
+            }
+            $out[$name] = trim(substr($line, $pos + 1));
+        }
+        return $out;
+    }
+
     private static function retryAfterSeconds(string $rawHeaders): ?float
     {
         foreach (preg_split('/\r?\n/', $rawHeaders) ?: [] as $line) {
@@ -442,7 +471,8 @@ class HttpClient
                     $httpCode,
                     $responseBody,
                     $url,
-                    $method
+                    $method,
+                    self::parseHeaders($rawHeaders)
                 );
             }
 

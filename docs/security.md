@@ -67,6 +67,8 @@ These knobs relax a default-secure behavior — set them only when you understan
 ## Retrieving Credentials
 
 ```php
+use SignalWire\Agent\AgentBase;
+
 $agent = new AgentBase(name: 'secure-agent', route: '/agent');
 
 [$user, $pass] = $agent->getBasicAuthCredentials();
@@ -144,9 +146,9 @@ The REST client authenticates with project credentials:
 use SignalWire\REST\RestClient;
 
 $client = new RestClient(
-    $_ENV['SIGNALWIRE_PROJECT_ID'],
-    $_ENV['SIGNALWIRE_API_TOKEN'],
-    $_ENV['SIGNALWIRE_SPACE'],
+    getenv('SIGNALWIRE_PROJECT_ID'),
+    getenv('SIGNALWIRE_API_TOKEN'),
+    getenv('SIGNALWIRE_SPACE'),
 );
 ```
 
@@ -160,9 +162,9 @@ The RELAY client authenticates over WebSocket:
 use SignalWire\Relay\Client;
 
 $client = new Client([
-    'project' => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'   => $_ENV['SIGNALWIRE_API_TOKEN'],
-    'host'    => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'project' => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'   => getenv('SIGNALWIRE_API_TOKEN'),
+    'host'    => getenv('SIGNALWIRE_SPACE') ?: 'relay.signalwire.com',
 ]);
 ```
 

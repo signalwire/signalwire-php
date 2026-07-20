@@ -54,8 +54,9 @@ functionally at parity with the other language SDKs.
   `messaging`, `chat`, `fax`, `datasphere`, `pubsub`, `logs`, `project`, and the
   relay-rest resources) are generated from the canonical REST specs; every
   implemented route is covered by success and error wire tests.
-- List resources return a `PaginatedIterator` wired into `list()`, so callers can
-  page through all results by following `links.next`.
+- `list()` returns a lazy `PaginatedIterator`: iterating it yields every result
+  across pages, transparently following the `links.next` cursor and stopping when
+  a page comes back empty (no next link or an empty page ends iteration).
 - REST errors carry the full `(status, body, url, method)` envelope and are raised
   on any HTTP status `>= 400`.
 

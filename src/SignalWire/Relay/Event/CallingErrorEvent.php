@@ -19,11 +19,13 @@ class CallingErrorEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The code. */
     public function getCode(): string
     {
         return $this->code;
     }
 
+    /** The message. */
     public function getMessage(): string
     {
         return $this->message;

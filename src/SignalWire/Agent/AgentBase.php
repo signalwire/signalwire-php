@@ -1387,6 +1387,7 @@ class AgentBase extends Service implements AgentInterface
         return $this->skillManager->listLoadedSkills();
     }
 
+    /** Whether there is a skill. */
     public function hasSkill(SkillName|string $name): bool
     {
         if ($this->skillManager === null) {

@@ -13,6 +13,23 @@ namespace SignalWire\REST\Namespaces\Generated;
 
 /**
  * FabricNamespace — generated container grouping the fabric namespace resources (§8).
+ *
+ * @property-read FabricAddresses $addresses
+ * @property-read GenericResources $resources
+ * @property-read AiAgents $aiAgents
+ * @property-read CallFlows $callFlows
+ * @property-read ConferenceRooms $conferenceRooms
+ * @property-read CxmlApplications $cxmlApplications
+ * @property-read CxmlScripts $cxmlScripts
+ * @property-read CxmlWebhooks $cxmlWebhooks
+ * @property-read FreeswitchConnectors $freeswitchConnectors
+ * @property-read RelayApplications $relayApplications
+ * @property-read SipEndpoints $sipEndpoints
+ * @property-read SipGateways $sipGateways
+ * @property-read Subscribers $subscribers
+ * @property-read SwmlScripts $swmlScripts
+ * @property-read SwmlWebhooks $swmlWebhooks
+ * @property-read FabricTokens $tokens
  */
 class FabricNamespace
 {
@@ -165,5 +182,19 @@ class FabricNamespace
             $this->tokens = new FabricTokens($this->http);
         }
         return $this->tokens;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }

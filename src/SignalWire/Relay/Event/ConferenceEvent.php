@@ -20,16 +20,19 @@ class ConferenceEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The conference ID. */
     public function getConferenceId(): string
     {
         return $this->conferenceId;
     }
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;
     }
 
+    /** The status. */
     public function getStatus(): string
     {
         return $this->status;

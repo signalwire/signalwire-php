@@ -83,9 +83,21 @@ class RestClient
         // Accept a bare host ("space.signalwire.com") or a fully-qualified
         // URL. The latter is used by tests and audit harnesses to point
         // the client at a loopback fixture without forcing https://.
-        $baseUrl = preg_match('#^https?://#i', $this->space)
-            ? rtrim($this->space, '/')
-            : 'https://' . $this->space;
+        //
+        // A BARE loopback host (127.0.0.1[:port] / localhost[:port]) is a local
+        // mock/dev server that speaks plain HTTP, so pick http:// for it — this
+        // lets a shipped example/doc run verbatim against the local mock via
+        // SIGNALWIRE_SPACE=127.0.0.1:<port> without a code change or an explicit
+        // scheme. Mirrors the python reference `_is_loopback_host`
+        // (signalwire/rest/_base.py). A real space (<name>.signalwire.com) is
+        // never loopback, so production is unaffected. An explicit scheme in the
+        // host string is always honored verbatim (the branch above).
+        if (preg_match('#^https?://#i', $this->space)) {
+            $baseUrl = rtrim($this->space, '/');
+        } else {
+            $scheme = self::isLoopbackHost($this->space) ? 'http' : 'https';
+            $baseUrl = $scheme . '://' . $this->space;
+        }
         // Genuine invariant: $space is non-empty (thrown above), so the
         // https:// branch is non-empty by construction, and the rtrim branch
         // strips only trailing '/' from a URL that already begins with a
@@ -94,6 +106,20 @@ class RestClient
         assert($baseUrl !== '');
         $this->baseUrl = $baseUrl;
         $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl, $requestOptions, $caBundle);
+    }
+
+    /**
+     * True if ``$host`` (bare host or host:port) is a local loopback address —
+     * a local mock/dev server that speaks plain HTTP. Used to pick http:// vs
+     * https:// so a shipped example runs verbatim against the local mock. A real
+     * SignalWire space (``<name>.signalwire.com``) is never loopback, so
+     * production is unaffected. Mirrors python's ``_is_loopback_host``.
+     */
+    private static function isLoopbackHost(string $host): bool
+    {
+        $hostname = str_contains($host, ':') ? substr($host, 0, strrpos($host, ':') ?: 0) : $host;
+
+        return in_array($hostname, ['127.0.0.1', 'localhost', '::1', '[::1]'], true);
     }
 
     /**
@@ -110,26 +136,31 @@ class RestClient
     // Getters
     // -----------------------------------------------------------------
 
+    /** The project ID. */
     public function getProjectId(): string
     {
         return $this->projectId;
     }
 
+    /** The API token. */
     public function getToken(): string
     {
         return $this->token;
     }
 
+    /** The SignalWire space (host). */
     public function getSpace(): string
     {
         return $this->space;
     }
 
+    /** The base URL. */
     public function getBaseUrl(): string
     {
         return $this->baseUrl;
     }
 
+    /** The underlying HTTP client. */
     public function getHttp(): HttpClient
     {
         return $this->http;

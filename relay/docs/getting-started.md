@@ -30,9 +30,9 @@ require 'vendor/autoload.php';
 use SignalWire\Relay\Client;
 
 $client = new Client([
-    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
-    'host'     => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'project'  => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'    => getenv('SIGNALWIRE_API_TOKEN'),
+    'host'     => getenv('SIGNALWIRE_SPACE') ?: 'relay.signalwire.com',
     'contexts' => ['default'],
 ]);
 
@@ -65,9 +65,9 @@ require 'vendor/autoload.php';
 use SignalWire\Relay\Client;
 
 $client = new Client([
-    'project' => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'   => $_ENV['SIGNALWIRE_API_TOKEN'],
-    'host'    => $_ENV['SIGNALWIRE_SPACE'] ?? 'relay.signalwire.com',
+    'project' => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'   => getenv('SIGNALWIRE_API_TOKEN'),
+    'host'    => getenv('SIGNALWIRE_SPACE') ?: 'relay.signalwire.com',
 ]);
 
 $client->connect();
@@ -105,9 +105,11 @@ $client->disconnect();
 Contexts route inbound calls to your handler. Set them in the options array:
 
 ```php
+use SignalWire\Relay\Client;
+
 $client = new Client([
-    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'],
-    'token'    => $_ENV['SIGNALWIRE_API_TOKEN'],
+    'project'  => getenv('SIGNALWIRE_PROJECT_ID'),
+    'token'    => getenv('SIGNALWIRE_API_TOKEN'),
     'contexts' => ['default', 'sales', 'support'],
 ]);
 ```

@@ -828,6 +828,7 @@ class Client implements RelayClientLike
 
     // ── accessors ────────────────────────────────────────────────────
 
+    /** The call. */
     public function getCall(string $callId): ?Call
     {
         return $this->calls[$callId] ?? null;

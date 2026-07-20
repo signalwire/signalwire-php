@@ -38,11 +38,13 @@ class Event
         $this->timestamp = $timestamp ?: microtime(true);
     }
 
+    /** The event type. */
     public function getEventType(): string
     {
         return $this->eventType;
     }
 
+    /** The timestamp. */
     public function getTimestamp(): float
     {
         return $this->timestamp;
@@ -54,30 +56,35 @@ class Event
         return $this->params;
     }
 
+    /** The call ID. */
     public function getCallId(): ?string
     {
         $value = $this->params['call_id'] ?? null;
         return is_string($value) ? $value : null;
     }
 
+    /** The node ID. */
     public function getNodeId(): ?string
     {
         $value = $this->params['node_id'] ?? null;
         return is_string($value) ? $value : null;
     }
 
+    /** The control ID. */
     public function getControlId(): ?string
     {
         $value = $this->params['control_id'] ?? null;
         return is_string($value) ? $value : null;
     }
 
+    /** The tag. */
     public function getTag(): ?string
     {
         $value = $this->params['tag'] ?? null;
         return is_string($value) ? $value : null;
     }
 
+    /** The state. */
     public function getState(): ?string
     {
         $value = $this->params['state'] ?? null;

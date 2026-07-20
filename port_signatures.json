@@ -34337,6 +34337,12 @@
                   "type": "string",
                   "required": false,
                   "default": ""
+                },
+                {
+                  "name": "headers",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -34359,6 +34365,15 @@
               ],
               "returns": "string"
             },
+            "get_headers": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<any>"
+            },
             "get_method": {
               "params": [
                 {
@@ -34367,6 +34382,15 @@
                 }
               ],
               "returns": "string"
+            },
+            "get_request_id": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
             },
             "get_response_body": {
               "params": [

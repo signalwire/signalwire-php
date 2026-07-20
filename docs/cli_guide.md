@@ -34,6 +34,8 @@ export SIGNALWIRE_SPACE=example.signalwire.com
 ### Custom Host and Port
 
 ```php
+use SignalWire\Agent\AgentBase;
+
 $agent = new AgentBase(
     name:  'my-agent',
     route: '/agent',

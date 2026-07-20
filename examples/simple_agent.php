@@ -11,15 +11,21 @@ require 'vendor/autoload.php';
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
-// Create an agent
-$agent = new AgentBase(
-    name:  'simple',
-    route: '/simple',
-    host:  '0.0.0.0',
-    port:  3000,
-);
+// Build the agent inside a `build*Service()` function (the convention
+// `swaig-test --file` looks for) so the file can be loaded in-process to list
+// tools without running a server. `buildSimpleAgent()` returns the configured
+// agent; the CLI-entrypoint guard at the bottom is the only place run() fires.
+function buildSimpleAgent(): AgentBase
+{
+    // Create an agent
+    $agent = new AgentBase(
+        name:  'simple',
+        route: '/simple',
+        host:  '0.0.0.0',
+        port:  3000,
+    );
 
-// --- Prompt Configuration ---
+    // --- Prompt Configuration ---
 
 $agent->promptAddSection('Personality', 'You are a friendly and helpful assistant.');
 $agent->promptAddSection('Goal', 'Help users with basic tasks and answer questions.');
@@ -123,13 +129,27 @@ $agent->setSummaryCallback(function ($summary, $rawData) {
     }
 });
 
+    return $agent;
+}
+
 // --- Start the Agent ---
+//
+// Guard the blocking run() so the file can be LOADED in-process (e.g.
+// `swaig-test --file examples/simple_agent.php --list-tools`) without starting
+// the HTTP server. run() fires only when this file is the CLI entrypoint.
+$isCliEntrypoint = PHP_SAPI === 'cli'
+    && isset($_SERVER['argv'][0])
+    && \realpath($_SERVER['argv'][0]) === __FILE__;
 
-[$user, $pass] = $agent->getBasicAuthCredentials();
+if ($isCliEntrypoint) {
+    $agent = buildSimpleAgent();
 
-echo "Starting the agent. Press Ctrl+C to stop.\n";
-echo "Agent 'simple' is available at:\n";
-echo "URL: http://localhost:3000/simple\n";
-echo "Basic Auth: {$user}:{$pass}\n";
+    [$user, $pass] = $agent->getBasicAuthCredentials();
 
-$agent->run();
+    echo "Starting the agent. Press Ctrl+C to stop.\n";
+    echo "Agent 'simple' is available at:\n";
+    echo "URL: http://localhost:3000/simple\n";
+    echo "Basic Auth: {$user}:{$pass}\n";
+
+    $agent->run();
+}

@@ -18,6 +18,7 @@ class DenoiseEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The denoised. */
     public function getDenoised(): bool
     {
         return $this->denoised;

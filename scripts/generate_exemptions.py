@@ -931,6 +931,24 @@ ADDITIONS_RATIONALES: list[tuple[str, str]] = [
         "field; Python users access the same data via `agent.<attr>` direct "
         "attribute access.",
     ),
+    # --- REST property-access magic (__get) — must precede the generic
+    # RestClient / namespace prefixes so the magic-method rationale wins. ---
+    (
+        "signalwire.rest.client.RestClient.__get",
+        "PHP magic-method accessor: `$client->phoneNumbers` / `$client->fabric` "
+        "property reads delegate to the same-named accessor method, so the "
+        "python/stripe attribute-chain idiom (client.fabric.ai_agents) works "
+        "verbatim in PHP. Python uses native attribute access; PHP has no "
+        "surface member for it — hence the addition, analog to SWMLService.__call.",
+    ),
+    (
+        "signalwire.rest.namespaces._client_tree_generated.",
+        "PHP magic-method accessor (__get): namespace-container property reads "
+        "($client->fabric->aiAgents) delegate to the same-named accessor method, "
+        "so the python attribute-chain idiom works verbatim. Python uses native "
+        "attribute access; PHP has no surface member for it — analog to "
+        "SWMLService.__call.",
+    ),
     # --- RestClient getters ---
     (
         "signalwire.rest.client.RestClient.",

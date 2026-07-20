@@ -206,36 +206,43 @@ class Message
     // Accessors
     // ------------------------------------------------------------------
 
+    /** Whether the done. */
     public function isDone(): bool
     {
         return $this->completed;
     }
 
+    /** The message ID. */
     public function getMessageId(): ?string
     {
         return $this->messageId;
     }
 
+    /** The context. */
     public function getContext(): ?string
     {
         return $this->context;
     }
 
+    /** The direction. */
     public function getDirection(): ?string
     {
         return $this->direction;
     }
 
+    /** The from number. */
     public function getFromNumber(): ?string
     {
         return $this->fromNumber;
     }
 
+    /** The to number. */
     public function getToNumber(): ?string
     {
         return $this->toNumber;
     }
 
+    /** The body. */
     public function getBody(): ?string
     {
         return $this->body;
@@ -253,6 +260,7 @@ class Message
         return $this->tags;
     }
 
+    /** The state. */
     public function getState(): ?string
     {
         return $this->state;
@@ -273,6 +281,7 @@ class Message
         return MessageState::tryFromWire($this->state);
     }
 
+    /** The reason. */
     public function getReason(): ?string
     {
         return $this->reason;

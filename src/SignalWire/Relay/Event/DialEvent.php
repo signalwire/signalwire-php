@@ -26,6 +26,7 @@ class DialEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The tag. */
     public function getTag(): string
     {
         return $this->tag;

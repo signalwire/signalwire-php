@@ -84,6 +84,7 @@ class GatherQuestion
         $this->isolated = $isolated;
     }
 
+    /** The key. */
     public function getKey(): string
     {
         return $this->key;
@@ -173,6 +174,7 @@ class GatherInfo
         return $this->questions;
     }
 
+    /** The completion action. */
     public function getCompletionAction(): ?string
     {
         return $this->completionAction;
@@ -248,6 +250,7 @@ class Step
         $this->name = $name;
     }
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;
@@ -565,6 +568,7 @@ class Step
         return $this->validContexts;
     }
 
+    /** The gather info. */
     public function getGatherInfo(): ?GatherInfo
     {
         return $this->gatherInfo;
@@ -737,6 +741,7 @@ class Context
         return new self($name);
     }
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;
@@ -804,6 +809,7 @@ class Context
         return $step;
     }
 
+    /** The step. */
     public function getStep(string $name): ?Step
     {
         return $this->steps[$name] ?? null;
@@ -928,6 +934,7 @@ class Context
         return $this;
     }
 
+    /** The initial step. */
     public function getInitialStep(): ?string
     {
         return $this->initialStep;
@@ -1350,6 +1357,7 @@ class ContextBuilder
         return $this->contexts[$name] ?? null;
     }
 
+    /** Whether there is a contexts. */
     public function hasContexts(): bool
     {
         return !empty($this->contexts);

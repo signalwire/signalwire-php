@@ -48,8 +48,8 @@ safe('List addresses', function () use ($client, $roomId) {
 // 3. Create a cXML script
 echo "\nCreating cXML script...\n";
 $cxml = $client->fabric()->cxmlScripts()->create([
-    'name'     => 'Hold Music Script',
-    'contents' => '<Response><Say>Please hold.</Say><Play>https://example.com/hold.mp3</Play></Response>',
+    'display_name' => 'Hold Music Script',
+    'contents'     => '<Response><Say>Please hold.</Say><Play>https://example.com/hold.mp3</Play></Response>',
 ]);
 $cxmlId = $cxml['id'] ?? 'demo-cxml-id';
 echo "  Created cXML script: {$cxmlId}\n";

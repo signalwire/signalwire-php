@@ -33,8 +33,9 @@ function safe(string $label, callable $fn): mixed
 // 1. Create a subscriber
 echo "Creating subscriber...\n";
 $subscriber = $client->fabric()->subscribers()->create([
-    'name'  => 'Alice Johnson',
-    'email' => 'alice@example.com',
+    'email'      => 'alice@example.com',
+    'first_name' => 'Alice',
+    'last_name'  => 'Johnson',
 ]);
 $subId      = $subscriber['id'] ?? 'demo-subscriber-id';
 $innerSubId = ($subscriber['subscriber'] ?? [])['id'] ?? $subId;

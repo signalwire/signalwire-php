@@ -26,31 +26,37 @@ class QueueEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The control ID. */
     public function getControlId(): string
     {
         return $this->controlId;
     }
 
+    /** The status. */
     public function getStatus(): string
     {
         return $this->status;
     }
 
+    /** The queue ID. */
     public function getQueueId(): string
     {
         return $this->queueId;
     }
 
+    /** The queue name. */
     public function getQueueName(): string
     {
         return $this->queueName;
     }
 
+    /** The position. */
     public function getPosition(): int
     {
         return $this->position;
     }
 
+    /** The size. */
     public function getSize(): int
     {
         return $this->size;

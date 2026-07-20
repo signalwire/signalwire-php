@@ -205,11 +205,13 @@ class AgentServer
         return $this;
     }
 
+    /** The sip route. */
     public function getSipRoute(): string
     {
         return $this->sipRoute;
     }
 
+    /** The sip auto map. */
     public function getSipAutoMap(): bool
     {
         return $this->sipAutoMap;
@@ -615,11 +617,13 @@ class AgentServer
     //  Accessors
     // ======================================================================
 
+    /** The host. */
     public function getHost(): string
     {
         return $this->host;
     }
 
+    /** The port. */
     public function getPort(): int
     {
         return $this->port;

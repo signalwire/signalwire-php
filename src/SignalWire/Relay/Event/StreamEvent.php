@@ -24,21 +24,25 @@ class StreamEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The control ID. */
     public function getControlId(): string
     {
         return $this->controlId;
     }
 
+    /** The state. */
     public function getState(): string
     {
         return $this->state;
     }
 
+    /** The URL. */
     public function getUrl(): string
     {
         return $this->url;
     }
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;

@@ -39,6 +39,7 @@ class SchemaValidationError extends \RuntimeException
         parent::__construct($message);
     }
 
+    /** The verb name. */
     public function getVerbName(): string
     {
         return $this->verbName;

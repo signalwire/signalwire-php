@@ -8,6 +8,18 @@ use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\Utils\SchemaUtils;
 
+/**
+ * SWML service — builds and serves an SWML document over HTTP.
+ *
+ * Every SWML schema verb is auto-vivified through {@see __call()} (the PHP
+ * analog of Python's runtime `__getattr__` verb dispatch) and dispatched as
+ * `$service->verb([$section], [$config])` — the first argument may be the
+ * target section name OR the verb config array (see __call). Because that
+ * receiver arity is genuinely polymorphic, the verbs are documented on
+ * __call rather than as fixed-signature `@method` tags. (SWMLBuilder, whose
+ * verb signature is the simpler `verb(array $config = [])`, DOES carry
+ * per-verb @method tags.)
+ */
 class Service implements RequestHandlerLike
 {
     protected string $name;
@@ -659,26 +671,31 @@ class Service implements RequestHandlerLike
     // Accessors
     // ------------------------------------------------------------------
 
+    /** The name. */
     public function getName(): string
     {
         return $this->name;
     }
 
+    /** The route. */
     public function getRoute(): string
     {
         return $this->route;
     }
 
+    /** The host. */
     public function getHost(): string
     {
         return $this->host;
     }
 
+    /** The port. */
     public function getPort(): int
     {
         return $this->port;
     }
 
+    /** The document. */
     public function getDocument(): Document
     {
         return $this->document;

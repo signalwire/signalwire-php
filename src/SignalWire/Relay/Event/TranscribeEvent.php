@@ -26,31 +26,37 @@ class TranscribeEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The control ID. */
     public function getControlId(): string
     {
         return $this->controlId;
     }
 
+    /** The state. */
     public function getState(): string
     {
         return $this->state;
     }
 
+    /** The URL. */
     public function getUrl(): string
     {
         return $this->url;
     }
 
+    /** The recording ID. */
     public function getRecordingId(): string
     {
         return $this->recordingId;
     }
 
+    /** The duration. */
     public function getDuration(): float
     {
         return $this->duration;
     }
 
+    /** The size. */
     public function getSize(): int
     {
         return $this->size;

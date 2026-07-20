@@ -52,19 +52,26 @@ $service->run();
 
 When SignalWire calls your endpoint, `Service` returns the SWML document as JSON.
 
-## SWML Schema Validation
+## SWML Schema
 
-The `Schema` class validates SWML documents:
+The `Schema` class is a singleton that exposes the SWML verb vocabulary loaded
+from the bundled schema. Use it to check whether a verb name is valid before
+adding it to a document, or to enumerate every supported verb:
 
 ```php
 use SignalWire\SWML\Schema;
 
-$schema = new Schema();
-$errors = $schema->validate($swmlArray);
-if (empty($errors)) {
-    echo "Valid SWML document.\n";
-} else {
-    echo "Errors: " . implode(', ', $errors) . "\n";
+$schema = Schema::instance();
+
+// Is a verb name part of the SWML vocabulary?
+if ($schema->isValidVerb('play')) {
+    echo "'play' is a valid SWML verb.\n";
+}
+
+// Enumerate every supported verb.
+echo "SWML supports {$schema->verbCount()} verbs:\n";
+foreach ($schema->getVerbNames() as $verb) {
+    echo "  - {$verb}\n";
 }
 ```
 
@@ -112,6 +119,8 @@ $agent->addPostAiVerb('play', [
 ### Auto-Answer and Record
 
 ```php
+use SignalWire\Agent\AgentBase;
+
 $agent = new AgentBase(
     name:       'recording-agent',
     route:      '/record',
@@ -147,6 +156,8 @@ Each request gets a fresh clone of the agent, so configuration is isolated.
 A SWML document has named sections. The `main` section runs first:
 
 ```php
+use SignalWire\SWML\Document;
+
 $doc = new Document();
 
 // Main section

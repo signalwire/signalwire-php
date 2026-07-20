@@ -16,7 +16,41 @@ namespace SignalWire\SWML;
  * The explicit verb helpers ({@see answer()}, {@see hangup()}, {@see play()},
  * {@see ai()}, {@see say()}) cover the common verbs; every other schema verb is
  * auto-vivified through {@see __call()} (e.g. `$builder->denoise()->goto(...)`),
- * the PHP analog of Python's runtime `__getattr__` verb dispatch.
+ * the PHP analog of Python's runtime `__getattr__` verb dispatch. The `@method`
+ * tags below make those auto-vivified verbs discoverable by IDEs and PHPStan.
+ * (The reserved-word verbs `goto`/`return`/`switch`/`unset` dispatch the same way
+ * but are omitted — they aren't callable as bare `->verb()` syntax in PHP.)
+ *
+ * @method static amazon_bedrock(array<string, mixed> $config = []) Auto-vivified SWML `amazon_bedrock` verb.
+ * @method static cond(array<string, mixed> $config = []) Auto-vivified SWML `cond` verb.
+ * @method static connect(array<string, mixed> $config = []) Auto-vivified SWML `connect` verb.
+ * @method static denoise(array<string, mixed> $config = []) Auto-vivified SWML `denoise` verb.
+ * @method static detect_machine(array<string, mixed> $config = []) Auto-vivified SWML `detect_machine` verb.
+ * @method static enter_queue(array<string, mixed> $config = []) Auto-vivified SWML `enter_queue` verb.
+ * @method static execute(array<string, mixed> $config = []) Auto-vivified SWML `execute` verb.
+ * @method static join_conference(array<string, mixed> $config = []) Auto-vivified SWML `join_conference` verb.
+ * @method static join_room(array<string, mixed> $config = []) Auto-vivified SWML `join_room` verb.
+ * @method static label(array<string, mixed> $config = []) Auto-vivified SWML `label` verb.
+ * @method static live_transcribe(array<string, mixed> $config = []) Auto-vivified SWML `live_transcribe` verb.
+ * @method static live_translate(array<string, mixed> $config = []) Auto-vivified SWML `live_translate` verb.
+ * @method static pay(array<string, mixed> $config = []) Auto-vivified SWML `pay` verb.
+ * @method static prompt(array<string, mixed> $config = []) Auto-vivified SWML `prompt` verb.
+ * @method static receive_fax(array<string, mixed> $config = []) Auto-vivified SWML `receive_fax` verb.
+ * @method static record(array<string, mixed> $config = []) Auto-vivified SWML `record` verb.
+ * @method static record_call(array<string, mixed> $config = []) Auto-vivified SWML `record_call` verb.
+ * @method static request(array<string, mixed> $config = []) Auto-vivified SWML `request` verb.
+ * @method static send_digits(array<string, mixed> $config = []) Auto-vivified SWML `send_digits` verb.
+ * @method static send_fax(array<string, mixed> $config = []) Auto-vivified SWML `send_fax` verb.
+ * @method static send_sms(array<string, mixed> $config = []) Auto-vivified SWML `send_sms` verb.
+ * @method static set(array<string, mixed> $config = []) Auto-vivified SWML `set` verb.
+ * @method static sip_refer(array<string, mixed> $config = []) Auto-vivified SWML `sip_refer` verb.
+ * @method static sleep(int $duration) Auto-vivified SWML `sleep` verb (integer milliseconds).
+ * @method static stop_denoise(array<string, mixed> $config = []) Auto-vivified SWML `stop_denoise` verb.
+ * @method static stop_record_call(array<string, mixed> $config = []) Auto-vivified SWML `stop_record_call` verb.
+ * @method static stop_tap(array<string, mixed> $config = []) Auto-vivified SWML `stop_tap` verb.
+ * @method static tap(array<string, mixed> $config = []) Auto-vivified SWML `tap` verb.
+ * @method static transfer(array<string, mixed> $config = []) Auto-vivified SWML `transfer` verb.
+ * @method static user_event(array<string, mixed> $config = []) Auto-vivified SWML `user_event` verb.
  */
 class SWMLBuilder
 {

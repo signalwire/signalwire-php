@@ -142,6 +142,7 @@ class SkillRegistry
         return $sources;
     }
 
+    /** The factory. */
     public function getFactory(string $name): ?string
     {
         if (isset($this->registeredSkills[$name])) {

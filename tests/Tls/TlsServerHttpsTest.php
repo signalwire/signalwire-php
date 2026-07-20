@@ -37,6 +37,13 @@ final class TlsServerHttpsTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
+        // workerman/workerman is a `suggest` (optional runtime dep — only the
+        // verified-HTTPS serving path needs it; it is in require-dev so CI/dev have
+        // it). Skip cleanly on a minimal install that omits it rather than fatal.
+        if (!class_exists(\Workerman\Worker::class)) {
+            self::markTestSkipped('workerman/workerman not installed (optional HTTPS-serving dependency)');
+        }
+
         $certs = TlsSupport::certsDir();
         if ($certs === null) {
             self::markTestSkipped('porting-sdk/test_harness/tls not adjacent to repo');

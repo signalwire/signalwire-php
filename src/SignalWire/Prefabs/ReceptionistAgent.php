@@ -150,6 +150,7 @@ class ReceptionistAgent extends AgentBase
         return $this->departments;
     }
 
+    /** The greeting. */
     public function getGreeting(): string
     {
         return $this->greeting;

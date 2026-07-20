@@ -18,6 +18,7 @@ class EchoEvent extends RelayEvent
         parent::__construct($eventType, $params, $callId, $timestamp);
     }
 
+    /** The state. */
     public function getState(): string
     {
         return $this->state;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SignalWire\REST\CrudResource;
@@ -162,6 +163,94 @@ class RestClientTest extends TestCase
     }
 
     // =================================================================
+    // §6.6 error-observability — the platform request-id is captured off the
+    // response headers of a failed (non-2xx) request and exposed on the typed
+    // error, so a caller can quote it to support. Driven against a real one-shot
+    // loopback HTTP server (no transport mock) that returns 400 + x-request-id.
+    // =================================================================
+
+    #[Test]
+    public function restErrorCapturesRequestIdAndHeaders(): void
+    {
+        if (!\function_exists('pcntl_fork')) {
+            self::markTestSkipped('pcntl_fork unavailable (needed to serve a one-shot loopback response)');
+        }
+        // Bind a listener, hand its port to the client, accept one connection and
+        // reply 400 with an x-request-id header, then read the typed error.
+        $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($server, "could not bind a probe server: {$errstr}");
+        $name = stream_socket_get_name($server, false);
+        $this->assertIsString($name);
+        $port = (int) substr($name, strrpos($name, ':') + 1);
+
+        $reqId = 'req-abc123def456';
+        $pid = pcntl_fork();
+        if ($pid === 0) {
+            // Child: serve exactly one request, then exit.
+            $conn = @stream_socket_accept($server, 5);
+            if ($conn !== false) {
+                // Drain the request line/headers (best-effort) then reply.
+                stream_set_timeout($conn, 1);
+                @fread($conn, 4096);
+                $body = '{"errors":[{"code":"bad_request"}]}';
+                $resp = "HTTP/1.1 400 Bad Request\r\n"
+                    . "Content-Type: application/json\r\n"
+                    . 'X-Request-ID: ' . $reqId . "\r\n"
+                    . 'Content-Length: ' . strlen($body) . "\r\n"
+                    . "\r\n" . $body;
+                @fwrite($conn, $resp);
+                @fclose($conn);
+            }
+            fclose($server);
+            exit(0);
+        }
+        fclose($server); // parent doesn't accept
+
+        $http = new HttpClient('proj', 'tok', "http://127.0.0.1:{$port}");
+        $caught = null;
+        try {
+            $http->get('/api/fabric/addresses');
+        } catch (SignalWireRestError $e) {
+            $caught = $e;
+        }
+        pcntl_waitpid($pid, $status);
+
+        $this->assertInstanceOf(SignalWireRestError::class, $caught);
+        $this->assertSame(400, $caught->getStatusCode());
+        $this->assertSame($reqId, $caught->getRequestId());
+        $headers = $caught->getHeaders();
+        $this->assertIsArray($headers);
+        $this->assertArrayHasKey('X-Request-ID', $headers);
+        $this->assertSame($reqId, $headers['X-Request-ID']);
+        // The request-id is surfaced in the exception message for observability.
+        $this->assertStringContainsString($reqId, $caught->getMessage());
+    }
+
+    #[Test]
+    public function transportErrorHasNoRequestIdOrHeaders(): void
+    {
+        // A connection-refused (transport) failure produced no response, so there
+        // are no headers and no request-id.
+        $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($sock);
+        $nm = stream_socket_get_name($sock, false);
+        $this->assertIsString($nm);
+        fclose($sock);
+        $deadPort = (int) substr($nm, strrpos($nm, ':') + 1);
+
+        $http = new HttpClient('p', 't', "http://127.0.0.1:{$deadPort}");
+        $caught = null;
+        try {
+            $http->get('/api/fabric/addresses');
+        } catch (SignalWireRestTransportError $e) {
+            $caught = $e;
+        }
+        $this->assertInstanceOf(SignalWireRestTransportError::class, $caught);
+        $this->assertNull($caught->getRequestId());
+        $this->assertNull($caught->getHeaders());
+    }
+
+    // =================================================================
     // CrudResource
     // =================================================================
 
@@ -221,6 +310,91 @@ class RestClientTest extends TestCase
         $this->assertSame('p', $http->getProjectId());
         $this->assertSame('t', $http->getToken());
         $this->assertSame('https://h.signalwire.com', $http->getBaseUrl());
+    }
+
+    // =================================================================
+    // RestClient construction -- bare loopback host uses http:// (mirrors the
+    // python reference `_is_loopback_host`: a bare 127.0.0.1[:port] / localhost
+    // is a local mock/dev server that speaks plain HTTP, so the client targets
+    // http:// for it. Lets a shipped example/doc run verbatim against the local
+    // mock via SIGNALWIRE_SPACE=127.0.0.1:<port> without an explicit scheme.
+    // A real space (<name>.signalwire.com) is never loopback → still https://.)
+    // =================================================================
+
+    /**
+     * @return list<array{0: string, 1: string}>
+     */
+    public static function loopbackHostCases(): array
+    {
+        return [
+            ['127.0.0.1',        'http://127.0.0.1'],
+            ['127.0.0.1:8080',   'http://127.0.0.1:8080'],
+            ['localhost',        'http://localhost'],
+            ['localhost:3000',   'http://localhost:3000'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('loopbackHostCases')]
+    public function bareLoopbackHostUsesHttp(string $host, string $expectedBaseUrl): void
+    {
+        $client = new RestClient('p', 't', $host);
+        $this->assertSame($expectedBaseUrl, $client->getBaseUrl());
+        // The wired HttpClient carries the same http:// base URL.
+        $this->assertSame($expectedBaseUrl, $client->getHttp()->getBaseUrl());
+    }
+
+    // =================================================================
+    // Property-style namespace/resource access (the stripe/twilio + python
+    // attribute idiom): $client->phoneNumbers === $client->phoneNumbers(),
+    // and nested chains $client->fabric->aiAgents work via __get delegation.
+    // =================================================================
+
+    #[Test]
+    public function propertyAccessDelegatesToAccessorMethod(): void
+    {
+        $client = new RestClient('p', 't', '127.0.0.1:8080');
+        // Flat resource: property read returns the same lazy instance as the method.
+        $this->assertSame($client->phoneNumbers(), $client->phoneNumbers);
+        // Namespace container: property read returns the same lazy instance.
+        $this->assertSame($client->fabric(), $client->fabric);
+    }
+
+    #[Test]
+    public function nestedPropertyChainWorks(): void
+    {
+        $client = new RestClient('p', 't', '127.0.0.1:8080');
+        // $client->fabric->aiAgents mirrors python's client.fabric.ai_agents.
+        $this->assertSame(
+            $client->fabric()->aiAgents(),
+            $client->fabric->aiAgents,
+        );
+    }
+
+    #[Test]
+    public function unknownPropertyThrows(): void
+    {
+        $client = new RestClient('p', 't', '127.0.0.1:8080');
+        $this->expectException(\Error::class);
+        /** @phpstan-ignore-next-line property.notFound (intentional: exercising __get's throw) */
+        $client->definitelyNotAResource; // @phpstan-ignore-line
+    }
+
+    #[Test]
+    public function realSpaceHostStillUsesHttps(): void
+    {
+        // A production space that merely CONTAINS a digit octet is not loopback.
+        $client = new RestClient('p', 't', 'acme.signalwire.com');
+        $this->assertSame('https://acme.signalwire.com', $client->getBaseUrl());
+    }
+
+    #[Test]
+    public function explicitSchemeIsAlwaysHonored(): void
+    {
+        // An explicit https:// on a loopback host is honored verbatim (a caller
+        // who WANTS TLS against a local TLS-terminating proxy).
+        $client = new RestClient('p', 't', 'https://127.0.0.1:8443');
+        $this->assertSame('https://127.0.0.1:8443', $client->getBaseUrl());
     }
 
     // =================================================================

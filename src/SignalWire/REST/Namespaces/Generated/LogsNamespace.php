@@ -13,6 +13,11 @@ namespace SignalWire\REST\Namespaces\Generated;
 
 /**
  * LogsNamespace — generated container grouping the logs namespace resources (§8).
+ *
+ * @property-read ConferenceLogs $conferences
+ * @property-read MessageLogs $messages
+ * @property-read VoiceLogs $voice
+ * @property-read FaxLogs $fax
  */
 class LogsNamespace
 {
@@ -57,5 +62,19 @@ class LogsNamespace
             $this->fax = new FaxLogs($this->http);
         }
         return $this->fax;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }

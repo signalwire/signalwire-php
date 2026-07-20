@@ -8,6 +8,7 @@ use SignalWire\Skills\SkillBase;
 
 class SwmlTransfer extends SkillBase
 {
+    /** The name. */
     public function getName(): string
     {
         return 'swml_transfer';
@@ -28,6 +29,7 @@ class SwmlTransfer extends SkillBase
         return $default;
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Transfer calls between agents based on pattern matching';

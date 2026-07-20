@@ -13,6 +13,8 @@ namespace SignalWire\REST\Namespaces\Generated;
 
 /**
  * ProjectNamespace — generated container grouping the project namespace resources (§8).
+ *
+ * @property-read ProjectTokens $tokens
  */
 class ProjectNamespace
 {
@@ -30,5 +32,19 @@ class ProjectNamespace
             $this->tokens = new ProjectTokens($this->http);
         }
         return $this->tokens;
+    }
+
+    /**
+     * Property-style access to a namespace/resource accessor:
+     * `$client->phoneNumbers` returns the same object as `$client->phoneNumbers()`.
+     */
+    public function __get(string $name): mixed
+    {
+        if (\method_exists($this, $name)) {
+            /** @var callable(): mixed $accessor */
+            $accessor = [$this, $name];
+            return $accessor();
+        }
+        throw new \Error(\sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 }

@@ -44,11 +44,13 @@ class Spider extends SkillBase
         parent::__construct($agent, $params);
     }
 
+    /** The name. */
     public function getName(): string
     {
         return 'spider';
     }
 
+    /** The description. */
     public function getDescription(): string
     {
         return 'Fast web scraping and crawling capabilities';

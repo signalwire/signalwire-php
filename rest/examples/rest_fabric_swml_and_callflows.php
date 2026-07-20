@@ -58,8 +58,10 @@ echo "  Created call flow: {$flowId}\n";
 
 // 4. Deploy a version
 echo "\nDeploying call flow version...\n";
+// Deploying snapshots the current call-flow definition as a new version; the
+// deploy request itself carries no body fields (the version is server-assigned).
 safe('Deploy version', fn() =>
-    $client->fabric()->callFlows()->deployVersion($flowId, ['label' => 'v1'])
+    $client->fabric()->callFlows()->deployVersion($flowId, [])
 );
 
 // 5. List call flow versions
