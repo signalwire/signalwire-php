@@ -466,6 +466,12 @@
                   "type": "any",
                   "required": false,
                   "default": []
+                },
+                {
+                  "name": "call_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -997,7 +1003,7 @@
                   "name": "secure",
                   "type": "bool",
                   "required": false,
-                  "default": false
+                  "default": true
                 },
                 {
                   "name": "extra_fields",
@@ -1220,6 +1226,12 @@
                   "type": "any",
                   "required": false,
                   "default": []
+                },
+                {
+                  "name": "call_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -1446,6 +1458,12 @@
                   "type": "any",
                   "required": false,
                   "default": []
+                },
+                {
+                  "name": "call_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -2246,6 +2264,13 @@
                   "name": "name",
                   "type": "string",
                   "required": true
+                },
+                {
+                  "name": "rejected",
+                  "type": "optional<any>",
+                  "kind": "var_positional",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "class:signalwire.core.contexts.Context"
@@ -5427,7 +5452,7 @@
                   "name": "secure",
                   "type": "bool",
                   "required": false,
-                  "default": false
+                  "default": true
                 },
                 {
                   "name": "extra_fields",
@@ -9972,7 +9997,7 @@
                   "name": "secure",
                   "type": "bool",
                   "required": false,
-                  "default": false
+                  "default": true
                 },
                 {
                   "name": "extra_fields",

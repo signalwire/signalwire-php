@@ -364,6 +364,23 @@ class SkillsTest extends TestCase
         $this->assertSame(['datetime'], $manager->listLoadedSkills());
     }
 
+    // PHP-4 — addSkill() must SURFACE a load failure by throwing, not silently
+    // no-op. An unknown skill is a configuration error the caller must see.
+    // Mirrors python SkillMixin.add_skill raising ValueError.
+    public function testAddSkillThrowsOnUnknownSkill(): void
+    {
+        $agent = $this->makeAgent();
+        try {
+            $agent->addSkill('no_such_skill_xyz');
+            $this->fail('addSkill should throw on an unknown skill, not no-op');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('no_such_skill_xyz', $e->getMessage());
+            $this->assertStringContainsString('Failed to load skill', $e->getMessage());
+        }
+        // The failed load left nothing registered.
+        $this->assertFalse($agent->hasSkill('no_such_skill_xyz'));
+    }
+
     public function testSkillManagerHasSkillTrueAndFalse(): void
     {
         $agent = $this->makeAgent();

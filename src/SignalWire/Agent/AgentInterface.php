@@ -48,7 +48,7 @@ interface AgentInterface
         string $description,
         array $parameters,
         callable $handler,
-        bool $secure = false,
+        bool $secure = true,
         array $extraFields = [],
     ): static;
 

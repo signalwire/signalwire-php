@@ -94,12 +94,14 @@ class BedrockAgent extends AgentBase
      *
      * @param array<string, mixed>|null $requestBody
      * @param array<string, string>     $headers
+     * @param string|null               $callId Threaded to the base render so
+     *   secure SWAIG functions get their per-tool ``__token``.
      * @return array<string, mixed>
      */
-    public function renderSwml(?array $requestBody = null, array $headers = []): array
+    public function renderSwml(?array $requestBody = null, array $headers = [], ?string $callId = null): array
     {
         // Build the base SWML with the ai verb, then transform it.
-        $swml = parent::renderSwml($requestBody, $headers);
+        $swml = parent::renderSwml($requestBody, $headers, $callId);
 
         $sections = is_array($swml['sections'] ?? null) ? $swml['sections'] : [];
         $main = is_array($sections['main'] ?? null) ? $sections['main'] : [];

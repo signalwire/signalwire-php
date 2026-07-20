@@ -32,6 +32,17 @@ class PaginatedIterator implements \Iterator
     private bool $done = false;
 
     /**
+     * Cycle guard: ``links.next`` cursors already followed. A server that keeps
+     * returning the SAME ``links.next`` would otherwise loop forever (the
+     * empty-page fix terminates ONLY on an ABSENT next link, so a repeating next
+     * became an infinite loop). Seeing a repeat terminates iteration. Mirrors
+     * the python reference ``_seen_next`` (rest/_pagination.py).
+     *
+     * @var array<string,true>
+     */
+    private array $seenNext = [];
+
+    /**
      * @param array<string,mixed>|null $params Initial query-string parameters.
      */
     public function __construct(
@@ -148,10 +159,25 @@ class PaginatedIterator implements \Iterator
 
         $links = $resp['links'] ?? [];
         $nextUrl = is_array($links) ? ($links['next'] ?? null) : null;
-        if (is_string($nextUrl) && $nextUrl !== '' && is_array($data) && count($data) > 0) {
+        // Termination is driven ONLY by the absence of a next link, NOT by an
+        // empty ``data`` array on this page. A page can legitimately carry a
+        // ``links.next`` (more pages exist) while returning zero items on THIS
+        // page — a filtered page that matched nothing here. The old
+        // ``next_url && count(data) > 0`` condition stopped on such a page and
+        // silently dropped every subsequent page; iterate while a next link
+        // exists, empty page or not. Mirrors python rest/_pagination.py.
+        if (is_string($nextUrl) && $nextUrl !== '') {
+            // Cycle guard: a ``links.next`` we have already followed means the
+            // server is looping (a repeating cursor) — terminate instead of
+            // re-fetching the same page forever.
+            if (isset($this->seenNext[$nextUrl])) {
+                $this->done = true;
+                return;
+            }
+            $this->seenNext[$nextUrl] = true;
             // Parse cursor/page token from next URL.
             $parsed = parse_url($nextUrl);
-            $query = $parsed['query'] ?? '';
+            $query = is_string($parsed['query'] ?? null) ? $parsed['query'] : '';
             $parts = [];
             parse_str($query, $parts);
             /** @var array<string,mixed> $normalized */

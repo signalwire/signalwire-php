@@ -56,8 +56,8 @@ class HttpClient
      *   ``HttpClient(project, token, host, request_options)`` positional shape;
      *   ``$caBundle`` is the php-only trailing extra.
      * @param string|null $caBundle Optional CA bundle (PEM) for HTTPS peer
-     *   verification. Falls back to the SIGNALWIRE_CA_FILE / SSL_CERT_FILE
-     *   env vars (PHP's cURL does not honor those env vars on its own).
+     *   verification. Falls back to the fleet-standard SIGNALWIRE_REST_CA_FILE
+     *   env var (A5 hard-cut; PHP's cURL does not honor it on its own).
      */
     public function __construct(
         string $projectId,
@@ -81,8 +81,10 @@ class HttpClient
 
     /**
      * Resolve the effective CA bundle: explicit arg wins, otherwise the
-     * SIGNALWIRE_CA_FILE then SSL_CERT_FILE env vars (which cURL itself does
-     * not consult), otherwise null (cURL's built-in default store).
+     * fleet-standard SIGNALWIRE_REST_CA_FILE env var (A5 hard-cut, this EXACT
+     * name only — matches the python reference rest/_base.py which reads
+     * SIGNALWIRE_REST_CA_FILE into ``session.verify``; cURL itself does not
+     * consult it), otherwise null (cURL's built-in default store).
      */
     /**
      * @return non-empty-string|null
@@ -92,11 +94,9 @@ class HttpClient
         if ($explicit !== null && $explicit !== '') {
             return $explicit;
         }
-        foreach (['SIGNALWIRE_CA_FILE', 'SSL_CERT_FILE'] as $envVar) {
-            $val = getenv($envVar);
-            if (is_string($val) && $val !== '') {
-                return $val;
-            }
+        $val = getenv('SIGNALWIRE_REST_CA_FILE');
+        if (is_string($val) && $val !== '') {
+            return $val;
         }
         return null;
     }
@@ -412,8 +412,9 @@ class HttpClient
                 CURLOPT_SSL_VERIFYHOST => 2,
             ]);
 
-            // Trust a specific CA bundle when configured (PHP's cURL ignores the
-            // SSL_CERT_FILE / CURL_CA_BUNDLE env vars, so we wire CAINFO directly).
+            // Trust a specific CA bundle when configured (resolved from the
+            // SIGNALWIRE_REST_CA_FILE env var or the explicit arg; PHP's cURL
+            // does not consult it on its own, so we wire CAINFO directly).
             if ($this->caBundle !== null) {
                 curl_setopt($ch, CURLOPT_CAINFO, $this->caBundle);
             }

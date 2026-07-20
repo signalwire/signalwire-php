@@ -1461,6 +1461,34 @@ class AgentBaseTest extends TestCase
         $this->assertSame('Custom prompt.', Shape::at($ai, 'prompt', 'text'));
     }
 
+    // PHP-8 wire-shape fixture — the contexts DEFINITION is emitted at
+    // ``ai.prompt.contexts`` (a sibling of text/pom INSIDE the prompt object),
+    // NOT at a top-level ``ai.context_switch``. This matches the SWML schema
+    // (swml_handler validates ``prompt.contexts``) and the python reference
+    // (swml_handler.build_config sets ``prompt_config['contexts']``).
+    // ``context_switch`` is a distinct RUNTIME SWAIG action, not the static
+    // definition's home.
+    public function testContextsDefinitionEmittedUnderPromptNotContextSwitch(): void
+    {
+        $agent = $this->makeAgent(['use_pom' => false, 'name' => 'Aria']);
+        $agent->defineContexts()
+            ->addContext('default')
+            ->addStep('start')
+            ->setText('Begin.');
+
+        $ai = $this->extractAiVerb($agent->renderSwml());
+
+        // The contexts object is a sibling of the prompt text.
+        $this->assertArrayHasKey('contexts', Shape::sub($ai, 'prompt'));
+        $contexts = Shape::at($ai, 'prompt', 'contexts');
+        $this->assertIsArray($contexts);
+        $this->assertArrayHasKey('default', $contexts);
+
+        // The legacy/wrong top-level ``ai.context_switch`` key is NOT emitted for
+        // the static contexts definition.
+        $this->assertArrayNotHasKey('context_switch', $ai);
+    }
+
     // #182 — promptAddToSection / promptAddSubsection must AUTO-CREATE the
     // (parent) section when it is missing, matching the TS reference, instead
     // of silently no-op'ing.

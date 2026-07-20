@@ -1330,9 +1330,29 @@ class ContextBuilder
 
     /**
      * Add a new context and return it for further configuration.
+     *
+     * Takes ONLY the context name — a context is configured with the fluent
+     * setters on the returned {@see Context} (setSystemPrompt / setConsolidate /
+     * setFullReset / addStep), mirroring the python reference ``add_context``.
+     * An array-config second argument (a stale idiom from an older doc example)
+     * is REJECTED LOUDLY: PHP would otherwise silently swallow the extra
+     * positional arg, leaving the context empty and fataling at serve time with
+     * ``Context '<name>' must have at least one step`` — a runtime mystery. The
+     * variadic guard turns that into an immediate, self-explaining error.
+     *
+     * @param mixed ...$rejected Must be empty. Any extra argument (e.g. a config
+     *   array) throws — use the fluent setters instead.
      */
-    public function addContext(string $name): Context
+    public function addContext(string $name, mixed ...$rejected): Context
     {
+        if ($rejected !== []) {
+            throw new \InvalidArgumentException(
+                "addContext('{$name}', ...) takes only the context name. Configure "
+                . 'the returned Context with the fluent setters '
+                . '(setSystemPrompt/setConsolidate/setFullReset/addStep) — an '
+                . 'array-config second argument is not supported.'
+            );
+        }
         if (isset($this->contexts[$name])) {
             throw new \LogicException("Context '{$name}' already exists");
         }

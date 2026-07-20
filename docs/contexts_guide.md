@@ -89,6 +89,7 @@ returned `Step` exposes further setters:
 | `criteria:` / `setStepCriteria(string)` | Completion criteria for advancing |
 | `valid_steps:` / `setValidSteps(array)` | Steps the AI can move to next |
 | `setValidContexts(array)` | Contexts the AI can switch to |
+| `functions:` / `setFunctions(array\|string)` | Restrict which SWAIG tools this step may call — an allow-list of tool names, or `'none'` to disable tools for the step |
 
 ## Navigation
 

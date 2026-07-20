@@ -63,7 +63,8 @@ class SWMLDocumentTest extends TestCase
         $verbs = $doc->getVerbs('main');
         $this->assertCount(2, $verbs);
         $this->assertSame(['answer' => ['max_duration' => 3600]], $verbs[0]);
-        $this->assertSame(['hangup' => []], $verbs[1]);
+        // A no-arg verb is stored as an empty OBJECT ({}), not an empty array.
+        $this->assertEquals(['hangup' => new \stdClass()], $verbs[1]);
     }
 
     public function testAddVerbToSection(): void

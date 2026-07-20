@@ -1,0 +1,161 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * secure-default-dump — the PHP port's SECURE-DEFAULT (A1) Layer-D dump program
+ * for the cross-port behavioral differ
+ * (porting-sdk/scripts/diff_port_secure_default.py).
+ *
+ * The differ drives the python reference through the secure_default corpus to
+ * build the golden per-fixture classification, then runs THIS program (which
+ * embeds the same two fixtures) and structurally compares our classification.
+ *
+ * The A1 contract: ``AgentBase::defineTool`` defaults ``secure=true`` fleet-wide.
+ * A tool defined WITHOUT an explicit ``secure=`` MUST require SWAIG token
+ * validation, and the WIRE manifestation of ``secure`` is the per-tool
+ * ``__token`` the rendered SWAIG webhook carries when the SWML is rendered with
+ * a call_id (python agent_base.py:1040/1096-1100). A tool defined with
+ * ``secure=false`` gets NO ``__token``.
+ *
+ * For each fixture this dump builds a fresh AgentBase, defines the tool, renders
+ * the SWML with the FIXED corpus call_id, and reduces to the deterministic pair:
+ *   secure_default_true  — the SDK-recorded secure flag for the tool.
+ *   wire_reflects_secure — a ``__token`` is present on the rendered webhook IFF
+ *                          the tool is secure (secure → token; insecure → none).
+ * The token VALUE (an HMAC) is nondeterministic and is NOT compared — only its
+ * PRESENCE folds into the boolean. So the golden is deterministic while the
+ * behavior that produces it is real and unfakeable.
+ *
+ * Protocol: stdout = ONE JSON object mapping fixture id => {secure_default_true,
+ * wire_reflects_secure}. Only stdout carries JSON; setup noise goes to stderr.
+ *
+ * Run from the signalwire-php repo root:
+ *
+ *   php bin/secure-default-dump
+ *
+ * Copyright (c) 2025 SignalWire
+ * Licensed under the MIT License.
+ */
+
+use SignalWire\Agent\AgentBase;
+use SignalWire\SWAIG\FunctionResult;
+
+$autoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (!is_file($autoload)) {
+    fwrite(STDERR, "secure-default-dump: vendor/autoload.php not found; run composer install\n");
+    exit(1);
+}
+require_once $autoload;
+
+// The FIXED call_id the corpus renders with, so a secure tool deterministically
+// gets a __token. Mirrors secure_default_corpus.CALL_ID.
+const SD_CALL_ID = 'call-secure-default-fixture';
+
+/**
+ * Build a fresh agent, define one tool, render the SWML with the fixed call_id,
+ * and reduce to the {secure_default_true, wire_reflects_secure} classification.
+ *
+ * @param bool          $expectSecure the SDK-recorded secure flag we assert.
+ * @param callable(AgentBase):void $define defines the tool on the agent.
+ * @return array{secure_default_true: bool, wire_reflects_secure: bool}
+ */
+function sd_classify(string $toolName, bool $expectSecure, callable $define): array
+{
+    $agent = new AgentBase(
+        name: 'demo',
+        route: '/demo',
+        basicAuthUser: 'u',
+        basicAuthPassword: 'p',
+    );
+    $define($agent);
+
+    $doc = $agent->renderSwml(null, [], SD_CALL_ID);
+    $tokenPresent = sd_webhook_has_token($doc, $toolName);
+
+    return [
+        'secure_default_true'  => $expectSecure,
+        'wire_reflects_secure' => $tokenPresent === $expectSecure,
+    ];
+}
+
+/**
+ * Locate the SWAIG function entry by name in the rendered doc and report whether
+ * its web_hook_url carries the reserved ``__token`` query parameter (the wire
+ * reflection of ``secure``). Mirrors the oracle's _webhook_has_token.
+ *
+ * @param array<string, mixed> $doc
+ */
+function sd_webhook_has_token(array $doc, string $toolName): bool
+{
+    foreach (sd_swaig_functions($doc) as $fn) {
+        if (!is_array($fn)) {
+            continue;
+        }
+        if (($fn['function'] ?? null) === $toolName) {
+            $url = $fn['web_hook_url'] ?? '';
+            return is_string($url) && str_contains($url, '__token=');
+        }
+    }
+    return false;
+}
+
+/**
+ * Walk sections.main → the ``ai`` verb → SWAIG.functions.
+ *
+ * @param array<string, mixed> $doc
+ * @return list<mixed>
+ */
+function sd_swaig_functions(array $doc): array
+{
+    $main = $doc['sections']['main'] ?? null;
+    if (!is_array($main)) {
+        return [];
+    }
+    foreach ($main as $section) {
+        if (!is_array($section) || !isset($section['ai']) || !is_array($section['ai'])) {
+            continue;
+        }
+        $functions = $section['ai']['SWAIG']['functions'] ?? null;
+        if (is_array($functions)) {
+            return array_values($functions);
+        }
+    }
+    return [];
+}
+
+$out = [];
+
+// A1 (a): a tool defined with NO explicit secure= must default to SECURE →
+// its rendered webhook carries a __token. Reds a port defaulting secure=false.
+$out['define_tool_default_is_secure'] = sd_classify(
+    'sd_default_secure',
+    true,
+    static function (AgentBase $a): void {
+        $a->defineTool(
+            'sd_default_secure',
+            'A default-secure tool',
+            ['q' => ['type' => 'string']],
+            static fn (array $args, array $raw): FunctionResult => new FunctionResult(),
+        );
+    },
+);
+
+// A1 (b): a tool defined with secure=false must be INSECURE → NO __token.
+$out['define_tool_explicit_insecure'] = sd_classify(
+    'sd_explicit_insecure',
+    false,
+    static function (AgentBase $a): void {
+        $a->defineTool(
+            'sd_explicit_insecure',
+            'An explicitly-insecure tool',
+            ['q' => ['type' => 'string']],
+            static fn (array $args, array $raw): FunctionResult => new FunctionResult(),
+            secure: false,
+        );
+    },
+);
+
+fwrite(STDOUT, json_encode($out, JSON_UNESCAPED_SLASHES) . "\n");
+exit(0);

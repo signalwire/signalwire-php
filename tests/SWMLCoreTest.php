@@ -67,9 +67,11 @@ class SWMLCoreTest extends TestCase
 
         $main = Shape::sub($doc, 'sections', 'main');
         $this->assertCount(3, $main);
-        $this->assertSame(['answer' => []], $main[0]);
+        // A no-arg verb is an empty OBJECT ({}), NOT an empty array ([]) — the
+        // SWML wire contract + python parity.
+        $this->assertEquals(['answer' => new \stdClass()], $main[0]);
         $this->assertSame(['play' => ['url' => 'https://cdn.example.com/greeting.mp3']], $main[1]);
-        $this->assertSame(['hangup' => []], $main[2]);
+        $this->assertEquals(['hangup' => new \stdClass()], $main[2]);
     }
 
     public function testBuilderFluentChainingReturnsSelf(): void
@@ -173,7 +175,8 @@ class SWMLCoreTest extends TestCase
         // `denoise` has no explicit method — dispatched via __call (declared via
         // the SWMLBuilder `@method` tags, so PHPStan resolves it).
         $doc = $builder->denoise()->build();
-        $this->assertSame(['denoise' => []], Shape::at($doc, 'sections', 'main', 0));
+        // A no-arg verb renders as an empty OBJECT ({}), not an empty array.
+        $this->assertEquals(['denoise' => new \stdClass()], Shape::at($doc, 'sections', 'main', 0));
     }
 
     public function testBuilderAutoVivifiedSleepTakesInteger(): void
@@ -358,7 +361,8 @@ class SWMLCoreTest extends TestCase
         $svc = $this->makeService();
         $this->assertTrue($svc->addVerb('answer', []));
         $doc = $svc->getDocument()->toArray();
-        $this->assertSame([['answer' => []]], $doc['sections']['main']);
+        // A no-arg verb is stored as an empty OBJECT so it renders as {}.
+        $this->assertEquals([['answer' => new \stdClass()]], $doc['sections']['main']);
     }
 
     public function testServiceAddSection(): void
@@ -375,7 +379,8 @@ class SWMLCoreTest extends TestCase
         $svc = $this->makeService();
         $this->assertTrue($svc->addVerbToSection('intro', 'answer', []));
         $doc = $svc->getDocument()->toArray();
-        $this->assertSame([['answer' => []]], $doc['sections']['intro']);
+        // A no-arg verb is stored as an empty OBJECT so it renders as {}.
+        $this->assertEquals([['answer' => new \stdClass()]], $doc['sections']['intro']);
     }
 
     public function testServiceAddVerbSleepTakesInteger(): void

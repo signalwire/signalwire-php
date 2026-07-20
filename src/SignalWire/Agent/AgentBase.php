@@ -1362,11 +1362,26 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Add a skill by name.
      *
+     * Surfaces a load failure by THROWING — a skill that is not in the
+     * registry, is missing required env vars, whose ``setup()`` returns false,
+     * or is a duplicate that forbids multiple instances is a configuration
+     * error the caller must see, NOT a silent no-op. Mirrors the python
+     * reference ``SkillMixin.add_skill`` which raises
+     * ``ValueError(f"Failed to load skill '{name}': {error}")``; PHP's idiom for
+     * that value-domain error is ``\InvalidArgumentException``.
+     *
      * @param array<string, mixed> $params
+     * @throws \InvalidArgumentException when the skill fails to load.
      */
     public function addSkill(SkillName|string $name, array $params = []): static
     {
-        $this->getSkillManager()->loadSkill($name instanceof SkillName ? $name->value : $name, $params);
+        $skillName = $name instanceof SkillName ? $name->value : $name;
+        [$success, $error] = $this->getSkillManager()->loadSkill($skillName, $params);
+        if (!$success) {
+            throw new \InvalidArgumentException(
+                "Failed to load skill '{$skillName}': {$error}"
+            );
+        }
         return $this;
     }
 
@@ -1630,7 +1645,17 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string, string> $headers
      * @return array<string, mixed> The SWML document array.
      */
-    public function renderSwml(?array $requestBody = null, array $headers = []): array
+    /**
+     * @param array<string, mixed>|null $requestBody
+     * @param array<string, string>     $headers
+     * @param string|null               $callId Optional call id. When present,
+     *   secure SWAIG functions get a per-tool ``__token`` appended to their
+     *   ``web_hook_url`` (the wire manifestation of ``secure``), mirroring the
+     *   python reference ``AgentBase._render_swml(call_id=...)``. Omitted →
+     *   no per-tool token (the pre-render default; existing callers unaffected).
+     * @return array<string, mixed>
+     */
+    public function renderSwml(?array $requestBody = null, array $headers = [], ?string $callId = null): array
     {
         $main = [];
 
@@ -1659,7 +1684,7 @@ class AgentBase extends Service implements AgentInterface
         }
 
         // 5. AI verb
-        $main[] = ['ai' => $this->buildAiVerb($headers)];
+        $main[] = ['ai' => $this->buildAiVerb($headers, $callId)];
 
         // 6. Post-AI verbs
         foreach ($this->postAiVerbs as [$verb, $config]) {
@@ -1678,9 +1703,11 @@ class AgentBase extends Service implements AgentInterface
      * Build the AI verb configuration block.
      *
      * @param array<string, string> $headers
+     * @param string|null            $callId Optional call id threaded to the
+     *   SWAIG block so secure functions get their per-tool ``__token``.
      * @return array<string, mixed>
      */
-    public function buildAiVerb(array $headers = []): array
+    public function buildAiVerb(array $headers = [], ?string $callId = null): array
     {
         $ai = [];
 
@@ -1701,6 +1728,21 @@ class AgentBase extends Service implements AgentInterface
         }
         if (!empty($this->promptLlmParams)) {
             $prompt = array_merge($prompt, $this->promptLlmParams);
+        }
+        // ── Contexts (steps feature) ────────────────────────────────────
+        // The contexts DEFINITION lives at ``ai.prompt.contexts`` — a sibling of
+        // ``text``/``pom`` INSIDE the prompt object — NOT at a top-level
+        // ``ai.context_switch``. This matches the SWML schema (swml_handler
+        // validates ``prompt.contexts`` must be an object) and the python
+        // reference (swml_handler.build_config: ``prompt_config['contexts'] =
+        // contexts``). ``context_switch`` is a distinct RUNTIME SWAIG *action*
+        // (FunctionResult::contextSwitch) returned at call time to change
+        // context — it is NOT where the static contexts definition belongs.
+        if ($this->contextBuilder !== null) {
+            $contextArray = $this->contextBuilder->toArray();
+            if (!empty($contextArray)) {
+                $prompt['contexts'] = $contextArray;
+            }
         }
         $ai['prompt'] = $prompt;
 
@@ -1756,7 +1798,7 @@ class AgentBase extends Service implements AgentInterface
         }
 
         // ── SWAIG ──────────────────────────────────────────────────────
-        $swaig = $this->buildSwaigBlock($headers);
+        $swaig = $this->buildSwaigBlock($headers, $callId);
         if (!empty($swaig)) {
             $ai['SWAIG'] = $swaig;
         }
@@ -1764,14 +1806,6 @@ class AgentBase extends Service implements AgentInterface
         // ── Global data ─────────────────────────────────────────────────
         if (!empty($this->globalData)) {
             $ai['global_data'] = $this->globalData;
-        }
-
-        // ── Context switch ──────────────────────────────────────────────
-        if ($this->contextBuilder !== null) {
-            $contextArray = $this->contextBuilder->toArray();
-            if (!empty($contextArray)) {
-                $ai['context_switch'] = $contextArray;
-            }
         }
 
         return $ai;
@@ -1953,9 +1987,15 @@ class AgentBase extends Service implements AgentInterface
      * Build the SWAIG block for the AI verb.
      *
      * @param array<string, string> $headers
+     * @param string|null            $callId When present, a SECURE tool gets a
+     *   per-tool ``__token`` appended to its ``web_hook_url`` (the wire
+     *   manifestation of ``secure`` — mirrors python agent_base.py:1040/1096-1100:
+     *   ``if func.secure and call_id: url_params['__token'] = token``). An
+     *   INSECURE tool (``secure=False``) never gets a token. When $callId is
+     *   null no token is minted (the render-without-call_id default).
      * @return array<string, mixed>
      */
-    private function buildSwaigBlock(array $headers): array
+    private function buildSwaigBlock(array $headers, ?string $callId = null): array
     {
         $swaig = [];
 
@@ -1973,7 +2013,17 @@ class AgentBase extends Service implements AgentInterface
 
             // Add web_hook_url for callable tools (those with a handler)
             if (isset($tool['_handler'])) {
-                $funcDef['web_hook_url'] = $this->buildSwaigWebhookUrl($headers);
+                // Mint a per-tool token ONLY for a SECURE tool when we have a
+                // call_id — the platform validates that token on the callback,
+                // so its PRESENCE on the wire is what makes ``secure`` real.
+                // (python: ``if func.secure and call_id``). An insecure tool
+                // gets the plain webhook URL (no token).
+                $token = null;
+                if ($callId !== null && $callId !== '' && ($tool['_secure'] ?? false) === true) {
+                    $minted = $this->createToolToken($name, $callId);
+                    $token = $minted !== '' ? $minted : null;
+                }
+                $funcDef['web_hook_url'] = $this->buildSwaigWebhookUrl($headers, $token);
             }
 
             $functions[] = $funcDef;
@@ -2004,8 +2054,11 @@ class AgentBase extends Service implements AgentInterface
      * Build the authenticated SWAIG webhook URL with query params.
      *
      * @param array<string, string> $headers
+     * @param string|null            $token Optional per-tool SWAIG token. When
+     *   present it is appended as the reserved ``__token`` query parameter
+     *   (python uses ``__token`` to avoid collision with a caller's ``token``).
      */
-    private function buildSwaigWebhookUrl(array $headers): string
+    private function buildSwaigWebhookUrl(array $headers, ?string $token = null): string
     {
         $proxyBase = $this->resolveProxyBase($headers);
         $routeSegment = $this->route === '/' ? '' : $this->route;
@@ -2019,9 +2072,16 @@ class AgentBase extends Service implements AgentInterface
 
         $authUrl = "{$scheme}://{$this->basicAuthUser}:{$this->basicAuthPassword}@{$host}{$port}{$path}{$routeSegment}/swaig";
 
-        // Append query params
-        if (!empty($this->swaigQueryParams)) {
-            $authUrl .= '?' . http_build_query($this->swaigQueryParams);
+        // Merge base SWAIG query params + the reserved per-tool __token (secure
+        // tools only). Preserve base params first so __token is a sibling, not
+        // an override — matches python's ``url_params[...] = token`` on a copy
+        // of the swaig query params.
+        $params = $this->swaigQueryParams;
+        if ($token !== null && $token !== '') {
+            $params['__token'] = $token;
+        }
+        if (!empty($params)) {
+            $authUrl .= '?' . http_build_query($params);
         }
 
         return $authUrl;

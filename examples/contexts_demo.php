@@ -28,49 +28,49 @@ $agent->promptAddSection(
     ],
 );
 
-// Define contexts using the ContextBuilder
+// Define contexts using the ContextBuilder's FLUENT API. addContext() takes
+// ONLY the context name and returns a Context you configure with chainable
+// setters; addStep() takes the step name plus named params and returns a Step.
+// (An array-config shape is NOT accepted — addContext() rejects extra args
+// loudly so a stale config-array example fails fast instead of building empty
+// contexts that fatal at serve time.)
 $ctx = $agent->defineContexts();
 
-// Sales context
-$ctx->addContext('sales', [
-    'system_prompt' => 'You are Franklin, a friendly computer sales consultant.',
-    'consolidate'   => true,
-    'steps' => [
-        [
-            'name'        => 'greeting',
-            'prompt'      => 'Greet the customer and ask what kind of computer they need.',
-            'criteria'    => 'Customer has stated their general needs.',
-            'valid_steps' => ['needs_assessment'],
-        ],
-        [
-            'name'           => 'needs_assessment',
-            'prompt'         => 'Ask about budget, use case, and specific requirements.',
-            'criteria'       => 'Budget and use case are known.',
-            'valid_steps'    => ['recommendation'],
-            'valid_contexts' => ['support'],
-        ],
-        [
-            'name'           => 'recommendation',
-            'prompt'         => 'Recommend a computer based on the gathered requirements.',
-            'criteria'       => 'Customer has received a recommendation.',
-            'valid_contexts' => ['support'],
-        ],
-    ],
-]);
+// ── Sales context ────────────────────────────────────────────────────────
+$sales = $ctx->addContext('sales')
+    ->setSystemPrompt('You are Franklin, a friendly computer sales consultant.')
+    ->setConsolidate(true);
 
-// Support context
-$ctx->addContext('support', [
-    'system_prompt' => 'You are Rachael, a technical support specialist.',
-    'full_reset'    => true,
-    'steps' => [
-        [
-            'name'           => 'diagnose',
-            'prompt'         => 'Help the customer with any technical questions or issues.',
-            'criteria'       => 'Issue has been identified or question answered.',
-            'valid_contexts' => ['sales'],
-        ],
-    ],
-]);
+$sales->addStep(
+    'greeting',
+    task: 'Greet the customer and ask what kind of computer they need.',
+    criteria: 'Customer has stated their general needs.',
+    valid_steps: ['needs_assessment'],
+);
+
+$sales->addStep(
+    'needs_assessment',
+    task: 'Ask about budget, use case, and specific requirements.',
+    criteria: 'Budget and use case are known.',
+    valid_steps: ['recommendation'],
+)->setValidContexts(['support']);
+
+$sales->addStep(
+    'recommendation',
+    task: 'Recommend a computer based on the gathered requirements.',
+    criteria: 'Customer has received a recommendation.',
+)->setValidContexts(['support']);
+
+// ── Support context ──────────────────────────────────────────────────────
+$support = $ctx->addContext('support')
+    ->setSystemPrompt('You are Rachael, a technical support specialist.')
+    ->setFullReset(true);
+
+$support->addStep(
+    'diagnose',
+    task: 'Help the customer with any technical questions or issues.',
+    criteria: 'Issue has been identified or question answered.',
+)->setValidContexts(['sales']);
 
 $agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
 $agent->setParams(['ai_model' => 'gpt-4.1-nano']);
