@@ -38,6 +38,13 @@ interface AgentInterface
     public function addHints(array $hints): static;
 
     /**
+     * The agent's name. Skills read it for metadata (e.g. MCP Gateway threads
+     * it into each tool call's `metadata.agent_id`, mirroring Python's
+     * `self.agent.name`).
+     */
+    public function getName(): string;
+
+    /**
      * @param array<string, mixed> $parameters
      * @param array<string, mixed> $extraFields Top-level SWAIG function-definition fields
      *   (e.g. meta_data_token) — siblings of `argument`. PHP's positional form of Python's

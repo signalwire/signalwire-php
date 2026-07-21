@@ -87277,6 +87277,12 @@
                   "type": "int",
                   "required": false,
                   "default": 15
+                },
+                {
+                  "name": "verify_ssl",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "any"
@@ -87310,6 +87316,12 @@
                   "type": "int",
                   "required": false,
                   "default": 15
+                },
+                {
+                  "name": "verify_ssl",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "any"
@@ -87349,6 +87361,12 @@
                   "type": "int",
                   "required": false,
                   "default": 15
+                },
+                {
+                  "name": "verify_ssl",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "any"
@@ -87634,6 +87652,115 @@
                 }
               ],
               "returns": "any"
+            },
+            "register_tools": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "void"
+            },
+            "setup": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        }
+      }
+    },
+    "signalwire.skills.mcp_gateway.skill": {
+      "classes": {
+        "MCPGatewaySkill": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "agent",
+                  "type": "class:signalwire.core.agent_base.AgentBase",
+                  "required": true
+                },
+                {
+                  "name": "params",
+                  "type": "any",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "void"
+            },
+            "get_description": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "get_global_data": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_hints": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_name": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "get_parameter_schema": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_prompt_sections": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "get_version": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             },
             "register_tools": {
               "params": [

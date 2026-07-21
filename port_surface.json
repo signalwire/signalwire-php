@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 8a98c2d2bcc01d076916c7b56335fb93e0578d5e",
+  "generated_from": "signalwire-php @ acc9d8c8b6865e5bf7a3c58f39c95a7a55254e40",
   "modules": {
     "signalwire": {
       "classes": {
@@ -3282,6 +3282,22 @@
           "get_name",
           "get_parameter_schema",
           "get_prompt_sections",
+          "register_tools",
+          "setup"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.skills.mcp_gateway.skill": {
+      "classes": {
+        "MCPGatewaySkill": [
+          "get_description",
+          "get_global_data",
+          "get_hints",
+          "get_name",
+          "get_parameter_schema",
+          "get_prompt_sections",
+          "get_version",
           "register_tools",
           "setup"
         ]

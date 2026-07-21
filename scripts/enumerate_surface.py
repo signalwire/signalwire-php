@@ -321,6 +321,7 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "InfoGatherer": "signalwire.skills.info_gatherer.skill",
     "Joke": "signalwire.skills.joke.skill",
     "Math": "signalwire.skills.math.skill",
+    "McpGateway": "signalwire.skills.mcp_gateway.skill",
     "NativeVectorSearch": "signalwire.skills.native_vector_search.skill",
     "PlayBackgroundFile": "signalwire.skills.play_background_file.skill",
     "Spider": "signalwire.skills.spider.skill",
@@ -523,6 +524,8 @@ CLASS_RENAME_MAP: dict[str, str] = {
     "InfoGatherer": "InfoGathererSkill",
     "Joke": "JokeSkill",
     "Math": "MathSkill",
+    # PHP `McpGateway` -> Python `MCPGatewaySkill` (all-caps MCP acronym).
+    "McpGateway": "MCPGatewaySkill",
     "NativeVectorSearch": "NativeVectorSearchSkill",
     "PlayBackgroundFile": "PlayBackgroundFileSkill",
     "Spider": "SpiderSkill",
