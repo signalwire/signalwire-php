@@ -202,8 +202,10 @@ class McpGatewaySkillTest extends TestCase
             // Explicit opt-out → the same self-signed cert is now accepted and
             // the /health probe succeeds.
             $ok = $skill->setup();
+            $diag = '';
             if (!$ok) {
-                // TEMP DIAGNOSTIC: capture curl backend + a direct probe.
+                // TEMP DIAGNOSTIC: capture curl backend + a direct probe, embedded
+                // into the assertion message so it surfaces in phpunit output.
                 $v = \curl_version();
                 $ch = \curl_init();
                 \curl_setopt_array($ch, [
@@ -219,12 +221,13 @@ class McpGatewaySkillTest extends TestCase
                 $er = \curl_error($ch);
                 $st = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 \curl_close($ch);
-                \fwrite(STDERR, "DIAG curl={$v['version']} ssl={$v['ssl_version']} "
-                    . "errno={$en} err=[{$er}] status={$st} body=[" . ($b === false ? 'FALSE' : $b) . "]\n");
+                $diag = " DIAG curl={$v['version']} ssl={$v['ssl_version']}"
+                    . " errno={$en} err=[{$er}] status={$st}"
+                    . ' body=[' . ($b === false ? 'FALSE' : $b) . ']';
             }
             $this->assertTrue(
                 $ok,
-                'verify_ssl=false must accept the self-signed gateway cert'
+                'verify_ssl=false must accept the self-signed gateway cert' . $diag
             );
         } finally {
             $this->tearDownTlsFixture($proc, $cert);
