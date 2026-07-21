@@ -201,33 +201,11 @@ class McpGatewaySkillTest extends TestCase
             ]);
             // Explicit opt-out → the same self-signed cert is now accepted and
             // the /health probe succeeds.
-            $ok = $skill->setup();
-            $diag = '';
-            if (!$ok) {
-                // TEMP DIAGNOSTIC: capture curl backend + a direct probe, embedded
-                // into the assertion message so it surfaces in phpunit output.
-                $v = \curl_version();
-                $ch = \curl_init();
-                \curl_setopt_array($ch, [
-                    CURLOPT_URL => "https://127.0.0.1:{$port}/health",
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_SSL_VERIFYPEER => false,
-                    CURLOPT_SSL_VERIFYHOST => 0,
-                    CURLOPT_TIMEOUT => 10,
-                    CURLOPT_CONNECTTIMEOUT => 5,
-                ]);
-                $b = \curl_exec($ch);
-                $en = \curl_errno($ch);
-                $er = \curl_error($ch);
-                $st = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                \curl_close($ch);
-                $diag = " DIAG curl={$v['version']} ssl={$v['ssl_version']}"
-                    . " errno={$en} err=[{$er}] status={$st}"
-                    . ' body=[' . ($b === false ? 'FALSE' : $b) . ']';
-            }
+            // Explicit opt-out → the same self-signed cert is now accepted and
+            // the /health probe succeeds.
             $this->assertTrue(
-                $ok,
-                'verify_ssl=false must accept the self-signed gateway cert' . $diag
+                $skill->setup(),
+                'verify_ssl=false must accept the self-signed gateway cert'
             );
         } finally {
             $this->tearDownTlsFixture($proc, $cert);
@@ -328,12 +306,32 @@ class McpGatewaySkillTest extends TestCase
         while (true) {
             \$conn = @stream_socket_accept(\$srv, 30);
             if (\$conn === false) { continue; }
+            // Read the client's request fully before responding, then shut the
+            // write side down in order before closing. PHP 8.3/8.4 ship a curl/
+            // OpenSSL that negotiates TLS 1.3 with this stream server; writing
+            // the response and closing immediately races the client's handshake
+            // completion, so curl saw a mid-stream RST ("Connection reset by
+            // peer" / errno 56) even with verification disabled. Draining the
+            // request and doing an ordered shutdown makes the close clean on
+            // every PHP/TLS version (8.2 negotiated TLS 1.2 and tolerated the
+            // abrupt close, which is why only 8.3/8.4 failed).
+            stream_set_timeout(\$conn, 2);
+            \$req = '';
+            while (!feof(\$conn)) {
+                \$line = @fgets(\$conn, 8192);
+                if (\$line === false) { break; }
+                \$req .= \$line;
+                if (str_contains(\$req, "\\r\\n\\r\\n")) { break; }
+            }
             \$body = '{"status":"ok"}';
             \$resp = "HTTP/1.1 200 OK\\r\\n"
                 . "Content-Type: application/json\\r\\n"
                 . "Content-Length: " . strlen(\$body) . "\\r\\n"
                 . "Connection: close\\r\\n\\r\\n" . \$body;
             @fwrite(\$conn, \$resp);
+            @fflush(\$conn);
+            @stream_socket_shutdown(\$conn, STREAM_SHUT_WR);
+            @stream_get_contents(\$conn);
             @fclose(\$conn);
         }
         PHP;
