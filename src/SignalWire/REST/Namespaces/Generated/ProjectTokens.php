@@ -24,9 +24,10 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
     /**
      * @param list<mixed> $permissions
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $name, array $permissions, ?string $subprojectId = null, array $extras = []): array
+    public function create(string $name, array $permissions, ?string $subprojectId = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['name'] = $name;
@@ -35,15 +36,16 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
             $__body['subproject_id'] = $subprojectId;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body);
+        return $this->http->post($this->basePath, $__body, $requestOptions);
     }
 
     /**
      * @param list<mixed>|null $permissions
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $tokenId, ?string $name = null, ?array $permissions = null, array $extras = []): array
+    public function update(string $tokenId, ?string $name = null, ?array $permissions = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($name !== null) {
@@ -53,14 +55,15 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
             $__body['permissions'] = $permissions;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->patch($this->path($tokenId), $__body);
+        return $this->http->patch($this->path($tokenId), $__body, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function delete(string $tokenId): array
+    public function delete(string $tokenId, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->delete($this->path($tokenId));
+        return $this->http->delete($this->path($tokenId), $requestOptions);
     }
 }

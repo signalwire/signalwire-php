@@ -640,6 +640,29 @@ def _register_sidecar(cls: str, php_method: str, records: list[dict]) -> None:
     _SIDECAR[(cls, php_method)] = records
 
 
+# The trailing per-call transport-override param (plan 4.2 / PY-7). Every
+# generated REST verb accepts a keyword-only ``request_options`` (mirroring the
+# Python reference generator) forwarded to the HTTP layer and NEVER folded into
+# the wire body. The single PHP realization is a nullable trailing param; the
+# oracle records it as the LAST keyword param (after ``extras``/``extra``).
+_REQUEST_OPTIONS_PHP_PARAM = "?\\SignalWire\\REST\\RequestOptions $requestOptions = null"
+_REQUEST_OPTIONS_DOC = (
+    "     * @param \\SignalWire\\REST\\RequestOptions|null $requestOptions "
+    "Per-call transport override (timeout / retry / abort); null uses the "
+    "client default. NEVER folded into the wire body."
+)
+
+
+def _request_options_record() -> dict:
+    """The sidecar record for the trailing ``request_options`` keyword param —
+    a fresh dict per call (records are mutated/serialized independently)."""
+    return {
+        "name": "request_options", "kind": "keyword",
+        "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
+        "required": False, "default": None,
+    }
+
+
 def body_params(spec: Spec, cls: str, php_method: str,
                 fields: list[tuple[str, dict, bool]],
                 leading: list[dict]) -> tuple[list[str], list[str], list[dict], list[str]]:
@@ -689,6 +712,11 @@ def body_params(spec: Spec, cls: str, php_method: str,
         "name": "extras", "kind": "keyword",
         "type": "optional<dict<string,any>>", "required": False, "default": None,
     })
+    # ``request_options`` is recorded BEFORE the dropped ``**kwargs`` var_keyword
+    # so the positional prefix stays aligned with the reference (whose oracle
+    # drops the bare **kwargs, leaving request_options as the last recorded
+    # keyword). The var_keyword kwargs record trails as a tolerated optional.
+    records.append(_request_options_record())
     records.append({
         "name": "kwargs", "kind": "var_keyword", "type": "any",
         "required": False, "default": {},
@@ -784,6 +812,11 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
     doc = ["    /**"]
     body_ml: list[str] = []
 
+    # Every emitted verb takes a trailing keyword-only ``request_options`` (plan
+    # 4.2) forwarded to the HTTP layer, never folded into the wire body. The
+    # object-body path's sidecar is registered by body_params (which already
+    # appends the request_options record); the other paths register their own
+    # sidecar here and MUST append the same record.
     if write_verb and has_body:
         body_schema = spec.op_body.get(op_id) or {}
         if is_object_body(spec, body_schema):
@@ -799,32 +832,42 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
             params = id_params + ["array $body"]
             _register_sidecar(cls, name, id_records + [
                 {"name": "body", "kind": "positional", "type": "dict<string,any>", "required": True},
+                _request_options_record(),
             ])
             body_arg = "$body"
             doc.append("     * @param array<string,mixed> $body JSON request body.")
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
-        if body_ml:
-            call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, {body_arg});"
-        else:
-            call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, {body_arg});"
+        call_line = (
+            f"        return $this->{recv}->{verb_fn}"
+            f"({path_expr}, {body_arg}, $requestOptions);"
+        )
     elif write_verb:
         # write verb, no body → empty body.
         params = id_params
-        _register_sidecar(cls, name, list(id_records))
+        _register_sidecar(cls, name, id_records + [_request_options_record()])
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
-        call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, []);"
+        call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, [], $requestOptions);"
     elif verb == "get":
         # §5.3 GET query door — a trailing var_keyword ``params`` map.
+        # The reference records ``request_options`` (keyword) BEFORE the dropped
+        # ``**params`` var_keyword, so the sidecar orders request_options first to
+        # keep the positional prefix aligned (the var_keyword params record sits
+        # last as a tolerated optional extra).
         params = id_params + ["array $params = []"]
         _register_sidecar(cls, name, id_records + [
+            _request_options_record(),
             {"name": "params", "kind": "var_keyword", "type": "any", "required": False, "default": {}},
         ])
         doc.append("     * @param array<string,mixed> $params Query-string parameters.")
-        call_line = f"        return $this->{recv}->get({path_expr}, $params);"
+        call_line = f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
     else:  # delete
         params = id_params
-        _register_sidecar(cls, name, list(id_records))
-        call_line = f"        return $this->{recv}->delete({path_expr});"
+        _register_sidecar(cls, name, id_records + [_request_options_record()])
+        call_line = f"        return $this->{recv}->delete({path_expr}, $requestOptions);"
+
+    # Trailing per-call transport override (keyword idiom: nullable last param).
+    params = params + [_REQUEST_OPTIONS_PHP_PARAM]
+    doc.append(_REQUEST_OPTIONS_DOC)
 
     sig = ", ".join(params)
     doc.append("     * @return array<string,mixed>")
@@ -881,9 +924,15 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
         records.append(rec)
     params.append("array $extra = []")
     arg_doc.append("     * @param array<string,mixed> $extra")
-    # trailing var_keyword door (the oracle's ``extra``).
+    # trailing per-call transport override (forwarded through update()). The
+    # sidecar records request_options BEFORE the dropped ``extra`` var_keyword so
+    # the positional prefix aligns with the reference (which records
+    # request_options as its last keyword param, the **extra dropped).
+    records.append(_request_options_record())
     records.append({"name": "extra", "kind": "var_keyword", "type": "any",
                     "required": False, "default": {}})
+    params.append(_REQUEST_OPTIONS_PHP_PARAM)
+    arg_doc.append(_REQUEST_OPTIONS_DOC)
     _register_sidecar(cls, name, records)
     sig = ", ".join(params)
 
@@ -902,7 +951,7 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
         body.append(f"        if (${ident} !== null) {{")
         body.append(f"            $body[{php_str(field)}] = ${ident};")
         body.append("        }")
-    body.append("        return $this->update($resourceId, array_merge($body, $extra));")
+    body.append("        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);")
     body.append("    }")
     return "\n".join(body) + "\n"
 
@@ -1014,13 +1063,15 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
     lines.append("     * @param array<string,mixed> $params")
     lines.append("     * @return array<string,mixed>")
     lines.append("     */")
-    lines.append("    private function execute(string $command, ?string $callId, array $params = []): array")
+    lines.append("    private function execute("
+                 "string $command, ?string $callId, array $params = [], "
+                 "?\\SignalWire\\REST\\RequestOptions $requestOptions = null): array")
     lines.append("    {")
     lines.append("        $body = ['command' => $command, 'params' => $params];")
     lines.append("        if ($callId !== null) {")
     lines.append("            $body['id'] = $callId;")
     lines.append("        }")
-    lines.append("        return $this->http->post(self::BASE_PATH, $body);")
+    lines.append("        return $this->http->post(self::BASE_PATH, $body, $requestOptions);")
     lines.append("    }")
     mapping = (spec.schemas.get(request).get("discriminator") or {}).get("mapping") or {}
     for cmd in commands:
@@ -1063,6 +1114,10 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         records.append({"name": "extras", "kind": "keyword",
                         "type": "optional<dict<string,any>>", "required": False, "default": None})
         build.append("        $params = array_merge($params, $extras);")
+        # trailing per-call transport override (forwarded through execute()).
+        field_php.append(_REQUEST_OPTIONS_PHP_PARAM)
+        field_doc.append(_REQUEST_OPTIONS_DOC)
+        records.append(_request_options_record())
         _register_sidecar(name, mname, records)
 
         id_php = ["string $callId"] if with_id else []
@@ -1076,7 +1131,7 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         lines.append(f"    public function {mname}({sig}): array")
         lines.append("    {")
         lines.extend(build)
-        lines.append(f"        return $this->execute({php_str(cmd)}, {call_arg}, $params);")
+        lines.append(f"        return $this->execute({php_str(cmd)}, {call_arg}, $params, $requestOptions);")
         lines.append("    }")
     lines.append("}")
     return GEN_HEADER.format(desc=f"Generated command-dispatch resource for the {spec.name!r} namespace.") + "\n" + "\n".join(lines) + "\n"

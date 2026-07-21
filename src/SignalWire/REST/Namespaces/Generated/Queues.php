@@ -23,28 +23,31 @@ class Queues extends \SignalWire\REST\CrudResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listMembers(string $queueId, array $params = []): array
+    public function listMembers(string $queueId, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($queueId, 'members'), $params);
+        return $this->client->get($this->path($queueId, 'members'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function getNextMember(string $queueId, array $params = []): array
+    public function getNextMember(string $queueId, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($queueId, 'members', 'next'), $params);
+        return $this->client->get($this->path($queueId, 'members', 'next'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function getMember(string $queueId, string $id, array $params = []): array
+    public function getMember(string $queueId, string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($queueId, 'members', $id), $params);
+        return $this->client->get($this->path($queueId, 'members', $id), $params, $requestOptions);
     }
 }

@@ -25,9 +25,10 @@ class DatasphereDocuments extends \SignalWire\REST\CrudResource
      * @param list<mixed>|null $tags
      * @param list<mixed>|null $posToExpand
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function search(string $queryString, ?array $tags = null, ?string $documentId = null, ?float $distance = null, ?int $count = null, ?string $language = null, ?array $posToExpand = null, ?int $maxSynonyms = null, array $extras = []): array
+    public function search(string $queryString, ?array $tags = null, ?string $documentId = null, ?float $distance = null, ?int $count = null, ?string $language = null, ?array $posToExpand = null, ?int $maxSynonyms = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['query_string'] = $queryString;
@@ -53,32 +54,35 @@ class DatasphereDocuments extends \SignalWire\REST\CrudResource
             $__body['max_synonyms'] = $maxSynonyms;
         }
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path('search'), $__body);
+        return $this->client->post($this->path('search'), $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listChunks(string $documentId, array $params = []): array
+    public function listChunks(string $documentId, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($documentId, 'chunks'), $params);
+        return $this->client->get($this->path($documentId, 'chunks'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function getChunk(string $documentId, string $chunkId, array $params = []): array
+    public function getChunk(string $documentId, string $chunkId, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($documentId, 'chunks', $chunkId), $params);
+        return $this->client->get($this->path($documentId, 'chunks', $chunkId), $params, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function deleteChunk(string $documentId, string $chunkId): array
+    public function deleteChunk(string $documentId, string $chunkId, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->delete($this->path($documentId, 'chunks', $chunkId));
+        return $this->client->delete($this->path($documentId, 'chunks', $chunkId), $requestOptions);
     }
 }

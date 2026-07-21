@@ -76,11 +76,14 @@ class ReadResource extends BaseResource
      * List resources (GET basePath).
      *
      * @param array<string,mixed> $params Query-string parameters.
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   (timeout / retry / abort); null uses the client default. Mirrors the
+     *   python reference ``ReadResource.list(*, request_options=None, **params)``.
      * @return array<string,mixed>
      */
-    public function list(array $params = []): array
+    public function list(array $params = [], ?RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->basePath, $params);
+        return $this->client->get($this->basePath, $params, $requestOptions);
     }
 
     /**
@@ -100,25 +103,33 @@ class ReadResource extends BaseResource
      * ``ReadResource.paginate(**params) -> PaginatedIterator``.
      *
      * @param array<string,mixed> $params Initial query-string parameters.
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   applied to EVERY page fetch (timeout / retry / abort); null uses the
+     *   client default. Mirrors the python reference
+     *   ``ReadResource.paginate(*, request_options=None, **params)``.
      */
-    public function paginate(array $params = []): PaginatedIterator
+    public function paginate(array $params = [], ?RequestOptions $requestOptions = null): PaginatedIterator
     {
         return new PaginatedIterator(
             $this->client,
             $this->basePath,
             $params === [] ? null : $params,
-            'data'
+            'data',
+            $requestOptions
         );
     }
 
     /**
      * Retrieve a single resource by ID (GET basePath/{id}).
      *
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   (timeout / retry / abort); null uses the client default. Mirrors the
+     *   python reference ``ReadResource.get(resource_id, *, request_options=None)``.
      * @return array<string,mixed>
      */
-    public function get(string $id): array
+    public function get(string $id, ?RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($id));
+        return $this->client->get($this->path($id), [], $requestOptions);
     }
 }
 
@@ -149,11 +160,14 @@ class CrudResource extends ReadResource
      * Create a new resource (POST basePath).
      *
      * @param array<string,mixed> $data JSON body.
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   (timeout / retry / abort); null uses the client default. Mirrors the
+     *   python reference ``CrudResource.create(*, request_options=None, **kwargs)``.
      * @return array<string,mixed>
      */
-    public function create(array $data): array
+    public function create(array $data, ?RequestOptions $requestOptions = null): array
     {
-        return $this->client->post($this->basePath, $data);
+        return $this->client->post($this->basePath, $data, $requestOptions);
     }
 
     /**
@@ -161,24 +175,30 @@ class CrudResource extends ReadResource
      * resources whose canonical route uses PUT — see $updateMethod).
      *
      * @param array<string,mixed> $data JSON body.
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   (timeout / retry / abort); null uses the client default. Mirrors the
+     *   python reference ``CrudResource.update(resource_id, *, request_options=None, **kwargs)``.
      * @return array<string,mixed>
      */
-    public function update(string $id, array $data): array
+    public function update(string $id, array $data, ?RequestOptions $requestOptions = null): array
     {
         if ($this->updateMethod === 'PUT') {
-            return $this->client->put($this->path($id), $data);
+            return $this->client->put($this->path($id), $data, $requestOptions);
         }
-        return $this->client->patch($this->path($id), $data);
+        return $this->client->patch($this->path($id), $data, $requestOptions);
     }
 
     /**
      * Delete a resource by ID (DELETE basePath/{id}).
      *
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   (timeout / retry / abort); null uses the client default. Mirrors the
+     *   python reference ``CrudResource.delete(resource_id, *, request_options=None)``.
      * @return array<string,mixed>
      */
-    public function delete(string $id): array
+    public function delete(string $id, ?RequestOptions $requestOptions = null): array
     {
-        return $this->client->delete($this->path($id));
+        return $this->client->delete($this->path($id), $requestOptions);
     }
 }
 
@@ -194,10 +214,14 @@ class CrudWithAddresses extends CrudResource
      * List the addresses associated with a resource (GET basePath/{id}/addresses).
      *
      * @param array<string,mixed> $params Query-string parameters.
+     * @param RequestOptions|null $requestOptions Per-call transport override
+     *   (timeout / retry / abort); null uses the client default. Mirrors the
+     *   python reference
+     *   ``CrudWithAddresses.list_addresses(resource_id, *, request_options=None, **params)``.
      * @return array<string,mixed>
      */
-    public function listAddresses(string $resource_id, array $params = []): array
+    public function listAddresses(string $resource_id, array $params = [], ?RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($resource_id, 'addresses'), $params);
+        return $this->client->get($this->path($resource_id, 'addresses'), $params, $requestOptions);
     }
 }

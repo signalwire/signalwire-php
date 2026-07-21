@@ -154,6 +154,12 @@ final class CapturingAgent implements AgentInterface
         return $this;
     }
 
+    /** Stub agent name for the skill-contract harness. */
+    public function getName(): string
+    {
+        return 'skill-contract-agent';
+    }
+
     /**
      * Captured — records hints so registerTools() that calls addHints does not
      * fatal (the addHints-fatal class of bug this harness must survive).

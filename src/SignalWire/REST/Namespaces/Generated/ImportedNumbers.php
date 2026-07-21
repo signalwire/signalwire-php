@@ -24,9 +24,10 @@ class ImportedNumbers extends \SignalWire\REST\BaseResource
     /**
      * @param list<mixed>|null $capabilities
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $number, string $numberType, ?array $capabilities = null, array $extras = []): array
+    public function create(string $number, string $numberType, ?array $capabilities = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['number'] = $number;
@@ -35,6 +36,6 @@ class ImportedNumbers extends \SignalWire\REST\BaseResource
             $__body['capabilities'] = $capabilities;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body);
+        return $this->http->post($this->basePath, $__body, $requestOptions);
     }
 }

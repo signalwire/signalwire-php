@@ -65,12 +65,12 @@ class SkillsTest extends TestCase
     //  Registry tests (8)
     // ══════════════════════════════════════════════════════════════════════
 
-    public function testRegistryListSkillsReturns17Skills(): void
+    public function testRegistryListSkillsReturns18Skills(): void
     {
         $registry = SkillRegistry::instance();
         $skills = $registry->listSkills();
 
-        $this->assertCount(17, $skills);
+        $this->assertCount(18, $skills);
     }
 
     public function testRegistryGetFactoryForKnownSkillReturnsClassName(): void
@@ -102,9 +102,10 @@ class SkillsTest extends TestCase
         $this->assertContains('my_custom', $skills);
     }
 
-    public function testRegistryAll17BuiltinNamesPresentInListSkills(): void
+    public function testRegistryAll18BuiltinNamesPresentInListSkills(): void
     {
-        // 17 built-ins: mcp_gateway is NOT ported (approved Python-only per §I.1).
+        // 18 built-ins. The mcp_gateway CLIENT skill IS ported (oracle-required);
+        // only the gateway SERVER daemon stays Python-only (PORT_PHILOSOPHY.md).
         $expected = [
             'api_ninjas_trivia',
             'claude_skills',
@@ -116,6 +117,7 @@ class SkillsTest extends TestCase
             'info_gatherer',
             'joke',
             'math',
+            'mcp_gateway',
             'native_vector_search',
             'play_background_file',
             'spider',
@@ -362,6 +364,23 @@ class SkillsTest extends TestCase
 
         $manager->loadSkill('datetime', ['skip_prompt' => true]);
         $this->assertSame(['datetime'], $manager->listLoadedSkills());
+    }
+
+    // PHP-4 — addSkill() must SURFACE a load failure by throwing, not silently
+    // no-op. An unknown skill is a configuration error the caller must see.
+    // Mirrors python SkillMixin.add_skill raising ValueError.
+    public function testAddSkillThrowsOnUnknownSkill(): void
+    {
+        $agent = $this->makeAgent();
+        try {
+            $agent->addSkill('no_such_skill_xyz');
+            $this->fail('addSkill should throw on an unknown skill, not no-op');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('no_such_skill_xyz', $e->getMessage());
+            $this->assertStringContainsString('Failed to load skill', $e->getMessage());
+        }
+        // The failed load left nothing registered.
+        $this->assertFalse($agent->hasSkill('no_such_skill_xyz'));
     }
 
     public function testSkillManagerHasSkillTrueAndFalse(): void
@@ -1139,13 +1158,13 @@ class SkillsTest extends TestCase
     //  Individual skill instantiation test (1)
     // ══════════════════════════════════════════════════════════════════════
 
-    public function testAll17SkillsCanBeInstantiatedWithAgent(): void
+    public function testAll18SkillsCanBeInstantiatedWithAgent(): void
     {
         $agent = $this->makeAgent();
         $registry = SkillRegistry::instance();
         $skillNames = $registry->listSkills();
 
-        $this->assertCount(17, $skillNames);
+        $this->assertCount(18, $skillNames);
 
         // A few skills validate their required config in the constructor
         // (mirroring Python's __init__ which raises ValueError): supply the

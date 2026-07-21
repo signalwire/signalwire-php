@@ -32,7 +32,7 @@ class Client implements RelayClientLike
     /**
      * Optional path to a CA bundle (PEM) used to verify the server
      * certificate on ``wss://`` connections. Sourced from the ``ca_file``
-     * option or the ``SIGNALWIRE_CA_FILE`` / ``SSL_CERT_FILE`` env vars.
+     * option or the fleet-standard ``SIGNALWIRE_RELAY_CA_FILE`` env var (A5).
      * Peer verification stays enabled regardless; this only selects which
      * CA to trust (system store when null).
      */
@@ -88,6 +88,83 @@ class Client implements RelayClientLike
     private bool $running = false;
     private bool $closing = false;
 
+    /**
+     * Credential / re-auth keys whose VALUES must never reach a debug log or
+     * error string. A raw RELAY frame carries the connect ``authentication``
+     * block ({project, token, jwt_token}) and the server's
+     * ``authorization_state`` re-auth blob; logging the frame verbatim would
+     * leak live credentials (enterprise SECRET-SCRUB / F3.1/F3.2). Mirrors the
+     * python reference ``_SCRUB_KEYS`` (relay/client.py).
+     *
+     * @var list<string>
+     */
+    private const SCRUB_KEYS = ['token', 'project', 'jwt_token', 'authorization_state'];
+
+    /**
+     * Return a log-safe repr of a raw RELAY frame (a JSON string) with the
+     * credential VALUES of {@see self::SCRUB_KEYS} masked to ``"***"``.
+     *
+     * Structural / non-credential content is preserved so the frame stays
+     * diagnostic at ``SIGNALWIRE_LOG_LEVEL=debug`` — only the sensitive string
+     * values are redacted. Mirrors the python reference ``_scrub_frame``
+     * (relay/client.py): a regex substitution over ``"<key>": "<value>"`` that
+     * replaces the value with ``"***"``. A non-string value (number, object,
+     * array) is not a credential shape and is left untouched.
+     */
+    private static function scrubFrame(string $raw): string
+    {
+        $keys = implode('|', self::SCRUB_KEYS);
+        // Match "<scrub-key>" : "<json-string-value>" and replace only the
+        // value. The value alternation `\\.|[^"\\]` consumes escaped chars and
+        // any non-quote/non-backslash char, so embedded escaped quotes inside
+        // the credential value do not terminate the match early.
+        $pattern  = '/("(?:' . $keys . ')"\s*:\s*)"(?:\\\\.|[^"\\\\])*"/';
+        $scrubbed = preg_replace($pattern, '$1"***"', $raw);
+
+        return $scrubbed ?? $raw;
+    }
+
+    /**
+     * Return a log-safe repr of a raw frame for THIS client's debug output.
+     *
+     * Two layers, in order:
+     *   1. {@see self::scrubFrame} — the key-shape mask (``"<key>":"***"``),
+     *      mirroring the python reference ``_scrub_frame``: it redacts the
+     *      credential/re-auth VALUES wherever they sit under a recognised key.
+     *   2. A verbatim-value mask of THIS connection's LIVE credentials
+     *      (project / token / jwt_token / authorization_state). The server can
+     *      echo a live credential back inside a field that is NOT a scrub key —
+     *      e.g. a connect-response ``identity`` derived from the project — so a
+     *      key-shape-only scrub would leak it. This layer replaces any verbatim
+     *      occurrence of a live credential value with ``***`` regardless of the
+     *      surrounding field, so a live credential NEVER reaches a debug log
+     *      (enterprise SECRET-SCRUB / F3.1: the connect frame's project must not
+     *      leak, in ANY field the server reflects it into). Empty credentials
+     *      are skipped so we never mask ``""`` and mangle unrelated frames.
+     */
+    private function scrubForLog(string $raw): string
+    {
+        $out = self::scrubFrame($raw);
+
+        $values = array_filter(
+            [
+                $this->token,
+                $this->project,
+                $this->jwtToken ?? '',
+                $this->authorizationState ?? '',
+            ],
+            static fn (string $v): bool => $v !== ''
+        );
+        if ($values === []) {
+            return $out;
+        }
+        // Longest-first so a value that is a substring of another is not
+        // partially masked ahead of its container.
+        usort($values, static fn (string $a, string $b): int => \strlen($b) <=> \strlen($a));
+
+        return str_replace($values, '***', $out);
+    }
+
     // ══════════════════════════════════════════════════════════════════
     //  Construction
     // ══════════════════════════════════════════════════════════════════
@@ -132,18 +209,19 @@ class Client implements RelayClientLike
             $this->relayPath = $options['path'];
         }
 
-        // CA bundle for wss:// peer verification. Option wins; otherwise fall
-        // back to SIGNALWIRE_CA_FILE then SSL_CERT_FILE (the latter is the
-        // conventional OpenSSL override the test harness sets).
+        // CA bundle for wss:// peer verification. Explicit ``ca_file`` option
+        // wins; otherwise the fleet-standard RELAY CA env var
+        // SIGNALWIRE_RELAY_CA_FILE selects the trust bundle for the RELAY
+        // WebSocket transport (A5 hard-cut: this EXACT name only, no aliases —
+        // matches the python reference relay/client.py _build_relay_ssl_context
+        // which reads SIGNALWIRE_RELAY_CA_FILE). Peer verification stays
+        // enabled regardless; this only chooses which CA to trust.
         if (isset($options['ca_file']) && is_string($options['ca_file']) && $options['ca_file'] !== '') {
             $this->caFile = $options['ca_file'];
         } else {
-            foreach (['SIGNALWIRE_CA_FILE', 'SSL_CERT_FILE'] as $envVar) {
-                $val = getenv($envVar);
-                if (is_string($val) && $val !== '') {
-                    $this->caFile = $val;
-                    break;
-                }
+            $val = getenv('SIGNALWIRE_RELAY_CA_FILE');
+            if (is_string($val) && $val !== '') {
+                $this->caFile = $val;
             }
         }
 
@@ -431,7 +509,10 @@ class Client implements RelayClientLike
     public function send(array $msg): void
     {
         $json = json_encode($msg, JSON_THROW_ON_ERROR);
-        $this->logger->debug(">> {$json}");
+        // SECRET-SCRUB: mask credential/authorization_state VALUES before the
+        // debug log so a `SIGNALWIRE_LOG_LEVEL=debug` session never emits the
+        // connect frame's live project/token/jwt_token (enterprise F3.1).
+        $this->logger->debug('>> ' . $this->scrubForLog($json));
 
         if ($this->socket === null || !$this->socket->isConnected()) {
             throw new \RuntimeException('RelayClient: send on disconnected socket');
@@ -492,7 +573,11 @@ class Client implements RelayClientLike
      */
     public function handleMessage(string $raw): void
     {
-        $this->logger->debug("<< {$raw}");
+        // SECRET-SCRUB: mask credential/authorization_state VALUES before the
+        // debug log so an inbound `signalwire.authorization.state` re-auth blob
+        // (or any frame echoing credentials) is never emitted verbatim at
+        // debug (enterprise F3.2).
+        $this->logger->debug('<< ' . $this->scrubForLog($raw));
 
         $data = json_decode($raw, true);
         // A JSON-RPC frame is always an object — decode to a string-keyed
@@ -558,7 +643,11 @@ class Client implements RelayClientLike
         if ($eventType === 'signalwire.authorization.state') {
             $authState = $params['authorization_state'] ?? null;
             $this->authorizationState = is_string($authState) ? $authState : null;
-            $this->logger->info("Authorization state: {$this->authorizationState}");
+            // SECRET-SCRUB: NEVER log the re-auth blob VALUE — it is the
+            // server's encrypted state (enterprise F3.2). Log only that it was
+            // updated, mirroring the python reference which logs a value-free
+            // "Updated authorization_state for reconnection".
+            $this->logger->info('Re-auth state updated for reconnection');
             return;
         }
 

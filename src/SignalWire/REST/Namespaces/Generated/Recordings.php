@@ -23,27 +23,30 @@ class Recordings extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function list(array $params = []): array
+    public function list(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->basePath, $params);
+        return $this->http->get($this->basePath, $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function get(string $id, array $params = []): array
+    public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id), $params);
+        return $this->http->get($this->path($id), $params, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function delete(string $id): array
+    public function delete(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->delete($this->path($id));
+        return $this->http->delete($this->path($id), $requestOptions);
     }
 }

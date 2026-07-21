@@ -60,11 +60,23 @@ class Document
 
     /**
      * Append a verb to a named section.
+     *
+     * A verb with no arguments (an empty array config) is stored as an empty
+     * OBJECT (``\stdClass``) so it renders on the wire as ``{"verb":{}}``, NOT
+     * ``{"verb":[]}``. The SWML wire contract (and the python reference,
+     * swml_service.add_verb, which stores ``config = {}``) is that a verb's
+     * config is a JSON OBJECT; PHP's empty ``[]`` would json_encode to a JSON
+     * ARRAY, which the server's SWML schema rejects for a verb body. A ``sleep``
+     * verb (whose config is a bare integer) and any non-empty config pass
+     * through unchanged.
      */
     public function addVerbToSection(string $section, string $verbName, mixed $config): void
     {
         if (!isset($this->sections[$section])) {
             throw new \InvalidArgumentException("Section '{$section}' does not exist");
+        }
+        if (is_array($config) && $config === []) {
+            $config = new \stdClass();
         }
         $this->sections[$section][] = [$verbName => $config];
     }

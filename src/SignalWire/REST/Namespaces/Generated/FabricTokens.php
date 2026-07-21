@@ -23,9 +23,10 @@ class FabricTokens extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createSubscriberToken(string $reference, ?int $expireAt = null, ?string $applicationId = null, ?string $password = null, ?string $firstName = null, ?string $lastName = null, ?string $displayName = null, ?string $jobTitle = null, ?string $timeZone = null, ?string $country = null, ?string $region = null, ?string $companyName = null, array $extras = []): array
+    public function createSubscriberToken(string $reference, ?int $expireAt = null, ?string $applicationId = null, ?string $password = null, ?string $firstName = null, ?string $lastName = null, ?string $displayName = null, ?string $jobTitle = null, ?string $timeZone = null, ?string $country = null, ?string $region = null, ?string $companyName = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['reference'] = $reference;
@@ -63,26 +64,28 @@ class FabricTokens extends \SignalWire\REST\BaseResource
             $__body['company_name'] = $companyName;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens', $__body);
+        return $this->http->post('/api/fabric/subscribers/tokens', $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function refreshSubscriberToken(string $refreshToken, array $extras = []): array
+    public function refreshSubscriberToken(string $refreshToken, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['refresh_token'] = $refreshToken;
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body);
+        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createInviteToken(string $addressId, ?int $expiresAt = null, array $extras = []): array
+    public function createInviteToken(string $addressId, ?int $expiresAt = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['address_id'] = $addressId;
@@ -90,15 +93,16 @@ class FabricTokens extends \SignalWire\REST\BaseResource
             $__body['expires_at'] = $expiresAt;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscriber/invites', $__body);
+        return $this->http->post('/api/fabric/subscriber/invites', $__body, $requestOptions);
     }
 
     /**
      * @param list<mixed> $allowedAddresses
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createGuestToken(array $allowedAddresses, ?int $expireAt = null, array $extras = []): array
+    public function createGuestToken(array $allowedAddresses, ?int $expireAt = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['allowed_addresses'] = $allowedAddresses;
@@ -106,18 +110,19 @@ class FabricTokens extends \SignalWire\REST\BaseResource
             $__body['expire_at'] = $expireAt;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/guests/tokens', $__body);
+        return $this->http->post('/api/fabric/guests/tokens', $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createEmbedToken(string $token, array $extras = []): array
+    public function createEmbedToken(string $token, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['token'] = $token;
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/embeds/tokens', $__body);
+        return $this->http->post('/api/fabric/embeds/tokens', $__body, $requestOptions);
     }
 }

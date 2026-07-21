@@ -23,20 +23,22 @@ class CxmlApplications extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function list(array $params = []): array
+    public function list(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->basePath, $params);
+        return $this->http->get($this->basePath, $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function get(string $id, array $params = []): array
+    public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id), $params);
+        return $this->http->get($this->path($id), $params, $requestOptions);
     }
 
     /**
@@ -47,9 +49,10 @@ class CxmlApplications extends \SignalWire\REST\BaseResource
      * @param array<string,mixed>|null $smsFallbackMethod
      * @param array<string,mixed>|null $smsStatusCallbackMethod
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $id, ?string $displayName = null, ?string $accountSid = null, ?string $voiceUrl = null, ?array $voiceMethod = null, ?string $voiceFallbackUrl = null, ?array $voiceFallbackMethod = null, ?string $statusCallback = null, ?array $statusCallbackMethod = null, ?string $smsUrl = null, ?array $smsMethod = null, ?string $smsFallbackUrl = null, ?array $smsFallbackMethod = null, ?string $smsStatusCallback = null, ?array $smsStatusCallbackMethod = null, array $extras = []): array
+    public function update(string $id, ?string $displayName = null, ?string $accountSid = null, ?string $voiceUrl = null, ?array $voiceMethod = null, ?string $voiceFallbackUrl = null, ?array $voiceFallbackMethod = null, ?string $statusCallback = null, ?array $statusCallbackMethod = null, ?string $smsUrl = null, ?array $smsMethod = null, ?string $smsFallbackUrl = null, ?array $smsFallbackMethod = null, ?string $smsStatusCallback = null, ?array $smsStatusCallbackMethod = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($displayName !== null) {
@@ -95,23 +98,25 @@ class CxmlApplications extends \SignalWire\REST\BaseResource
             $__body['sms_status_callback_method'] = $smsStatusCallbackMethod;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->path($id), $__body);
+        return $this->http->put($this->path($id), $__body, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function delete(string $id): array
+    public function delete(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->delete($this->path($id));
+        return $this->http->delete($this->path($id), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listAddresses(string $id, array $params = []): array
+    public function listAddresses(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id, 'addresses'), $params);
+        return $this->http->get($this->path($id, 'addresses'), $params, $requestOptions);
     }
 }

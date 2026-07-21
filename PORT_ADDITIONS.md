@@ -569,6 +569,9 @@ signalwire.skills.joke.skill.JokeSkill.get_description: idiomatic PHP surface ex
 signalwire.skills.joke.skill.JokeSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.math.skill.MathSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.math.skill.MathSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
+signalwire.skills.mcp_gateway.skill.MCPGatewaySkill.get_version: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference

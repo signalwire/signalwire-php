@@ -436,7 +436,7 @@ class Service implements RequestHandlerLike
         string $description,
         array $parameters,
         callable $handler,
-        bool $secure = false,
+        bool $secure = true,
         array $extraFields = [],
     ): static {
         $this->tools[$name] = array_merge($extraFields, [

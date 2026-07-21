@@ -26,10 +26,28 @@ class PaginatedIterator implements \Iterator
     private array $params;
     private string $dataKey;
 
+    /**
+     * Per-call transport override applied to EVERY page fetch (timeout / retry /
+     * abort). Null = use the client default. Mirrors the python reference
+     * ``PaginatedIterator.__init__(request_options=...)`` (rest/_pagination.py).
+     */
+    private ?RequestOptions $requestOptions;
+
     /** @var list<array<string,mixed>> */
     private array $items = [];
     private int $index = 0;
     private bool $done = false;
+
+    /**
+     * Cycle guard: ``links.next`` cursors already followed. A server that keeps
+     * returning the SAME ``links.next`` would otherwise loop forever (the
+     * empty-page fix terminates ONLY on an ABSENT next link, so a repeating next
+     * became an infinite loop). Seeing a repeat terminates iteration. Mirrors
+     * the python reference ``_seen_next`` (rest/_pagination.py).
+     *
+     * @var array<string,true>
+     */
+    private array $seenNext = [];
 
     /**
      * @param array<string,mixed>|null $params Initial query-string parameters.
@@ -38,12 +56,14 @@ class PaginatedIterator implements \Iterator
         HttpClient $http,
         string $path,
         ?array $params = null,
-        string $dataKey = 'data'
+        string $dataKey = 'data',
+        ?RequestOptions $requestOptions = null
     ) {
         $this->http = $http;
         $this->path = $path;
         $this->params = $params ?? [];
         $this->dataKey = $dataKey;
+        $this->requestOptions = $requestOptions;
     }
 
     /** The http. */
@@ -131,7 +151,11 @@ class PaginatedIterator implements \Iterator
      */
     private function fetchNext(): void
     {
-        $resp = $this->http->get($this->path, $this->coerceParams($this->params));
+        $resp = $this->http->get(
+            $this->path,
+            $this->coerceParams($this->params),
+            $this->requestOptions
+        );
         $data = $resp[$this->dataKey] ?? [];
         if (is_array($data)) {
             foreach ($data as $row) {
@@ -148,10 +172,25 @@ class PaginatedIterator implements \Iterator
 
         $links = $resp['links'] ?? [];
         $nextUrl = is_array($links) ? ($links['next'] ?? null) : null;
-        if (is_string($nextUrl) && $nextUrl !== '' && is_array($data) && count($data) > 0) {
+        // Termination is driven ONLY by the absence of a next link, NOT by an
+        // empty ``data`` array on this page. A page can legitimately carry a
+        // ``links.next`` (more pages exist) while returning zero items on THIS
+        // page — a filtered page that matched nothing here. The old
+        // ``next_url && count(data) > 0`` condition stopped on such a page and
+        // silently dropped every subsequent page; iterate while a next link
+        // exists, empty page or not. Mirrors python rest/_pagination.py.
+        if (is_string($nextUrl) && $nextUrl !== '') {
+            // Cycle guard: a ``links.next`` we have already followed means the
+            // server is looping (a repeating cursor) — terminate instead of
+            // re-fetching the same page forever.
+            if (isset($this->seenNext[$nextUrl])) {
+                $this->done = true;
+                return;
+            }
+            $this->seenNext[$nextUrl] = true;
             // Parse cursor/page token from next URL.
             $parsed = parse_url($nextUrl);
-            $query = $parsed['query'] ?? '';
+            $query = is_string($parsed['query'] ?? null) ? $parsed['query'] : '';
             $parts = [];
             parse_str($query, $parts);
             /** @var array<string,mixed> $normalized */

@@ -1,0 +1,209 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * pagination-dump — the PHP port's PAGINATION-CORPUS (Layer-D) dump program for
+ * the cross-port behavioral differ (porting-sdk/scripts/diff_port_pagination.py).
+ *
+ * The BEHAVIORAL upgrade of the static PAGINATION-WIRED gate. The differ drives
+ * the python reference PaginatedIterator over a live mock_signalwire with each
+ * fixture's page sequence armed to build the golden classification, then runs
+ * THIS program (which embeds the same corpus + arms the same pages against the
+ * same shared mock) and structurally compares our per-fixture classification.
+ *
+ * The three fixtures pin the paginator's tricky runtime contract:
+ *   * empty_page_with_next   — page 1 is EMPTY but carries a ``links.next``; the
+ *     paginator MUST continue past it and yield the page-2 item (a naive
+ *     ``while data`` stops early and drops every later page).
+ *     → {continued_past_empty, items_seen}
+ *   * repeating_cursor_guard — both pages point at the SAME ``links.next`` (a
+ *     server loop); the paginator MUST detect the repeat and STOP (never spin).
+ *     → {loop_guarded, hung}
+ *   * exhaustion             — a normal 3-page sequence; terminate + yield ALL
+ *     items. → {terminated, total_items}
+ *
+ * The artifact is a DETERMINISTIC classification (booleans + exact item counts),
+ * fakeable only by actually walking the pages. ``hung`` is bounded: a paginator
+ * with no cycle guard would loop forever — we bound the walk with a hard
+ * iteration cap so a hang is OBSERVED as hung=true, never a wedged process.
+ *
+ * Protocol: stdout = ONE JSON object mapping fixture id => classification. Only
+ * stdout carries JSON; the mock harness's setup noise goes to stderr.
+ *
+ * Run from the signalwire-php repo root (with a mock_signalwire reachable via
+ * MOCK_SIGNALWIRE_PORT, or auto-spawned by the harness):
+ *
+ *   php bin/pagination-dump
+ *
+ * Copyright (c) 2025 SignalWire
+ * Licensed under the MIT License.
+ */
+
+use SignalWire\REST\PaginatedIterator;
+use SignalWire\Tests\Rest\Harness;
+use SignalWire\Tests\Rest\MockTest;
+
+// Keep stdout PURE JSON: the differ does json_loads(proc.stdout). Any incidental
+// stdout during setup is captured and forwarded to stderr; only the final JSON
+// reaches the real stdout.
+$REAL_STDOUT = fopen('php://stdout', 'w');
+if ($REAL_STDOUT === false) {
+    $REAL_STDOUT = STDOUT;
+}
+ob_start(function (string $chunk): string {
+    if ($chunk !== '') {
+        fwrite(STDERR, $chunk);
+    }
+    return '';
+}, 1);
+
+$autoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (!is_file($autoload)) {
+    fwrite(STDERR, "pagination-dump: vendor/autoload.php not found; run composer install\n");
+    exit(1);
+}
+require_once $autoload;
+// The mock harness lives under tests/ (not autoloaded by the src PSR-4 map).
+require_once dirname(__DIR__) . '/tests/Rest/MockTest.php';
+
+// ---------------------------------------------------------------------------
+// Corpus — byte-identical page bodies to porting-sdk/scripts/pagination_corpus.py.
+// ---------------------------------------------------------------------------
+const PG_LIST_PATH   = '/api/fabric/addresses';
+const PG_ENDPOINT_ID = 'fabric.list_fabric_addresses';
+
+/** Stable next-cursor URL builder (echoes ``page_token=<tok>`` like the server). */
+function pg_next(string $tok): string
+{
+    return 'http://mock.test' . PG_LIST_PATH . '?page_token=' . $tok;
+}
+
+/**
+ * The corpus: id => {kind, pages}. Pages are armed FIFO on PG_ENDPOINT_ID.
+ *
+ * @return array<string, array{kind: string, pages: list<array<string,mixed>>}>
+ */
+function pg_corpus(): array
+{
+    return [
+        'empty_page_with_next' => [
+            'kind'  => 'empty_page_with_next',
+            'pages' => [
+                ['data' => [], 'links' => ['next' => pg_next('EP_page2')]],
+                ['data' => [['id' => 'found-after-empty']], 'links' => new \stdClass()],
+            ],
+        ],
+        'repeating_cursor_guard' => [
+            'kind'  => 'repeating_cursor_guard',
+            'pages' => [
+                ['data' => [['id' => 'loop-1']], 'links' => ['next' => pg_next('LOOP')]],
+                ['data' => [['id' => 'loop-2']], 'links' => ['next' => pg_next('LOOP')]],
+            ],
+        ],
+        'exhaustion' => [
+            'kind'  => 'exhaustion',
+            'pages' => [
+                ['data' => [['id' => 'x-1'], ['id' => 'x-2']], 'links' => ['next' => pg_next('EX_page2')]],
+                ['data' => [['id' => 'x-3'], ['id' => 'x-4']], 'links' => ['next' => pg_next('EX_page3')]],
+                ['data' => [['id' => 'x-5']], 'links' => new \stdClass()],
+            ],
+        ],
+    ];
+}
+
+/**
+ * Arm the fixture's pages on a fresh scoped client and return the collected item
+ * ids (bounded so a missing cycle guard is observed as a hang, not a wedge).
+ *
+ * @param list<array<string,mixed>> $pages
+ * @return array{ids: list<string>, hung: bool}
+ */
+function pg_walk(array $pages): array
+{
+    /** @var array{0: \SignalWire\REST\RestClient, 1: Harness, 2: string} $tuple */
+    $tuple = MockTest::scopedClient();
+    [$client, $mock] = $tuple;
+
+    foreach ($pages as $page) {
+        // Scenarios are FIFO consume-once; arm each page in order.
+        $body = is_array($page) ? $page : (array) $page;
+        $mock->scenarios()->set(PG_ENDPOINT_ID, 200, $body);
+    }
+
+    $it = new PaginatedIterator($client->getHttp(), PG_LIST_PATH, null, 'data');
+
+    // Hard cap: at most (pages armed + a small slack) items can legitimately be
+    // yielded. A paginator missing its cycle guard would loop forever re-fetching
+    // the repeated cursor — the cap trips and we classify hung=true instead of
+    // hanging the process (the differ also SIGKILLs a truly wedged dump).
+    $cap = 0;
+    foreach ($pages as $page) {
+        $data = $page['data'] ?? [];
+        $cap += is_array($data) ? count($data) : 0;
+    }
+    $cap += 5;
+
+    $ids = [];
+    $hung = false;
+    foreach ($it as $row) {
+        $id = is_array($row) ? ($row['id'] ?? null) : null;
+        if (is_string($id)) {
+            $ids[] = $id;
+        }
+        if (count($ids) > $cap) {
+            $hung = true;
+            break;
+        }
+    }
+
+    return ['ids' => $ids, 'hung' => $hung];
+}
+
+/**
+ * Reduce one fixture's walk to its deterministic classification.
+ *
+ * @param array{kind: string, pages: list<array<string,mixed>>} $case
+ * @return array<string, bool|int>
+ */
+function pg_classify(array $case): array
+{
+    $kind = $case['kind'];
+    $walk = pg_walk($case['pages']);
+    $ids  = $walk['ids'];
+
+    if ($kind === 'repeating_cursor_guard') {
+        if ($walk['hung']) {
+            return ['loop_guarded' => false, 'hung' => true];
+        }
+        // Terminated: the cycle guard fired. The two pages' items were consumed
+        // exactly once (the repeated cursor was NOT re-fetched).
+        return ['loop_guarded' => $ids === ['loop-1', 'loop-2'], 'hung' => false];
+    }
+
+    if ($kind === 'empty_page_with_next') {
+        // Continued past the empty page 1 iff the page-2 item was yielded.
+        return ['continued_past_empty' => $ids === ['found-after-empty'], 'items_seen' => count($ids)];
+    }
+
+    if ($kind === 'exhaustion') {
+        $expected = ['x-1', 'x-2', 'x-3', 'x-4', 'x-5'];
+        return ['terminated' => $ids === $expected, 'total_items' => count($ids)];
+    }
+
+    fwrite(STDERR, "pagination-dump: unknown corpus kind {$kind}\n");
+    exit(1);
+}
+
+$out = [];
+foreach (pg_corpus() as $id => $case) {
+    $out[$id] = pg_classify($case);
+}
+
+// Flush the setup-noise buffer to stderr, then emit the pure-JSON result.
+while (ob_get_level() > 0) {
+    ob_end_flush();
+}
+fwrite($REAL_STDOUT, json_encode($out, JSON_UNESCAPED_SLASHES) . "\n");
+exit(0);

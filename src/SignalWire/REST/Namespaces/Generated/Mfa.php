@@ -23,9 +23,10 @@ class Mfa extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function sms(string $to, ?string $from_ = null, ?string $message = null, ?int $tokenLength = null, ?int $validFor = null, ?int $maxAttempts = null, ?bool $allowAlphas = null, array $extras = []): array
+    public function sms(string $to, ?string $from_ = null, ?string $message = null, ?int $tokenLength = null, ?int $validFor = null, ?int $maxAttempts = null, ?bool $allowAlphas = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['to'] = $to;
@@ -48,14 +49,15 @@ class Mfa extends \SignalWire\REST\BaseResource
             $__body['allow_alphas'] = $allowAlphas;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path('sms'), $__body);
+        return $this->http->post($this->path('sms'), $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function call(string $to, ?string $from_ = null, ?string $message = null, ?int $tokenLength = null, ?int $validFor = null, ?int $maxAttempts = null, ?bool $allowAlphas = null, array $extras = []): array
+    public function call(string $to, ?string $from_ = null, ?string $message = null, ?int $tokenLength = null, ?int $validFor = null, ?int $maxAttempts = null, ?bool $allowAlphas = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['to'] = $to;
@@ -78,18 +80,19 @@ class Mfa extends \SignalWire\REST\BaseResource
             $__body['allow_alphas'] = $allowAlphas;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path('call'), $__body);
+        return $this->http->post($this->path('call'), $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function verify(string $requestId, string $token, array $extras = []): array
+    public function verify(string $requestId, string $token, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['token'] = $token;
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path($requestId, 'verify'), $__body);
+        return $this->http->post($this->path($requestId, 'verify'), $__body, $requestOptions);
     }
 }

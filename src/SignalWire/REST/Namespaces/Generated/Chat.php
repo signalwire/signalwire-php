@@ -25,9 +25,10 @@ class Chat extends \SignalWire\REST\BaseResource
      * @param array<string,mixed> $channels
      * @param array<string,mixed>|null $state
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createToken(int $ttl, array $channels, ?string $memberId = null, ?array $state = null, array $extras = []): array
+    public function createToken(int $ttl, array $channels, ?string $memberId = null, ?array $state = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['ttl'] = $ttl;
@@ -39,6 +40,6 @@ class Chat extends \SignalWire\REST\BaseResource
             $__body['state'] = $state;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body);
+        return $this->http->post($this->basePath, $__body, $requestOptions);
     }
 }

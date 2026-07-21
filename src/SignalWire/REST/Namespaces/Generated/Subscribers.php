@@ -23,20 +23,22 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listSipEndpoints(string $subscriberId, array $params = []): array
+    public function listSipEndpoints(string $subscriberId, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($subscriberId, 'sip_endpoints'), $params);
+        return $this->client->get($this->path($subscriberId, 'sip_endpoints'), $params, $requestOptions);
     }
 
     /**
      * @param list<mixed>|null $ciphers
      * @param list<mixed>|null $codecs
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createSipEndpoint(string $subscriberId, string $username, string $password, ?string $callerId = null, ?string $sendAs = null, ?array $ciphers = null, ?array $codecs = null, ?string $encryption = null, array $extras = []): array
+    public function createSipEndpoint(string $subscriberId, string $username, string $password, ?string $callerId = null, ?string $sendAs = null, ?array $ciphers = null, ?array $codecs = null, ?string $encryption = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['username'] = $username;
@@ -57,25 +59,27 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
             $__body['encryption'] = $encryption;
         }
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path($subscriberId, 'sip_endpoints'), $__body);
+        return $this->client->post($this->path($subscriberId, 'sip_endpoints'), $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function getSipEndpoint(string $subscriberId, string $id, array $params = []): array
+    public function getSipEndpoint(string $subscriberId, string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($subscriberId, 'sip_endpoints', $id), $params);
+        return $this->client->get($this->path($subscriberId, 'sip_endpoints', $id), $params, $requestOptions);
     }
 
     /**
      * @param list<mixed>|null $ciphers
      * @param list<mixed>|null $codecs
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function updateSipEndpoint(string $subscriberId, string $id, ?string $username = null, ?string $password = null, ?string $callerId = null, ?string $sendAs = null, ?array $ciphers = null, ?array $codecs = null, ?string $encryption = null, array $extras = []): array
+    public function updateSipEndpoint(string $subscriberId, string $id, ?string $username = null, ?string $password = null, ?string $callerId = null, ?string $sendAs = null, ?array $ciphers = null, ?array $codecs = null, ?string $encryption = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($username !== null) {
@@ -100,14 +104,15 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
             $__body['encryption'] = $encryption;
         }
         $__body = array_merge($__body, $extras);
-        return $this->client->patch($this->path($subscriberId, 'sip_endpoints', $id), $__body);
+        return $this->client->patch($this->path($subscriberId, 'sip_endpoints', $id), $__body, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function deleteSipEndpoint(string $subscriberId, string $id): array
+    public function deleteSipEndpoint(string $subscriberId, string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->delete($this->path($subscriberId, 'sip_endpoints', $id));
+        return $this->client->delete($this->path($subscriberId, 'sip_endpoints', $id), $requestOptions);
     }
 }

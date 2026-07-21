@@ -185,7 +185,12 @@ class SWMLServiceTest extends TestCase
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertCount(1, $verbs);
-        $this->assertSame(['hangup' => []], $verbs[0]);
+        // A no-arg verb is an empty OBJECT, so it renders as {"hangup":{}} on
+        // the wire (SWML contract + python parity), NOT {"hangup":[]}.
+        $this->assertEquals(['hangup' => new \stdClass()], $verbs[0]);
+        $rendered = $svc->getDocument()->render();
+        $this->assertStringContainsString('"hangup":{}', $rendered);
+        $this->assertStringNotContainsString('"hangup":[]', $rendered);
     }
 
     public function testSleepVerbInteger(): void

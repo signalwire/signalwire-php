@@ -22,22 +22,24 @@ class VerifiedCallers extends \SignalWire\REST\CrudResource
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function redialVerification(string $id): array
+    public function redialVerification(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post($this->path($id, 'verification'), []);
+        return $this->client->post($this->path($id, 'verification'), [], $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function submitVerification(string $id, string $verificationCode, array $extras = []): array
+    public function submitVerification(string $id, string $verificationCode, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['verification_code'] = $verificationCode;
         $__body = array_merge($__body, $extras);
-        return $this->client->put($this->path($id, 'verification'), $__body);
+        return $this->client->put($this->path($id, 'verification'), $__body, $requestOptions);
     }
 }

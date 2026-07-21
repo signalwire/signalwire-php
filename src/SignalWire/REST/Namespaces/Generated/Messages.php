@@ -25,9 +25,10 @@ class Messages extends \SignalWire\REST\BaseResource
      * @param list<mixed>|null $media
      * @param array<string,mixed>|null $customVariables
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $to, string $from_, ?string $body = null, ?array $media = null, ?bool $sendAsMms = null, ?string $statusCallback = null, ?array $customVariables = null, array $extras = []): array
+    public function create(string $to, string $from_, ?string $body = null, ?array $media = null, ?bool $sendAsMms = null, ?string $statusCallback = null, ?array $customVariables = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['to'] = $to;
@@ -48,18 +49,19 @@ class Messages extends \SignalWire\REST\BaseResource
             $__body['custom_variables'] = $customVariables;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body);
+        return $this->http->post($this->basePath, $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $messageId, string $body, array $extras = []): array
+    public function update(string $messageId, string $body, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['body'] = $body;
         $__body = array_merge($__body, $extras);
-        return $this->http->patch($this->path($messageId), $__body);
+        return $this->http->patch($this->path($messageId), $__body, $requestOptions);
     }
 }

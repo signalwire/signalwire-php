@@ -23,31 +23,34 @@ class PhoneNumbers extends \SignalWire\REST\CrudResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function search(array $params = []): array
+    public function search(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path('search'), $params);
+        return $this->client->get($this->path('search'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setSwmlWebhook(string $resourceId, string $url, array $extra = []): array
+    public function setSwmlWebhook(string $resourceId, string $url, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'relay_script',
             'call_relay_script_url' => $url,
         ];
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setCxmlWebhook(string $resourceId, string $url, ?string $fallbackUrl = null, ?string $statusCallbackUrl = null, array $extra = []): array
+    public function setCxmlWebhook(string $resourceId, string $url, ?string $fallbackUrl = null, ?string $statusCallbackUrl = null, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'laml_webhooks',
@@ -59,40 +62,43 @@ class PhoneNumbers extends \SignalWire\REST\CrudResource
         if ($statusCallbackUrl !== null) {
             $body['call_status_callback_url'] = $statusCallbackUrl;
         }
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setCxmlApplication(string $resourceId, string $applicationId, array $extra = []): array
+    public function setCxmlApplication(string $resourceId, string $applicationId, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'laml_application',
             'call_laml_application_id' => $applicationId,
         ];
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setAiAgent(string $resourceId, string $agentId, array $extra = []): array
+    public function setAiAgent(string $resourceId, string $agentId, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'ai_agent',
             'call_ai_agent_id' => $agentId,
         ];
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setCallFlow(string $resourceId, string $flowId, ?string $version = null, array $extra = []): array
+    public function setCallFlow(string $resourceId, string $flowId, ?string $version = null, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'call_flow',
@@ -101,27 +107,29 @@ class PhoneNumbers extends \SignalWire\REST\CrudResource
         if ($version !== null) {
             $body['call_flow_version'] = $version;
         }
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setRelayApplication(string $resourceId, string $name, array $extra = []): array
+    public function setRelayApplication(string $resourceId, string $name, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'relay_application',
             'call_relay_application' => $name,
         ];
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extra
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function setRelayTopic(string $resourceId, string $topic, ?string $statusCallbackUrl = null, array $extra = []): array
+    public function setRelayTopic(string $resourceId, string $topic, ?string $statusCallbackUrl = null, array $extra = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $body = [
             'call_handler' => 'relay_topic',
@@ -130,6 +138,6 @@ class PhoneNumbers extends \SignalWire\REST\CrudResource
         if ($statusCallbackUrl !== null) {
             $body['call_relay_topic_status_callback_url'] = $statusCallbackUrl;
         }
-        return $this->update($resourceId, array_merge($body, $extra));
+        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);
     }
 }

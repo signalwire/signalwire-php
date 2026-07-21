@@ -36,12 +36,13 @@ class HttpHelper
         ?array $query = null,
         ?array $basicAuth = null,
         int $timeout = self::DEFAULT_TIMEOUT,
+        bool $verifySsl = true,
     ): array {
         if ($query !== null && !empty($query)) {
             $sep = str_contains($url, '?') ? '&' : '?';
             $url .= $sep . http_build_query($query);
         }
-        return self::request('GET', $url, $headers, null, $basicAuth, $timeout);
+        return self::request('GET', $url, $headers, null, $basicAuth, $timeout, $verifySsl);
     }
 
     /**
@@ -57,6 +58,7 @@ class HttpHelper
         array $headers = [],
         ?array $basicAuth = null,
         int $timeout = self::DEFAULT_TIMEOUT,
+        bool $verifySsl = true,
     ): array {
         $headers['Content-Type'] = $headers['Content-Type']
             ?? $headers['content-type']
@@ -65,7 +67,7 @@ class HttpHelper
             ?? $headers['accept']
             ?? 'application/json';
         $encoded = $body === null ? '' : (string) json_encode($body);
-        return self::request('POST', $url, $headers, $encoded, $basicAuth, $timeout);
+        return self::request('POST', $url, $headers, $encoded, $basicAuth, $timeout, $verifySsl);
     }
 
     /**
@@ -102,6 +104,10 @@ class HttpHelper
      *
      * @param array<string,string> $headers
      * @param array{0:string,1:string}|null $basicAuth [user, password]
+     * @param bool $verifySsl When true (default), the outbound TLS certificate
+     *   chain + hostname are verified (cURL's secure default). When false, the
+     *   caller has explicitly opted out of verification (self-signed-cert
+     *   environments) — this disables CURLOPT_SSL_VERIFYPEER / VERIFYHOST.
      * @return array{int, string, mixed}
      */
     public static function request(
@@ -111,6 +117,7 @@ class HttpHelper
         ?string $body = null,
         ?array $basicAuth = null,
         int $timeout = self::DEFAULT_TIMEOUT,
+        bool $verifySsl = true,
     ): array {
         // Public entry boundary: $method/$url arrive directly from skill
         // callers with no upstream contract. Fail fast on empty input (and
@@ -159,6 +166,11 @@ class HttpHelper
             CURLOPT_HTTPHEADER => $rawHeaders,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_USERAGENT => 'signalwire-agents-php/1.0',
+            // Real TLS verification, controlled by the caller. Secure by
+            // default (VERIFYPEER on, VERIFYHOST strict); a caller that passes
+            // $verifySsl=false has explicitly opted out (self-signed certs).
+            CURLOPT_SSL_VERIFYPEER => $verifySsl,
+            CURLOPT_SSL_VERIFYHOST => $verifySsl ? 2 : 0,
         ];
         if ($body !== null) {
             $opts[CURLOPT_POSTFIELDS] = $body;

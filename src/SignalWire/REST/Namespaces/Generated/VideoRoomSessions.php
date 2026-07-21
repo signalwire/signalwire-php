@@ -23,28 +23,31 @@ class VideoRoomSessions extends \SignalWire\REST\ReadResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listEvents(string $id, array $params = []): array
+    public function listEvents(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($id, 'events'), $params);
+        return $this->client->get($this->path($id, 'events'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listMembers(string $id, array $params = []): array
+    public function listMembers(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($id, 'members'), $params);
+        return $this->client->get($this->path($id, 'members'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listRecordings(string $id, array $params = []): array
+    public function listRecordings(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($id, 'recordings'), $params);
+        return $this->client->get($this->path($id, 'recordings'), $params, $requestOptions);
     }
 }
