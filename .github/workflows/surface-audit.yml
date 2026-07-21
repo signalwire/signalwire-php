@@ -40,7 +40,7 @@ jobs:
           # PINNED to wave/1-aplus: the A+ campaign branch carries the surface
           # oracle + gate scripts the wave's gates use, not yet on main.
           # REVERT this ref to main when porting-sdk wave/1-aplus merges.
-          ref: wave/1-aplus
+          ref: main
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 

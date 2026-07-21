@@ -43,7 +43,7 @@ jobs:
           # WIRED-MODES / DOC-SURFACE gate scripts (check_wired_modes.py,
           # doc_surface.py) plus the A+ gate corpora, none yet on main.
           # REVERT this ref to main when porting-sdk wave/1-aplus merges.
-          ref: wave/1-aplus
+          ref: main
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
