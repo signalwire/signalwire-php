@@ -23,20 +23,22 @@ class SipProfile extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function get(array $params = []): array
+    public function get(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->basePath, $params);
+        return $this->http->get($this->basePath, $params, $requestOptions);
     }
 
     /**
      * @param list<mixed>|null $defaultCodecs
      * @param list<mixed>|null $defaultCiphers
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(?string $domainIdentifier = null, ?array $defaultCodecs = null, ?array $defaultCiphers = null, ?string $defaultEncryption = null, ?string $defaultSendAs = null, array $extras = []): array
+    public function update(?string $domainIdentifier = null, ?array $defaultCodecs = null, ?array $defaultCiphers = null, ?string $defaultEncryption = null, ?string $defaultSendAs = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($domainIdentifier !== null) {
@@ -55,6 +57,6 @@ class SipProfile extends \SignalWire\REST\BaseResource
             $__body['default_send_as'] = $defaultSendAs;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->basePath, $__body);
+        return $this->http->put($this->basePath, $__body, $requestOptions);
     }
 }

@@ -23,22 +23,24 @@ class VideoRooms extends \SignalWire\REST\CrudResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listStreams(string $id, array $params = []): array
+    public function listStreams(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($id, 'streams'), $params);
+        return $this->client->get($this->path($id, 'streams'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createStream(string $id, string $url, array $extras = []): array
+    public function createStream(string $id, string $url, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['url'] = $url;
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path($id, 'streams'), $__body);
+        return $this->client->post($this->path($id, 'streams'), $__body, $requestOptions);
     }
 }

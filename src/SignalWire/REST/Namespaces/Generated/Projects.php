@@ -22,10 +22,11 @@ class Projects extends \SignalWire\REST\CrudResource
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function rotateSigningKey(string $id): array
+    public function rotateSigningKey(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post($this->path($id, 'signing-key', 'rotate'), []);
+        return $this->client->post($this->path($id, 'signing-key', 'rotate'), [], $requestOptions);
     }
 }

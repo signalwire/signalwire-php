@@ -26,9 +26,10 @@ class VideoRoomTokens extends \SignalWire\REST\BaseResource
      * @param array<string,mixed>|null $roomMeta
      * @param array<string,mixed>|null $meta
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $roomName, ?string $userName = null, ?array $permissions = null, ?string $joinFrom = null, ?string $joinUntil = null, ?string $removeAt = null, ?int $removeAfterSecondsElapsed = null, ?bool $joinAudioMuted = null, ?bool $joinVideoMuted = null, ?bool $autoCreateRoom = null, ?bool $enableRoomPreviews = null, ?string $roomDisplayName = null, ?bool $endRoomSessionOnLeave = null, ?string $joinAs = null, ?string $mediaAllowed = null, ?array $roomMeta = null, ?array $meta = null, ?bool $syncAudioVideo = null, array $extras = []): array
+    public function create(string $roomName, ?string $userName = null, ?array $permissions = null, ?string $joinFrom = null, ?string $joinUntil = null, ?string $removeAt = null, ?int $removeAfterSecondsElapsed = null, ?bool $joinAudioMuted = null, ?bool $joinVideoMuted = null, ?bool $autoCreateRoom = null, ?bool $enableRoomPreviews = null, ?string $roomDisplayName = null, ?bool $endRoomSessionOnLeave = null, ?string $joinAs = null, ?string $mediaAllowed = null, ?array $roomMeta = null, ?array $meta = null, ?bool $syncAudioVideo = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['room_name'] = $roomName;
@@ -84,6 +85,6 @@ class VideoRoomTokens extends \SignalWire\REST\BaseResource
             $__body['sync_audio_video'] = $syncAudioVideo;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body);
+        return $this->http->post($this->basePath, $__body, $requestOptions);
     }
 }

@@ -23,46 +23,51 @@ class RegistryBrands extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function list(array $params = []): array
+    public function list(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->basePath, $params);
+        return $this->http->get($this->basePath, $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $body JSON request body.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(array $body): array
+    public function create(array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->basePath, $body);
+        return $this->http->post($this->basePath, $body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function get(string $id, array $params = []): array
+    public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id), $params);
+        return $this->http->get($this->path($id), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listCampaigns(string $id, array $params = []): array
+    public function listCampaigns(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id, 'campaigns'), $params);
+        return $this->http->get($this->path($id, 'campaigns'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $body JSON request body.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createCampaign(string $id, array $body): array
+    public function createCampaign(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->path($id, 'campaigns'), $body);
+        return $this->http->post($this->path($id, 'campaigns'), $body, $requestOptions);
     }
 }

@@ -23,10 +23,11 @@ class Lookup extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function phoneNumber(string $e164, array $params = []): array
+    public function phoneNumber(string $e164, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path('phone_number', $e164), $params);
+        return $this->http->get($this->path('phone_number', $e164), $params, $requestOptions);
     }
 }

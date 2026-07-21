@@ -23,18 +23,20 @@ class Addresses extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function list(array $params = []): array
+    public function list(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->basePath, $params);
+        return $this->http->get($this->basePath, $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $label, string $country, string $firstName, string $lastName, string $streetNumber, string $streetName, string $city, string $state, string $postalCode, ?string $addressType = null, ?string $addressNumber = null, array $extras = []): array
+    public function create(string $label, string $country, string $firstName, string $lastName, string $streetNumber, string $streetName, string $city, string $state, string $postalCode, ?string $addressType = null, ?string $addressNumber = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['label'] = $label;
@@ -53,23 +55,25 @@ class Addresses extends \SignalWire\REST\BaseResource
             $__body['address_number'] = $addressNumber;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body);
+        return $this->http->post($this->basePath, $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function get(string $id, array $params = []): array
+    public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id), $params);
+        return $this->http->get($this->path($id), $params, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function delete(string $id): array
+    public function delete(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->delete($this->path($id));
+        return $this->http->delete($this->path($id), $requestOptions);
     }
 }

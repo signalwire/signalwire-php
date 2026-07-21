@@ -26,6 +26,13 @@ class PaginatedIterator implements \Iterator
     private array $params;
     private string $dataKey;
 
+    /**
+     * Per-call transport override applied to EVERY page fetch (timeout / retry /
+     * abort). Null = use the client default. Mirrors the python reference
+     * ``PaginatedIterator.__init__(request_options=...)`` (rest/_pagination.py).
+     */
+    private ?RequestOptions $requestOptions;
+
     /** @var list<array<string,mixed>> */
     private array $items = [];
     private int $index = 0;
@@ -49,12 +56,14 @@ class PaginatedIterator implements \Iterator
         HttpClient $http,
         string $path,
         ?array $params = null,
-        string $dataKey = 'data'
+        string $dataKey = 'data',
+        ?RequestOptions $requestOptions = null
     ) {
         $this->http = $http;
         $this->path = $path;
         $this->params = $params ?? [];
         $this->dataKey = $dataKey;
+        $this->requestOptions = $requestOptions;
     }
 
     /** The http. */
@@ -142,7 +151,11 @@ class PaginatedIterator implements \Iterator
      */
     private function fetchNext(): void
     {
-        $resp = $this->http->get($this->path, $this->coerceParams($this->params));
+        $resp = $this->http->get(
+            $this->path,
+            $this->coerceParams($this->params),
+            $this->requestOptions
+        );
         $data = $resp[$this->dataKey] ?? [];
         if (is_array($data)) {
             foreach ($data as $row) {

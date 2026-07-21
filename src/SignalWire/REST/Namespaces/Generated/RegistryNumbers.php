@@ -22,10 +22,11 @@ class RegistryNumbers extends \SignalWire\REST\BaseResource
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function delete(string $id): array
+    public function delete(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->delete($this->path($id));
+        return $this->http->delete($this->path($id), $requestOptions);
     }
 }

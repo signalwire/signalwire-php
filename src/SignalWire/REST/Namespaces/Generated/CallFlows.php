@@ -23,28 +23,31 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listAddresses(string $id, array $params = []): array
+    public function listAddresses(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/addresses', $params);
+        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/addresses', $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listVersions(string $id, array $params = []): array
+    public function listVersions(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/versions', $params);
+        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/versions', $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $body JSON request body.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function deployVersion(string $id, array $body): array
+    public function deployVersion(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post('/api/fabric/resources/call_flow/' . $id . '/versions', $body);
+        return $this->client->post('/api/fabric/resources/call_flow/' . $id . '/versions', $body, $requestOptions);
     }
 }

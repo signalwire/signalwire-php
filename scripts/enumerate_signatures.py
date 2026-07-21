@@ -831,7 +831,19 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             and "paginate" not in methods_out
         ):
             methods_out["paginate"] = {
-                "params": [{"name": "self", "kind": "self"}],
+                "params": [
+                    {"name": "self", "kind": "self"},
+                    # The inherited ReadResource::paginate(array $params = [],
+                    # ?RequestOptions $requestOptions = null) forwards a per-call
+                    # transport override to every page fetch. The reference oracle
+                    # records paginate as (self, request_options) — the bare
+                    # **params var_keyword is dropped — so mirror exactly that.
+                    {
+                        "name": "request_options", "kind": "keyword",
+                        "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
+                        "required": False, "default": None,
+                    },
+                ],
                 "returns": "class:signalwire.rest._pagination.PaginatedIterator",
             }
 

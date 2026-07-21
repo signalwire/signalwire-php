@@ -23,39 +23,43 @@ class NumberGroups extends \SignalWire\REST\CrudResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listMemberships(string $groupId, array $params = []): array
+    public function listMemberships(string $groupId, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get($this->path($groupId, 'number_group_memberships'), $params);
+        return $this->client->get($this->path($groupId, 'number_group_memberships'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function addMembership(string $groupId, string $phoneNumberId, array $extras = []): array
+    public function addMembership(string $groupId, string $phoneNumberId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['phone_number_id'] = $phoneNumberId;
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path($groupId, 'number_group_memberships'), $__body);
+        return $this->client->post($this->path($groupId, 'number_group_memberships'), $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function getMembership(string $id, array $params = []): array
+    public function getMembership(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/relay/rest/number_group_memberships/' . $id, $params);
+        return $this->client->get('/api/relay/rest/number_group_memberships/' . $id, $params, $requestOptions);
     }
 
     /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function deleteMembership(string $id): array
+    public function deleteMembership(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->delete('/api/relay/rest/number_group_memberships/' . $id);
+        return $this->client->delete('/api/relay/rest/number_group_memberships/' . $id, $requestOptions);
     }
 }

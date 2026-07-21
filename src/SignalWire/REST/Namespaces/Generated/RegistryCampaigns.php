@@ -23,51 +23,56 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function get(string $id, array $params = []): array
+    public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id), $params);
+        return $this->http->get($this->path($id), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $id, ?string $name = null, array $extras = []): array
+    public function update(string $id, ?string $name = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($name !== null) {
             $__body['name'] = $name;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->path($id), $__body);
+        return $this->http->put($this->path($id), $__body, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listNumbers(string $id, array $params = []): array
+    public function listNumbers(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id, 'numbers'), $params);
+        return $this->http->get($this->path($id, 'numbers'), $params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listOrders(string $id, array $params = []): array
+    public function listOrders(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->get($this->path($id, 'orders'), $params);
+        return $this->http->get($this->path($id, 'orders'), $params, $requestOptions);
     }
 
     /**
      * @param list<mixed>|null $phoneNumbers
      * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createOrder(string $id, ?array $phoneNumbers = null, ?string $statusCallbackUrl = null, array $extras = []): array
+    public function createOrder(string $id, ?array $phoneNumbers = null, ?string $statusCallbackUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($phoneNumbers !== null) {
@@ -77,6 +82,6 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
             $__body['status_callback_url'] = $statusCallbackUrl;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path($id, 'orders'), $__body);
+        return $this->http->post($this->path($id, 'orders'), $__body, $requestOptions);
     }
 }
