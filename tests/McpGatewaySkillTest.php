@@ -201,8 +201,29 @@ class McpGatewaySkillTest extends TestCase
             ]);
             // Explicit opt-out → the same self-signed cert is now accepted and
             // the /health probe succeeds.
+            $ok = $skill->setup();
+            if (!$ok) {
+                // TEMP DIAGNOSTIC: capture curl backend + a direct probe.
+                $v = \curl_version();
+                $ch = \curl_init();
+                \curl_setopt_array($ch, [
+                    CURLOPT_URL => "https://127.0.0.1:{$port}/health",
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                ]);
+                $b = \curl_exec($ch);
+                $en = \curl_errno($ch);
+                $er = \curl_error($ch);
+                $st = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                \curl_close($ch);
+                \fwrite(STDERR, "DIAG curl={$v['version']} ssl={$v['ssl_version']} "
+                    . "errno={$en} err=[{$er}] status={$st} body=[" . ($b === false ? 'FALSE' : $b) . "]\n");
+            }
             $this->assertTrue(
-                $skill->setup(),
+                $ok,
                 'verify_ssl=false must accept the self-signed gateway cert'
             );
         } finally {
