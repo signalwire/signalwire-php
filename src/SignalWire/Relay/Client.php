@@ -124,6 +124,47 @@ class Client implements RelayClientLike
         return $scrubbed ?? $raw;
     }
 
+    /**
+     * Return a log-safe repr of a raw frame for THIS client's debug output.
+     *
+     * Two layers, in order:
+     *   1. {@see self::scrubFrame} — the key-shape mask (``"<key>":"***"``),
+     *      mirroring the python reference ``_scrub_frame``: it redacts the
+     *      credential/re-auth VALUES wherever they sit under a recognised key.
+     *   2. A verbatim-value mask of THIS connection's LIVE credentials
+     *      (project / token / jwt_token / authorization_state). The server can
+     *      echo a live credential back inside a field that is NOT a scrub key —
+     *      e.g. a connect-response ``identity`` derived from the project — so a
+     *      key-shape-only scrub would leak it. This layer replaces any verbatim
+     *      occurrence of a live credential value with ``***`` regardless of the
+     *      surrounding field, so a live credential NEVER reaches a debug log
+     *      (enterprise SECRET-SCRUB / F3.1: the connect frame's project must not
+     *      leak, in ANY field the server reflects it into). Empty credentials
+     *      are skipped so we never mask ``""`` and mangle unrelated frames.
+     */
+    private function scrubForLog(string $raw): string
+    {
+        $out = self::scrubFrame($raw);
+
+        $values = array_filter(
+            [
+                $this->token,
+                $this->project,
+                $this->jwtToken ?? '',
+                $this->authorizationState ?? '',
+            ],
+            static fn (string $v): bool => $v !== ''
+        );
+        if ($values === []) {
+            return $out;
+        }
+        // Longest-first so a value that is a substring of another is not
+        // partially masked ahead of its container.
+        usort($values, static fn (string $a, string $b): int => \strlen($b) <=> \strlen($a));
+
+        return str_replace($values, '***', $out);
+    }
+
     // ══════════════════════════════════════════════════════════════════
     //  Construction
     // ══════════════════════════════════════════════════════════════════
@@ -471,7 +512,7 @@ class Client implements RelayClientLike
         // SECRET-SCRUB: mask credential/authorization_state VALUES before the
         // debug log so a `SIGNALWIRE_LOG_LEVEL=debug` session never emits the
         // connect frame's live project/token/jwt_token (enterprise F3.1).
-        $this->logger->debug('>> ' . self::scrubFrame($json));
+        $this->logger->debug('>> ' . $this->scrubForLog($json));
 
         if ($this->socket === null || !$this->socket->isConnected()) {
             throw new \RuntimeException('RelayClient: send on disconnected socket');
@@ -536,7 +577,7 @@ class Client implements RelayClientLike
         // debug log so an inbound `signalwire.authorization.state` re-auth blob
         // (or any frame echoing credentials) is never emitted verbatim at
         // debug (enterprise F3.2).
-        $this->logger->debug('<< ' . self::scrubFrame($raw));
+        $this->logger->debug('<< ' . $this->scrubForLog($raw));
 
         $data = json_decode($raw, true);
         // A JSON-RPC frame is always an object — decode to a string-keyed

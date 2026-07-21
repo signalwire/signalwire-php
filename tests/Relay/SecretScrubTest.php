@@ -36,6 +36,26 @@ class SecretScrubTest extends TestCase
         return $m->invoke(null, $raw);
     }
 
+    /**
+     * Invoke the instance ``Client::scrubForLog`` (key-shape scrub + live
+     * credential-VALUE mask) on a client constructed with the given creds.
+     *
+     * @param array<string,mixed> $options
+     */
+    private static function scrubForLog(array $options, string $raw): string
+    {
+        $client = new RelayClient($options + [
+            'project'  => 'PJ-LIVE',
+            'token'    => 'PT-LIVE',
+            'host'     => 'relay.example.test',
+            'contexts' => ['default'],
+        ]);
+        $m = new \ReflectionMethod(RelayClient::class, 'scrubForLog');
+        $m->setAccessible(true);
+        /** @var string */
+        return $m->invoke($client, $raw);
+    }
+
     #[Test]
     public function masksConnectFrameCredentials(): void
     {
@@ -123,5 +143,72 @@ class SecretScrubTest extends TestCase
         // value is not a credential leak shape — left as-is.
         $frame = '{"project":{"nested":1},"token":42}';
         $this->assertSame($frame, self::scrub($frame));
+    }
+
+    /**
+     * The connect-RESPONSE echoes the live project back inside a NON-credential
+     * field (``identity``: the server derives it from the project). A key-shape
+     * scrub cannot catch it (``identity`` is not a scrub key), so the live
+     * credential-VALUE mask in scrubForLog must redact it. This is the exact
+     * SECRET-SCRUB-LIVE ``project`` sentinel leak the shared mock reproduces
+     * (``identity = mock-relay-identity-<project>``).
+     */
+    #[Test]
+    public function scrubForLogMasksProjectEchoedIntoIdentity(): void
+    {
+        $frame = json_encode([
+            'jsonrpc' => '2.0',
+            'id'      => 'abc',
+            'result'  => [
+                'sessionid' => 's',
+                'identity'  => 'mock-relay-identity-PJ-LIVE',
+                'protocol'  => 'signalwire_deadbeef',
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $scrubbed = self::scrubForLog(['project' => 'PJ-LIVE', 'token' => 'PT-LIVE'], $frame);
+
+        // The live project value must not survive anywhere in the log line.
+        $this->assertStringNotContainsString('PJ-LIVE', $scrubbed);
+        // Non-credential structure is preserved (still diagnostic).
+        $this->assertStringContainsString('"sessionid":"s"', $scrubbed);
+        $this->assertStringContainsString('signalwire_deadbeef', $scrubbed);
+    }
+
+    /**
+     * The live token echoed into a non-credential field is likewise masked.
+     */
+    #[Test]
+    public function scrubForLogMasksTokenEchoedAnywhere(): void
+    {
+        $frame = '{"result":{"note":"issued for PT-LIVE"}}';
+        $scrubbed = self::scrubForLog(['project' => 'PJ-LIVE', 'token' => 'PT-LIVE'], $frame);
+        $this->assertStringNotContainsString('PT-LIVE', $scrubbed);
+    }
+
+    /**
+     * scrubForLog still applies the key-shape mask (it composes over
+     * scrubFrame): an authorization_state under its own key is masked even
+     * when it is not one of THIS client's stored live credentials.
+     */
+    #[Test]
+    public function scrubForLogStillAppliesKeyShapeMask(): void
+    {
+        $frame = '{"params":{"params":{"authorization_state":"AENC-TESTLEAK"}}}';
+        $scrubbed = self::scrubForLog(['project' => 'PJ-LIVE', 'token' => 'PT-LIVE'], $frame);
+        $this->assertStringNotContainsString('AENC-TESTLEAK', $scrubbed);
+        $this->assertStringContainsString('"authorization_state":"***"', $scrubbed);
+    }
+
+    /**
+     * A frame that contains neither a scrub-key nor any live credential value
+     * is returned unchanged — the value mask must not corrupt unrelated frames.
+     */
+    #[Test]
+    public function scrubForLogLeavesUnrelatedFramesUntouched(): void
+    {
+        $frame = '{"jsonrpc":"2.0","method":"signalwire.ping","params":{"state":"answered"}}';
+        $scrubbed = self::scrubForLog(['project' => 'PJ-LIVE', 'token' => 'PT-LIVE'], $frame);
+        $this->assertSame($frame, $scrubbed);
     }
 }
