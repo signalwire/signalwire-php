@@ -107,7 +107,11 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: json, openssl, mbstring, pcntl
+          # `sockets` is needed by LoggerTest (socket_create to grab a free port);
+          # it is bundled but not enabled by default on the Windows PHP build, so it
+          # must be requested explicitly or the multi-OS lane errors with
+          # "Call to undefined function socket_create()".
+          extensions: json, openssl, mbstring, pcntl, sockets
           coverage: none
           tools: composer:v2
 

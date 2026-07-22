@@ -1266,4 +1266,19 @@ class ContextsTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         (new Context('default'))->setHistory('nonsense');
     }
+
+    // addContext() takes ONLY the context name. A stale array-config call
+    // — addContext('sales', ['steps' => [...]]) — must RAISE loudly instead of
+    // silently swallowing the extra arg and building an empty context that then
+    // fatals at serve time ("Context 'sales' must have at least one step").
+    // Regression guard for the r5 php array-config trap.
+    public function testAddContextRejectsArrayConfigSecondArg(): void
+    {
+        $builder = new ContextBuilder();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('takes only the context name');
+        // Intentionally passes an unsupported 2nd arg (the removed array-config
+        // shape); addContext's variadic ...$rejected catches it and throws.
+        $builder->addContext('sales', ['steps' => [['name' => 'greeting']]]);
+    }
 }
