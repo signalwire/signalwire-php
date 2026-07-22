@@ -173,7 +173,7 @@ $client->phoneNumbers()->search(['areacode' => '512']);
 $client->datasphere()->documents()->search(queryString: 'billing policy');
 ```
 
-- 20 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
+- 22 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
 - Lightweight HTTP via cURL with connection reuse
 - Array returns -- raw data, no wrapper objects
 
