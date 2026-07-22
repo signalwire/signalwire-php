@@ -174,7 +174,7 @@ $client->datasphere()->documents()->search(queryString: 'billing policy');
 ```
 
 - 22 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
-- Lightweight HTTP via cURL with connection reuse
+- Lightweight HTTP via cURL (one handle per request)
 - Array returns -- raw data, no wrapper objects
 
 See the **[REST documentation](rest/README.md)** for the full guide, API reference, and examples.
@@ -228,6 +228,12 @@ Guides are also available in the [`docs/`](docs/) directory:
 - [Skills Parameter Schema](docs/skills_parameter_schema.md) -- skill parameter definitions
 
 ## Environment Variables
+
+Get your project id, API token, and space hostname from the
+[SignalWire dashboard](https://signalwire.com/signin) (API → Credentials). Copy
+[`.env.example`](.env.example) to `.env` for the full list of variables the SDK
+reads; see [docs/configuration.md](docs/configuration.md) for the complete
+reference (custom CA bundles, RELAY overrides, and more).
 
 | Variable | Used by | Description |
 |----------|---------|-------------|

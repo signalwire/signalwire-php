@@ -1,5 +1,6 @@
 /vendor/
-composer.lock
+# composer.lock IS committed for reproducible installs (pinned dependency versions
+# across dev + CI). Do not re-ignore it.
 .phpunit.result.cache
 .phpunit.cache/
 .php-cs-fixer.cache

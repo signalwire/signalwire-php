@@ -227,6 +227,57 @@ class RestClientTest extends TestCase
     }
 
     #[Test]
+    public function restErrorMessageIncludesResponseBody(): void
+    {
+        // A non-2xx (401) with a server error body must surface that body IN the
+        // exception message (matching the python reference's
+        // "{method} {url} returned {status}: {body}"), not drop it — a caller who
+        // logs only getMessage() still sees why the request failed.
+        if (!\function_exists('pcntl_fork')) {
+            self::markTestSkipped('pcntl_fork unavailable (needed to serve a one-shot loopback response)');
+        }
+        $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        $this->assertNotFalse($server, "could not bind a probe server: {$errstr}");
+        $name = stream_socket_get_name($server, false);
+        $this->assertIsString($name);
+        $port = (int) substr($name, strrpos($name, ':') + 1);
+
+        $errBody = '{"errors":[{"code":"unauthorized","detail":"invalid credentials"}]}';
+        $pid = pcntl_fork();
+        if ($pid === 0) {
+            $conn = @stream_socket_accept($server, 5);
+            if ($conn !== false) {
+                stream_set_timeout($conn, 1);
+                @fread($conn, 4096);
+                $resp = "HTTP/1.1 401 Unauthorized\r\n"
+                    . "Content-Type: application/json\r\n"
+                    . 'Content-Length: ' . strlen($errBody) . "\r\n"
+                    . "\r\n" . $errBody;
+                @fwrite($conn, $resp);
+                @fclose($conn);
+            }
+            fclose($server);
+            exit(0);
+        }
+        fclose($server);
+
+        $http = new HttpClient('proj', 'tok', "http://127.0.0.1:{$port}");
+        $caught = null;
+        try {
+            $http->get('/api/fabric/addresses');
+        } catch (SignalWireRestError $e) {
+            $caught = $e;
+        }
+        pcntl_waitpid($pid, $status);
+
+        $this->assertInstanceOf(SignalWireRestError::class, $caught);
+        $this->assertSame(401, $caught->getStatusCode());
+        // The raised message carries the server's error body, not just the status.
+        $this->assertStringContainsString($errBody, $caught->getMessage());
+        $this->assertStringContainsString('invalid credentials', $caught->getMessage());
+    }
+
+    #[Test]
     public function transportErrorHasNoRequestIdOrHeaders(): void
     {
         // A connection-refused (transport) failure produced no response, so there

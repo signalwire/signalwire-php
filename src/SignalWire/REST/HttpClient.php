@@ -467,8 +467,11 @@ class HttpClient
                     $this->sleepSeconds($delay);
                     continue;
                 }
+                // Include the server's response body in the message (matching the
+                // python reference's "{method} {url} returned {status}: {body}") so a
+                // caller who logs only getMessage() still sees why the request failed.
                 throw new SignalWireRestError(
-                    sprintf('%s %s returned %d', $method, $path, $httpCode),
+                    sprintf('%s %s returned %d: %s', $method, $url, $httpCode, $responseBody),
                     $httpCode,
                     $responseBody,
                     $url,
