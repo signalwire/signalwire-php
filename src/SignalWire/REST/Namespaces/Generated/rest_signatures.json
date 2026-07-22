@@ -83,13 +83,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Addresses::delete": [
@@ -120,13 +113,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Addresses::list": [
@@ -136,13 +122,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "CallFlows::deployVersion": [
@@ -179,13 +158,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "CallFlows::listVersions": [
@@ -201,13 +173,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Calling::aiHold": [
@@ -1561,13 +1526,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ConferenceLogs::list": [
@@ -1577,13 +1535,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ConferenceRooms::listAddresses": [
@@ -1599,13 +1550,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "CxmlApplications::delete": [
@@ -1636,13 +1580,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "CxmlApplications::list": [
@@ -1652,13 +1589,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "CxmlApplications::listAddresses": [
@@ -1674,13 +1604,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "CxmlApplications::update": [
@@ -1801,13 +1724,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "DatasphereDocuments::deleteChunk": [
@@ -1850,13 +1766,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "DatasphereDocuments::listChunks": [
@@ -1872,13 +1781,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "DatasphereDocuments::search": [
@@ -1950,13 +1852,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "FabricTokens::createEmbedToken": [
@@ -1979,13 +1874,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "FabricTokens::createGuestToken": [
@@ -2015,13 +1903,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "FabricTokens::createInviteToken": [
@@ -2051,13 +1932,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "FabricTokens::createSubscriberToken": [
@@ -2157,13 +2031,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "FabricTokens::refreshSubscriberToken": [
@@ -2186,13 +2053,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "GenericResources::assignDomainApplication": [
@@ -2221,13 +2081,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "GenericResources::assignPhoneRoute": [
@@ -2262,13 +2115,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "GenericResources::delete": [
@@ -2299,13 +2145,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "GenericResources::list": [
@@ -2315,13 +2154,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "GenericResources::listAddresses": [
@@ -2337,13 +2169,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ImportedNumbers::create": [
@@ -2379,13 +2204,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Lookup::phoneNumber": [
@@ -2401,13 +2219,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Messages::create": [
@@ -2471,13 +2282,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Messages::update": [
@@ -2506,13 +2310,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Mfa::call": [
@@ -2577,13 +2374,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Mfa::sms": [
@@ -2648,13 +2438,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Mfa::verify": [
@@ -2683,13 +2466,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "NumberGroups::addMembership": [
@@ -2718,13 +2494,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "NumberGroups::deleteMembership": [
@@ -2755,13 +2524,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "NumberGroups::listMemberships": [
@@ -2777,13 +2539,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "PhoneNumbers::search": [
@@ -2793,13 +2548,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "PhoneNumbers::setAiAgent": [
@@ -3059,13 +2807,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ProjectTokens::delete": [
@@ -3117,13 +2858,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Projects::rotateSigningKey": [
@@ -3181,13 +2915,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Queues::getMember": [
@@ -3209,13 +2936,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Queues::getNextMember": [
@@ -3231,13 +2951,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Queues::listMembers": [
@@ -3253,13 +2966,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Recordings::delete": [
@@ -3290,13 +2996,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Recordings::list": [
@@ -3306,13 +3005,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryBrands::create": [
@@ -3364,13 +3056,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryBrands::list": [
@@ -3380,13 +3065,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryBrands::listCampaigns": [
@@ -3402,13 +3080,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryCampaigns::createOrder": [
@@ -3445,13 +3116,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryCampaigns::get": [
@@ -3467,13 +3131,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryCampaigns::listNumbers": [
@@ -3489,13 +3146,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryCampaigns::listOrders": [
@@ -3511,13 +3161,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryCampaigns::update": [
@@ -3547,13 +3190,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "RegistryNumbers::delete": [
@@ -3584,13 +3220,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ShortCodes::get": [
@@ -3606,13 +3235,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ShortCodes::list": [
@@ -3622,13 +3244,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "ShortCodes::update": [
@@ -3705,13 +3320,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "SipProfile::get": [
@@ -3721,13 +3329,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "SipProfile::update": [
@@ -3779,13 +3380,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Subscribers::createSipEndpoint": [
@@ -3855,13 +3449,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Subscribers::deleteSipEndpoint": [
@@ -3904,13 +3491,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Subscribers::listSipEndpoints": [
@@ -3926,13 +3506,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "Subscribers::updateSipEndpoint": [
@@ -4010,13 +3583,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VerifiedCallers::redialVerification": [
@@ -4060,13 +3626,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoConferenceTokens::get": [
@@ -4082,13 +3641,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoConferenceTokens::reset": [
@@ -4132,13 +3684,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoConferences::listConferenceTokens": [
@@ -4154,13 +3699,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoConferences::listStreams": [
@@ -4176,13 +3714,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomRecordings::delete": [
@@ -4213,13 +3744,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomRecordings::list": [
@@ -4229,13 +3753,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomRecordings::listEvents": [
@@ -4251,13 +3768,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomSessions::listEvents": [
@@ -4273,13 +3783,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomSessions::listMembers": [
@@ -4295,13 +3798,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomSessions::listRecordings": [
@@ -4317,13 +3813,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRoomTokens::create": [
@@ -4465,13 +3954,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRooms::createStream": [
@@ -4500,13 +3982,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoRooms::listStreams": [
@@ -4522,13 +3997,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoStreams::delete": [
@@ -4559,13 +4027,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VideoStreams::update": [
@@ -4594,13 +4055,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "kwargs",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ],
     "VoiceLogs::listEvents": [
@@ -4616,13 +4070,6 @@
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
         "required": false,
         "default": null
-      },
-      {
-        "name": "params",
-        "kind": "var_keyword",
-        "type": "any",
-        "required": false,
-        "default": {}
       }
     ]
   }
