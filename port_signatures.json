@@ -2613,6 +2613,15 @@
               ],
               "returns": "any"
             },
+            "get_functions": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
             "get_gather_info": {
               "params": [
                 {

@@ -110,6 +110,7 @@ signalwire.core.contexts.ContextBuilder.has_contexts: PHP idiomatic accessor on 
 signalwire.core.contexts.GatherInfo.get_completion_action: PHP idiomatic getter on GatherInfo.
 signalwire.core.contexts.GatherInfo.get_questions: PHP idiomatic getter on GatherInfo.
 signalwire.core.contexts.GatherQuestion.get_key: PHP idiomatic getter on GatherQuestion.
+signalwire.core.contexts.Step.get_functions: PHP idiomatic getter on Step.
 signalwire.core.contexts.Step.get_gather_info: PHP idiomatic getter on Step.
 signalwire.core.contexts.Step.get_name: PHP idiomatic getter on Step.
 signalwire.core.contexts.Step.get_valid_contexts: PHP idiomatic getter on Step.

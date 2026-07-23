@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ acc9d8c8b6865e5bf7a3c58f39c95a7a55254e40",
+  "generated_from": "signalwire-php @ b89deba9127428e6310d2d2a3778b5682c14328e",
   "modules": {
     "signalwire": {
       "classes": {
@@ -289,6 +289,7 @@
           "add_gather_question",
           "add_section",
           "clear_sections",
+          "get_functions",
           "get_gather_info",
           "get_name",
           "get_valid_contexts",

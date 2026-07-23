@@ -330,6 +330,17 @@ class Service implements RequestHandlerLike
         $handler = $this->verbRegistry->getHandler($verbName);
         if ($handler !== null) {
             [$isValid, $errors] = $handler->validateConfig($config);
+            // A handler's validateConfig carries verb-specific diagnostics
+            // (e.g. the ai verb's prompt/SWAIG shape checks) but does NOT run
+            // the schema's closed-key check -- so unknown/misspelled top-level
+            // keys would slip through silently (r5 silent-drop family, GAP1).
+            // Run the schema pass too so a handler verb rejects stray keys like
+            // every other verb. The schema pass is a no-op when validation is
+            // disabled, so this never tightens the validation-off path. Mirrors
+            // Python SWMLService.add_verb / add_verb_to_section.
+            if ($isValid) {
+                [$isValid, $errors] = $this->getSchemaUtils()->validateVerb($verbName, $config);
+            }
         } else {
             [$isValid, $errors] = $this->getSchemaUtils()->validateVerb($verbName, $config);
         }

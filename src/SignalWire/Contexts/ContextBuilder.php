@@ -553,6 +553,18 @@ class Step
     // ── Package-level accessors for validation ──────────────────────────
 
     /**
+     * The step's function whitelist, exactly as set via setFunctions():
+     * a list of names, the string 'none', or null (unset -> inherit).
+     * Used by ContextBuilder::validate() to detect dangling references.
+     *
+     * @return list<string>|string|null
+     */
+    public function getFunctions()
+    {
+        return $this->functions;
+    }
+
+    /**
      * @return list<string>|null
      */
     public function getValidSteps(): ?array
@@ -1538,6 +1550,41 @@ class ContextBuilder
                         . " {$reservedStr} are reserved and cannot be used for"
                         . ' user-defined SWAIG tools when contexts/steps are in use.'
                         . ' Rename your tool(s) to avoid the collision.';
+                }
+
+                // Validate step setFunctions([...]) whitelists against the
+                // known tool universe (strict-render GAP2 / r5 F3). A step that
+                // whitelists a function which is neither a registered SWAIG tool
+                // nor a reserved native tool is a DANGLING reference: it renders
+                // a step whose active-function set silently points at nothing
+                // (get_datetime vs get_current_time). Only enforced when a real
+                // registry is present (the toolNameSupplier is attached) -- a
+                // contexts builder with no agent cannot know the tool universe,
+                // so it must not red a valid document. 'none' / [] (disable-all)
+                // are never treated as reference lists.
+                $known = array_merge($registeredNames, RESERVED_NATIVE_TOOL_NAMES);
+                foreach ($this->contexts as $contextName => $context) {
+                    foreach ($context->getSteps() as $stepName => $step) {
+                        $funcs = $step->getFunctions();
+                        if (!is_array($funcs)) {
+                            continue;  // null (inherit) or 'none' (disable-all)
+                        }
+                        foreach ($funcs as $fn) {
+                            if (!in_array($fn, $known, true)) {
+                                $available = array_values(array_unique($known));
+                                sort($available);
+                                $availableStr = "['" . implode("', '", $available) . "']";
+                                $errors[] = "Step '{$stepName}' in context "
+                                    . "'{$contextName}' whitelists function '{$fn}' via"
+                                    . ' setFunctions(), but no such SWAIG tool is'
+                                    . ' registered on the agent and it is not a reserved'
+                                    . ' native tool. This would emit a dangling function'
+                                    . ' reference. Register the tool (defineTool / a'
+                                    . ' skill) or remove it from the step. Available: '
+                                    . $availableStr;
+                            }
+                        }
+                    }
                 }
             }
         }
