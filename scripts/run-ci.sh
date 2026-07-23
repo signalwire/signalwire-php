@@ -304,6 +304,9 @@ sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
 sched_gate COORDINATED-PASS desc="a non-main porting-sdk pin must be declared on the PR (Coordinated-With: line or coordinated-pass label)" \
     -- python3 "$PORTING_SDK_DIR/scripts/coordinated_pass.py" --porting-sdk "$PORTING_SDK_DIR"
 
+sched_gate COORDINATED-REFS desc="every coordinated-set checkout (porting-sdk + python oracle + matrix ports) uses PORTING_SDK_REF, not a literal ref" \
+    -- python3 "$PORTING_SDK_DIR/scripts/check_coordinated_refs.py" --repo "$PORT_ROOT"
+
 sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
     -- bash scripts/run-format.sh ${CI:+--check}
 
