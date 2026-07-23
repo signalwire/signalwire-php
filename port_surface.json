@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 306363d9fd1dd722f4388c74fa1a803fdf3c2ed5",
+  "generated_from": "signalwire-php @ 30940eaf66b1c7cb7541e73470a60a910052fd73",
   "modules": {
     "signalwire": {
       "classes": {
@@ -58,8 +58,6 @@
     "signalwire.ai_chat.client": {
       "classes": {
         "AIChatClient": [
-          "__aenter__",
-          "__aexit__",
           "__init__",
           "chat",
           "close",

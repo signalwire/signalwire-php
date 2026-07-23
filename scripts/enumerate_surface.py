@@ -1337,15 +1337,20 @@ def build_surface() -> dict:
     # getError*/getServerMessage helpers on the base error, and cannot express
     # the two async-context dunders (no PHP context-manager protocol — the
     # lifecycle is a per-request cURL client that opens/closes each call, so
-    # enter/exit/close are all no-ops). Reconcile in the enumerator by SETTING
-    # each AIChat class to its exact oracle own-surface (AGENT_RULES §2: idiom
-    # hidden by emission, never omission). This mirrors the .NET port's
-    # SURFACE_METHOD_INJECTIONS + own-surface intersection, which folded ai_chat
-    # to ZERO allow-list entries.
+    # close() is a no-op and there is no with-block enter/exit). Reconcile in the
+    # enumerator by SETTING each AIChat class to its exact oracle own-surface
+    # (AGENT_RULES §2: idiom hidden by emission, never omission), EXCEPT the two
+    # __aenter__/__aexit__ dunders which have no PHP counterpart and are the only
+    # two AI-Chat surface omissions (impossible:, RelayClient precedent).
     _AICHAT_MODULE = "signalwire.ai_chat.client"
     _AICHAT_SURFACE: dict[str, list[str]] = {
         "AIChatClient": [
-            "__aenter__", "__aexit__", "__init__", "chat", "close",
+            # __aenter__/__aexit__ are the reference's async-context lifecycle
+            # dunders. PHP has NO context-manager / with-block / dispose protocol,
+            # so there is nothing to emit — they are recorded as the only two
+            # AI-Chat surface omissions (impossible:, RelayClient precedent) in
+            # PORT_OMISSIONS.md rather than fabricated here. Everything else folds.
+            "__init__", "chat", "close",
             "create_conversation", "delete", "end", "log", "summarize",
         ],
         "AIChatError": ["__init__"],

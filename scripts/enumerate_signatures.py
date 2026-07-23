@@ -519,13 +519,13 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 #
 # Keyed: canonical_class -> {canonical_method -> full signature dict}. When a class
 # appears here, its enumerated methods_out is REPLACED by exactly this map (so the
-# spurious ``url`` property-method is dropped and ``close`` is present). The
-# constructor is the ONE genuine divergence: params 1-4 (project/token/space/url)
-# match the oracle verbatim; the 5th (read_idle_timeout_seconds vs the reference's
-# session) has no PHP counterpart — PHP opens/closes a fresh cURL handle per
-# request and exposes no injectable HTTP-session seam — so __init__ keeps its
-# PHP-real shape here and the 5th-param divergence is excused by the single
-# PORT_SIGNATURE_OMISSIONS entry (PHP-param-shape). Everything else folds to zero.
+# spurious ``url`` property-method is dropped and ``close`` is present). __init__
+# folds to the oracle's four params (project/token/space/url) verbatim: the PHP
+# ctor's trailing optional convenience knob ``readIdleTimeoutSeconds`` (byte-idle
+# read timeout; the reference's async DI ``session`` seam has no PHP counterpart)
+# is a PHP-idiom trailing optional not part of the reference construction surface,
+# so it is folded away here. Everything folds to ZERO drift — no AI-Chat
+# signature omission remains.
 AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
     "AIChatClient": {
         "__init__": {
@@ -535,7 +535,6 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
                 {"name": "token", "type": "optional<string>", "required": False, "default": None},
                 {"name": "space", "type": "optional<string>", "required": False, "default": None},
                 {"name": "url", "type": "optional<string>", "required": False, "default": None},
-                {"name": "read_idle_timeout_seconds", "type": "optional<int>", "required": False, "default": None},
             ],
             "returns": "void",
         },
@@ -547,6 +546,8 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
                 {"name": "role", "type": "string", "required": False, "default": "user"},
                 {"name": "config_url", "type": "optional<string>", "required": False, "default": None},
                 {"name": "user_metadata", "type": "optional<dict<string,any>>", "required": False, "default": None},
+                {"name": "timeout", "type": "optional<integer>", "required": False, "default": None},
+                {"name": "reinit", "type": "boolean", "required": False, "default": False},
             ],
             "returns": "class:signalwire.ai_chat.client.ChatResponse",
         },
@@ -1035,7 +1036,7 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         # REPLACE the reflected methods_out with the canonical oracle signatures
         # (splice) — dropping the spurious ``url`` property-method and adding the
         # ``close`` lifecycle member — so every AIChat method folds to zero drift
-        # except the documented __init__ 5th-param divergence (AGENT_RULES §2).
+        # (AGENT_RULES §2). No AI-Chat signature omission remains.
         if mod == "signalwire.ai_chat.client":
             # The five code-mapped AIChat error subclasses inherit AIChatError's
             # constructor and define nothing of their own; the oracle signatures

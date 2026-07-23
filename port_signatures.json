@@ -600,12 +600,6 @@
                   "type": "optional<string>",
                   "required": false,
                   "default": null
-                },
-                {
-                  "name": "read_idle_timeout_seconds",
-                  "type": "optional<int>",
-                  "required": false,
-                  "default": null
                 }
               ],
               "returns": "void"
@@ -643,6 +637,18 @@
                   "type": "optional<dict<string,any>>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "timeout",
+                  "type": "optional<integer>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "reinit",
+                  "type": "boolean",
+                  "required": false,
+                  "default": false
                 }
               ],
               "returns": "class:signalwire.ai_chat.client.ChatResponse"
