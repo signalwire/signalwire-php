@@ -640,13 +640,13 @@
                 },
                 {
                   "name": "timeout",
-                  "type": "optional<integer>",
+                  "type": "optional<int>",
                   "required": false,
                   "default": null
                 },
                 {
                   "name": "reinit",
-                  "type": "boolean",
+                  "type": "bool",
                   "required": false,
                   "default": false
                 }
