@@ -375,6 +375,17 @@ sched_gate WIRED-MODES desc="load-bearing run-ci modes (WIRED_MODES.md) all pres
 sched_gate ROUTE-COLLISION res=surface desc="no split routes / duplicate CRUD bases (spec-aware; fed by route_registry.php)" \
     -- bash scripts/route_collision.sh
 
+
+# AI-CHAT (COORDINATED pass php:ai-chat-client <-> porting-sdk:ai-chat-client):
+# wire-behavioral gate for the AIChatClient. Drives bin/ai-chat-dump.php through the
+# shared ai_chat_corpus against porting-sdk's in-process mock_ai_chat and asserts the
+# client speaks the AI Chat JSON-RPC protocol per the vendored spec (ai-chat-specs/
+# ai-chat.yaml). The gate script (diff_port_ai_chat.py) + mock live on the porting-sdk
+# `ai-chat-client` branch, so during the coordinated pass PORTING_SDK_REF pins that
+# branch and the gate runs; on plain main it skip-passes until the branch merges.
+sched_gate AI-CHAT desc="AIChatClient speaks the AI Chat protocol per the vendored spec (mock_ai_chat wire-behavioral)" \
+    -- bash -c 'if [ -f "$1/scripts/diff_port_ai_chat.py" ]; then python3 "$1/scripts/diff_port_ai_chat.py" --port php --dump-cmd "php $2/bin/ai-chat-dump.php"; else echo "[ai-chat] diff_port_ai_chat.py not on porting-sdk main yet — skip-pass (coordinated-branch dep: porting-sdk ai-chat-client)"; fi' _ "$PORTING_SDK_DIR" "$PORT_ROOT"
+
 sched_run
 rc=$?
 if [ "$rc" -eq 0 ]; then
