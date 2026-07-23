@@ -19,7 +19,7 @@ $client = new RestClient(
 ## Namespaces
 
 All API surfaces are accessed as method calls that return the namespace object.
-There are 21 namespaces:
+There are 22 namespaces:
 
 | Accessor | Description |
 |----------|-------------|
@@ -41,7 +41,9 @@ There are 21 namespaces:
 | `$client->importedNumbers()` | Imported phone numbers |
 | `$client->logs()` | Call, message, fax, conference logs |
 | `$client->project()` | Project-level token management |
+| `$client->projects()` | Project management API (`/api/projects`) |
 | `$client->pubsub()` | PubSub token creation |
+| `$client->messages()` | Message send and history |
 | `$client->chat()` | Chat token creation |
 
 ## Return Values

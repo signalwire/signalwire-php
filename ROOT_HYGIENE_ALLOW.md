@@ -27,3 +27,4 @@ audit pipeline (which this repo cannot edit). Verified reader per file below.
 - WIRED_MODES.md — load-bearing run-ci mode manifest read by porting-sdk check_wired_modes.py at repo root (the WIRED-MODES merge-coherence guard, plan a-bar 1.6/D7); must be at root (lane-php, 2026-07-19)
 - .doc_surface_floor — DOC-SURFACE docblock-coverage floor pin, read + ratcheted at repo root by porting-sdk doc_surface.py (plan 6.3, lane-php, 2026-07-19)
 - SNIPPET_RUN_ALLOW.md — gate-control allowlist read at repo root by porting-sdk snippet_run.py (the SNIPPET-RUN no-run ledger; sibling of EXAMPLES_RUN_ALLOW.md) (lane-php, 2026-07-19)
+- .env.example — dotenv template documenting every env var the SDK reads; a copy-to-`.env` file that must live at the repo root by the dotenv convention to serve its purpose, alongside the built-in .gitignore config file (same class + reason as ruby's allowlisted .env.example) (c2-php, 2026-07-22)
