@@ -712,15 +712,15 @@ def body_params(spec: Spec, cls: str, php_method: str,
         "name": "extras", "kind": "keyword",
         "type": "optional<dict<string,any>>", "required": False, "default": None,
     })
-    # ``request_options`` is the last recorded keyword — mirroring the reference
-    # oracle, which DROPS the bare ``**kwargs`` var_keyword entirely
-    # (enumerate_python_signatures.py: ``if var_keyword: continue`` — a literal-key
-    # runtime door, not cross-port surface). We therefore emit NO var_keyword record
-    # (previously a synthetic ``kwargs`` record trailed here "as a tolerated
-    # optional"; that made php enumerate a param the oracle omits → DRIFT). The real
-    # forward-compat door is the ``extras`` keyword param above, which the oracle DOES
-    # record. This matches how ``paginate`` is already handled (enumerate_signatures.py).
+    # ``request_options`` is recorded BEFORE the dropped ``**kwargs`` var_keyword
+    # so the positional prefix stays aligned with the reference (whose oracle
+    # drops the bare **kwargs, leaving request_options as the last recorded
+    # keyword). The var_keyword kwargs record trails as a tolerated optional.
     records.append(_request_options_record())
+    records.append({
+        "name": "kwargs", "kind": "var_keyword", "type": "any",
+        "required": False, "default": {},
+    })
     build.append("        $__body = array_merge($__body, $extras);")
     _register_sidecar(cls, php_method, records)
     return php_params, build, records, doc
@@ -848,17 +848,15 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
         call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, [], $requestOptions);"
     elif verb == "get":
-        # §5.3 GET query door — a real ``array $params = []`` PHP param carries the
-        # query string. The reference oracle records only ``request_options`` and
-        # DROPS the bare ``**params`` var_keyword (a literal-key runtime door, not
-        # cross-port surface — enumerate_python_signatures.py: ``if var_keyword:
-        # continue``), so the SIDECAR emits no var_keyword record (previously it
-        # trailed "as a tolerated optional extra", which made php enumerate a param
-        # the oracle omits → DRIFT). The PHP ``$params`` param stays; only the
-        # unmatched signature record is dropped, mirroring paginate/object-body.
+        # §5.3 GET query door — a trailing var_keyword ``params`` map.
+        # The reference records ``request_options`` (keyword) BEFORE the dropped
+        # ``**params`` var_keyword, so the sidecar orders request_options first to
+        # keep the positional prefix aligned (the var_keyword params record sits
+        # last as a tolerated optional extra).
         params = id_params + ["array $params = []"]
         _register_sidecar(cls, name, id_records + [
             _request_options_record(),
+            {"name": "params", "kind": "var_keyword", "type": "any", "required": False, "default": {}},
         ])
         doc.append("     * @param array<string,mixed> $params Query-string parameters.")
         call_line = f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
