@@ -503,6 +503,29 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 }
 
 
+# Var-keyword drop — mirror the oracle's policy of dropping a bare ``**kwargs``
+# var_keyword (enumerate_python_signatures.py: `if var_keyword: continue`). A
+# hand-written PHP method whose ONLY declared param realizes Python's trailing
+# ``**kwargs`` catch-all (as a single ``array $params``) enumerates that param,
+# but the reference records NOTHING for it. Strip the named trailing param so the
+# enumerated signature == the oracle's ``(self)``. Keyed by (full_php, native)
+# → the trailing param name to drop.
+#
+# Scoped to the BedrockAgent no-op overrides of the AIConfigMixin setters: the
+# reference declares them ``set_prompt_llm_params(self, **params) -> None`` /
+# ``set_post_prompt_llm_params(self, **params) -> None`` (pure **kwargs), so the
+# oracle records only ``self``. The PHP overrides take ``array $params`` (the
+# **kwargs realization) — drop it to match. (The AIConfigMixin BASE copies keep
+# a required ``array $params`` and are excused via PORT_SIGNATURE_OMISSIONS as
+# the documented set_*_llm_params required-array idiom; these concrete no-op
+# overrides return void/self and carry no distinct wire surface, so the
+# oracle-mirror drop is exact.)
+VAR_KEYWORD_DROP_METHODS: dict[tuple[str, str], str] = {
+    ("SignalWire\\Agents\\BedrockAgent", "setPromptLlmParams"): "params",
+    ("SignalWire\\Agents\\BedrockAgent", "setPostPromptLlmParams"): "params",
+}
+
+
 # Return-type remaps for methods whose concrete return element type PHP
 # reflection erases (bare ``array`` → ``any``) but the Python reference types
 # concretely. Same rationale as PARAM_TYPE_REMAPS: the ``@return`` generic on
@@ -740,6 +763,15 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             ret_remap = RETURN_TYPE_REMAPS.get((full_php, native))
             if ret_remap is not None:
                 sig["returns"] = ret_remap
+            # Var-keyword drop: mirror the oracle dropping a bare ``**kwargs``.
+            # Strip the named trailing param that realizes Python's **kwargs so
+            # the enumerated signature == the oracle's ``(self)``.
+            drop_name = VAR_KEYWORD_DROP_METHODS.get((full_php, native))
+            if drop_name is not None:
+                sig["params"] = [
+                    p for p in sig.get("params", [])
+                    if not (p.get("kind") != "self" and p.get("name") == drop_name)
+                ]
             # §5 unfold: a generated REST operation/command/set method takes its
             # wire fields as named PHP params (options-struct idiom); PHP
             # reflection can't recover keyword kind / element types / the open

@@ -703,24 +703,22 @@ def body_params(spec: Spec, cls: str, php_method: str,
         records.append(rec)
     # trailing forward-compat door (the oracle's keyword ``extras`` + the
     # Python-reference ``**kwargs`` catch-all). The single PHP ``array $extras``
-    # arg realizes BOTH — the oracle records ``extras`` (keyword optional-dict)
-    # AND a trailing ``kwargs`` (var_keyword) on object-body operation methods,
-    # so both records are emitted (the var_keyword needs no distinct PHP param).
+    # arg realizes BOTH — but the oracle records ONLY the keyword ``extras``
+    # (optional-dict) and DROPS the bare ``**kwargs`` var_keyword entirely
+    # (enumerate_python_signatures.py: `if var_keyword: continue`). So the port
+    # emits an ``extras`` record ONLY — no trailing var_keyword record — and the
+    # enumerated signature is [...typed..., extras, request_options], matching the
+    # oracle exactly. The PHP ``array $extras`` runtime param stays; it realizes
+    # the ``extras`` door.
     php_params.append("array $extras = []")
     doc.append("     * @param array<string,mixed> $extras Forward-compat body fields.")
     records.append({
         "name": "extras", "kind": "keyword",
         "type": "optional<dict<string,any>>", "required": False, "default": None,
     })
-    # ``request_options`` is recorded BEFORE the dropped ``**kwargs`` var_keyword
-    # so the positional prefix stays aligned with the reference (whose oracle
-    # drops the bare **kwargs, leaving request_options as the last recorded
-    # keyword). The var_keyword kwargs record trails as a tolerated optional.
+    # ``request_options`` is the last recorded keyword (the reference's oracle
+    # drops the bare **kwargs, leaving request_options as its last recorded param).
     records.append(_request_options_record())
-    records.append({
-        "name": "kwargs", "kind": "var_keyword", "type": "any",
-        "required": False, "default": {},
-    })
     build.append("        $__body = array_merge($__body, $extras);")
     _register_sidecar(cls, php_method, records)
     return php_params, build, records, doc
@@ -848,15 +846,16 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
         call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, [], $requestOptions);"
     elif verb == "get":
-        # §5.3 GET query door — a trailing var_keyword ``params`` map.
-        # The reference records ``request_options`` (keyword) BEFORE the dropped
-        # ``**params`` var_keyword, so the sidecar orders request_options first to
-        # keep the positional prefix aligned (the var_keyword params record sits
-        # last as a tolerated optional extra).
+        # §5.3 GET query door — the PHP ``array $params`` realizes Python's
+        # ``**params`` var_keyword catch-all. The reference oracle DROPS the bare
+        # ``**params`` var_keyword (enumerate_python_signatures.py: `if
+        # var_keyword: continue`), recording ``request_options`` as its last
+        # keyword. So the sidecar records ONLY [...id..., request_options] — no
+        # var_keyword record — matching the oracle exactly. The PHP ``array
+        # $params`` runtime param stays; it realizes the query-door.
         params = id_params + ["array $params = []"]
         _register_sidecar(cls, name, id_records + [
             _request_options_record(),
-            {"name": "params", "kind": "var_keyword", "type": "any", "required": False, "default": {}},
         ])
         doc.append("     * @param array<string,mixed> $params Query-string parameters.")
         call_line = f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
@@ -924,13 +923,13 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
         records.append(rec)
     params.append("array $extra = []")
     arg_doc.append("     * @param array<string,mixed> $extra")
-    # trailing per-call transport override (forwarded through update()). The
-    # sidecar records request_options BEFORE the dropped ``extra`` var_keyword so
-    # the positional prefix aligns with the reference (which records
-    # request_options as its last keyword param, the **extra dropped).
+    # trailing per-call transport override (forwarded through update()). The PHP
+    # ``array $extra`` realizes Python's ``**kwargs`` catch-all, but the oracle
+    # DROPS the bare ``**kwargs`` var_keyword (enumerate_python_signatures.py: `if
+    # var_keyword: continue`), so the sidecar records ONLY request_options as its
+    # last param — no var_keyword record — matching the oracle exactly. The PHP
+    # ``array $extra`` runtime param stays.
     records.append(_request_options_record())
-    records.append({"name": "extra", "kind": "var_keyword", "type": "any",
-                    "required": False, "default": {}})
     params.append(_REQUEST_OPTIONS_PHP_PARAM)
     arg_doc.append(_REQUEST_OPTIONS_DOC)
     _register_sidecar(cls, name, records)
