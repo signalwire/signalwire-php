@@ -115,6 +115,20 @@ class AIChatClient
     }
 
     /**
+     * Release any client-held transport resources.
+     *
+     * Mirrors the python reference's ``AIChatClient.close()`` lifecycle member.
+     * This client opens and closes a fresh cURL handle per request (there is no
+     * pooled/persistent session to tear down), so ``close()`` is a well-defined
+     * no-op that completes the lifecycle contract — calling it is always safe
+     * and the client remains usable afterward. (Python closes its persistent
+     * ``aiohttp.ClientSession`` here; PHP has nothing to release.)
+     */
+    public function close(): void
+    {
+    }
+
+    /**
      * Resolve the endpoint URL, in order:
      *   1. an explicit ``url`` — used verbatim;
      *   2. ``RAILS_DEV_MODE`` env var when it holds a real URL (it doubles as the

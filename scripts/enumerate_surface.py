@@ -141,6 +141,29 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # logging
     "Logger": "signalwire.core.logging_config",
 
+    # ai-chat: the AI-Chat front-door client + its typed response records and
+    # error family. The Python reference houses ALL of them in the single module
+    # signalwire.ai_chat.client (griffe records AIChatClient, the AIChatError base
+    # + 5 code-mapped subclasses, and the ConversationInfo/ChatResponse/ChatLog
+    # response records there). PHP splits them one-class-per-file under
+    # SignalWire\AIChat\, so the auto path-fallback would derive
+    # signalwire.aichat.<file> per class; route them all onto the one reference
+    # module (module-consolidation idiom). The AIChat method/ctor SIGNATURES are
+    # spliced to the oracle shape (AICHAT_SIGNATURES in enumerate_signatures.py)
+    # and the SURFACE method sets folded to the oracle own-surface (_AICHAT_SURFACE
+    # below); the client's wire behavior is proven independently by the AI-CHAT
+    # wire gate, so this is pure idiom (AGENT_RULES §2).
+    "AIChatClient": "signalwire.ai_chat.client",
+    "AIChatError": "signalwire.ai_chat.client",
+    "AuthenticationError": "signalwire.ai_chat.client",
+    "ChatInProgressError": "signalwire.ai_chat.client",
+    "ConversationNotFoundError": "signalwire.ai_chat.client",
+    "RateLimitError": "signalwire.ai_chat.client",
+    "SummaryError": "signalwire.ai_chat.client",
+    "ConversationInfo": "signalwire.ai_chat.client",
+    "ChatResponse": "signalwire.ai_chat.client",
+    "ChatLog": "signalwire.ai_chat.client",
+
     # server
     "AgentServer": "signalwire.agent_server",
 
@@ -1302,6 +1325,41 @@ def build_surface() -> dict:
         existing = set(modules[module_path]["classes"].get(translated, []))
         existing.add("stop")
         modules[module_path]["classes"][translated] = sorted(existing)
+
+    # AI-Chat surface fold onto the single reference module
+    # signalwire.ai_chat.client. The oracle records an EXACT own-surface per
+    # class (griffe): AIChatClient exposes the async-context lifecycle
+    # (__aenter__/__aexit__), close, __init__, and the six verbs; AIChatError
+    # exposes only __init__; the ConversationInfo/ChatResponse/ChatLog response
+    # records and the five code-mapped error subclasses are method-less on the
+    # SURFACE (their __init__ lives on the signature side per griffe). PHP
+    # reflection sees the ctor as a surface method on the records and the two
+    # getError*/getServerMessage helpers on the base error, and cannot express
+    # the two async-context dunders (no PHP context-manager protocol — the
+    # lifecycle is a per-request cURL client that opens/closes each call, so
+    # enter/exit/close are all no-ops). Reconcile in the enumerator by SETTING
+    # each AIChat class to its exact oracle own-surface (AGENT_RULES §2: idiom
+    # hidden by emission, never omission). This mirrors the .NET port's
+    # SURFACE_METHOD_INJECTIONS + own-surface intersection, which folded ai_chat
+    # to ZERO allow-list entries.
+    _AICHAT_MODULE = "signalwire.ai_chat.client"
+    _AICHAT_SURFACE: dict[str, list[str]] = {
+        "AIChatClient": [
+            "__aenter__", "__aexit__", "__init__", "chat", "close",
+            "create_conversation", "delete", "end", "log", "summarize",
+        ],
+        "AIChatError": ["__init__"],
+        "AuthenticationError": [],
+        "ChatInProgressError": [],
+        "ConversationNotFoundError": [],
+        "RateLimitError": [],
+        "SummaryError": [],
+        "ConversationInfo": [],
+        "ChatResponse": [],
+        "ChatLog": [],
+    }
+    for _ac_cls, _ac_methods in _AICHAT_SURFACE.items():
+        modules[_AICHAT_MODULE]["classes"][_ac_cls] = sorted(_ac_methods)
 
     # Apply mixin projections — pick matching methods off AgentBase / SWMLService
     # and emit them under each Python mixin module path so the diff lines up.

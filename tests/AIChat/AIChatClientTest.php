@@ -126,6 +126,18 @@ final class AIChatClientTest extends TestCase
         $this->assertSame('http://local/api/ai/chat', $c->url);
     }
 
+    public function testCloseIsNoOpAndClientRemainsUsable(): void
+    {
+        // close() completes the reference lifecycle contract. This client
+        // opens/closes a cURL handle per request, so close() releases nothing
+        // (no-op) and the client stays fully usable afterward — proven by
+        // reading $url, an operation unaffected by close().
+        $c = new AIChatClient(project: 'p', token: 't', url: 'http://local/api/ai/chat');
+        $c->close();
+        $c->close(); // idempotent
+        $this->assertSame('http://local/api/ai/chat', $c->url);
+    }
+
     public function testThrowsWhenNoUrlResolves(): void
     {
         $this->expectException(\InvalidArgumentException::class);
