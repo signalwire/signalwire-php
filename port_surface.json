@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 0b8492493c186415ebf53ee94570278bd9c721c1",
+  "generated_from": "signalwire-php @ dd4c35f37168536a8622d95ac4a004d7d0df8ef5",
   "modules": {
     "signalwire": {
       "classes": {
@@ -72,9 +72,20 @@
         ],
         "AuthenticationError": [],
         "ChatInProgressError": [],
-        "ChatLog": [],
-        "ChatResponse": [],
-        "ConversationInfo": [],
+        "ChatLog": [
+          "call_timeline",
+          "messages"
+        ],
+        "ChatResponse": [
+          "conversation_id",
+          "text",
+          "user_event"
+        ],
+        "ConversationInfo": [
+          "id",
+          "initial_message",
+          "status"
+        ],
         "ConversationNotFoundError": [],
         "RateLimitError": [],
         "SummaryError": []
@@ -817,17 +828,14 @@
           "add_verb",
           "add_verb_to_section",
           "as_router",
-          "define_tool",
           "define_tools",
           "dispatch_from_globals",
           "extract_sip_username",
           "full_validation_enabled",
-          "get_all_functions",
           "get_basic_auth_credentials",
           "get_basic_auth_credentials_with_source",
           "get_document",
           "get_full_url",
-          "get_function",
           "get_host",
           "get_name",
           "get_port",
@@ -836,15 +844,12 @@
           "get_tool_names",
           "get_tools",
           "handle_request",
-          "has_function",
           "manual_set_proxy_url",
           "on_function_call",
           "on_request",
           "on_swml_request",
           "register_routing_callback",
-          "register_swaig_function",
           "register_verb_handler",
-          "remove_function",
           "render",
           "render_document",
           "render_pretty",
@@ -1522,73 +1527,73 @@
       "classes": {
         "CallReceiveEvent": [
           "__init__",
+          "call_state",
+          "context",
+          "device",
+          "direction",
           "from_payload",
-          "get_call_state",
-          "get_context",
-          "get_device",
-          "get_direction",
-          "get_node_id",
-          "get_project_id",
-          "get_segment_id",
-          "get_tag"
+          "node_id",
+          "project_id",
+          "segment_id",
+          "tag"
         ],
         "CallStateEvent": [
           "__init__",
-          "from_payload",
-          "get_call_state",
-          "get_device",
-          "get_direction",
-          "get_end_reason"
+          "call_state",
+          "device",
+          "direction",
+          "end_reason",
+          "from_payload"
         ],
         "CallingErrorEvent": [
           "__init__",
+          "code",
           "from_payload",
-          "get_code",
-          "get_message"
+          "message"
         ],
         "CollectEvent": [
           "__init__",
+          "control_id",
+          "final",
           "from_payload",
-          "get_control_id",
-          "get_final",
-          "get_result",
-          "get_state"
+          "result",
+          "state"
         ],
         "ConferenceEvent": [
           "__init__",
+          "conference_id",
           "from_payload",
-          "get_conference_id",
-          "get_name",
-          "get_status"
+          "name",
+          "status"
         ],
         "ConnectEvent": [
           "__init__",
+          "connect_state",
           "from_payload",
-          "get_connect_state",
-          "get_peer"
+          "peer"
         ],
         "DenoiseEvent": [
           "__init__",
-          "from_payload",
-          "get_denoised"
+          "denoised",
+          "from_payload"
         ],
         "DetectEvent": [
           "__init__",
-          "from_payload",
-          "get_control_id",
-          "get_detect"
+          "control_id",
+          "detect",
+          "from_payload"
         ],
         "DialEvent": [
           "__init__",
+          "call",
+          "dial_state",
           "from_payload",
-          "get_call",
-          "get_dial_state",
-          "get_tag"
+          "tag"
         ],
         "EchoEvent": [
           "__init__",
           "from_payload",
-          "get_state"
+          "state"
         ],
         "Event": [
           "__init__",
@@ -1606,124 +1611,124 @@
         ],
         "FaxEvent": [
           "__init__",
-          "from_payload",
-          "get_control_id",
-          "get_fax"
+          "control_id",
+          "fax",
+          "from_payload"
         ],
         "HoldEvent": [
           "__init__",
           "from_payload",
-          "get_state"
+          "state"
         ],
         "MessageReceiveEvent": [
           "__init__",
+          "body",
+          "context",
+          "direction",
+          "from_number",
           "from_payload",
-          "get_body",
-          "get_context",
-          "get_direction",
-          "get_from_number",
-          "get_media",
-          "get_message_id",
-          "get_message_state",
-          "get_segments",
-          "get_tags",
-          "get_to_number"
+          "media",
+          "message_id",
+          "message_state",
+          "segments",
+          "tags",
+          "to_number"
         ],
         "MessageStateEvent": [
           "__init__",
+          "body",
+          "context",
+          "direction",
+          "from_number",
           "from_payload",
-          "get_body",
-          "get_context",
-          "get_direction",
-          "get_from_number",
-          "get_media",
-          "get_message_id",
-          "get_message_state",
-          "get_reason",
-          "get_segments",
-          "get_tags",
-          "get_to_number"
+          "media",
+          "message_id",
+          "message_state",
+          "reason",
+          "segments",
+          "tags",
+          "to_number"
         ],
         "PayEvent": [
           "__init__",
+          "control_id",
           "from_payload",
-          "get_control_id",
-          "get_state"
+          "state"
         ],
         "PlayEvent": [
           "__init__",
+          "control_id",
           "from_payload",
-          "get_control_id",
-          "get_state"
+          "state"
         ],
         "QueueEvent": [
           "__init__",
+          "control_id",
           "from_payload",
-          "get_control_id",
-          "get_position",
-          "get_queue_id",
-          "get_queue_name",
-          "get_size",
-          "get_status"
+          "position",
+          "queue_id",
+          "queue_name",
+          "size",
+          "status"
         ],
         "RecordEvent": [
           "__init__",
+          "control_id",
+          "duration",
           "from_payload",
-          "get_control_id",
-          "get_duration",
-          "get_record",
-          "get_size",
-          "get_state",
-          "get_url"
+          "record",
+          "size",
+          "state",
+          "url"
         ],
         "ReferEvent": [
           "__init__",
           "from_payload",
-          "get_sip_notify_response_code",
-          "get_sip_refer_response_code",
-          "get_sip_refer_to",
-          "get_state"
+          "sip_notify_response_code",
+          "sip_refer_response_code",
+          "sip_refer_to",
+          "state"
         ],
         "RelayEvent": [
           "__init__",
+          "call_id",
+          "event_type",
           "from_payload",
-          "get_call_id",
-          "get_event_type",
-          "get_params",
-          "get_timestamp",
-          "parse_event"
+          "params",
+          "parse_event",
+          "timestamp"
         ],
         "SendDigitsEvent": [
           "__init__",
+          "control_id",
           "from_payload",
-          "get_control_id",
-          "get_state"
+          "state"
         ],
         "StreamEvent": [
           "__init__",
+          "control_id",
           "from_payload",
-          "get_control_id",
-          "get_name",
-          "get_state",
-          "get_url"
+          "name",
+          "state",
+          "url"
         ],
         "TapEvent": [
           "__init__",
+          "control_id",
+          "device",
           "from_payload",
-          "get_control_id",
-          "get_device",
-          "get_state",
-          "get_tap"
+          "state",
+          "tap"
         ],
         "TranscribeEvent": [
           "__init__",
+          "control_id",
+          "duration",
           "from_payload",
-          "get_control_id",
-          "get_duration",
-          "get_recording_id",
-          "get_size",
-          "get_state",
-          "get_url"
+          "recording_id",
+          "size",
+          "state",
+          "url"
         ]
       },
       "functions": []
@@ -1987,7 +1992,11 @@
         "RequestOptions": [
           "__init__",
           "abort_signal",
-          "merge"
+          "merge",
+          "retries",
+          "retry_backoff",
+          "retry_on_status",
+          "timeout"
         ]
       },
       "functions": [

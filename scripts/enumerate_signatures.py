@@ -607,6 +607,12 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             "returns": "void",
         },
     },
+    # The three response records now carry their @dataclass PUBLIC FIELDS on the
+    # oracle (wave-4 re-drift): each field is recorded as a zero-arg ``(self) ->
+    # <type>`` accessor. PHP exposes each as a constructor-promoted ``public
+    # readonly`` property carrying the SAME data; splice the field members here so
+    # the SIGNATURE gate reconciles EQUAL (parallel to the surface field emit in
+    # enumerate_surface.py). Field types mirror the oracle exactly.
     "ConversationInfo": {
         "__init__": {
             "params": [
@@ -617,6 +623,9 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        "id": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "status": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "initial_message": {"params": [{"name": "self", "kind": "self"}], "returns": "optional<string>"},
     },
     "ChatResponse": {
         "__init__": {
@@ -628,6 +637,9 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        "text": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "conversation_id": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "user_event": {"params": [{"name": "self", "kind": "self"}], "returns": "optional<dict<string,any>>"},
     },
     "ChatLog": {
         "__init__": {
@@ -638,6 +650,8 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        "messages": {"params": [{"name": "self", "kind": "self"}], "returns": "list<dict<string,any>>"},
+        "call_timeline": {"params": [{"name": "self", "kind": "self"}], "returns": "list<dict<string,any>>"},
     },
     # NOTE: the five code-mapped error subclasses (AuthenticationError/
     # ChatInProgressError/ConversationNotFoundError/RateLimitError/SummaryError)

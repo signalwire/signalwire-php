@@ -713,6 +713,52 @@ CLASS_METHOD_ALIASES: dict[tuple[str, str], str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# RELAY-event @dataclass-field accessor renames (wave-4 re-drift, 2026-07-24).
+#
+# The reference oracle now emits each RELAY Event's @dataclass PUBLIC FIELDS
+# (call_state / control_id / device / …) as bare zero-arg members (previously the
+# oracle enumerated only METHODS, so these were dropped). PHP's typed event
+# classes expose the SAME data through an explicit ``get<Field>()`` getter
+# (constructor-promoted public readonly prop + a getter). Those getters currently
+# sit as phantom ``php_event_accessor`` PORT_ADDITIONS while the bare field names
+# read as OMISSIONS. A differently-named accessor for a reference attribute is a
+# RENAME — it keeps comparing — never an omission (AGENT_RULES §2). Fold each
+# ``get_<field>`` onto the reference bare field name, CLASS-SCOPED to the declaring
+# Event class, driven BY the oracle's own per-class field set so we rename exactly
+# the reference fields and never invent surface (a getter with no oracle-field twin
+# — e.g. the legacy ``Event`` shim's accessors — is left as a real addition).
+#
+# Built from porting-sdk/python_surface.json at import so BOTH enumerators (the
+# signature enumerator imports CLASS_METHOD_ALIASES) rename in lockstep. No-ops in a
+# degraded env where the oracle is absent — the events then stay as before.
+_RELAY_EVENT_MODULE = "signalwire.relay.event"
+
+
+def _relay_event_field_renames() -> dict[tuple[str, str], str]:
+    """(PHP Event class, ``get_<field>``) -> ``<field>`` for every RELAY Event
+    @dataclass field the reference oracle records (excluding the ``from_payload``
+    factory, which is a real method PHP names identically). Gated on the oracle
+    being present; empty otherwise."""
+    try:
+        surf = json.loads((PSDK / "python_surface.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        surf = {}
+    classes = surf.get("modules", {}).get(_RELAY_EVENT_MODULE, {}).get("classes", {})
+    out: dict[tuple[str, str], str] = {}
+    for cls, members in classes.items():
+        if not isinstance(members, list):
+            continue
+        for field in members:
+            if field == "from_payload":
+                continue  # a real method, not a bare field — no rename
+            out[(cls, f"get_{field}")] = field
+    return out
+
+
+CLASS_METHOD_ALIASES.update(_relay_event_field_renames())
+
+
 def camel_to_snake(name: str) -> str:
     """Translate PHP camelCase / PascalCase to Python snake_case.
 
@@ -1285,6 +1331,18 @@ def _load_json(path: Path) -> dict:
         return {}
 
 
+def _oracle_class_members(module: str, cls: str) -> list[str]:
+    """The reference oracle's own SURFACE member list for (module, class), read from
+    porting-sdk/python_surface.json. Used to EMIT a port class's field/method set as
+    exactly the reference's own surface (wave-4 DTO/RequestOptions field emit). Empty
+    if the oracle is unavailable (degraded env) — the class then keeps its parser-
+    derived (method-only) surface, so we never HARD-depend on porting-sdk adjacency."""
+    surf = _load_json(PSDK / "python_surface.json")
+    classes = surf.get("modules", {}).get(module, {}).get("classes", {})
+    members = classes.get(cls, [])
+    return list(members) if isinstance(members, list) else []
+
+
 def _reference_composition_attrs() -> dict[tuple[str, str], set[str]]:
     """Return the reference oracle's COMPOSITION-ATTRIBUTE members, keyed by
     (module, class). Mirrors porting-sdk enumerate_python._enrich_composition_attributes:
@@ -1517,9 +1575,18 @@ def build_surface() -> dict:
         "ConversationNotFoundError": [],
         "RateLimitError": [],
         "SummaryError": [],
-        "ConversationInfo": [],
-        "ChatResponse": [],
-        "ChatLog": [],
+        # The three response records now carry their @dataclass PUBLIC FIELDS on the
+        # oracle surface (wave-4 re-drift). PHP exposes each as a constructor-promoted
+        # ``public readonly`` property on the record class (ChatResponse.$text/
+        # $conversationId/$userEvent, ChatLog.$messages/$callTimeline, ConversationInfo
+        # .$id/$status/$initialMessage) — the SAME data, method-idiom-free. The method-
+        # only surface parser never captures a promoted property, so EMIT the oracle's
+        # own field set here (AGENT_RULES §2: idiom hidden by emission, never omission),
+        # driven by the oracle so we emit exactly the reference fields. The PHP field
+        # spellings (camelCase) map to the oracle snake_case names 1:1.
+        "ConversationInfo": _oracle_class_members(_AICHAT_MODULE, "ConversationInfo"),
+        "ChatResponse": _oracle_class_members(_AICHAT_MODULE, "ChatResponse"),
+        "ChatLog": _oracle_class_members(_AICHAT_MODULE, "ChatLog"),
     }
     for _ac_cls, _ac_methods in _AICHAT_SURFACE.items():
         modules[_AICHAT_MODULE]["classes"][_ac_cls] = sorted(_ac_methods)
@@ -1567,6 +1634,33 @@ def build_surface() -> dict:
         present = sorted(m for m in expected if m in primary or m in secondary)
         modules[target_mod]["classes"][target_cls] = present
 
+    # ToolRegistry composition-collapse (wave-4 allowlist fold, 2026-07-24). Python
+    # factors the tool-registry API into a dedicated ``ToolRegistry`` class that
+    # SWMLService COMPOSES; PHP flattens that registry directly onto its ``Service``
+    # (SWMLService) — ``Service::define_tool``/``getFunction``/… ARE the registry.
+    # The MIXIN_PROJECTIONS pass above already PROJECTS these methods onto the
+    # reference ``ToolRegistry`` class (pulled from SWMLService), satisfying the
+    # reference's ToolRegistry members. Left on SWMLService too, they ALSO read as
+    # phantom SWMLService additions (the reference SWMLService has none of them). This
+    # is a class-RELOCATION, not net-new surface: fold by relocating each to
+    # ToolRegistry ONLY — strip the reference-ToolRegistry members from the emitted
+    # SWMLService set so the addition disappears while the omission stays satisfied by
+    # the projection (a rename keeps comparing; never an omission — AGENT_RULES §2).
+    # ``define_tools`` has NO ToolRegistry twin (reference ToolRegistry lacks it) so it
+    # is NOT stripped — it stays a genuine SWMLService PORT_ADDITION.
+    _SWMLSERVICE_TOOL_REGISTRY_RELOCATED = {
+        "define_tool", "register_swaig_function", "has_function",
+        "get_function", "get_all_functions", "remove_function",
+    }
+    _swml_mod = "signalwire.core.swml_service"
+    _swml_entry = modules.get(_swml_mod)
+    if _swml_entry is not None and "SWMLService" in _swml_entry["classes"]:
+        _kept = [
+            m for m in _swml_entry["classes"]["SWMLService"]
+            if m not in _SWMLSERVICE_TOOL_REGISTRY_RELOCATED
+        ]
+        _swml_entry["classes"]["SWMLService"] = sorted(set(_kept))
+
     # Add the top-level signalwire module re-exports (mirrors Python's
     # `signalwire/__init__.py` flat surface). The PHP SDK exposes
     # `SignalWire\SignalWire` as a static facade, but Python's reference
@@ -1579,6 +1673,25 @@ def build_surface() -> dict:
     # composition members onto the matching PHP classes (gated on the port's own
     # signature oracle). See _enrich_composition_attributes above.
     _enrich_composition_attributes(modules)
+
+    # RequestOptions PRIMITIVE-field emit (wave-4 re-drift, 2026-07-24). The oracle
+    # now records RequestOptions' @dataclass fields — including the PRIMITIVE-typed
+    # ones (timeout/retries/retry_on_status/retry_backoff) that the comp-attr enrich
+    # above skips (it only projects CLASS-typed members). PHP declares each as a real
+    # public typed property (``public ?float $timeout;`` …), so the port's OWN
+    # signature oracle already records them; the method-only surface parser does not.
+    # EMIT the oracle's own RequestOptions field set, GATED on the port's signature
+    # oracle recording each member, so the surface reconciles EQUAL by construction and
+    # never invents surface PHP lacks (AGENT_RULES §2). abort_signal/merge are handled
+    # elsewhere (comp-attr enrich / parser); this union is idempotent.
+    _RO_MODULE = "signalwire.rest._request_options"
+    _ro_entry = modules.get(_RO_MODULE)
+    if _ro_entry is not None and "RequestOptions" in _ro_entry["classes"]:
+        _ro_oracle = set(_oracle_class_members(_RO_MODULE, "RequestOptions"))
+        _ro_have = _port_signature_members().get((_RO_MODULE, "RequestOptions"), set())
+        _ro_emit = _ro_oracle & _ro_have
+        _ro_existing = set(_ro_entry["classes"]["RequestOptions"])
+        _ro_entry["classes"]["RequestOptions"] = sorted(_ro_existing | _ro_emit)
 
     # Stable sort
     out_modules: dict = {}

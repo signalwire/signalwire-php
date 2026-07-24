@@ -814,6 +814,24 @@
                 }
               ],
               "returns": "void"
+            },
+            "call_timeline": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "list<dict<string,any>>"
+            },
+            "messages": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "list<dict<string,any>>"
             }
           }
         },
@@ -843,6 +861,33 @@
                 }
               ],
               "returns": "void"
+            },
+            "conversation_id": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "text": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "user_event": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<dict<string,any>>"
             }
           }
         },
@@ -872,6 +917,33 @@
                 }
               ],
               "returns": "void"
+            },
+            "id": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "initial_message": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
+            },
+            "status": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             }
           }
         }
@@ -20699,26 +20771,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22004,26 +22056,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22130,26 +22162,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22238,26 +22250,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22280,26 +22272,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22360,26 +22332,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22495,26 +22447,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22537,26 +22469,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -22579,26 +22491,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "control_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "call_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "node_id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "client",
-                  "type": "any",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -23434,78 +23326,6 @@
               ],
               "returns": "any"
             },
-            "get_call_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_context": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_device": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_direction": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_node_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_project_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_segment_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_tag": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "node_id": {
               "params": [
                 {
@@ -23644,42 +23464,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_call_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_device": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_direction": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_end_reason": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             }
           }
         },
@@ -23746,24 +23530,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_code": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_message": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "message": {
               "params": [
@@ -23843,7 +23609,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "bool"
+              "returns": "optional<bool>"
             },
             "from_payload": {
               "params": [
@@ -23858,42 +23624,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_final": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "optional<bool>"
-            },
-            "get_result": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "result": {
               "params": [
@@ -23984,33 +23714,6 @@
               ],
               "returns": "any"
             },
-            "get_conference_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_name": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_status": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "name": {
               "params": [
                 {
@@ -24095,24 +23798,6 @@
               ],
               "returns": "any"
             },
-            "get_connect_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_peer": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
             "peer": {
               "params": [
                 {
@@ -24182,15 +23867,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_denoised": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "bool"
             }
           }
         },
@@ -24263,24 +23939,6 @@
                   "name": "payload",
                   "type": "any",
                   "required": true
-                }
-              ],
-              "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_detect": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
                 }
               ],
               "returns": "any"
@@ -24365,33 +24023,6 @@
               ],
               "returns": "any"
             },
-            "get_call": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_dial_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_tag": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "tag": {
               "params": [
                 {
@@ -24452,15 +24083,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "state": {
               "params": [
@@ -24679,24 +24301,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_fax": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             }
           }
         },
@@ -24749,15 +24353,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "state": {
               "params": [
@@ -24900,96 +24495,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_body": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_context": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_direction": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_from_number": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_media": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_message_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_message_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_segments": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_tags": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_to_number": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "media": {
               "params": [
@@ -25183,105 +24688,6 @@
               ],
               "returns": "any"
             },
-            "get_body": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_context": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_direction": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_from_number": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_media": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_message_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_message_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_reason": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_segments": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_tags": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_to_number": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "media": {
               "params": [
                 {
@@ -25411,24 +24817,6 @@
               ],
               "returns": "any"
             },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "state": {
               "params": [
                 {
@@ -25503,24 +24891,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "state": {
               "params": [
@@ -25616,60 +24986,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_position": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_queue_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_queue_name": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_size": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_status": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "position": {
               "params": [
@@ -25811,60 +25127,6 @@
               ],
               "returns": "any"
             },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_duration": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "float"
-            },
-            "get_record": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_size": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_url": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "record": {
               "params": [
                 {
@@ -25967,42 +25229,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_sip_notify_response_code": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_sip_refer_response_code": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_sip_refer_to": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "sip_notify_response_code": {
               "params": [
@@ -26107,42 +25333,6 @@
               ],
               "returns": "any"
             },
-            "get_call_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_event_type": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_params": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_timestamp": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "float"
-            },
             "params": {
               "params": [
                 {
@@ -26237,24 +25427,6 @@
               ],
               "returns": "any"
             },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "state": {
               "params": [
                 {
@@ -26339,42 +25511,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_name": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_url": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "name": {
               "params": [
@@ -26484,42 +25620,6 @@
                   "name": "payload",
                   "type": "any",
                   "required": true
-                }
-              ],
-              "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_device": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_tap": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
                 }
               ],
               "returns": "any"
@@ -26636,60 +25736,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "get_control_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_duration": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "float"
-            },
-            "get_recording_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_size": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
-            },
-            "get_state": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "get_url": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
             },
             "recording_id": {
               "params": [
@@ -34254,22 +33300,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "client",
-                  "type": "class:signalwire.rest._base.HttpClient",
-                  "required": true
-                },
-                {
-                  "name": "base_path",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "update_method",
-                  "type": "string",
-                  "required": false,
-                  "default": "PATCH"
                 }
               ],
               "returns": "void"
@@ -34299,35 +33329,6 @@
                 }
               ],
               "returns": "any"
-            }
-          }
-        },
-        "FabricResource": {
-          "methods": {
-            "__init__": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "client",
-                  "type": "class:signalwire.rest._base.HttpClient",
-                  "required": true
-                },
-                {
-                  "name": "base_path",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "update_method",
-                  "type": "string",
-                  "required": false,
-                  "default": "PATCH"
-                }
-              ],
-              "returns": "void"
             }
           }
         },
@@ -86317,17 +85318,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -86426,17 +85416,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -86499,17 +85478,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -86626,17 +85594,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -86744,17 +85701,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -86835,17 +85781,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -87082,17 +86017,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -87191,17 +86115,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -87291,17 +86204,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -87382,17 +86284,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -87491,17 +86382,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -87993,17 +86873,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -88184,17 +87053,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"
@@ -88311,17 +87169,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                },
-                {
-                  "name": "agent",
-                  "type": "class:signalwire.core.agent_base.AgentBase",
-                  "required": true
-                },
-                {
-                  "name": "params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
                 }
               ],
               "returns": "void"

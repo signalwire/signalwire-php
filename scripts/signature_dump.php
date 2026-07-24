@@ -78,9 +78,20 @@ foreach ($classes as $fqcn) {
 
     $methods = [];
 
-    // Constructor
+    // Constructor — emit ONLY when declared on THIS class (not merely inherited),
+    // mirroring the own-declared-only filter applied to every other method below.
+    // ReflectionClass::getConstructor() returns the INHERITED ctor for a subclass
+    // that does not redeclare __construct, so an unfiltered emit records a phantom
+    // __init__ on a base like _base.FabricResource / _base.CrudWithAddresses (which
+    // inherit BaseResource::__construct) that the reference — and the port's own
+    // method-body-parsed SURFACE — do not carry, reading as `missing-reference`
+    // signature drift. A subclass that DOES redeclare __construct (CrudResource /
+    // ReadResource / FabricResourcePUT) still emits it, matching its surface.
     $ctor = $r->getConstructor();
-    if ($ctor !== null && $ctor->isPublic()) {
+    if (
+        $ctor !== null && $ctor->isPublic()
+        && $ctor->getDeclaringClass()->getName() === $r->getName()
+    ) {
         $methods[] = methodEntry($ctor, true);
     }
 
