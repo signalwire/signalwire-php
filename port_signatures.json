@@ -20830,15 +20830,6 @@
               ],
               "returns": "any"
             },
-            "get_result": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
-            },
             "get_state": {
               "params": [
                 {
@@ -20908,6 +20899,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "result": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
             },
             "stop": {
               "params": [
@@ -26826,15 +26826,6 @@
                 }
               ],
               "returns": "optional<string>"
-            },
-            "get_result": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "any"
             },
             "get_state": {
               "params": [

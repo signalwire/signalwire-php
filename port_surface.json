@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 0d9ba59051f5e82d878e9cd6c65b6b5c084984a2",
+  "generated_from": "signalwire-php @ 0b8492493c186415ebf53ee94570278bd9c721c1",
   "modules": {
     "signalwire": {
       "classes": {
@@ -1319,13 +1319,13 @@
           "get_events",
           "get_node_id",
           "get_payload",
-          "get_result",
           "get_state",
           "get_stop_method",
           "handle_event",
           "is_done",
           "on_completed",
           "resolve",
+          "result",
           "stop",
           "wait"
         ],
@@ -1740,7 +1740,6 @@
           "get_media",
           "get_message_id",
           "get_reason",
-          "get_result",
           "get_state",
           "get_tags",
           "get_to_number",

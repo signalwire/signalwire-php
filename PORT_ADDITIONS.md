@@ -240,7 +240,6 @@ signalwire.relay.call.Action.get_control_id: PHP idiomatic getter on Action; Pyt
 signalwire.relay.call.Action.get_events: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_node_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_payload: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Action.get_result: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_state: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_stop_method: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.handle_event: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
@@ -416,7 +415,6 @@ signalwire.relay.message.Message.get_from_number: PHP idiomatic getter on the Me
 signalwire.relay.message.Message.get_media: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_message_id: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_reason: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_result: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_state: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_tags: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.get_to_number: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.

@@ -686,6 +686,33 @@ METHOD_ALIASES: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# CLASS-SCOPED accessor renames (owner directive 2026-07-24: a differently-named
+# accessor for a reference ATTRIBUTE is a RENAME — it keeps comparing — never an
+# omission). PHP exposes a handful of reference bare-attributes through an
+# explicit getter under a different name; map the PHP accessor onto the reference
+# attribute name, SCOPED to the declaring class so the same getter spelling on a
+# DIFFERENT class (which has no such reference twin) is untouched.
+#
+# Keyed by (PHP class name, snake_case method) -> reference attribute name.
+#   * Action.get_result   -> result   (ref: optional<RelayEvent> bare attr; the
+#     reference exposes `result` and NOT `get_result`, so the rename is clean).
+#   * Message.get_result  -> result   (ref Message ALSO exposes `result`, not
+#     `get_result`).
+# NOT applied to Relay/Event/CollectEvent.get_result: the reference CollectEvent
+# has NO `result` member, so renaming there would invent surface — it stays the
+# recorded php_event_accessor PORT_ADDITION.
+# NOT applied to AgentServer.get_agents: the reference AgentServer exposes BOTH a
+# `get_agents` METHOD (list-of-tuples) AND an `agents` DICT attribute — php's
+# single getAgents() already matches `get_agents` by name; renaming it to `agents`
+# would ORPHAN the reference `get_agents` method. So `agents` (the raw dict php
+# does not expose) stays a genuine omission, not a rename.
+CLASS_METHOD_ALIASES: dict[tuple[str, str], str] = {
+    ("Action", "get_result"): "result",
+    ("Message", "get_result"): "result",
+}
+
+
 def camel_to_snake(name: str) -> str:
     """Translate PHP camelCase / PascalCase to Python snake_case.
 
@@ -1108,6 +1135,10 @@ def _parse_file(
                 py_name = camel_to_snake(method_name)
             # Apply Python-canonical aliasing where PHP idiom differs.
             py_name = METHOD_ALIASES.get(py_name, py_name)
+            # Class-scoped accessor rename (getter -> reference attribute name),
+            # applied only for the declaring PHP class (see CLASS_METHOD_ALIASES).
+            if cur_class is not None:
+                py_name = CLASS_METHOD_ALIASES.get((cur_class, py_name), py_name)
             if cur_trait is not None:
                 # Trait body — collect the method for flattening onto the
                 # class(es) that `use` this trait; the trait itself never

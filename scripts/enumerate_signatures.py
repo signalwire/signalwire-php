@@ -38,7 +38,7 @@ if not PSDK.is_dir():
 
 sys.path.insert(0, str(HERE))
 from enumerate_surface import (  # type: ignore
-    CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES,
+    CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES, CLASS_METHOD_ALIASES,
     camel_to_snake, _module_path_for_class, _translate_class,
     _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
     _SWML_VERBS_MODULE, _RELAY_PROTO_MODULE,
@@ -846,6 +846,11 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             else:
                 snake = camel_to_snake(native)
                 method_canonical = METHOD_ALIASES.get(snake, snake)
+                # Class-scoped accessor rename (getter -> reference attribute
+                # name), scoped to the declaring PHP class. Mirrors the surface
+                # enumerator's CLASS_METHOD_ALIASES so both gates rename in lockstep.
+                method_canonical = CLASS_METHOD_ALIASES.get(
+                    (php_name, method_canonical), method_canonical)
 
             ff_key = (full_php, native)
             if ff_key in FREE_FUNCTION_PROJECTIONS:
