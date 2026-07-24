@@ -430,7 +430,6 @@ signalwire.relay.web_socket.WebSocket.receive: Port-internal WebSocket transport
 signalwire.relay.web_socket.WebSocket.send_text: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.rest._base.BaseResource.get_base_path: PHP idiomatic accessor on BaseResource — Python exposes the base path as the protected `_base_path` attribute; PHP wraps it in `getBasePath()`.
 signalwire.rest._base.BaseResource.get_http: PHP idiomatic accessor on BaseResource — Python exposes the http transport as the protected `_http` attribute; PHP wraps it in `getHttp()`.
-signalwire.rest._base.CrudWithAddresses.__init__: PHP exposes an explicit `__construct(client, basePath)` because PHP's reflection emits a constructor entry on every concrete class — Python's CrudWithAddresses inherits from CrudResource without redeclaring `__init__`.
 signalwire.rest._base.CrudResource.__init__: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
 signalwire.rest._base.HttpClient.get_auth_header: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.HttpClient.get_base_url: PHP idiomatic accessor on HttpClient.
@@ -578,7 +577,6 @@ signalwire.rest.namespaces._client_tree_generated.ProjectNamespace.__get: PHP ma
 signalwire.rest.namespaces._client_tree_generated.RegistryNamespace.__get: PHP magic-method accessor (__get): namespace-container property reads ($client->registry->brands) delegate to the same-named accessor method, so the python attribute-chain idiom works verbatim. Python uses native attribute access; PHP has no surface member for it — analog of SWMLService.__call.
 signalwire.rest.namespaces._client_tree_generated.VideoNamespace.__get: PHP magic-method accessor (__get): namespace-container property reads ($client->video->rooms) delegate to the same-named accessor method, so the python attribute-chain idiom works verbatim. Python uses native attribute access; PHP has no surface member for it — analog of SWMLService.__call.
 signalwire.rest.namespaces.calling_resources_generated.Calling.get_base_path: PHP-idiom getter: explicit getBasePath() on the generated command-dispatch resource; Python exposes the base path as a class-level attribute. Same data, different access shape.
-signalwire.rest._base.FabricResource.__init__: PHP reflection synthesizes a constructor entry on every concrete class (inherited from CrudWithAddresses); Python's FabricResource is an empty intermediate base that inherits __init__ without redeclaring it.
 
 # --- Skill override methods PHP declares that the reference skill does not ---
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.
