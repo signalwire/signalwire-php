@@ -1,5 +1,53 @@
 # PORT_OMISSIONS — Python symbols the PHP SDK does not implement
 
+<!-- ══════════════════════════════════════════════════════════════════════════
+BEFORE YOU ADD AN ENTRY TO THIS FILE — READ THIS.
+
+Every entry here is a place the parity checker STOPS comparing. That is a real cost:
+a divergence you list is a divergence no gate will ever catch again. So entries must
+be RARE, and each one must earn its place. Default to skepticism: assume the entry is
+NOT needed and make the case that it is.
+
+The order of preference, always:
+  1. FIX THE PORT so it matches the reference (add the missing member; make the
+     signature match).
+  2. FIX THE EMISSION so idiom folds onto the reference shape — the enumerator/emitter
+     canonicalizes your language's spelling onto the oracle's (builder → __init__,
+     getters → attributes, Result<T,E> → the plain return, CamelCase → the reference
+     name, options-object/kwargs → the expanded param list, RAII/dispose → close).
+     MOST divergences are idiom and belong here, not in this file.
+  3. FIX THE REFERENCE if the oracle itself is wrong or stale (a Python-only symbol
+     that leaked into the contract, a param the reference added and the oracle never
+     re-enumerated). Fix Python / the oracle, then re-drift — do not paper over a
+     broken reference with a per-port entry.
+  4. Only when 1–3 genuinely cannot apply does an entry here become justified.
+
+An entry is JUSTIFIED ONLY IF it is irreducible after correct emission — i.e. the
+divergence survives because the two languages genuinely cannot express the same thing,
+not because the emitter hasn't folded the idiom yet. If emission COULD fold it, the
+entry is a bug in this file; go fix the emitter.
+
+Each entry MUST state WHY, concretely, in one of these forms:
+  • ADDITION — this symbol exists in the port but not the reference. Answer: is it
+    genuine port-only surface with NO reference twin (say what it is and why the
+    reference has no equivalent), or is it IDIOM the emitter should have folded (then
+    it does not belong here — fold it)? A convenience/alias/back-compat wrapper is NOT
+    a justification.
+  • OMISSION — this reference symbol has no port member. Answer: WHY can it not exist
+    here — what specific language feature is absent (e.g. no async-context-manager
+    protocol, no __init__ method protocol)? "impossible:" means the construct cannot
+    be expressed at all; if it merely LOOKS different, that's idiom → fold it, don't
+    omit it. Cite a precedent when one exists (e.g. RelayClient omits the same dunder).
+  • SIGNATURE — the symbol matches by name but its parameters differ. Answer: is the
+    difference a foldable idiom collapse (options-object, leading context/self,
+    builder) — then EXPAND it in the signature emitter so names+count match, don't list
+    it — or a genuine reference-only parameter with no cross-language analogue?
+
+If you cannot write a crisp, specific WHY that survives the "could emission fold this?"
+test, the entry is not ready. Prove it's needed before you add it.
+═══════════════════════════════════════════════════════════════════════════════ -->
+
+
 Every symbol listed here is a public class, method or function present in the Python reference (`porting-sdk/python_surface.json`) that this PHP port deliberately does not expose. Each entry records a one-line rationale; the Phase 13 surface audit in CI will reject any Python symbol missing from the PHP SDK that is also missing from this file.
 
 As of phase 4 cleanup, every `not_yet_implemented:` entry has been closed. New entries should carry an intentional-divergence rationale (e.g. "Python's helper is internal", "PHP composes the same behavior via X", etc.).
@@ -185,18 +233,8 @@ signalwire.core.logging_config.get_execution_mode: impossible: PHP (PSR-4, file-
 signalwire.core.logging_config.get_logger: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4), so it is hosted as the static method LoggingConfig::getLogger (Logging/LoggingConfig.php), surfaced via FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.
 signalwire.core.logging_config.reset_logging_configuration: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4), so it is hosted as the static method LoggingConfig::resetLoggingConfiguration (Logging/LoggingConfig.php), surfaced via FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.
 signalwire.core.logging_config.strip_control_chars: impossible: Python module-level free function; PHP has no module-level free functions (PSR-4), so it is hosted as the static method LoggingConfig::stripControlChars (Logging/LoggingConfig.php), surfaced via FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.
-signalwire.core.mixins.auth_mixin.AuthMixin.validate_basic_auth: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.prompt_mixin.PromptMixin.get_post_prompt: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.prompt_mixin.PromptMixin.set_prompt_pom: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.state_mixin.StateMixin.validate_tool_token: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.mixins.tool_mixin.ToolMixin.tool: impossible: Python @tool class/instance decorator relies on the decorator protocol; PHP has no method-decorator language feature — tools register via Service::define_tool directly, exactly as TS registers via defineTools()/the tool builder (TS also omits this as impossible)
 signalwire.core.mixins.web_mixin.WebMixin.get_app: impossible: returns the Python FastAPI/Flask app object; PHP uses no web framework, so there is no framework app handle to return — PHP serves via its native Service::handleRequest()/run() (the framework-native equivalent, present). TS handles the same method as framework-bound (ships getApp() returning the Hono app as a recorded addition).
-signalwire.core.mixins.web_mixin.WebMixin.on_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.on_swml_request: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.register_routing_callback: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.run: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.serve: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
-signalwire.core.mixins.web_mixin.WebMixin.set_dynamic_config_callback: Python composes AgentBase + SWMLService from 9 mixin classes. PHP flattens those into a single AgentBase (extends Service) and the methods are projected back into mixin module paths by `scripts/enumerate_surface.py`'s mixin-projection table.
 signalwire.core.security.webhook_middleware.make_webhook_validation_dependency: impossible: produces a FastAPI Depends() dependency; FastAPI is a Python web framework with no PHP equivalent — PHP ships the equivalent callable WebhookMiddleware class (recorded in PORT_ADDITIONS.md), wrapping the same signature-validation core. TS also omits this method as impossible (ships a Hono middleware instead).
 signalwire.core.skill_base.SkillBase.get_skill_data: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
 signalwire.core.skill_base.SkillBase.register_tools: Python's SkillBase exposes plugin-discovery and async helpers not applicable to PHP; PHP's SkillBase is a leaner abstract class with the same public surface (getName/getDescription/setup/registerTools).
@@ -685,3 +723,17 @@ signalwire.livewire.StopResponse: approved: livewire is a LiveKit-agents compati
 signalwire.livewire.ToolError: approved: livewire is a LiveKit-agents compatibility shim — ported ONLY to languages LiveKit ships an agents SDK for (Python + Node/TS); not ported to PHP (user ruling, 2026-07)
 signalwire.ai_chat.client.AIChatClient.__aenter__: impossible: Python's async context-manager entry dunder (`async with AIChatClient(...) as c`). PHP has no context-manager / with-block / RAII-dispose protocol at all — the client is a per-request cURL transport that opens and closes a fresh handle each call, and `close()` is a no-op — so there is no language construct to host an enter hook. Same irreducible language limit as RelayClient's context-manager dunders. Lifecycle is fully covered by the ctor + `close()`; the client's wire behavior is proven by the AI-CHAT wire gate.
 signalwire.ai_chat.client.AIChatClient.__aexit__: impossible: Python's async context-manager exit dunder (calls `close()` on block exit). PHP has no context-manager / with-block / RAII-dispose protocol at all — nothing invokes an exit hook — so it is un-expressible. The equivalent cleanup is the explicit `close()` lifecycle member (a no-op here, since each request opens/closes its own cURL handle). Same irreducible language limit as RelayClient's context-manager dunders. See AIChatClient.__aenter__.
+
+<!-- family-folded surface twins (wave-2 allowlist fold) -->
+agentbase-family.get_app: impossible: returns the Python FastAPI/Flask app object; PHP uses no web framework, so there is no framework app handle to return — PHP serves via its native Service::handleRequest()/run(). Family-folded twin of the ToolMixin/WebMixin unfolded entry (TS ships getApp() as a framework-bound addition).
+agentbase-family.tool: impossible: Python @tool class/instance decorator relies on the decorator protocol; PHP has no method-decorator language feature — tools register via Service::define_tool directly (TS also omits this as impossible). Family-folded twin of the ToolMixin.tool unfolded entry.
+agentbase-family.skill_manager: approved: PHP AgentBase composes a SkillManager but exposes it via the PROTECTED getSkillManager() (internal composition); the public skill API is add_skill/remove_skill/has_skill/list_skills. Python surfaces the raw skill_manager attribute. Accessor-expressible — pending API sign-off.
+signalwire.agent_server.AgentServer.agents: approved: PHP AgentServer exposes the registered-agents collection via the public getAgents() getter (a B2 scalar/collection getter idiom; get_agents is a recorded PORT_ADDITION). Python surfaces it as the bare `agents` attribute. Getter-idiom fold is the DEFERRED fleet B2 pass — pending API sign-off.
+signalwire.agent_server.AgentServer.logger: impossible: PHP has no per-instance public logger field — logging goes through the module-level singleton facade Logger::getLogger($name), fetched fresh at each call site. Python exposes a per-instance self.logger attribute; there is no equivalent public instance member in PHP's singleton-logger idiom.
+signalwire.core.skill_base.SkillBase.logger: impossible: PHP has no per-instance public logger field — logging goes through the module-level singleton Logger::getLogger($name). Python's SkillBase exposes a per-instance self.logger attribute with no PHP counterpart.
+signalwire.core.skill_manager.SkillManager.loaded_skills: approved: PHP SkillManager keeps $loadedSkills PROTECTED and exposes the public accessors list_loaded_skills()/has_skill()/get_skill() (different shape: a key list, not the raw dict). Python surfaces the raw loaded_skills dict attribute. Accessor-expressible via a differently-named getter — pending API sign-off.
+signalwire.core.skill_manager.SkillManager.logger: impossible: PHP has no per-instance public logger field — logging goes through the module-level singleton Logger::getLogger($name). Python's SkillManager exposes a per-instance self.logger attribute with no PHP counterpart.
+signalwire.core.swml_service.SWMLService.security: approved: PHP SWMLService composes its security config internally (securityHeaders() is protected; no public `security` accessor). Python surfaces a `security` composition attribute holding a SecurityConfig. Accessor-expressible — pending API sign-off.
+signalwire.core.swml_service.SWMLService.verb_registry: approved: PHP SWMLService keeps $verbRegistry PROTECTED; the public verb API is add_verb/register_verb_handler/add_verb_to_section. Python surfaces the raw verb_registry attribute. Accessor-expressible — pending API sign-off.
+signalwire.relay.call.Action.result: approved: PHP Action exposes the completed-action result via the public getResult() getter (get_result is a recorded PORT_ADDITION); Python surfaces it as the bare `result` attribute. Mirrors the Message.result treatment — the getter-idiom fold is the DEFERRED fleet B2 pass.
+signalwire.skills.registry.SkillRegistry.logger: impossible: PHP has no per-instance public logger field — logging goes through the module-level singleton Logger::getLogger($name). Python's SkillRegistry exposes a per-instance self.logger attribute with no PHP counterpart.

@@ -59,6 +59,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src" / "SignalWire"
+# porting-sdk sibling (holds the reference signature oracle used by the
+# composition-attribute enrich below). Resolved by adjacency; the enrich no-ops
+# if it is absent (degraded / first-generation env), so surface never HARD-depends
+# on porting-sdk being present.
+PSDK = (REPO_ROOT.parent / "porting-sdk").resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -1208,6 +1213,128 @@ def _inject_extends(modules: dict, files: list[Path]) -> None:
             modules[module_path]["classes"][translated] = sorted(existing)
 
 
+# ---------------------------------------------------------------------------
+# B1 composition-attribute enrich (mirrors porting-sdk enumerate_python.py's
+# _enrich_composition_attributes and the Rust/perl/cpp getter-idiom ports).
+#
+# The reference surface oracle now records COMPOSITION ATTRIBUTES — a class-typed
+# member (a field/getter that HOLDS an SDK class, e.g. AIObject.SWAIG holding a
+# SWAIG config, PomBuilder.pom holding a PromptObjectModel, PostPrompt.call_log
+# holding a list of entry objects). PHP exposes these as public typed properties
+# on the generated data classes / as getters on the hand classes; the SURFACE
+# enumerator only captures `public function` methods, so a method-less generated
+# data class (AIObject, Cond, PostPrompt, ...) comes out empty and BOTH (a) folds
+# to the gen-type pseudo-module (while the reference now carries members and does
+# not) and (b) misses the members themselves — reading as phantom OMISSIONS.
+#
+# The fix, exactly as Rust did it: import the REFERENCE oracle's comp-attr member
+# set (self-only, class-ref return — NOT union<>, which are the verb SETTERS, a
+# distinct idiom class) and project each member onto the matching PHP class, GATED
+# on the port's OWN signature oracle recording that member (so we never invent
+# surface PHP lacks — a member absent from port_signatures.json stays a real gap).
+# Class-typed field surface is exactly what a getter-idiom port exposes; recording
+# it here is an EMISSION projection (AGENT_RULES 2: idiom hidden by emission, never
+# omission), consistent-by-construction with the port's own signature oracle.
+# ---------------------------------------------------------------------------
+
+# Public members the reference records as composition attributes but which PHP
+# exposes as bare public properties (not `public function`), so the method-only
+# parser never captures them AND the signature oracle (PHP reflection over public
+# props) DOES record them but with an `array`/`any` return rather than a class ref.
+# The gate on port_signatures.json membership below covers these — they need no
+# special-case here; retained for parity with Rust's PUBLIC_FIELD_MEMBERS doc only
+# if a future member is reflection-invisible. Empty today.
+PUBLIC_FIELD_MEMBERS: dict[tuple[str, str], set[str]] = {}
+
+
+def _load_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _reference_composition_attrs() -> dict[tuple[str, str], set[str]]:
+    """Return the reference oracle's COMPOSITION-ATTRIBUTE members, keyed by
+    (module, class). Mirrors porting-sdk enumerate_python._enrich_composition_attributes:
+    a member is a composition attribute iff its signature is self-only AND returns an
+    SDK class (bare ``class:signalwire.…`` or ``optional<…>``/``list<…>``-wrapped; a
+    ``union<…>`` return is EXCLUDED — those are verb SETTERS, a distinct idiom class).
+    Read from the reference signature oracle (porting-sdk/python_signatures.json).
+    Empty if the oracle is unavailable (degraded env) — the enrich then no-ops, so the
+    surface never HARD-depends on porting-sdk adjacency."""
+    sig = _load_json(PSDK / "python_signatures.json")
+    out: dict[tuple[str, str], set[str]] = {}
+
+    def _is_comp(ret: object) -> bool:
+        if not isinstance(ret, str):
+            return False
+        if ret.startswith("union<"):
+            return False
+        return "class:signalwire." in ret
+
+    for mod, inv in sig.get("modules", {}).items():
+        for cls, ce in inv.get("classes", {}).items():
+            methods = ce.get("methods", {})
+            if not isinstance(methods, dict):
+                continue
+            comp = {
+                m for m, ms in methods.items()
+                if isinstance(ms, dict)
+                and [p for p in ms.get("params", []) if p.get("kind") != "self"] == []
+                and _is_comp(ms.get("returns"))
+            }
+            if comp:
+                out[(mod, cls)] = comp
+    return out
+
+
+def _port_signature_members() -> dict[tuple[str, str], set[str]]:
+    """Return (module, class) -> {member names} recorded in this port's OWN committed
+    signature oracle (port_signatures.json). Used to gate the composition-attr enrich:
+    a reference composition attribute is surfaced on the port ONLY when the port's
+    signature enumeration ALSO records that member on that class — i.e. the port
+    genuinely has the field/accessor. This keeps the surface and signature oracles
+    consistent BY CONSTRUCTION and never invents surface the port lacks."""
+    sig = _load_json(REPO_ROOT / "port_signatures.json")
+    out: dict[tuple[str, str], set[str]] = {}
+    for mod, inv in sig.get("modules", {}).items():
+        for cls, ce in inv.get("classes", {}).items():
+            methods = ce.get("methods", {})
+            if isinstance(methods, dict) and methods:
+                out[(mod, cls)] = set(methods.keys())
+    return out
+
+
+def _enrich_composition_attributes(modules: dict) -> None:
+    """Surface composition-attribute members (fields that HOLD an SDK class) on the
+    port's generated-type / dataclass-twin classes, matching the reference oracle's
+    ``_enrich_composition_attributes``. PHP records a data class's public properties
+    METHOD-LESS on the SURFACE (a property is not a `public function`), so classes
+    like ``swml_verbs_generated.AIObject`` or ``post_prompt_generated.PostPrompt``
+    come out empty and read as phantom omissions once the reference carries comp-attr
+    members. Importing the reference's comp-attr members onto the matching port class
+    (gated on the port's own signature oracle recording that member) reconciles the
+    idiom in EMIT. Never invents surface: an absent port class / member is skipped and
+    stays a real gap."""
+    ref_comp = _reference_composition_attrs()
+    if not ref_comp:
+        return
+    port_members = _port_signature_members()
+    for (mod, cls), comp in ref_comp.items():
+        have = port_members.get((mod, cls))
+        # Also honour any explicit PUBLIC_FIELD_MEMBERS twins for this class.
+        pub = PUBLIC_FIELD_MEMBERS.get((mod, cls), set())
+        candidate = comp & ((have or set()) | pub)
+        if not candidate:
+            continue
+        entry = modules.get(mod)
+        if entry is None or cls not in entry["classes"]:
+            continue  # class not emitted by the port -> a real gap, leave it
+        existing = set(entry["classes"][cls])
+        entry["classes"][cls] = sorted(existing | candidate)
+
+
 def build_surface() -> dict:
     modules: dict[str, dict] = defaultdict(
         lambda: {"classes": defaultdict(list), "functions": []}
@@ -1416,6 +1543,11 @@ def build_surface() -> dict:
     # ...). Those are documented in PORT_OMISSIONS.md as PHP not having
     # module-level free functions; the static class methods on SignalWire.php
     # are emitted under the `signalwire` module's classes already.
+
+    # B1 composition-attribute enrich: project the reference oracle's class-typed
+    # composition members onto the matching PHP classes (gated on the port's own
+    # signature oracle). See _enrich_composition_attributes above.
+    _enrich_composition_attributes(modules)
 
     # Stable sort
     out_modules: dict = {}

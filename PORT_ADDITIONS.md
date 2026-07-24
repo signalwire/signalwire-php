@@ -1,5 +1,53 @@
 # PORT_ADDITIONS — PHP-only public symbols with no Python equivalent
 
+<!-- ══════════════════════════════════════════════════════════════════════════
+BEFORE YOU ADD AN ENTRY TO THIS FILE — READ THIS.
+
+Every entry here is a place the parity checker STOPS comparing. That is a real cost:
+a divergence you list is a divergence no gate will ever catch again. So entries must
+be RARE, and each one must earn its place. Default to skepticism: assume the entry is
+NOT needed and make the case that it is.
+
+The order of preference, always:
+  1. FIX THE PORT so it matches the reference (add the missing member; make the
+     signature match).
+  2. FIX THE EMISSION so idiom folds onto the reference shape — the enumerator/emitter
+     canonicalizes your language's spelling onto the oracle's (builder → __init__,
+     getters → attributes, Result<T,E> → the plain return, CamelCase → the reference
+     name, options-object/kwargs → the expanded param list, RAII/dispose → close).
+     MOST divergences are idiom and belong here, not in this file.
+  3. FIX THE REFERENCE if the oracle itself is wrong or stale (a Python-only symbol
+     that leaked into the contract, a param the reference added and the oracle never
+     re-enumerated). Fix Python / the oracle, then re-drift — do not paper over a
+     broken reference with a per-port entry.
+  4. Only when 1–3 genuinely cannot apply does an entry here become justified.
+
+An entry is JUSTIFIED ONLY IF it is irreducible after correct emission — i.e. the
+divergence survives because the two languages genuinely cannot express the same thing,
+not because the emitter hasn't folded the idiom yet. If emission COULD fold it, the
+entry is a bug in this file; go fix the emitter.
+
+Each entry MUST state WHY, concretely, in one of these forms:
+  • ADDITION — this symbol exists in the port but not the reference. Answer: is it
+    genuine port-only surface with NO reference twin (say what it is and why the
+    reference has no equivalent), or is it IDIOM the emitter should have folded (then
+    it does not belong here — fold it)? A convenience/alias/back-compat wrapper is NOT
+    a justification.
+  • OMISSION — this reference symbol has no port member. Answer: WHY can it not exist
+    here — what specific language feature is absent (e.g. no async-context-manager
+    protocol, no __init__ method protocol)? "impossible:" means the construct cannot
+    be expressed at all; if it merely LOOKS different, that's idiom → fold it, don't
+    omit it. Cite a precedent when one exists (e.g. RelayClient omits the same dunder).
+  • SIGNATURE — the symbol matches by name but its parameters differ. Answer: is the
+    difference a foldable idiom collapse (options-object, leading context/self,
+    builder) — then EXPAND it in the signature emitter so names+count match, don't list
+    it — or a genuine reference-only parameter with no cross-language analogue?
+
+If you cannot write a crisp, specific WHY that survives the "could emission fold this?"
+test, the entry is not ready. Prove it's needed before you add it.
+═══════════════════════════════════════════════════════════════════════════════ -->
+
+
 Symbols here exist in the PHP SDK but have no matching entry in the Python reference. These fall into three buckets:
   1. PHP-idiomatic accessors (getX(), setX(), explicit getters).
   2. Method-name variants where PHP's idiom differs from Python.
@@ -36,66 +84,13 @@ signalwire.cli.simulation.mock_env.Adapter.handle_cgi: PHP-specific platform-mod
 signalwire.cli.simulation.mock_env.Adapter.handle_gcf: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
 signalwire.cli.simulation.mock_env.Adapter.handle_lambda: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
 signalwire.cli.simulation.mock_env.Adapter.serve: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
-signalwire.core.agent.tools.type_inference.TypeInference: php_idiom_class_wrapper: static class hosting the runtime schema-inference helpers (Python keeps infer_schema/create_typed_handler_wrapper at module level); static methods projected to the canonical module-level free functions via FREE_FUNCTION_PROJECTIONS (the projected free functions reconcile EQUAL with the oracle — only this PSR-4 host-class shell is port-only).
-signalwire.core.agent.tools.type_inference.TypeInference.create_typed_handler_wrapper: php_idiom_class_wrapper: static-method host for the Python module-level free function create_typed_handler_wrapper (projected via FREE_FUNCTION_PROJECTIONS); see TypeInference class entry.
-signalwire.core.agent.tools.type_inference.TypeInference.infer_schema: php_idiom_class_wrapper: static-method host for the Python module-level free function infer_schema (projected via FREE_FUNCTION_PROJECTIONS); see TypeInference class entry.
-signalwire.core.agent_base.AgentBase.add_function_include: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_hint: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_hints: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_internal_filler: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_language: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_mcp_server: PHP-flattened-mixin: the AIConfigMixin.add_mcp_server capability is declared directly on the flattened AgentBase (extends Service) and projected back to signalwire.core.mixins.ai_config_mixin.AIConfigMixin via the enumerator's MIXIN_PROJECTIONS; it also surfaces on the concrete AgentBase (this entry). Registers an external MCP server (parity with Python's AIConfigMixin).
-signalwire.core.agent_base.AgentBase.add_pattern_hint: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_pronunciation: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.add_skill: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.build_ai_verb: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.clone_for_request: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.contexts: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.create_tool_token: PHP-additional-API: PHP's AgentBase exposes tool-token helpers as public methods (paired with SessionManager); Python keeps token operations internal
-signalwire.core.agent_base.AgentBase.define_contexts: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.enable_debug_events: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.enable_debug_routes: PHP-flattened-mixin: the WebMixin.enable_debug_routes capability is declared directly on the flattened AgentBase (extends Service) and projected back to signalwire.core.mixins.web_mixin.WebMixin via the enumerator's MIXIN_PROJECTIONS; it also surfaces on the concrete AgentBase (this entry). API-compat method returning $this (parity with Python's WebMixin).
-signalwire.core.agent_base.AgentBase.enable_mcp_server: PHP-flattened-mixin: the AIConfigMixin.enable_mcp_server capability is declared directly on the flattened AgentBase (extends Service) and projected back to signalwire.core.mixins.ai_config_mixin.AIConfigMixin via the enumerator's MIXIN_PROJECTIONS; it also surfaces on the concrete AgentBase (this entry). Enables the /mcp endpoint (parity with Python's AIConfigMixin).
-signalwire.core.agent_base.AgentBase.get_contexts: PHP-prompt-getter: explicit prompt accessor 'get_contexts' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
-signalwire.core.agent_base.AgentBase.get_language_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.get_mcp_servers: php_accessor: explicit read-only accessor returning the configured external MCP servers; Python exposes the same list via the private _mcp_servers attribute (no public getter). Pairs with add_mcp_server.
-signalwire.core.agent_base.AgentBase.get_post_prompt: PHP-prompt-getter: explicit prompt accessor 'get_post_prompt' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
-signalwire.core.agent_base.AgentBase.get_prompt: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.get_raw_prompt: PHP-prompt-getter: explicit prompt accessor 'get_raw_prompt' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
-signalwire.core.agent_base.AgentBase.handle_serverless_request: PHP-flattened-mixin: the ServerlessMixin.handle_serverless_request capability is declared directly on the flattened AgentBase (extends Service) and projected back to signalwire.core.mixins.serverless_mixin.ServerlessMixin via the enumerator's MIXIN_PROJECTIONS; it also surfaces on the concrete AgentBase (this entry). Dispatches per execution mode to Serverless\Adapter (parity with Python's ServerlessMixin).
-signalwire.core.agent_base.AgentBase.has_skill: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.is_mcp_server_enabled: php_accessor: explicit boolean accessor reporting whether the /mcp endpoint is enabled; Python exposes the same flag via the private _mcp_server_enabled attribute (no public getter). Pairs with enable_mcp_server.
-signalwire.core.agent_base.AgentBase.list_skills: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.list_tool_names: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.manual_set_proxy_url: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.pom: PHP-prompt-getter: explicit pom() accessor returning the Prompt Object Model builder; Python's @property pom is mapped via METHOD_ALIASES (get_pom -> pom) but PHP's bare 'pom()' method still surfaces
-signalwire.core.agent_base.AgentBase.prompt_add_section: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.prompt_add_subsection: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.prompt_add_to_section: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.prompt_has_section: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.remove_skill: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.render_swml: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.reset_contexts: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_dynamic_config_callback: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_function_includes: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_global_data: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_internal_fillers: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_language_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_languages: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_multilingual: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access. (The parity copy is projected onto the ai_config_mixin path — see enumerate_surface MIXIN_PROJECTIONS.)
-signalwire.core.agent_base.AgentBase.set_native_functions: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_param: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_post_prompt: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_post_prompt_llm_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_prompt_llm_params: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_prompt_pom: PHP-prompt-getter: explicit prompt accessor 'set_prompt_pom' on AgentBase; Python exposes equivalents via PromptManager / direct attributes
-signalwire.core.agent_base.AgentBase.set_prompt_text: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.set_pronunciations: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.set_summary_callback: PHP-additive convenience: registers a post-prompt summary callback without subclassing. The canonical contract is the overridable on_summary(summary, raw_data) handler (present, parity); this registrar is a PHP idiom (both the callback and the overridable method run). No Python/TS equivalent.
-signalwire.core.agent_base.AgentBase.setup_graceful_shutdown: PHP-flattened-mixin: the WebMixin.setup_graceful_shutdown capability is declared directly on the flattened AgentBase (extends Service) and projected back to signalwire.core.mixins.web_mixin.WebMixin via the enumerator's MIXIN_PROJECTIONS; it also surfaces on the concrete AgentBase (this entry). Registers SIGTERM/SIGINT handlers via ext-pcntl when available (parity with Python's WebMixin).
-signalwire.core.agent_base.AgentBase.update_global_data: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
-signalwire.core.agent_base.AgentBase.validate_tool_token: PHP-additional-API: PHP's AgentBase exposes tool-token helpers as public methods (paired with SessionManager); Python keeps token operations internal
 signalwire.core.auth_handler.AuthHandler.middleware: php_native_middleware: framework-agnostic middleware analog on AuthHandler — the PHP-native counterpart to Python's framework-coupled get_fastapi_dependency / flask_decorator (both omitted; see PORT_OMISSIONS.md) and the role TS's middleware/expressMiddleware play. Returns a closure that rejects an unauthenticated request with a [status, headers, body] triple (matching Service::handleRequest's shape) or null to allow it through.
 signalwire.core.auth_handler.AuthHandler.validate: php_native_middleware: header-validation helper backing AuthHandler::middleware (checks Bearer/API-key/Basic in order); the PHP-native analog of TS's AuthHandler.validate, used by the framework-agnostic middleware. Python performs the equivalent inline inside its framework dependency/decorator.
 signalwire.core.contexts.Context.create_simple_context: PHP-class-method: hosts the module-level signalwire.core.contexts.create_simple_context free function as a static factory on Context (PSR-4; mirrors Python's module-level free function). See PORT_OMISSIONS.md.
@@ -142,55 +137,24 @@ signalwire.core.skill_base.SkillBase.get_description: PHP idiomatic accessor / l
 signalwire.core.skill_base.SkillBase.get_required_env_vars: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.get_version: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
 signalwire.core.skill_base.SkillBase.supports_multiple_instances: PHP idiomatic accessor / lifecycle hook on the abstract SkillBase.
-signalwire.core.skill_manager.SkillManager.list_skills: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.skill_name.SkillName: php_enum_idiom: PHP 8.1 backed enum modelling the built-in SkillName closed set as a type alongside the bare string (the Python reference uses bare str). Class-level addition; see SkillName.cases for the call-site rationale.
-signalwire.skills.skill_name.SkillName.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the SkillName closed-set enum; addSkill/removeSkill/hasSkill accept SkillName|string so built-in skill names are typo-checked at the call site, with string preserved for parity (Python uses bare str) and custom skills.
-signalwire.skills.skill_name.SkillName.from: php_enum_idiom: PHP backed-enum auto-method (see SkillName.cases).
-signalwire.skills.skill_name.SkillName.try_from: php_enum_idiom: PHP backed-enum auto-method (see SkillName.cases).
 signalwire.logging.log_level.LogLevel: php_enum_idiom: PHP 8.1 backed enum modelling the LogLevel closed set (debug/info/warn/error) as a type alongside the bare string. Class-level addition; see LogLevel.cases for the call-site rationale.
-signalwire.logging.log_level.LogLevel.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the LogLevel closed-set enum (debug/info/warn/error); Logger::setLevel/shouldLog accept LogLevel|string so the level is typo-checked at the call site, with string preserved for parity (Python configures stdlib logging with bare names).
-signalwire.logging.log_level.LogLevel.from: php_enum_idiom: PHP backed-enum auto-method (see LogLevel.cases).
-signalwire.logging.log_level.LogLevel.try_from: php_enum_idiom: PHP backed-enum auto-method (see LogLevel.cases).
 signalwire.swaig.tap_direction.TapDirection: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG tap-direction closed set (speak/hear/both) as a type alongside the bare string. Class-level addition; see TapDirection.cases for the call-site rationale.
-signalwire.swaig.tap_direction.TapDirection.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the TapDirection closed-set enum (speak/hear/both); FunctionResult::tap accepts TapDirection|string so the direction is typo-checked at the call site, with string preserved for parity (Python's tap takes bare str — the valid set is ["speak","hear","both"]; record_call validates a distinct set, see RecordDirection).
-signalwire.swaig.tap_direction.TapDirection.from: php_enum_idiom: PHP backed-enum auto-method (see TapDirection.cases).
-signalwire.swaig.tap_direction.TapDirection.try_from: php_enum_idiom: PHP backed-enum auto-method (see TapDirection.cases).
 signalwire.swaig.record_direction.RecordDirection: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG record-direction closed set (speak/listen/both) as a type alongside the bare string. Class-level addition; see RecordDirection.cases for the call-site rationale.
-signalwire.swaig.record_direction.RecordDirection.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the RecordDirection closed-set enum (speak/listen/both); FunctionResult::recordCall accepts RecordDirection|string so the direction is typo-checked at the call site, with string preserved for parity (Python's record_call takes bare str — the valid set is ["speak","listen","both"], which uses "listen" where tap uses "hear"; see TapDirection).
-signalwire.swaig.record_direction.RecordDirection.from: php_enum_idiom: PHP backed-enum auto-method (see RecordDirection.cases).
-signalwire.swaig.record_direction.RecordDirection.try_from: php_enum_idiom: PHP backed-enum auto-method (see RecordDirection.cases).
 signalwire.swaig.record_format.RecordFormat: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG record-format closed set (wav/mp3/mp4) as a type alongside the bare string. Class-level addition; see RecordFormat.cases for the call-site rationale.
-signalwire.swaig.record_format.RecordFormat.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the RecordFormat closed-set enum (wav/mp3/mp4); FunctionResult::recordCall accepts RecordFormat|string so the format is typo-checked at the call site, with string preserved for parity (Python's record_call takes bare str — the valid set is ["wav","mp3","mp4"] from the SWML record_call verb schema; mp4 is valid here, distinct from the RELAY record action's 2-value format set).
-signalwire.swaig.record_format.RecordFormat.from: php_enum_idiom: PHP backed-enum auto-method (see RecordFormat.cases).
-signalwire.swaig.record_format.RecordFormat.try_from: php_enum_idiom: PHP backed-enum auto-method (see RecordFormat.cases).
 signalwire.swaig.codec.Codec: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG tap-codec closed set (PCMU/PCMA) as a type alongside the bare string. Class-level addition; see Codec.cases for the call-site rationale.
-signalwire.swaig.codec.Codec.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the Codec closed-set enum (PCMU/PCMA); FunctionResult::tap accepts Codec|string so the codec is typo-checked at the call site, with string preserved for parity (Python's tap takes bare str — the valid set is ["PCMU","PCMA"]). This is the SWAIG tap codec set ONLY, deliberately NOT unified with the larger RELAY stream/connect codec superset.
-signalwire.swaig.codec.Codec.from: php_enum_idiom: PHP backed-enum auto-method (see Codec.cases).
-signalwire.swaig.codec.Codec.try_from: php_enum_idiom: PHP backed-enum auto-method (see Codec.cases).
 signalwire.serverless.execution_mode.ExecutionMode: php_enum_idiom: PHP 8.1 backed enum modelling the Adapter execution-mode closed set (lambda/gcf/azure/cgi/server) as a type alongside the bare string. PORT-ONLY: Python has no equivalent enum. Class-level addition; see ExecutionMode.cases for the call-site rationale.
 signalwire.serverless.execution_mode.ExecutionMode.is_serverless: php_enum_idiom: convenience predicate on the ExecutionMode enum — true for every mode except Server. PORT-ONLY (no Python equivalent); see ExecutionMode.cases.
-signalwire.serverless.execution_mode.ExecutionMode.cases: php_enum_idiom: PHP 8.1 backed-enum auto-method on the ExecutionMode closed-set enum (lambda/gcf/azure/cgi/server); Adapter::detectMode() returns it and Adapter::serve() accepts ExecutionMode|string so the runtime mode is typo-checked at the call site, with string preserved for parity (the original Adapter::detect() returns a bare str). PORT-ONLY: Python has no equivalent enum (serverless handling lives in cli.simulation.mock_env). Deliberately NOT unified with LoggingConfig's distinct execution-mode set (cgi/lambda/google_cloud_function/azure_function/server).
-signalwire.serverless.execution_mode.ExecutionMode.from: php_enum_idiom: PHP backed-enum auto-method (see ExecutionMode.cases).
-signalwire.serverless.execution_mode.ExecutionMode.try_from: php_enum_idiom: PHP backed-enum auto-method (see ExecutionMode.cases).
 signalwire.serverless.execution_mode.ExecutionMode.coerce: php_enum_idiom: PHP convenience static on the ExecutionMode enum that normalises ExecutionMode|string to the enum (validating the string against the closed set), backing the enum-OR-string acceptance on Adapter::serve(). See ExecutionMode.cases.
 signalwire.relay.call_state.CallState: php_relay_state_enum: Tier-3 PHP 8.1 backed enum modelling the RELAY call-lifecycle closed set (created/ringing/answered/ending/ended) as a type alongside the bare string. Grounded in Constants::CALL_STATE_* (Python's relay/constants.py CALL_STATES). Offered ALONGSIDE Call::$state (the canonical string, parity) via the typed Call::callState() accessor. PORT-ONLY: the Python reference models call state as a bare str. Class-level addition; see CallState.is_terminal / CallState.try_from_wire. Deliberately NOT unified with DialState or MessageState — three distinct vocabularies.
 signalwire.relay.call_state.CallState.is_terminal: php_relay_state_enum: predicate on the CallState enum — true only for Ended, matching Constants::CALL_TERMINAL_STATES (the state that resolves all in-flight actions). PORT-ONLY (see CallState).
 signalwire.relay.call_state.CallState.try_from_wire: php_relay_state_enum: graceful coerce on the CallState enum — maps a wire string (or null) to the enum, returning null for an unknown/forward-compat server value instead of throwing (these mirror server-emitted values that can grow). PORT-ONLY (see CallState).
-signalwire.relay.call_state.CallState.cases: php_relay_state_enum: PHP 8.1 backed-enum auto-method on the CallState closed-set enum. PORT-ONLY (see CallState).
-signalwire.relay.call_state.CallState.from: php_relay_state_enum: PHP backed-enum auto-method (see CallState). Throws on an unknown value; prefer try_from_wire for server-emitted states.
-signalwire.relay.call_state.CallState.try_from: php_relay_state_enum: PHP backed-enum auto-method (see CallState); try_from_wire wraps it to also accept null.
 signalwire.relay.dial_state.DialState: php_relay_state_enum: Tier-3 PHP 8.1 backed enum modelling the RELAY dial-outcome closed set (dialing/answered/failed/no_answer/busy) as a type alongside the bare string. Grounded in Constants::DIAL_STATE_* + the no_answer/busy terminal failures Client::handleDialEvent processes (Python's relay/client.py documents dialing|answered|failed). Offered ALONGSIDE Event::getParams()['dial_state'] via the typed Event::dialState() accessor. PORT-ONLY: the Python reference reads dial_state as a bare str. Class-level addition; see DialState.is_terminal / DialState.try_from_wire. Deliberately NOT unified with CallState or MessageState — three distinct vocabularies (answered/failed recur but mean different things).
 signalwire.relay.dial_state.DialState.is_terminal: php_relay_state_enum: predicate on the DialState enum — true for every outcome except Dialing (i.e. a winner answered or the dial gave up), matching Client::handleDialEvent's resolve/reject points. PORT-ONLY (see DialState).
 signalwire.relay.dial_state.DialState.try_from_wire: php_relay_state_enum: graceful coerce on the DialState enum — maps a wire string (or null) to the enum, returning null for an unknown/forward-compat server value instead of throwing. PORT-ONLY (see DialState).
-signalwire.relay.dial_state.DialState.cases: php_relay_state_enum: PHP 8.1 backed-enum auto-method on the DialState closed-set enum. PORT-ONLY (see DialState).
-signalwire.relay.dial_state.DialState.from: php_relay_state_enum: PHP backed-enum auto-method (see DialState). Throws on an unknown value; prefer try_from_wire for server-emitted states.
-signalwire.relay.dial_state.DialState.try_from: php_relay_state_enum: PHP backed-enum auto-method (see DialState); try_from_wire wraps it to also accept null.
 signalwire.relay.message_state.MessageState: php_relay_state_enum: Tier-3 PHP 8.1 backed enum modelling the RELAY message-delivery closed set (queued/initiated/sent/delivered/undelivered/failed/received) as a type alongside the bare string. Grounded in Constants::MESSAGE_STATE_* + MESSAGE_TERMINAL_STATES (Python's relay/constants.py). Offered ALONGSIDE Message::getState() (the canonical string, parity) via the typed Message::messageState() accessor. PORT-ONLY: the Python reference models message state as a bare str. Class-level addition; see MessageState.is_terminal / MessageState.try_from_wire. Deliberately NOT unified with CallState or DialState — three distinct vocabularies (failed recurs but means message-delivery failure here).
 signalwire.relay.message_state.MessageState.is_terminal: php_relay_state_enum: predicate on the MessageState enum — true for Delivered/Undelivered/Failed, matching Constants::MESSAGE_TERMINAL_STATES (the states Message::dispatchEvent auto-resolves on); Received is NOT terminal (mirrors Python). PORT-ONLY (see MessageState).
 signalwire.relay.message_state.MessageState.try_from_wire: php_relay_state_enum: graceful coerce on the MessageState enum — maps a wire string (or null) to the enum, returning null for an unknown/forward-compat server value instead of throwing. PORT-ONLY (see MessageState).
-signalwire.relay.message_state.MessageState.cases: php_relay_state_enum: PHP 8.1 backed-enum auto-method on the MessageState closed-set enum. PORT-ONLY (see MessageState).
-signalwire.relay.message_state.MessageState.from: php_relay_state_enum: PHP backed-enum auto-method (see MessageState). Throws on an unknown value; prefer try_from_wire for server-emitted states.
-signalwire.relay.message_state.MessageState.try_from: php_relay_state_enum: PHP backed-enum auto-method (see MessageState); try_from_wire wraps it to also accept null.
 signalwire.relay.call.Call.call_state: php_relay_state_enum: typed accessor returning the call's current lifecycle state as a ?CallState (null when the raw string is outside the known set). Offered ALONGSIDE the canonical bare-string Call::$state for parity. PORT-ONLY: the Python reference exposes only the str state. See CallState.
 signalwire.relay.message.Message.message_state: php_relay_state_enum: typed accessor returning the message's current delivery state as a ?MessageState (null when the raw string is outside the known set). Offered ALONGSIDE the canonical bare-string Message::getState() for parity. PORT-ONLY: the Python reference exposes only the str state. See MessageState.
 signalwire.relay.event.Event.dial_state: php_relay_state_enum: typed accessor returning a calling.call.dial event's outcome as a ?DialState, read from the dial_state (or legacy state) param (null when absent/unknown). Offered ALONGSIDE the raw params string for parity. PORT-ONLY: the Python reference reads dial_state as a bare str. See DialState.
@@ -242,7 +206,6 @@ signalwire.core.swml_service.SWMLService.get_proxy_url_base: PHP getter for the 
 signalwire.core.swml_service.SWMLService.get_route: PHP getter for the bind route; Python users access via `service.route` attribute directly.
 signalwire.core.swml_service.SWMLService.get_tool_names: PHP getter for the registered tool names list; Python users iterate the underlying `_tool_registry` dict.
 signalwire.core.swml_service.SWMLService.get_tools: PHP getter for the full tool registry; Python exposes the same data via the registry's iter API.
-signalwire.core.swml_service.SWMLService.handle_request: PHP entry-point for HTTP request dispatch; Python's equivalent is the FastAPI route function the framework wires up.
 signalwire.core.swml_service.SWMLService.has_function: PHP-tool-registry: SWMLService exposes the internal tool-registry methods ('has_function') as public API for testing and reflection; Python keeps the registry internal
 signalwire.core.swml_service.SWMLService.on_function_call: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_service.SWMLService.on_swml_request: PHP-hook: SWMLService.on_swml_request is the standard hook for SWML callback handling; Python exposes equivalent via WebMixin.on_swml_request which projects to SWMLService
@@ -252,7 +215,6 @@ signalwire.core.swml_service.SWMLService.render: PHP method exposing the canonic
 signalwire.core.swml_service.SWMLService.render_pretty: PHP convenience for human-readable JSON output; Python equivalent is `render_document(pretty=True)`.
 signalwire.core.swml_service.SWMLService.render_swml: PHP alias for the SWML render path; equivalent of Python's `render_document`.
 signalwire.core.swml_service.SWMLService.run: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.core.swml_service.SWMLService.schema_utils: PHP-schema-getter: SWMLService.schema_utils accessor returning the SchemaUtils singleton; Python exposes it as @property schema_utils which already aliases to PHP's getSchemaUtils via METHOD_ALIASES
 signalwire.core.swml_service.SWMLService.validate_basic_auth: PHP-auth-helper: SWMLService.validate_basic_auth is exposed as a public method on the service for downstream auth checks; Python wraps it inside AuthMixin
 signalwire.logging.logging_config.LoggingConfig: PHP-logging-config: PHP groups logging-config helpers (configureLogging/getLogger/resetLoggingConfiguration/stripControlChars/getExecutionMode/isServerlessMode) on a LoggingConfig static class; Python ships them as module-level functions in signalwire.core.logging_config (projected via FREE_FUNCTION_PROJECTIONS)
 signalwire.logging.logging_config.LoggingConfig.configure_logging: PHP-logging-config: static-method host for the Python module-level free function signalwire.core.logging_config.configure_logging (PSR-4 file-per-class; projected via FREE_FUNCTION_PROJECTIONS). See PORT_OMISSIONS.md.
@@ -286,7 +248,6 @@ signalwire.relay.call.Action.on_completed: PHP idiomatic getter on Action; Pytho
 signalwire.relay.call.Action.resolve: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.stop: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Call.dispatch_event: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
-signalwire.relay.call.Call.pass: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
 signalwire.relay.call.Call.resolve_all_actions: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
 signalwire.relay.call.CollectAction.get_collect_result: PHP idiomatic accessor on the CollectAction subclass.
 signalwire.relay.call.CollectAction.get_stop_method: PHP idiomatic accessor on the CollectAction subclass.
@@ -462,7 +423,6 @@ signalwire.relay.message.Message.get_to_number: PHP idiomatic getter on the Mess
 signalwire.relay.message.Message.handle_event: alias for dispatchEvent so the Client's event router (which symmetrically calls handleEvent on actions and messages) doesn't need a per-type branch.
 signalwire.relay.message.Message.on_completed: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.resolve: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.relay_error.RelayError: PHP exception class corresponding to Python's `signalwire.relay.client.RelayError`; lives in its own module because PHP's autoloader is one-class-per-file.
 signalwire.relay.web_socket.WebSocket: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.__init__: Port-internal WebSocket transport adapter (phrity/websocket-backed); constructor accepts an optional CA-bundle path for wss:// peer verification. Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.close: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
@@ -474,8 +434,6 @@ signalwire.rest._base.BaseResource.get_base_path: PHP idiomatic accessor on Base
 signalwire.rest._base.BaseResource.get_http: PHP idiomatic accessor on BaseResource — Python exposes the http transport as the protected `_http` attribute; PHP wraps it in `getHttp()`.
 signalwire.rest._base.CrudWithAddresses.__init__: PHP exposes an explicit `__construct(client, basePath)` because PHP's reflection emits a constructor entry on every concrete class — Python's CrudWithAddresses inherits from CrudResource without redeclaring `__init__`.
 signalwire.rest._base.CrudResource.__init__: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
-signalwire.rest._base.CrudResource.get_base_path: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
-signalwire.rest._base.CrudResource.get_client: PHP idiomatic accessor on CrudResource (PHP exposes `getBasePath()`, `getClient()`, `getProjectId()` for advanced use).
 signalwire.rest._base.HttpClient.get_auth_header: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.HttpClient.get_base_url: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.HttpClient.get_project_id: PHP idiomatic accessor on HttpClient.
@@ -533,8 +491,6 @@ signalwire.rest.client.RestClient.video: PHP idiomatic getter / namespace access
 signalwire.skills.api_ninjas_trivia.skill.ApiNinjasTriviaSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.api_ninjas_trivia.skill.ApiNinjasTriviaSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.api_ninjas_trivia.skill.ApiNinjasTriviaSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.skills.builtin.__module__.get_hints: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.skills.builtin.__module__.get_prompt_sections: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -544,10 +500,7 @@ signalwire.skills.custom_skills.skill.CustomSkillsSkill.get_name: PHP idiomatic 
 signalwire.skills.custom_skills.skill.CustomSkillsSkill.register_tools: PHP idiomatic accessor on CustomSkillsSkill.
 signalwire.skills.custom_skills.skill.CustomSkillsSkill.setup: PHP idiomatic accessor on CustomSkillsSkill.
 signalwire.skills.custom_skills.skill.CustomSkillsSkill.supports_multiple_instances: PHP idiomatic accessor on CustomSkillsSkill.
-signalwire.skills.datasphere.skill.DataSphereSkill.__init__: PHP-default-ctor: PHP supplies a default constructor for every class; auto-synthesized __init__ entry — same instantiability as Python
-signalwire.skills.datasphere.skill.DataSphereSkill.documents: PHP-skill-accessor: DataSphereSkill exposes 'documents' as a public method (additional surface beyond Python's parent SkillBase)
 signalwire.skills.datasphere.skill.DataSphereSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.skills.datasphere.skill.DataSphereSkill.get_http: PHP-idiom-getter: explicit get_http() method on REST resource classes for the underlying HttpClient; Python keeps it as a private attribute accessed via descriptor
 signalwire.skills.datasphere.skill.DataSphereSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.datasphere.skill.DataSphereSkill.supports_multiple_instances: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.datasphere_serverless.skill.DataSphereServerlessSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -606,7 +559,6 @@ signalwire.utils.schema_utils.Schema.reset: PHP singleton reset hook (test-only)
 signalwire.utils.schema_utils.Schema.verb_count: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
 signalwire.utils.schema_utils.SchemaUtils.generate_method_body: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
 signalwire.utils.schema_utils.SchemaUtils.generate_method_signature: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
-signalwire.utils.schema_utils.SchemaUtils.is_full_validation_available: @property in Python (filtered as bool-returning attribute); ports expose it as an explicit method per spec.
 signalwire.utils.schema_utils.SchemaValidationError.get_errors: PHP-exception-getter: SchemaValidationError exposes 'get_errors' as an explicit getter; Python attaches the same data as instance attributes accessed directly
 signalwire.utils.schema_utils.SchemaValidationError.get_verb_name: PHP-exception-getter: SchemaValidationError exposes 'get_verb_name' as an explicit getter; Python attaches the same data as instance attributes accessed directly
 signalwire.utils.url_validator.UrlValidator: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
@@ -627,39 +579,6 @@ signalwire.rest.namespaces._client_tree_generated.LogsNamespace.__get: PHP magic
 signalwire.rest.namespaces._client_tree_generated.ProjectNamespace.__get: PHP magic-method accessor (__get): namespace-container property reads delegate to the same-named accessor method, so the python attribute-chain idiom works verbatim. Python uses native attribute access; PHP has no surface member for it — analog of SWMLService.__call.
 signalwire.rest.namespaces._client_tree_generated.RegistryNamespace.__get: PHP magic-method accessor (__get): namespace-container property reads ($client->registry->brands) delegate to the same-named accessor method, so the python attribute-chain idiom works verbatim. Python uses native attribute access; PHP has no surface member for it — analog of SWMLService.__call.
 signalwire.rest.namespaces._client_tree_generated.VideoNamespace.__get: PHP magic-method accessor (__get): namespace-container property reads ($client->video->rooms) delegate to the same-named accessor method, so the python attribute-chain idiom works verbatim. Python uses native attribute access; PHP has no surface member for it — analog of SWMLService.__call.
-signalwire.rest.namespaces._client_tree_generated.DatasphereNamespace.documents: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.addresses: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.ai_agents: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.call_flows: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.conference_rooms: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.cxml_applications: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.cxml_scripts: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.cxml_webhooks: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.freeswitch_connectors: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.relay_applications: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.resources: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.sip_endpoints: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.sip_gateways: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.subscribers: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.swml_scripts: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.swml_webhooks: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.FabricNamespace.tokens: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.LogsNamespace.conferences: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.LogsNamespace.fax: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.LogsNamespace.messages: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.LogsNamespace.voice: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.ProjectNamespace.tokens: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.RegistryNamespace.brands: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.RegistryNamespace.campaigns: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.RegistryNamespace.numbers: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.RegistryNamespace.orders: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.conference_tokens: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.conferences: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.room_recordings: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.room_sessions: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.room_tokens: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.rooms: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
-signalwire.rest.namespaces._client_tree_generated.VideoNamespace.streams: PHP-idiom accessor: the generated namespace container exposes each sub-resource via a lazy accessor METHOD (fabric()->addresses()); Python's container sets them as __init__ attributes. Same resource, method vs attribute access.
 signalwire.rest.namespaces.calling_resources_generated.Calling.get_base_path: PHP-idiom getter: explicit getBasePath() on the generated command-dispatch resource; Python exposes the base path as a class-level attribute. Same data, different access shape.
 signalwire.rest._base.FabricResource.__init__: PHP reflection synthesizes a constructor entry on every concrete class (inherited from CrudWithAddresses); Python's FabricResource is an empty intermediate base that inherits __init__ without redeclaring it.
 
@@ -667,3 +586,17 @@ signalwire.rest._base.FabricResource.__init__: PHP reflection synthesizes a cons
 signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.
 
 # --- LiveWire subsystem (item I) — LiveKit-compat shim, PHP hosting devices + idiomatic accessors ---
+
+<!-- family-folded surface twins (wave-2 allowlist fold) -->
+agentbase-family.build_ai_verb: PHP-only helper: AgentBase.build_ai_verb constructs the SWML `ai` verb block; a public port convenience with no Python reference twin. Family-folded twin of the unfolded AgentBase.build_ai_verb entry.
+agentbase-family.clone_for_request: PHP-only helper: per-request agent cloning entry point (dynamic-config idiom); Python performs the equivalent internally. Family-folded twin of the unfolded AgentBase.clone_for_request entry.
+agentbase-family.create_tool_token: PHP-additional-API: AgentBase exposes tool-token creation as a public method (paired with SessionManager); Python keeps token operations internal. Family-folded twin of the unfolded AgentBase.create_tool_token entry.
+agentbase-family.get_contexts: PHP-prompt-getter: explicit prompt accessor on AgentBase (the composition-flatten of PromptManager.get_contexts, which IS emitted on PromptManager); Python exposes it via the delegate / direct attributes. Family-folded twin of the unfolded AgentBase.get_contexts entry.
+agentbase-family.get_dynamic_config_callback: php_accessor: AgentBase exposes the dynamic-config callback via getDynamicConfigCallback(); Python keeps it as a private _dynamic_config_callback attribute. Family-folded twin of the unfolded AgentBase.get_dynamic_config_callback entry.
+agentbase-family.get_mcp_servers: php_accessor: read-only accessor returning the configured external MCP servers; Python exposes the same list via the private _mcp_servers attribute (no public getter). Family-folded twin of the unfolded AgentBase.get_mcp_servers entry.
+agentbase-family.get_raw_prompt: PHP-prompt-getter: explicit prompt accessor on AgentBase (composition-flatten of PromptManager.get_raw_prompt, which IS emitted on PromptManager); Python exposes it via the delegate / direct attributes. Family-folded twin of the unfolded AgentBase.get_raw_prompt entry.
+agentbase-family.get_signing_key: php_accessor: AgentBase exposes a signing_key getter; Python keeps it private. Family-folded twin of the unfolded AgentBase.get_signing_key entry.
+agentbase-family.is_mcp_server_enabled: php_accessor: boolean accessor reporting whether the /mcp endpoint is enabled; Python exposes the same flag via the private _mcp_server_enabled attribute. Family-folded twin of the unfolded AgentBase.is_mcp_server_enabled entry.
+agentbase-family.list_tool_names: PHP-only helper: explicit accessor listing registered tool names; Python users introspect the registry directly. Family-folded twin of the unfolded AgentBase.list_tool_names entry.
+agentbase-family.render_swml: PHP-public render entry: AgentBase.render_swml is public in PHP (delegates to SwmlRenderer); Python declares the equivalent as the private _render_swml (not surfaced). Family-folded twin of the unfolded AgentBase.render_swml / BedrockAgent.render_swml entries.
+agentbase-family.set_summary_callback: PHP-additive convenience: registers a post-prompt summary callback without subclassing; the canonical contract is the overridable on_summary() handler (present, parity). No Python/TS equivalent. Family-folded twin of the unfolded AgentBase.set_summary_callback entry.
