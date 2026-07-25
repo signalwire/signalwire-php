@@ -17,6 +17,8 @@ surface and never will be.
 
 __construct: PHP constructor / `parent::__construct(...)` — language keyword, not an SDK method (dynamic_swml_service example)
 sleep: PHP built-in (and SWML verb name; auto-vivified through Document::addVerb)
+Throwable#getCode: PHP SPL `\Throwable::getCode()` — language/stdlib method on caught exceptions in `try/catch` example blocks (rest/docs/client-reference.md), not an SDK surface method
+Throwable#getMessage: PHP SPL `\Throwable::getMessage()` — language/stdlib method on caught exceptions in `try/catch` example blocks (docs/skills_system.md, examples/*.php, …), not an SDK surface method
 
 ## SWML auto-vivified verbs
 
@@ -44,3 +46,7 @@ These identifiers appear in a doc only to say the SDK does NOT expose them — a
 negation the resolver still tries to resolve. No such method exists on the surface.
 
 getId: doc-negation reference — `rest/docs/client-reference.md` says "No `->getId()`" (array-access idiom instead); no such method exists, the name is only mentioned to state it is absent
+
+## Real method on a PHP-internal RELAY class (not enumerated onto the surface)
+
+Action#getResult: real public method on `Relay\Action` (`$action->getResult()` in relay/docs/call-methods.md) returning the raw result payload; the RELAY action/message helper classes are PHP-internal and not part of the Python reference surface, so the resolver sees no surface entry though the method genuinely exists
