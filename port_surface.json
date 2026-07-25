@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ dd4c35f37168536a8622d95ac4a004d7d0df8ef5",
+  "generated_from": "signalwire-php @ 0147bb42c09a91df79be5d8f946d97a6b2c7e18b",
   "modules": {
     "signalwire": {
       "classes": {
@@ -449,7 +449,13 @@
           "warn"
         ]
       },
-      "functions": []
+      "functions": [
+        "configure_logging",
+        "get_execution_mode",
+        "get_logger",
+        "reset_logging_configuration",
+        "strip_control_chars"
+      ]
     },
     "signalwire.core.mixins.ai_config_mixin": {
       "classes": {
@@ -1202,19 +1208,6 @@
     "signalwire.logging.log_level": {
       "classes": {
         "LogLevel": []
-      },
-      "functions": []
-    },
-    "signalwire.logging.logging_config": {
-      "classes": {
-        "LoggingConfig": [
-          "configure_logging",
-          "get_execution_mode",
-          "get_logger",
-          "is_serverless_mode",
-          "reset_logging_configuration",
-          "strip_control_chars"
-        ]
       },
       "functions": []
     },
@@ -3715,6 +3708,12 @@
         "TapDirection": []
       },
       "functions": []
+    },
+    "signalwire.utils": {
+      "classes": {},
+      "functions": [
+        "is_serverless_mode"
+      ]
     },
     "signalwire.utils.schema_utils": {
       "classes": {

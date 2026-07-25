@@ -416,6 +416,26 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         ("signalwire.rest._request_options", "resolve"),
     ("RequestOptions", "status_is_retryable"):
         ("signalwire.rest._request_options", "status_is_retryable"),
+    # Central logging helpers — Python ships all five as module-level free
+    # functions in signalwire.core.logging_config (plus is_serverless_mode in
+    # signalwire.utils); PHP hosts them as static methods on the LoggingConfig
+    # class (PSR-4 file-per-class). Project to the canonical module-level names,
+    # exactly as the signature enumerator's FREE_FUNCTION_PROJECTIONS already
+    # does — logging is a MODULE-LEVEL capability, so the host class is a
+    # PSR-4 packaging artifact, not port-only surface. EVERY public method of
+    # LoggingConfig is projected, so the empty class shell is dropped.
+    ("LoggingConfig", "configure_logging"):
+        ("signalwire.core.logging_config", "configure_logging"),
+    ("LoggingConfig", "get_logger"):
+        ("signalwire.core.logging_config", "get_logger"),
+    ("LoggingConfig", "reset_logging_configuration"):
+        ("signalwire.core.logging_config", "reset_logging_configuration"),
+    ("LoggingConfig", "strip_control_chars"):
+        ("signalwire.core.logging_config", "strip_control_chars"),
+    ("LoggingConfig", "get_execution_mode"):
+        ("signalwire.core.logging_config", "get_execution_mode"),
+    ("LoggingConfig", "is_serverless_mode"):
+        ("signalwire.utils", "is_serverless_mode"),
 }
 
 
