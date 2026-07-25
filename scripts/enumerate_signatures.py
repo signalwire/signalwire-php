@@ -871,11 +871,60 @@ _KWARGS_FORWARDING_BASE: dict[str, str] = {
     "signalwire.prefabs.survey.SurveyAgent": "signalwire.core.agent_base.AgentBase",
 }
 
-# The only base params a ``**kwargs``-forwarding reference subclass ALSO declares
-# explicitly in its own signature (verified: every entry above spells exactly
-# ``name=…, route=…`` and forwards the rest). These stay on the subclass's own
-# construction set; every other base param is attributed to the base.
-_KWARGS_FORWARD_KEEP = frozenset({"name", "route"})
+def _load_reference_construction() -> dict:
+    """The reference's ``construction`` node — the ONLY authority on whether the
+    oracle flattened a base class's params into a subclass.
+
+    Raises rather than defaulting: a missing node would silently turn every
+    oracle-gated decision below into a guess, and a wrong guess here fabricates
+    or deletes contract params. Fail loud instead.
+    """
+    path = PSDK / "python_signatures.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    node = data.get("construction")
+    if not node:
+        raise RuntimeError(
+            f"{path} has no `construction` node — cannot decide per class whether "
+            f"the reference flattens a base's params into its subclass. Refusing "
+            f"to guess (ALLOWLIST_DISCIPLINE.md §10)."
+        )
+    return node
+
+
+def _oracle_flattens(ref_construction: dict, cls_key: str, base_key: str) -> set[str]:
+    """Return the base params the ORACLE records on ``cls_key`` itself.
+
+    This is the split the ruby lane proved cannot be assumed, because the
+    reference has TWO subclass shapes and the oracle records them differently:
+
+      * ``@dataclass``-style — Python flattens the base's fields into the
+        generated ``__init__`` and the oracle records ALL of them (php's Action
+        subclasses: the oracle records ``call`` + ``control_id`` on AIAction even
+        though its Python ``__init__`` adds only ``control_id``). The port's
+        inherited-ctor params are contract here — FOLD IN.
+      * ``**kwargs``-forwarding — the reference ALSO calls ``super().__init__``,
+        but the oracle records ONLY the child's own params (the 6 agent
+        subclasses record just ``name``/``route`` of AgentBase's 22). The port's
+        re-declared base params belong to the BASE's entry — DO NOT fold in;
+        folding there fabricates ~20 bogus extras per subclass.
+
+    Only the oracle can answer it: the split lives in the REFERENCE's shapes, not
+    in anything observable from PHP. Fails loud if either class is unknown to the
+    reference, rather than silently choosing a direction.
+    """
+    if cls_key not in ref_construction:
+        raise RuntimeError(
+            f"construction: {cls_key} is not in the reference construction node; "
+            f"cannot determine whether the oracle flattens {base_key} into it."
+        )
+    if base_key not in ref_construction:
+        raise RuntimeError(
+            f"construction: base {base_key} is not in the reference construction "
+            f"node; cannot compute its overlap with {cls_key}."
+        )
+    return set(ref_construction[cls_key]["params"]) & set(
+        ref_construction[base_key]["params"]
+    )
 
 # Classes whose constructor mixes REAL named params with an untyped bag carrying
 # the rest. Unlike _OPTIONS_BAG_CONSTRUCTS (which REPLACES the reflected set), these
@@ -1019,18 +1068,24 @@ def build_construction(
         if params:
             out[cls_key] = {"params": dict(sorted(params.items()))}
 
-    # §11 idiom-completion fold: a ``**kwargs``-forwarding subclass's re-declared
-    # base params belong to the BASE's construction entry, where they are already
-    # compared. Applied after the main pass so the base entry is populated.
+    # §11 idiom-completion fold, ORACLE-GATED: a ``**kwargs``-forwarding
+    # subclass's re-declared base params belong to the BASE's construction entry,
+    # where they are already compared. Which base params the subclass KEEPS is not
+    # assumed — it is read from the reference construction node per class, because
+    # only the oracle knows whether the reference flattened the base into this
+    # subclass (see _oracle_flattens). Applied after the main pass so the base
+    # entry is populated.
+    ref_construction = _load_reference_construction()
     for cls_key, base_key in _KWARGS_FORWARDING_BASE.items():
         entry = out.get(cls_key)
         base = out.get(base_key)
         if not entry or not base:
             continue
+        keep = _oracle_flattens(ref_construction, cls_key, base_key)
         base_names = set(base["params"])
         entry["params"] = {
             n: v for n, v in entry["params"].items()
-            if n not in base_names or n in _KWARGS_FORWARD_KEEP
+            if n not in base_names or n in keep
         }
 
     return dict(sorted(out.items()))
