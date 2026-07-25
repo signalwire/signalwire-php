@@ -747,11 +747,311 @@ PROPERTY_TYPE_REMAPS: dict[tuple[str, str], str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Construction contract (porting-sdk ALLOWLIST_DISCIPLINE.md §10)
+# ---------------------------------------------------------------------------
+
+# A construction param whose PHP spelling genuinely differs from the reference's.
+# ADAPTER_CONTRACT rule 3: names are canonicalized to the reference spelling AT
+# ADAPTER TIME, and a genuine rename is a RENAME-table entry — never an omission.
+# Keyed by canonical "module.Class" (or ``None`` for the class-agnostic default),
+# mapping the PHP-side canonical (already snake_case) name -> reference name.
+#
+# ``basic_auth_user`` / ``basic_auth_password``: the reference takes a single
+# ``basic_auth: optional<tuple<string,string>>``. PHP has no tuple type, so the
+# pair is expressed as two nullable strings — the same §7 typed-split row java
+# has. Fold BOTH onto ``basic_auth`` so the capability compares present rather
+# than reading as one missing param plus two extras. (First-listed wins; the
+# password half is dropped as a duplicate of the same reference configurable.)
+_CONSTRUCTION_PARAM_RENAMES: dict[str | None, dict[str, str]] = {
+    None: {
+        "basic_auth_user": "basic_auth",
+        "basic_auth_password": "basic_auth",
+    },
+    # src/SignalWire/REST/HttpClient.php:62 — same two configurables, PHP spelling.
+    # ``$projectId`` is the SignalWire project id (reference ``project``) and
+    # ``$baseUrl`` is the API host the client talks to (reference ``host``).
+    "signalwire.rest._base.HttpClient": {
+        "project_id": "project",
+        "base_url": "host",
+    },
+}
+
+# The reference type for a param the rename table folds into a different shape
+# than PHP's own reflected type (the typed-split above): PHP's ``?string`` halves
+# reconstruct the reference's 2-tuple, so record the reference's type for the
+# folded name rather than the half's.
+_CONSTRUCTION_FOLDED_TYPE: dict[str, str] = {
+    "basic_auth": "optional<tuple<string,string>>",
+}
+
+# Classes whose PHP constructor takes an untyped ``array $options`` / ``array
+# $params`` bag. The bag KEYS are the real named configurables — that is PHP's
+# options-object idiom — but reflection sees only ``array``, so the key set
+# cannot be recovered mechanically. Declare it here, read off the constructor
+# body, so the contract compares the actual capability instead of one opaque
+# ``options`` param. Keyed by canonical "module.Class".
+_OPTIONS_BAG_CONSTRUCTS: dict[str, dict[str, dict]] = {
+    # The two MIXIN_PROJECTIONS targets that have no PHP class of their own:
+    # Python extracted PromptManager/ToolRegistry out of AgentBase and constructs
+    # each FROM the agent (``PromptManager(agent)``), while PHP keeps the same
+    # capability on AgentBase and the enumerator projects the methods across
+    # (see MIXIN_PROJECTIONS). Their construction contract is therefore that
+    # same single ``agent`` handle — declared here so the projection is in
+    # LOCKSTEP on the construction node too, not silently missing.
+    "signalwire.core.agent.prompt.manager.PromptManager": {
+        "agent": {"type": "class:signalwire.core.agent_base.AgentBase",
+                  "required": True},
+    },
+    "signalwire.core.agent.tools.registry.ToolRegistry": {
+        "agent": {"type": "class:signalwire.core.agent_base.AgentBase",
+                  "required": True},
+    },
+    # src/SignalWire/Relay/Client.php::__construct — $options['<key>'] reads.
+    "signalwire.relay.client.RelayClient": {
+        "project": {"type": "optional<string>", "required": False},
+        "token": {"type": "optional<string>", "required": False},
+        "contexts": {"type": "optional<list<string>>", "required": False},
+        "jwt_token": {"type": "optional<string>", "required": False},
+        "host": {"type": "optional<string>", "required": False},
+    },
+    # src/SignalWire/Pom/Section.php::__construct(?string $title, array $params)
+    # — the reference's four keyword-only params (body/bullets/numbered/
+    # numberedBullets) are $params['<key>'] reads; $title stays a real param.
+    "signalwire.pom.pom.Section": {
+        "title": {"type": "optional<string>", "required": False},
+        "body": {"type": "string", "required": False},
+        "bullets": {"type": "optional<list<string>>", "required": False},
+        "numbered": {"type": "optional<bool>", "required": False},
+        "numberedBullets": {"type": "bool", "required": False},
+    },
+    # src/SignalWire/Relay/Message.php::__construct — $params['<key>'] reads.
+    # ``id``/``from``/``to`` are accepted as wire-payload aliases of
+    # message_id/from_number/to_number; the canonical spelling is recorded.
+    "signalwire.relay.message.Message": {
+        "message_id": {"type": "string", "required": False},
+        "context": {"type": "string", "required": False},
+        "direction": {"type": "string", "required": False},
+        "from_number": {"type": "string", "required": False},
+        "to_number": {"type": "string", "required": False},
+        "body": {"type": "string", "required": False},
+        "media": {"type": "optional<list<string>>", "required": False},
+        "tags": {"type": "optional<list<string>>", "required": False},
+        "state": {"type": "string", "required": False},
+        "reason": {"type": "string", "required": False},
+    },
+}
+
+# ``**kwargs``-forwarding subclasses (ALLOWLIST_DISCIPLINE.md §11, idiom-completion).
+#
+# The reference's prefab/derived agents declare only their OWN new params and then
+# forward everything else to the base:
+#
+#     def __init__(self, venue_name, ..., name="concierge", route="/concierge",
+#                  **kwargs):                       # prefabs/concierge.py:45-55
+#         super().__init__(name=name, route=route, use_pom=True, **kwargs)
+#
+# So `host`, `port`, `basic_auth`, `auto_answer`, `record_call`, `use_pom`, … ARE
+# configurable on the reference's ConciergeAgent — the oracle simply cannot expand
+# `**kwargs`, so it records none of them. PHP has no `**kwargs`: the only way to
+# offer the same capability is to RE-DECLARE the base params explicitly and pass
+# them up. That is the idiomatic completion of the same contract member, not port-only
+# surface, so those params are attributed to the BASE's construction entry (where they
+# are already compared) rather than read as extras on the subclass.
+#
+# Keyed by canonical "module.Class" -> the canonical base whose construction contract
+# absorbs the forwarded params. Verified against the reference source: every entry's
+# reference twin ends its ``__init__`` with ``super().__init__(..., **kwargs)``.
+_KWARGS_FORWARDING_BASE: dict[str, str] = {
+    "signalwire.agents.bedrock.BedrockAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.concierge.ConciergeAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.faq_bot.FAQBotAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.info_gatherer.InfoGathererAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.receptionist.ReceptionistAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.survey.SurveyAgent": "signalwire.core.agent_base.AgentBase",
+}
+
+# The only base params a ``**kwargs``-forwarding reference subclass ALSO declares
+# explicitly in its own signature (verified: every entry above spells exactly
+# ``name=…, route=…`` and forwards the rest). These stay on the subclass's own
+# construction set; every other base param is attributed to the base.
+_KWARGS_FORWARD_KEEP = frozenset({"name", "route"})
+
+# Classes whose constructor mixes REAL named params with an untyped bag carrying
+# the rest. Unlike _OPTIONS_BAG_CONSTRUCTS (which REPLACES the reflected set), these
+# entries MERGE: the reflected named params stay, the bag's opaque ``array`` param is
+# dropped, and its keys are added. Keyed by canonical "module.Class" ->
+# (reflected param name to drop, {key: spec}).
+_PARTIAL_BAG_CONSTRUCTS: dict[str, tuple[str, dict[str, dict]]] = {
+    # src/SignalWire/Prefabs/ConciergeAgent.php:41 — ``array $venueInfo`` carries
+    # exactly the reference's six venue params as $venueInfo['<key>'] reads
+    # (lines 53-104); name/route/host/... stay real named params.
+    "signalwire.prefabs.concierge.ConciergeAgent": ("venue_info", {
+        "venue_name": {"type": "string", "required": True},
+        "services": {"type": "list<string>", "required": True},
+        "amenities": {"type": "dict<string,dict<string,string>>", "required": True},
+        "hours_of_operation": {"type": "optional<dict<string,string>>", "required": False},
+        "special_instructions": {"type": "optional<list<string>>", "required": False},
+        "welcome_message": {"type": "optional<string>", "required": False},
+    }),
+}
+
+# Constructor params that are PLUMBING, not configurable capability: a handle the
+# SDK itself threads in when it builds the object (the owning client, the HTTP
+# transport, the parent call's ids). They are not something a user configures, so
+# they are not part of the construction contract in any port.
+_CONSTRUCTION_NON_PARAMS = frozenset({"self", "cls"})
+
+
+def build_construction(
+    ctor_params: dict[str, list[dict]],
+    php_to_canonical: dict[str, str],
+    php_parents: dict[str, list[str]],
+) -> dict:
+    """Return ``{"module.Class": {"params": {name: {type, required}}}}``.
+
+    A NAME-KEYED, unordered SET of configurable construction parameters — see
+    porting-sdk ALLOWLIST_DISCIPLINE.md §10. Order, arity, and mechanism are
+    idiom; the named set is the capability. This is why the node exists
+    separately from ``modules``: ``compare_param`` matches BY POSITION and
+    ignores names, which is meaningless against a 22-param kwargs constructor,
+    so one blanket ``__init__`` omission used to hide every parameter at once.
+
+    Three sources, in precedence order:
+
+      1. ``_OPTIONS_BAG_CONSTRUCTS`` — the class's ctor takes an untyped
+         ``array $options``; the bag's keys are the configurables and cannot be
+         reflected, so they are declared.
+      2. the class's OWN ``__construct`` params (PHP 8 named arguments ARE the
+         named set — no builder needed).
+      3. the nearest ANCESTOR that declares a ``__construct``, because a PHP
+         subclass with no constructor of its own inherits the parent's, and a
+         caller genuinely configures it through those same names.
+
+    Names are canonicalized to the reference spelling via
+    ``_CONSTRUCTION_PARAM_RENAMES`` (ADAPTER_CONTRACT rule 3). ``required``
+    mirrors the PHP signature and is compared as contract: a port that makes a
+    defaulted reference param required breaks a valid reference program, and one
+    that defaults a required param silently accepts an under-specified
+    construction.
+    """
+    out: dict = {}
+
+    def _params_from(raw_params: list[dict], cls_key: str) -> dict:
+        renames = dict(_CONSTRUCTION_PARAM_RENAMES.get(None, {}))
+        renames.update(_CONSTRUCTION_PARAM_RENAMES.get(cls_key, {}))
+        params: dict = {}
+        for p in raw_params:
+            if not isinstance(p, dict):
+                continue
+            if (p.get("kind") or "positional") in _CONSTRUCTION_NON_PARAMS:
+                continue
+            if p.get("kind") in ("var_keyword", "var_positional"):
+                continue
+            name = p.get("name")
+            if not name or name.startswith("_"):
+                continue
+            name = renames.get(name, name)
+            if name in params:
+                # A typed-split fold (two PHP params -> one reference param):
+                # the halves describe one configurable, so keep the first.
+                continue
+            params[name] = {
+                "type": _CONSTRUCTION_FOLDED_TYPE.get(name, p.get("type", "any")),
+                "required": bool(p.get("required", True)),
+            }
+        return params
+
+    # Short name -> the FQNs declaring it, for resolving the short-named parent
+    # chain signature_dump.php emits.
+    by_short: dict[str, list[str]] = {}
+    for fqn in php_to_canonical:
+        by_short.setdefault(fqn.rsplit("\\", 1)[-1], []).append(fqn)
+
+    def _resolve_parent(child_fqn: str, parent_short: str) -> str | None:
+        """Resolve a short-named parent to its FQN.
+
+        Same-namespace first (PHP resolves an unqualified extends against the
+        current namespace), then a globally unique match. An ambiguous
+        cross-namespace short name resolves to nothing rather than guessing —
+        the generated REST Types tree repeats ~300 class names, and picking one
+        arbitrarily would attach the wrong constructor.
+        """
+        candidates = by_short.get(parent_short, [])
+        if len(candidates) == 1:
+            return candidates[0]
+        ns = child_fqn.rsplit("\\", 1)[0] if "\\" in child_fqn else ""
+        same_ns = [c for c in candidates if c.rsplit("\\", 1)[0] == ns]
+        return same_ns[0] if len(same_ns) == 1 else None
+
+    def _inherited_key(php_fqn: str) -> str | None:
+        """Nearest ancestor that declares its own constructor, canonically keyed."""
+        for parent_short in php_parents.get(php_fqn, []):
+            parent_fqn = _resolve_parent(php_fqn, parent_short)
+            if parent_fqn is None:
+                continue
+            pk = php_to_canonical.get(parent_fqn)
+            if pk and pk in ctor_params:
+                return pk
+        return None
+
+    # Declared bags first — some (the projection targets) have no PHP class of
+    # their own, so they are not reachable from php_to_canonical.
+    for cls_key, bag in _OPTIONS_BAG_CONSTRUCTS.items():
+        out[cls_key] = {"params": {k: dict(v) for k, v in sorted(bag.items())}}
+
+    for php_name, cls_key in php_to_canonical.items():
+        if cls_key in _OPTIONS_BAG_CONSTRUCTS:
+            continue
+        raw = ctor_params.get(cls_key)
+        if raw is None:
+            inherited = _inherited_key(php_name)
+            if inherited is None:
+                continue
+            raw = ctor_params[inherited]
+        params = _params_from(raw, cls_key)
+        partial = _PARTIAL_BAG_CONSTRUCTS.get(cls_key)
+        if partial is not None:
+            drop_name, bag_keys = partial
+            params.pop(drop_name, None)
+            for k, v in bag_keys.items():
+                params.setdefault(k, dict(v))
+        if params:
+            out[cls_key] = {"params": dict(sorted(params.items()))}
+
+    # §11 idiom-completion fold: a ``**kwargs``-forwarding subclass's re-declared
+    # base params belong to the BASE's construction entry, where they are already
+    # compared. Applied after the main pass so the base entry is populated.
+    for cls_key, base_key in _KWARGS_FORWARDING_BASE.items():
+        entry = out.get(cls_key)
+        base = out.get(base_key)
+        if not entry or not base:
+            continue
+        base_names = set(base["params"])
+        entry["params"] = {
+            n: v for n, v in entry["params"].items()
+            if n not in base_names or n in _KWARGS_FORWARD_KEEP
+        }
+
+    return dict(sorted(out.items()))
+
+
 def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None = None) -> tuple[dict, list]:
     if rest_sidecar is None:
         rest_sidecar = {}
     out_modules: dict = {}
     failures: list = []
+    # Construction-contract bookkeeping (ALLOWLIST_DISCIPLINE.md §10). Filled as
+    # classes are processed, consumed by build_construction() at the end:
+    #   ctor_params  canonical "module.Class" -> the class's OWN __init__ params
+    #                (captured HERE, before the mixin projection can move or pop
+    #                __init__ off AgentBase — see build_construction docstring)
+    #   class_parents  canonical "module.Class" -> [canonical parent, ...], so a
+    #                subclass that declares no __construct inherits the parent's
+    #                construction parameters, which is exactly PHP's semantics.
+    ctor_params: dict[str, list[dict]] = {}
+    php_to_canonical: dict[str, str] = {}
+    php_parents: dict[str, list[str]] = {}
 
     for type_entry in raw.get("types", []):
         ns = type_entry.get("namespace", "")
@@ -1071,6 +1371,26 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             "methods": dict(sorted(methods_out.items())),
         }
 
+        # Construction contract: remember this class's OWN constructor params and
+        # its inheritance edge, keyed canonically. Recorded here (not re-derived
+        # from out_modules later) because the mixin projection below both POPS
+        # AgentBase's __init__ and re-hosts it on PromptManager.
+        canonical_key = f"{mod}.{canonical_name}"
+        # Keyed by PHP FQN — a SHORT name is ambiguous (the generated REST Types
+        # tree repeats ~300 names across the per-namespace subtrees). ``parents``
+        # from signature_dump.php are short names, so build_construction resolves
+        # them namespace-first (see _resolve_parent).
+        php_to_canonical[full_php] = canonical_key
+        php_parents[full_php] = [
+            p for p in (type_entry.get("parents") or []) if isinstance(p, str)
+        ]
+        own_init = next(
+            (m for m in type_entry.get("methods", []) if m.get("name") == "__construct"),
+            None,
+        )
+        if own_init is not None and "__init__" in methods_out:
+            ctor_params[canonical_key] = methods_out["__init__"].get("params", [])
+
     # Free functions declared in SignalWire\* namespaces (e.g.
     # SignalWire\Contexts\create_simple_context). Map them onto
     # canonical Python module paths just like classes.
@@ -1177,6 +1497,7 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         "version": "2",
         "generated_from": "signalwire-php via PHP Reflection",
         "modules": sorted_modules,
+        "construction": build_construction(ctor_params, php_to_canonical, php_parents),
     }, failures
 
 
