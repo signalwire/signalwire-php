@@ -1113,6 +1113,84 @@
                   "type": "optional<string>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "token_expiry_secs",
+                  "type": "int",
+                  "required": false,
+                  "default": 3600
+                },
+                {
+                  "name": "record_format",
+                  "type": "string",
+                  "required": false,
+                  "default": "mp4"
+                },
+                {
+                  "name": "record_stereo",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "default_webhook_url",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "agent_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "native_functions",
+                  "type": "optional<any>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "schema_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "suppress_logs",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "enable_post_prompt_override",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "check_for_input_override",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
+                },
+                {
+                  "name": "config_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "schema_validation",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
+                },
+                {
+                  "name": "trust_proxy_for_signature",
+                  "type": "bool",
+                  "required": false,
+                  "default": false
                 }
               ],
               "returns": "void"
@@ -1341,6 +1419,24 @@
                   "type": "optional<string>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "schema_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "config_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "schema_validation",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "void"
@@ -10278,6 +10374,24 @@
                   "type": "optional<string>",
                   "required": false,
                   "default": null
+                },
+                {
+                  "name": "schema_path",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "config_file",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "schema_validation",
+                  "type": "bool",
+                  "required": false,
+                  "default": true
                 }
               ],
               "returns": "void"
@@ -88330,12 +88444,32 @@
     },
     "signalwire.core.agent_base.AgentBase": {
       "params": {
+        "agent_id": {
+          "type": "optional<string>",
+          "required": false
+        },
         "auto_answer": {
           "type": "bool",
           "required": false
         },
         "basic_auth": {
           "type": "optional<tuple<string,string>>",
+          "required": false
+        },
+        "check_for_input_override": {
+          "type": "bool",
+          "required": false
+        },
+        "config_file": {
+          "type": "optional<string>",
+          "required": false
+        },
+        "default_webhook_url": {
+          "type": "optional<string>",
+          "required": false
+        },
+        "enable_post_prompt_override": {
+          "type": "bool",
           "required": false
         },
         "host": {
@@ -88346,6 +88480,10 @@
           "type": "string",
           "required": true
         },
+        "native_functions": {
+          "type": "optional<any>",
+          "required": false
+        },
         "port": {
           "type": "optional<int>",
           "required": false
@@ -88354,12 +88492,40 @@
           "type": "bool",
           "required": false
         },
+        "record_format": {
+          "type": "string",
+          "required": false
+        },
+        "record_stereo": {
+          "type": "bool",
+          "required": false
+        },
         "route": {
           "type": "string",
           "required": false
         },
+        "schema_path": {
+          "type": "optional<string>",
+          "required": false
+        },
+        "schema_validation": {
+          "type": "bool",
+          "required": false
+        },
         "signing_key": {
           "type": "optional<string>",
+          "required": false
+        },
+        "suppress_logs": {
+          "type": "bool",
+          "required": false
+        },
+        "token_expiry_secs": {
+          "type": "int",
+          "required": false
+        },
+        "trust_proxy_for_signature": {
+          "type": "bool",
           "required": false
         },
         "use_pom": {
@@ -88610,6 +88776,10 @@
           "type": "optional<tuple<string,string>>",
           "required": false
         },
+        "config_file": {
+          "type": "optional<string>",
+          "required": false
+        },
         "host": {
           "type": "optional<string>",
           "required": false
@@ -88624,6 +88794,14 @@
         },
         "route": {
           "type": "string",
+          "required": false
+        },
+        "schema_path": {
+          "type": "optional<string>",
+          "required": false
+        },
+        "schema_validation": {
+          "type": "bool",
           "required": false
         }
       }

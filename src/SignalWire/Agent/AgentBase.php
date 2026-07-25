@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\Agent;
 
 use SignalWire\Contexts\ContextBuilder;
+use SignalWire\Core\ConfigLoader;
 use SignalWire\POM\PromptObjectModel;
 use SignalWire\Security\SessionManager;
 use SignalWire\Skills\SkillManager;
@@ -161,6 +162,41 @@ class AgentBase extends Service implements AgentInterface
      */
     protected ?string $signingKey = null;
 
+    // $trustProxyForSignature lives on the base Service (where
+    // reconstructPublicUrl() reads it); AgentBase supplies it via the
+    // constructor, mirroring Python AgentBase's `_trust_proxy_for_signature`.
+
+    // ── Identity / construction-time state ──────────────────────────────
+    /**
+     * Unique ID for this agent — the constructor's `agentId`, or a generated
+     * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     */
+    protected string $agentId = '';
+
+    /**
+     * Default webhook URL for all SWAIG functions, as supplied at
+     * construction. Mirrors Python AgentBase's `_default_webhook_url`.
+     */
+    protected ?string $defaultWebhookUrl = null;
+
+    /**
+     * Whether structured request logs are suppressed. Mirrors Python
+     * AgentBase's `_suppress_logs`.
+     */
+    protected bool $suppressLogs = false;
+
+    /**
+     * Post-prompt override flag, as supplied at construction. Mirrors Python
+     * AgentBase's `enable_post_prompt_override` constructor parameter.
+     */
+    protected bool $enablePostPromptOverride = false;
+
+    /**
+     * Check-for-input override flag, as supplied at construction. Mirrors
+     * Python AgentBase's `check_for_input_override` constructor parameter.
+     */
+    protected bool $checkForInputOverride = false;
+
     // ══════════════════════════════════════════════════════════════════════
     //  Constructor
     // ══════════════════════════════════════════════════════════════════════
@@ -178,6 +214,34 @@ class AgentBase extends Service implements AgentInterface
      * @param string|null $signingKey  Webhook signing key (falls back to
      *   SIGNALWIRE_SIGNING_KEY env). When null, signature validation is
      *   disabled and a startup warning is logged.
+     * @param int $tokenExpirySecs Seconds until per-call SWAIG tokens expire.
+     *   Forwarded to the agent's SessionManager.
+     * @param string $recordFormat Recording format for the `record_call` verb.
+     * @param bool $recordStereo Whether to record in stereo.
+     * @param string|null $defaultWebhookUrl Optional default webhook URL for
+     *   all SWAIG functions.
+     * @param string|null $agentId Unique ID for this agent; a UUIDv4 is
+     *   generated when omitted.
+     * @param list<string>|null $nativeFunctions Native functions to advertise
+     *   in the rendered SWAIG object.
+     * @param string|null $schemaPath Optional path to a SWML schema.json.
+     *   Forwarded to the SWMLService base -> SchemaUtils.
+     * @param bool $suppressLogs Whether to suppress structured request logs.
+     * @param bool $enablePostPromptOverride Whether to enable post-prompt
+     *   override.
+     * @param bool $checkForInputOverride Whether to enable check-for-input
+     *   override.
+     * @param string|null $configFile Optional path to a JSON configuration
+     *   file. Forwarded to the SWMLService base -> SecurityConfig, and its
+     *   `service` section supplies route/host/port/name defaults that explicit
+     *   constructor arguments override.
+     * @param bool $schemaValidation Enable SWML schema validation (default
+     *   true). Forwarded to the SWMLService base -> SchemaUtils; can also be
+     *   disabled via SWML_SKIP_SCHEMA_VALIDATION=1.
+     * @param bool $trustProxyForSignature Honour X-Forwarded-Proto /
+     *   X-Forwarded-Host when reconstructing the URL during webhook signature
+     *   validation. Default false — proxy headers are spoofable, so opt in
+     *   only when you control the proxy chain.
      */
     public function __construct(
         string $name,
@@ -190,21 +254,57 @@ class AgentBase extends Service implements AgentInterface
         bool $recordCall = false,
         bool $usePom = true,
         ?string $signingKey = null,
+        int $tokenExpirySecs = 3600,
+        string $recordFormat = 'mp4',
+        bool $recordStereo = true,
+        ?string $defaultWebhookUrl = null,
+        ?string $agentId = null,
+        ?array $nativeFunctions = null,
+        ?string $schemaPath = null,
+        bool $suppressLogs = false,
+        bool $enablePostPromptOverride = false,
+        bool $checkForInputOverride = false,
+        ?string $configFile = null,
+        bool $schemaValidation = true,
+        bool $trustProxyForSignature = false,
     ) {
+        // Load the config file's `service` section BEFORE constructing the
+        // base, so its route/host/port/name become defaults that an explicit
+        // constructor argument still overrides. Mirrors Python
+        // AgentBase.__init__'s `_load_service_config` + "constructor
+        // parameters taking precedence" block (agent_base.py:186-208).
+        $serviceConfig = self::loadServiceConfig($configFile, $name);
+
+        $finalRoute = $route !== '/'
+            ? $route
+            : (is_string($serviceConfig['route'] ?? null) ? $serviceConfig['route'] : $route);
+        $finalHost = $host ?? (is_string($serviceConfig['host'] ?? null)
+            ? $serviceConfig['host']
+            : null);
+        $finalPort = $port ?? (is_int($serviceConfig['port'] ?? null)
+            ? $serviceConfig['port']
+            : (is_numeric($serviceConfig['port'] ?? null) ? (int) $serviceConfig['port'] : null));
+        $finalName = is_string($serviceConfig['name'] ?? null) && $serviceConfig['name'] !== ''
+            ? $serviceConfig['name']
+            : $name;
+
         parent::__construct(
-            name: $name,
-            route: $route,
-            host: $host,
-            port: $port,
+            name: $finalName,
+            route: $finalRoute,
+            host: $finalHost,
+            port: $finalPort,
             basicAuthUser: $basicAuthUser,
-            basicAuthPassword: $basicAuthPassword
+            basicAuthPassword: $basicAuthPassword,
+            schemaPath: $schemaPath,
+            configFile: $configFile,
+            schemaValidation: $schemaValidation,
         );
 
         // Call handling
         $this->autoAnswer   = $autoAnswer;
         $this->recordCall   = $recordCall;
-        $this->recordFormat = 'wav';
-        $this->recordStereo = false;
+        $this->recordFormat = $recordFormat;
+        $this->recordStereo = $recordStereo;
 
         // Prompt / POM
         $this->usePom      = $usePom;
@@ -228,7 +328,7 @@ class AgentBase extends Service implements AgentInterface
         $this->globalData = [];
 
         // Native functions / fillers / debug
-        $this->nativeFunctions  = [];
+        $this->nativeFunctions  = $nativeFunctions ?? [];
         $this->internalFillers  = [];
         $this->debugEventsLevel = null;
 
@@ -259,10 +359,24 @@ class AgentBase extends Service implements AgentInterface
         $this->mcpServers = [];
         $this->mcpServerEnabled = false;
 
-        // Session / context / skills
-        $this->sessionManager = new SessionManager();
+        // Session / context / skills. tokenExpirySecs is forwarded here —
+        // mirrors Python `SessionManager(token_expiry_secs=token_expiry_secs)`
+        // (agent_base.py:247).
+        $this->sessionManager = new SessionManager(tokenExpirySecs: $tokenExpirySecs);
         $this->contextBuilder = null;
         $this->skillManager   = null;
+
+        // Agent identity: explicit id wins, else a generated UUIDv4.
+        $this->agentId = ($agentId !== null && $agentId !== '')
+            ? $agentId
+            : self::generateUuidV4();
+
+        // Agent-specific construction state (mirrors agent_base.py:225-254).
+        $this->defaultWebhookUrl        = $defaultWebhookUrl;
+        $this->suppressLogs             = $suppressLogs;
+        $this->trustProxyForSignature   = $trustProxyForSignature;
+        $this->enablePostPromptOverride = $enablePostPromptOverride;
+        $this->checkForInputOverride    = $checkForInputOverride;
 
         // Webhook signing key: explicit > env. Empty string treated as unset.
         if ($signingKey !== null && $signingKey !== '') {
@@ -289,6 +403,80 @@ class AgentBase extends Service implements AgentInterface
     public function getSigningKey(): ?string
     {
         return $this->signingKey;
+    }
+
+    /**
+     * This agent's unique ID — the constructor's `agentId` or a generated
+     * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     */
+    protected function getAgentId(): string
+    {
+        return $this->agentId;
+    }
+
+    /**
+     * The construction-time default webhook URL for SWAIG functions, or null.
+     * Mirrors Python AgentBase's `_default_webhook_url`.
+     */
+    protected function getDefaultWebhookUrl(): ?string
+    {
+        return $this->defaultWebhookUrl;
+    }
+
+    /**
+     * Whether structured request logs are suppressed.
+     * Mirrors Python AgentBase's `_suppress_logs`.
+     */
+    protected function getSuppressLogs(): bool
+    {
+        return $this->suppressLogs;
+    }
+
+    /**
+     * Whether proxy headers are honoured when reconstructing the URL during
+     * webhook signature validation.
+     * Mirrors Python AgentBase's `_trust_proxy_for_signature`.
+     */
+    protected function getTrustProxyForSignature(): bool
+    {
+        return $this->trustProxyForSignature;
+    }
+
+    /**
+     * Load the `service` section of the config file, mirroring Python's
+     * `AgentBase._load_service_config(config_file, service_name)`
+     * (agent_base.py:358-382): when no path is given the standard search
+     * paths are consulted for a service-named config first.
+     *
+     * @return array<string, mixed>
+     */
+    private static function loadServiceConfig(?string $configFile, string $serviceName): array
+    {
+        if ($configFile === null || $configFile === '') {
+            $configFile = ConfigLoader::findConfigFile($serviceName);
+        }
+        if ($configFile === null) {
+            return [];
+        }
+
+        $loader = new ConfigLoader([$configFile]);
+        if (!$loader->hasConfig()) {
+            return [];
+        }
+
+        return $loader->getSection('service');
+    }
+
+    /**
+     * Generate a RFC-4122 version-4 UUID, matching the reference's
+     * `str(uuid.uuid4())` agent-id default.
+     */
+    private static function generateUuidV4(): string
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
     }
 
     // ══════════════════════════════════════════════════════════════════════
