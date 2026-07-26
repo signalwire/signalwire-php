@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 2966e71552bb561147361436c4c1e55ff5d2cca8",
+  "generated_from": "signalwire-php @ 7d548b1042790983df16f9eebaa96f018503adff",
   "modules": {
     "signalwire": {
       "classes": {
@@ -932,6 +932,10 @@
         "AIPromptText": [
           "contexts"
         ],
+        "AiSidecar": [],
+        "AiSidecarConfig": [
+          "SWAIG"
+        ],
         "AllOfProperty": [
           "allOf"
         ],
@@ -1147,6 +1151,7 @@
         "Request": [],
         "RequestConfig": [],
         "Return": [],
+        "RingbackConfig": [],
         "SIPRefer": [],
         "SMSWithBody": [],
         "SMSWithMedia": [],
