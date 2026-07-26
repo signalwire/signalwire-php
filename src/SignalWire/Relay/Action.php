@@ -30,14 +30,48 @@ class Action
     protected $onCompletedCallback = null;
     protected object $client;
 
+    /**
+     * The Call this action runs on. The reference takes the Call ITSELF as its
+     * first construction param (`Action.__init__(call, control_id, …)`,
+     * relay/call.py:75-82) and exposes it as a public `self.call`; php took the
+     * loose `callId`/`nodeId`/`client` triple instead, so the action's identity
+     * could disagree with its call and a caller had no route back to the Call
+     * object at all. Supplied at construction — Call builds every Action, so the
+     * back-reference resolves directly rather than through a client registry
+     * (which is where it could dangle).
+     */
+    protected ?Call $call = null;
+
     private bool $callbackFired = false;
 
-    public function __construct(string $controlId, string $callId, string $nodeId, object $client)
-    {
+    /**
+     * @param Call|null $call The owning Call — the reference's `Action.call`
+     *   back-reference. Optional (trailing) so the three subclasses that declare
+     *   their own constructor keep working unchanged; {@see Call} always supplies
+     *   it on the production path.
+     */
+    public function __construct(
+        string $controlId,
+        string $callId,
+        string $nodeId,
+        object $client,
+        ?Call $call = null,
+    ) {
         $this->controlId = $controlId;
         $this->callId = $callId;
         $this->nodeId = $nodeId;
         $this->client = $client;
+        $this->call = $call;
+    }
+
+    /**
+     * The Call this action runs on — the reference's public `self.call`
+     * back-reference. Null only for an Action constructed outside a Call
+     * (test fakes), never on the production path.
+     */
+    public function getCall(): ?Call
+    {
+        return $this->call;
     }
 
     // ------------------------------------------------------------------
@@ -488,9 +522,14 @@ class StandaloneCollectAction extends CollectAction
      * member. Forwards to the base constructor and pins the standalone-collect
      * stop method.
      */
-    public function __construct(string $controlId, string $callId, string $nodeId, object $client)
-    {
-        parent::__construct($controlId, $callId, $nodeId, $client);
+    public function __construct(
+        string $controlId,
+        string $callId,
+        string $nodeId,
+        object $client,
+        ?Call $call = null,
+    ) {
+        parent::__construct($controlId, $callId, $nodeId, $client, $call);
         $this->setStopMethod('calling.collect.stop');
     }
 
@@ -537,16 +576,18 @@ class FaxAction extends Action
     protected string $faxType;
 
     /**
-     * @param string $faxType 'send' or 'receive'
+     * @param string    $faxType 'send' or 'receive'
+     * @param Call|null $call    The owning Call (the reference's `Action.call`).
      */
     public function __construct(
         string $controlId,
         string $callId,
         string $nodeId,
         object $client,
-        string $faxType = 'send'
+        string $faxType = 'send',
+        ?Call $call = null,
     ) {
-        parent::__construct($controlId, $callId, $nodeId, $client);
+        parent::__construct($controlId, $callId, $nodeId, $client, $call);
         $this->faxType = $faxType;
     }
 

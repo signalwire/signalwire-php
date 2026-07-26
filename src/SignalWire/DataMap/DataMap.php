@@ -36,6 +36,16 @@ class DataMap
     }
 
     /**
+     * The tool name this data-map defines. The reference exposes it as a plain
+     * ``self.function_name`` attribute; php held it private with no reader, so a
+     * caller could not read back the name it supplied.
+     */
+    public function getFunctionName(): string
+    {
+        return $this->functionName;
+    }
+
+    /**
      * Set the LLM-facing tool description (the "purpose"). PROMPT
      * ENGINEERING, not developer documentation.
      *

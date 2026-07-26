@@ -31,6 +31,27 @@ abstract class SkillBase
     }
 
     /**
+     * The agent this skill was constructed against. The reference exposes it as
+     * a plain ``self.agent`` attribute; php held it ``protected`` with no public
+     * reader, so a caller who passed the agent in could not read it back.
+     */
+    public function getAgent(): AgentInterface
+    {
+        return $this->agent;
+    }
+
+    /**
+     * The skill's configuration params, as supplied at construction (the
+     * reference's ``self.params``).
+     *
+     * @return array<string,mixed>
+     */
+    public function getParams(): array
+    {
+        return $this->params;
+    }
+
+    /**
      * Read a string param, narrowing the genuinely-mixed value. Non-string
      * values (including absent keys) fall back to $default. Numeric values
      * are stringified to match the loose typing the platform sends.

@@ -699,7 +699,7 @@ class Client implements RelayClientLike
             if (is_string($tag) && isset($this->pendingDials[$tag])) {
                 $callId = $params['call_id'] ?? null;
                 if (is_string($callId) && !isset($this->calls[$callId])) {
-                    $call = new Call($params, $this);
+                    $call = new Call($this->withProjectFallback($params), $this);
                     $this->calls[$callId] = $call;
                 }
             }
@@ -944,6 +944,30 @@ class Client implements RelayClientLike
     // ══════════════════════════════════════════════════════════════════
 
     /**
+     * Seed ``project_id`` from THIS client's project when the wire frame omits
+     * it, exactly as the reference does at every Call construction site
+     * (``project_id=params.get("project_id", self.project)`` —
+     * relay/client.py:1064, 1149, 1203). A frame that DOES carry the field wins,
+     * so a call routed through a different project keeps its own identity.
+     *
+     * @param  array<string,mixed> $params
+     * @return array<string,mixed>
+     */
+    private function withProjectFallback(array $params): array
+    {
+        $existing = $params['project_id'] ?? null;
+        if (is_string($existing) && $existing !== '') {
+            return $params;
+        }
+        if ($this->project === '') {
+            return $params;
+        }
+        $params['project_id'] = $this->project;
+
+        return $params;
+    }
+
+    /**
      * Narrow a JSON-decoded value to an ``array<string,mixed>`` (a JSON
      * object). RELAY event/params payloads are always objects on the wire;
      * a missing or non-object value yields an empty array. Re-keys to
@@ -1019,7 +1043,7 @@ class Client implements RelayClientLike
         // Production wire uses ``call_state`` on the receive frame; the
         // Call constructor already accepts both.
         $callParams = $params + ['direction' => 'inbound'];
-        $call = new Call($callParams, $this);
+        $call = new Call($this->withProjectFallback($callParams), $this);
         $this->calls[$callId] = $call;
 
         $this->logger->info("Inbound call {$callId}");
@@ -1072,13 +1096,13 @@ class Client implements RelayClientLike
             $call = $this->calls[$callId];
         } elseif ($callBlob !== null) {
             // Production shape: nested params.call has call_id/node_id/tag/device.
-            $call = new Call($callBlob, $this);
+            $call = new Call($this->withProjectFallback($callBlob), $this);
             if ($call->callId !== null) {
                 $this->calls[$call->callId] = $call;
             }
         } elseif ($callId !== null) {
             // Legacy / test fixture: top-level call_id alongside dial params.
-            $call = new Call($params, $this);
+            $call = new Call($this->withProjectFallback($params), $this);
             $this->calls[$callId] = $call;
         }
 

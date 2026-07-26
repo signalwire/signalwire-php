@@ -20,6 +20,16 @@ class SkillManager
     }
 
     /**
+     * The agent this manager loads skills onto. The reference exposes it as a
+     * plain ``self.agent`` attribute; php held it ``protected`` with no public
+     * reader.
+     */
+    public function getAgent(): AgentInterface
+    {
+        return $this->agent;
+    }
+
+    /**
      * @param array<string,mixed> $params
      * @return array{bool, string}
      */

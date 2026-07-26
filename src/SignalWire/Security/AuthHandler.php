@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace SignalWire\Security;
 
+use SignalWire\Core\SecurityConfig;
 use SignalWire\Logging\Logger;
 
 /**
@@ -37,21 +38,51 @@ class AuthHandler
     private ?array $basicAuth;
 
     /**
+     * The SecurityConfig this handler derives its credentials from, when the
+     * caller constructed it that way. The reference's ONLY construction route is
+     * `AuthHandler(security_config)` (core/auth_handler.py:56-63), and it exposes
+     * the config back as a public `self.security_config`.
+     */
+    private ?SecurityConfig $securityConfig = null;
+
+    /**
      * @param string|null $bearerToken Bearer token matched against the Authorization header.
      * @param string|null $apiKey      API key matched against the api-key header.
      * @param array{0: string, 1: string}|null $basicAuth [username, password] tuple.
      * @param string $apiKeyHeader Header name for API-key lookup (default: 'X-Api-Key').
+     * @param SecurityConfig|null $securityConfig Derive the basic-auth credentials
+     *   from a SecurityConfig, the reference's construction route. When supplied
+     *   and no explicit `$basicAuth` was given, the pair comes from
+     *   {@see SecurityConfig::getBasicAuth()} — the same source the reference's
+     *   `_setup_auth_methods` reads (auth_handler.py:77). An explicit
+     *   `$basicAuth` still wins, so existing flat-argument callers are unchanged.
      */
     public function __construct(
         ?string $bearerToken = null,
         ?string $apiKey = null,
         ?array $basicAuth = null,
         string $apiKeyHeader = 'X-Api-Key',
+        ?SecurityConfig $securityConfig = null,
     ) {
         $this->bearerToken = $bearerToken;
         $this->apiKey = $apiKey;
-        $this->basicAuth = $basicAuth;
         $this->apiKeyHeader = $apiKeyHeader;
+        $this->securityConfig = $securityConfig;
+
+        if ($basicAuth === null && $securityConfig !== null) {
+            $basicAuth = $securityConfig->getBasicAuth();
+        }
+        $this->basicAuth = $basicAuth;
+    }
+
+    /**
+     * The SecurityConfig this handler was constructed with, or null when the
+     * caller supplied credentials directly. Mirrors the reference's public
+     * `self.security_config` attribute.
+     */
+    public function getSecurityConfig(): ?SecurityConfig
+    {
+        return $this->securityConfig;
     }
 
     /**

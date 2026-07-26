@@ -176,6 +176,16 @@ final class SchemaUtils
     }
 
     /**
+     * The schema path this instance was constructed with, or null when it fell
+     * back to the bundled default. The reference exposes it as a plain
+     * ``self.schema_path`` attribute.
+     */
+    public function getSchemaPath(): ?string
+    {
+        return $this->schemaPath;
+    }
+
+    /**
      * Sorted list of all known verb names.
      * Mirrors Python's get_all_verb_names().
      *

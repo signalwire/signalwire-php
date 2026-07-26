@@ -750,6 +750,17 @@ class Service implements RequestHandlerLike
         return $this->route;
     }
 
+    /**
+     * This service, for the reference's `ToolRegistry.agent` back-reference.
+     * Python factors SWAIG registration into a `ToolRegistry` collaborator that
+     * holds a reference BACK to the agent; php flattens the registry onto the
+     * service itself, so the back-reference resolves to `$this`.
+     */
+    public function getAgent(): self
+    {
+        return $this;
+    }
+
     /** The host. */
     public function getHost(): string
     {

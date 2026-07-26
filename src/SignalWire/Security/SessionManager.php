@@ -13,7 +13,12 @@ class SessionManager
     private bool $debugMode = false;
 
     /**
-     * @param int $tokenExpirySecs Token lifetime in seconds (default 3600).
+     * @param int $tokenExpirySecs Token lifetime in seconds. Defaults to 900,
+     *        matching the reference (session_manager.py:30). php previously
+     *        defaulted to 3600, so a bare ``new SessionManager()`` minted tokens
+     *        with four times the reference's lifetime — a difference with no
+     *        reason behind it. ``AgentBase`` still passes 3600 explicitly, which
+     *        is the reference's own AgentBase default (agent_base.py:130, 247).
      * @param string|null $secretKey Optional HMAC signing key. When null a
      *        cryptographically-secure random key is generated. Mirrors Python's
      *        ``SessionManager(token_expiry_secs, secret_key)`` — an explicit key
@@ -23,7 +28,7 @@ class SessionManager
      *
      * @throws RuntimeException If secure random bytes cannot be generated.
      */
-    public function __construct(int $tokenExpirySecs = 3600, ?string $secretKey = null)
+    public function __construct(int $tokenExpirySecs = 900, ?string $secretKey = null)
     {
         $this->tokenExpirySecs = $tokenExpirySecs;
 
@@ -167,6 +172,18 @@ class SessionManager
     public function getTokenExpirySecs(): int
     {
         return $this->tokenExpirySecs;
+    }
+
+    /**
+     * The HMAC signing key — the caller-supplied one, or the generated 64-char
+     * hex string when none was supplied. The reference exposes it as a plain
+     * ``self.secret_key`` attribute (session_manager.py:40), and reading it back
+     * is what makes cross-instance token interop possible at all: a second
+     * process must be given the SAME key to validate a token this one signed.
+     */
+    public function getSecretKey(): string
+    {
+        return $this->secret;
     }
 
     // ──────────────────────────────────────────────────────────────────

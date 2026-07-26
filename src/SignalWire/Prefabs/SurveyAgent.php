@@ -55,11 +55,20 @@ class SurveyAgent extends AgentBase
         int $maxRetries = 2,
     ) {
         $this->surveyName     = $surveyName ?? ($name !== '' ? $name : 'Survey');
-        $this->introduction   = $introduction;
-        $this->conclusion     = $conclusion;
-        $this->brandName      = $brandName;
         $this->maxRetries     = $maxRetries;
         $this->surveyQuestions = $questions;
+        // The reference DEFAULTS each of these when the caller omits it, and then
+        // renders every one into the prompt (survey.py:93-103, 149, 163, 198).
+        // php previously stored brand_name / conclusion / max_retries and rendered
+        // none of them, so a caller configuring the prefab's brand or wrap-up text
+        // got no effect on the emitted document.
+        $this->brandName      = $brandName !== '' ? $brandName : 'Our Company';
+        $this->introduction   = $introduction !== ''
+            ? $introduction
+            : "Welcome to our {$this->surveyName}. We appreciate your participation.";
+        $this->conclusion     = $conclusion !== ''
+            ? $conclusion
+            : 'Thank you for completing our survey. Your feedback is valuable to us.';
 
         $name = $name !== '' ? $name : 'survey';
 
@@ -77,24 +86,34 @@ class SurveyAgent extends AgentBase
 
         $this->usePom = true;
 
-        // Global data
+        // Global data — carries brand_name and max_retries like the reference
+        // (survey.py:241-247) so the AI can reference both at runtime.
         $this->setGlobalData([
             'survey_name'    => $this->surveyName,
+            'brand_name'     => $this->brandName,
             'questions'      => $this->surveyQuestions,
+            'max_retries'    => $this->maxRetries,
             'question_index' => 0,
             'answers'        => new \stdClass(),
             'completed'      => false,
         ]);
 
+        // Personality — renders brand_name (reference survey.py:147-150).
+        $this->promptAddSection(
+            'Personality',
+            "You are a friendly and professional survey agent representing {$this->brandName}.",
+        );
+
         // Introduction section
-        $intro = $this->introduction !== '' ? $this->introduction : "Welcome to the {$this->surveyName}.";
         $this->promptAddSection(
             'Survey Introduction',
-            $intro,
+            $this->introduction,
             [
                 'Introduce the survey to the user',
                 'Ask each question in sequence',
                 'Validate responses based on question type',
+                // Renders max_retries (reference survey.py:163).
+                "If a response is invalid, explain and retry up to {$this->maxRetries} times.",
                 'Thank the user when complete',
             ],
         );
@@ -109,6 +128,13 @@ class SurveyAgent extends AgentBase
             $qBullets[] = $desc;
         }
         $this->promptAddSection('Survey Questions', '', $qBullets);
+
+        // Conclusion section — renders the wrap-up text the caller configured
+        // (reference survey.py:196-199).
+        $this->promptAddSection(
+            'Conclusion',
+            "End with this conclusion: {$this->conclusion}",
+        );
 
         // Tool: validate_response — dispatches to the named handler method.
         $this->defineTool(
@@ -254,9 +280,14 @@ class SurveyAgent extends AgentBase
     }
 
     /**
+     * The survey questions, as the caller supplied them (the reference's bare
+     * ``questions`` attribute). Renamed from the former ``getSurveyQuestions``
+     * so the accessor folds onto the reference attribute name and keeps
+     * comparing, rather than sitting as an "idiomatic accessor" addition.
+     *
      * @return list<array>
      */
-    public function getSurveyQuestions(): array
+    public function getQuestions(): array
     {
         return $this->surveyQuestions;
     }
@@ -265,5 +296,29 @@ class SurveyAgent extends AgentBase
     public function getSurveyName(): string
     {
         return $this->surveyName;
+    }
+
+    /** The brand/company name rendered into the Personality section. */
+    public function getBrandName(): string
+    {
+        return $this->brandName;
+    }
+
+    /** The introduction rendered into the Survey Introduction section. */
+    public function getIntroduction(): string
+    {
+        return $this->introduction;
+    }
+
+    /** The conclusion rendered into the Conclusion section. */
+    public function getConclusion(): string
+    {
+        return $this->conclusion;
+    }
+
+    /** How many times an invalid answer may be retried. */
+    public function getMaxRetries(): int
+    {
+        return $this->maxRetries;
     }
 }

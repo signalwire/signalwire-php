@@ -67,8 +67,6 @@ signalwire.SignalWire.list_skills: PHP-class-method: PHP's SignalWire static fac
 signalwire.SignalWire.list_skills_with_params: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
 signalwire.SignalWire.register_skill: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
 signalwire.SignalWire.rest_client: PHP-class-method: PHP's SignalWire static facade hosts package-level helpers as static methods (mirrors Python's module-level signalwire.<name> free functions)
-signalwire.agent_server.AgentServer.get_host: PHP idiomatic accessor / lifecycle hook on AgentServer.
-signalwire.agent_server.AgentServer.get_port: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agent_server.AgentServer.get_sip_auto_map: PHP idiomatic accessor / lifecycle hook on AgentServer (returns the auto_map flag passed to setupSipRouting).
 signalwire.agent_server.AgentServer.get_sip_route: PHP idiomatic accessor / lifecycle hook on AgentServer (returns the SIP route configured via setupSipRouting).
 signalwire.agent_server.AgentServer.get_sip_username_mapping: PHP idiomatic accessor / lifecycle hook on AgentServer.
@@ -95,7 +93,6 @@ signalwire.core.auth_handler.AuthHandler.middleware: php_native_middleware: fram
 signalwire.core.auth_handler.AuthHandler.validate: php_native_middleware: header-validation helper backing AuthHandler::middleware (checks Bearer/API-key/Basic in order); the PHP-native analog of TS's AuthHandler.validate, used by the framework-agnostic middleware. Python performs the equivalent inline inside its framework dependency/decorator.
 signalwire.core.contexts.Context.create_simple_context: PHP-class-method: hosts the module-level signalwire.core.contexts.create_simple_context free function as a static factory on Context (PSR-4; mirrors Python's module-level free function). See PORT_OMISSIONS.md.
 signalwire.core.contexts.Context.get_initial_step: PHP idiomatic getter on Context.
-signalwire.core.contexts.Context.get_name: PHP idiomatic getter on Context.
 signalwire.core.contexts.Context.get_step_order: PHP idiomatic getter on Context.
 signalwire.core.contexts.Context.get_steps: PHP idiomatic getter on Context.
 signalwire.core.contexts.Context.get_valid_contexts: PHP idiomatic getter on Context.
@@ -104,10 +101,8 @@ signalwire.core.contexts.ContextBuilder.create_simple_context: PHP idiomatic acc
 signalwire.core.contexts.ContextBuilder.has_contexts: PHP idiomatic accessor on ContextBuilder.
 signalwire.core.contexts.GatherInfo.get_completion_action: PHP idiomatic getter on GatherInfo.
 signalwire.core.contexts.GatherInfo.get_questions: PHP idiomatic getter on GatherInfo.
-signalwire.core.contexts.GatherQuestion.get_key: PHP idiomatic getter on GatherQuestion.
 signalwire.core.contexts.Step.get_functions: PHP idiomatic getter on Step.
 signalwire.core.contexts.Step.get_gather_info: PHP idiomatic getter on Step.
-signalwire.core.contexts.Step.get_name: PHP idiomatic getter on Step.
 signalwire.core.contexts.Step.get_valid_contexts: PHP idiomatic getter on Step.
 signalwire.core.contexts.Step.get_valid_steps: PHP idiomatic getter on Step.
 signalwire.core.data_map.DataMap.create_expression_tool: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -126,7 +121,6 @@ signalwire.core.logging_config.Logger.set_level: PHP wraps the Logger class with
 signalwire.core.logging_config.Logger.set_suppressed: PHP wraps the Logger class with explicit getters/setters and level-named helpers (info, warn, error, debug); Python re-exports stdlib logging directly.
 signalwire.core.logging_config.Logger.should_log: PHP wraps the Logger class with explicit getters/setters and level-named helpers (info, warn, error, debug); Python re-exports stdlib logging directly.
 signalwire.core.logging_config.Logger.warn: PHP wraps the Logger class with explicit getters/setters and level-named helpers (info, warn, error, debug); Python re-exports stdlib logging directly.
-signalwire.core.security.session_manager.SessionManager.get_token_expiry_secs: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.security.session_manager.SessionManager.set_debug_mode: php_accessor: explicit setter gating debug_token (mirrors Python's _debug_mode attribute, which the reference toggles by direct attribute assignment). PHP exposes it as a public setter (no public attribute).
 signalwire.web.web_service.WebService.handle_request: php_native_serving: the real static-file serving core for WebService, returning the [status, headers, body] triple used across the SDK. Python couples serving to FastAPI routes and TS to Hono handlers; PHP has no bundled web framework, so the dispatch lives in this native method that start() fronts with a socket bind. Same request→response behaviour, PHP idiom.
 signalwire.core.security.webhook_middleware.WebhookMiddleware: PHP-idiom: PHP has no FastAPI/PSR-15 dominant framework, so webhook validation ships as a callable middleware class (`process(method, url, headers, rawBody, next): [status, headers, body]`) wired into Service::handleRequest. Functional parity with Python's `make_webhook_validation_dependency` FastAPI factory.
@@ -196,11 +190,7 @@ signalwire.core.swml_service.SWMLService.define_tools: idiomatic PHP surface ext
 signalwire.core.swml_service.SWMLService.dispatch_from_globals: PHP CGI-mode helper that reads from `$_SERVER` / `$_REQUEST` globals; Python's equivalent is the WSGI/ASGI adapter shipped with FastAPI.
 signalwire.core.swml_service.SWMLService.get_basic_auth_credentials_with_source: PHP-auth-helper: SWMLService.get_basic_auth_credentials_with_source is the (creds, source) tuple variant; Python merges this into the include_source=True branch of get_basic_auth_credentials
 signalwire.core.swml_service.SWMLService.get_full_url: PHP getter for the host:port:route URL; Python computes this internally but doesn't expose a separate accessor on SWMLService.
-signalwire.core.swml_service.SWMLService.get_host: PHP getter exposing the bind host; Python uses the underlying uvicorn config directly.
-signalwire.core.swml_service.SWMLService.get_name: PHP getter for the service name; Python users access via `service.name` attribute directly.
-signalwire.core.swml_service.SWMLService.get_port: PHP getter for the bind port; Python uses the underlying uvicorn config directly.
 signalwire.core.swml_service.SWMLService.get_proxy_url_base: PHP getter for the SWML proxy URL; Python users access via the `SWML_PROXY_URL_BASE` env var directly.
-signalwire.core.swml_service.SWMLService.get_route: PHP getter for the bind route; Python users access via `service.route` attribute directly.
 signalwire.core.swml_service.SWMLService.get_tool_names: PHP getter for the registered tool names list; Python users iterate the underlying `_tool_registry` dict.
 signalwire.core.swml_service.SWMLService.get_tools: PHP getter for the full tool registry; Python exposes the same data via the registry's iter API.
 signalwire.core.swml_service.SWMLService.on_function_call: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -210,20 +200,12 @@ signalwire.core.swml_service.SWMLService.render_pretty: PHP convenience for huma
 signalwire.core.swml_service.SWMLService.render_swml: PHP alias for the SWML render path; equivalent of Python's `render_document`.
 signalwire.core.swml_service.SWMLService.run: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.core.swml_service.SWMLService.validate_basic_auth: PHP-auth-helper: SWMLService.validate_basic_auth is exposed as a public method on the service for downstream auth checks; Python wraps it inside AuthMixin
-signalwire.prefabs.concierge.ConciergeAgent.get_amenities: PHP idiomatic accessor on the prefab class.
-signalwire.prefabs.concierge.ConciergeAgent.get_services: PHP idiomatic accessor on the prefab class.
-signalwire.prefabs.concierge.ConciergeAgent.get_venue_name: PHP idiomatic accessor on the prefab class.
-signalwire.prefabs.faq_bot.FAQBotAgent.get_faqs: PHP idiomatic accessor on the prefab class.
-signalwire.prefabs.faq_bot.FAQBotAgent.get_suggest_related: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.info_gatherer.InfoGathererAgent.get_questions: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.receptionist.ReceptionistAgent.get_departments: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.receptionist.ReceptionistAgent.get_greeting: PHP idiomatic accessor on the prefab class.
-signalwire.prefabs.survey.SurveyAgent.get_survey_name: PHP idiomatic accessor on the prefab class.
-signalwire.prefabs.survey.SurveyAgent.get_survey_questions: PHP idiomatic accessor on the prefab class.
 signalwire.relay.call.AIAction.get_stop_method: PHP idiomatic accessor on the AIAction subclass.
 signalwire.relay.call.Action.execute_subcommand: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_call_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Action.get_control_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_events: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_node_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_payload: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
@@ -301,16 +283,6 @@ signalwire.relay.event.StreamEvent.__init__: php_event_accessor: PHP constructor
 signalwire.relay.event.TapEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
 signalwire.relay.event.TranscribeEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
 signalwire.relay.message.Message.dispatch_event: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_body: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_context: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_direction: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_from_number: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_media: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_message_id: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_reason: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_state: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_tags: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.get_to_number: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.handle_event: alias for dispatchEvent so the Client's event router (which symmetrically calls handleEvent on actions and messages) doesn't need a per-type branch.
 signalwire.relay.message.Message.on_completed: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.message.Message.resolve: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
@@ -330,13 +302,8 @@ signalwire.rest._base.HttpClient.get_project_id: PHP idiomatic accessor on HttpC
 signalwire.rest._base.HttpClient.get_token: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.HttpClient.list_all: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.SignalWireRestError.__str__: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.rest._base.SignalWireRestError.get_body: PHP getter for the response-body envelope field; Python's SignalWireRestError exposes `body` as a plain attribute (not a surface method)
-signalwire.rest._base.SignalWireRestError.get_headers: PHP getter for the response-header map (§6.6 error-observability); Python's SignalWireRestError exposes `headers` as a plain attribute (not a surface method)
-signalwire.rest._base.SignalWireRestError.get_method: PHP getter for the request-method envelope field; Python's SignalWireRestError exposes `method` as a plain attribute (not a surface method)
 signalwire.rest._base.SignalWireRestError.get_request_id: PHP getter for the platform request-id pulled from the response headers (§6.6 error-observability); Python's SignalWireRestError exposes `request_id` as a plain attribute (not a surface method)
 signalwire.rest._base.SignalWireRestError.get_response_body: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.rest._base.SignalWireRestError.get_status_code: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.rest._base.SignalWireRestError.get_url: PHP getter for the request-URL envelope field; Python's SignalWireRestError exposes `url` as a plain attribute (not a surface method)
 signalwire.rest._request_options.RequestOptions.__init__: PHP-explicit-constructor: Python's RequestOptions is a @dataclass, so its synthesized __init__ is not on the reference SURFACE (griffe omits dataclass-generated inits). PHP has no dataclass — it declares an explicit __construct with the same five optional fields (timeout, retries, retry_on_status, retry_backoff, abort_signal). Same construction contract; only the dataclass-vs-explicit-constructor idiom differs.
 signalwire.rest._pagination.PaginatedIterator.current: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
 signalwire.rest._pagination.PaginatedIterator.get_data_key: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
@@ -449,13 +416,10 @@ signalwire.utils.schema_utils.Schema.reset: PHP singleton reset hook (test-only)
 signalwire.utils.schema_utils.Schema.verb_count: PHP singleton sidecar accessor; canonical SchemaUtils ships separately.
 signalwire.utils.schema_utils.SchemaUtils.generate_method_body: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
 signalwire.utils.schema_utils.SchemaUtils.generate_method_signature: Python-source codegen helper; canonical Python signatures filter this method out (Python-only output shape).
-signalwire.utils.schema_utils.SchemaValidationError.get_errors: PHP-exception-getter: SchemaValidationError exposes 'get_errors' as an explicit getter; Python attaches the same data as instance attributes accessed directly
-signalwire.utils.schema_utils.SchemaValidationError.get_verb_name: PHP-exception-getter: SchemaValidationError exposes 'get_verb_name' as an explicit getter; Python attaches the same data as instance attributes accessed directly
 signalwire.utils.url_validator.UrlValidator: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
 signalwire.utils.url_validator.UrlValidator.validate_url: PHP-class-host: PHP groups url_validator helpers on a UrlValidator static class for cohesion; Python ships validate_url as a module-level function (already projected to module-level free function via FREE_FUNCTION_PROJECTIONS)
 
 signalwire.core.agent_base.AgentBase.get_dynamic_config_callback: PHP-bean-accessor — PHP exposes the dynamic-config callback via getDynamicConfigCallback(); Python keeps it as a private _dynamic_config_callback attribute set/cleared by setDynamicConfigCallback (no public getter on the Python side)
-signalwire.core.agent_base.AgentBase.get_signing_key: php_accessor: AgentBase exposes signing_key getter (Python keeps it private)
 signalwire.core.security.security_utils.SecurityUtils: php_idiom_class_wrapper: static class hosting the security hygiene helpers (Python keeps filter_sensitive_headers/redact_url/is_valid_hostname at module level); static methods projected to module-level free functions via FREE_FUNCTION_PROJECTIONS
 signalwire.core.security.security_utils.SecurityUtils.filter_sensitive_headers: php_idiom_class_wrapper: see SecurityUtils class entry
 signalwire.core.security.security_utils.SecurityUtils.redact_url: php_idiom_class_wrapper: see SecurityUtils class entry

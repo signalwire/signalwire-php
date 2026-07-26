@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -59,11 +60,57 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src" / "SignalWire"
-# porting-sdk sibling (holds the reference signature oracle used by the
-# composition-attribute enrich below). Resolved by adjacency; the enrich no-ops
-# if it is absent (degraded / first-generation env), so surface never HARD-depends
-# on porting-sdk being present.
-PSDK = (REPO_ROOT.parent / "porting-sdk").resolve()
+
+
+# ---------------------------------------------------------------------------
+# porting-sdk resolution — MULTI-LAYOUT and FAIL-LOUD.
+#
+# The oracle GATES this enumerator's field/accessor emission: a member emits only
+# when the reference records that name on that class. So a resolution FAILURE does
+# not merely skip an enrich — it silently emits a valid-LOOKING snapshot with
+# hundreds of members missing, and the enumerator still exits 0. That trap has now
+# cost three ports a full CI investigation (dotnet ~300 members lost / a phantom
+# 311-missing red; go ~200 lost / a red chased through six wrong hypotheses; cpp
+# per task #36), always for the same reason: LOCALLY porting-sdk is a SIBLING of the
+# port repo, but in CI it is checked out INSIDE the port repo, so a single hardcoded
+# `../porting-sdk` walk fails.
+#
+# Three layouts, in order, then FAIL LOUD:
+#   1. $PORTING_SDK          — explicit, set by the workflows
+#   2. <repo>/../porting-sdk — local sibling adjacency
+#   3. <repo>/porting-sdk    — CI checkout INSIDE the repo
+#
+# A gate that cannot resolve its oracle must SAY SO, never quietly emit less.
+# ---------------------------------------------------------------------------
+def resolve_porting_sdk() -> Path:
+    """Resolve the porting-sdk checkout, trying every supported layout, and raise
+    SystemExit with the layouts tried if none holds a readable oracle."""
+    candidates: list[tuple[str, Path]] = []
+    env = os.environ.get("PORTING_SDK")
+    if env:
+        candidates.append(("$PORTING_SDK", Path(env).expanduser()))
+    candidates.append(("<repo>/../porting-sdk", REPO_ROOT.parent / "porting-sdk"))
+    candidates.append(("<repo>/porting-sdk", REPO_ROOT / "porting-sdk"))
+
+    tried: list[str] = []
+    for label, cand in candidates:
+        path = cand.resolve()
+        tried.append(f"{label} -> {path}")
+        if (path / "python_surface.json").is_file() and (
+            path / "python_signatures.json"
+        ).is_file():
+            return path
+    raise SystemExit(
+        "enumerate_surface: cannot resolve porting-sdk (the reference oracle).\n"
+        "This enumerator ORACLE-GATES its field and accessor emission, so a silent\n"
+        "fallback would emit a valid-looking snapshot with members missing.\n"
+        "Layouts tried (each must hold python_surface.json + python_signatures.json):\n"
+        + "".join(f"  - {t}\n" for t in tried)
+        + "Set PORTING_SDK, or clone signalwire/porting-sdk as a sibling of this repo."
+    )
+
+
+PSDK = resolve_porting_sdk()
 
 
 # ---------------------------------------------------------------------------
@@ -489,6 +536,11 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
         "AgentBase",
         [
             "__init__",
+            # The reference's back-reference to the agent that owns the manager
+            # (manager.py:32 `self.agent = agent`). php flattens the manager onto
+            # AgentBase, so `AgentBase::getAgent()` returns `$this` — the same
+            # resolution cpp used. Folds via the accessor rename (get_agent->agent).
+            "agent",
             "define_contexts", "get_contexts", "get_post_prompt", "get_prompt",
             "get_raw_prompt",
             "prompt_add_section", "prompt_add_subsection", "prompt_add_to_section",
@@ -515,7 +567,10 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ),
     ("signalwire.core.agent.tools.registry", "ToolRegistry"): (
         "SWMLService",
-        ["__init__", "define_tool", "register_swaig_function",
+        # ``agent`` is the reference's back-reference to the owning agent
+        # (registry.py:31 `self.agent = agent`); php flattens the registry onto
+        # its Service, so `Service::getAgent()` returns `$this`.
+        ["__init__", "agent", "define_tool", "register_swaig_function",
          "has_function", "get_function", "get_all_functions",
          "remove_function"],
     ),
@@ -727,9 +782,46 @@ METHOD_ALIASES: dict[str, str] = {
 # single getAgents() already matches `get_agents` by name; renaming it to `agents`
 # would ORPHAN the reference `get_agents` method. So `agents` (the raw dict php
 # does not expose) stays a genuine omission, not a rename.
+#   * AIChatError.get_error_code    -> code
+#   * AIChatError.get_server_message -> message
+#     The reference exposes ``self.code`` / ``self.message`` (ai_chat/client.py:
+#     67-68). php CANNOT name its readers after them: ``AIChatError extends
+#     \RuntimeException``, and php's Throwable already declares ``getCode(): int``
+#     (which php cannot widen to the reference's ``int | None``) and
+#     ``getMessage(): string`` (whose value carries the ``[code] `` prefix, so it
+#     is a DIFFERENT value from the reference's raw ``message``). So the readers
+#     are spelled ``getErrorCode`` / ``getServerMessage`` and RENAMED here — the
+#     capability is present and keeps comparing. A name collision with an
+#     inherited framework method is exactly what the rename table is for; it is
+#     not an omission (AGENT_RULES §2 / ALLOWLIST_DISCIPLINE §7 "reserved words").
 CLASS_METHOD_ALIASES: dict[tuple[str, str], str] = {
     ("Action", "get_result"): "result",
     ("Message", "get_result"): "result",
+    ("AIChatError", "get_error_code"): "code",
+    ("AIChatError", "get_server_message"): "message",
+    # Same collision, same fix: ``RelayError extends \RuntimeException`` cannot
+    # declare ``$code``/``$message`` (php reserves both on Throwable), so its
+    # public readonly properties are ``$relayCode``/``$relayMessage``. The
+    # reference exposes ``self.code``/``self.message`` (relay/client.py:1331-1332).
+    # A framework-reserved name is a RENAME, never an omission.
+    ("RelayError", "relay_code"): "code",
+    ("RelayError", "relay_message"): "message",
+    # ``numberedBullets`` is a WIRE KEY, not reference sloppiness: it round-trips
+    # through the POM dict verbatim (pom.py:345, 361, 371), so the oracle records
+    # it camelCase and converting it would be WRONG. php declares the property
+    # under the same wire spelling (`public bool $numberedBullets`) — only the
+    # enumerator's blanket camel_to_snake mangles it to `numbered_bullets`.
+    # Un-mangle it here. Measured fleet-wide: exactly FOUR camelCase members exist
+    # in the whole oracle (this one plus allOf/anyOf/oneOf, all JSON-Schema
+    # keywords), so this is a one-line-per-port rename, NOT a case-conversion
+    # mechanism worth building.
+    ("Section", "numbered_bullets"): "numberedBullets",
+    # The reference's ``**extra_swaig_fields`` var-keyword tail is materialized as
+    # a real public property here (php has no var-keyword), and php named it
+    # ``$extraFields``. Same value, same construction route (the ctor is the only
+    # route in EITHER language — ALLOWLIST_DISCIPLINE §14). A different spelling
+    # is a RENAME, so it keeps comparing.
+    ("SwaigFunction", "extra_fields"): "extra_swaig_fields",
 }
 
 
@@ -1444,6 +1536,202 @@ def _enrich_composition_attributes(modules: dict) -> None:
         entry["classes"][cls] = sorted(existing | candidate)
 
 
+# ---------------------------------------------------------------------------
+# GENERAL FOLD 1 — ORACLE-GATED PUBLIC-PROPERTY EMISSION (class B2).
+#
+# PHP exposes a caller-supplied construction value in one of two idioms:
+#   (a) a bare ``public`` typed property  (``public ?string $callId;``)
+#   (b) a ``getX()`` accessor over a private field
+#
+# The SURFACE parser only captures ``public function``, so idiom (a) is invisible
+# to it — while the SIGNATURE side sees it fine, because signature_dump.php
+# reflects ``getProperties(ReflectionProperty::IS_PUBLIC)`` and emits each public
+# property as a zero-arg member. That asymmetry is why 34 B2 symbols were recorded
+# by port_signatures.json and NOT by port_surface.json.
+#
+# This used to be handled by four HARDCODED ``_oracle_class_members(...)`` calls
+# (the three AI-Chat response records + RequestOptions) — i.e. a closed list of
+# classes whose fields were allowed to emit. Class B2 widened the reference oracle
+# SDK-wide, which made that closed list a STALE EXCLUSION: every other class's
+# public properties stayed unemitted. go shipped the identical shape
+# (``dataclassFieldModules``, a hardcoded 3-module list) and the fix there is the
+# fix here: DELETE the list and leave THE ORACLE AS THE SOLE GATE.
+#
+# The oracle cannot over-emit. A member emits only when ALL THREE hold:
+#   1. the reference records that name as a SURFACE member of that same class,
+#   2. this port's OWN signature oracle records that name on that same class
+#      (so we never invent surface PHP lacks — an absent member stays a real gap),
+#   3. the port already emits the class (a class the port lacks is SURFACE-DIFF's
+#      business, not a place to fabricate one — friction warning #2: a field fold
+#      COMPLETES a class the walker already found, it never ADDS one).
+#
+# Same-class only. No cross-class fold (ALLOWLIST_DISCIPLINE §0: a cross-class
+# fold is the permanent blind spot RULES.md §4 forbids).
+# ---------------------------------------------------------------------------
+def _oracle_surface_members() -> dict[tuple[str, str], set[str]]:
+    """(module, class) -> the reference oracle's own SURFACE member set."""
+    surf = _load_json(PSDK / "python_surface.json")
+    out: dict[tuple[str, str], set[str]] = {}
+    for mod, inv in surf.get("modules", {}).items():
+        for cls, members in inv.get("classes", {}).items():
+            if isinstance(members, list):
+                out[(mod, cls)] = set(members)
+    return out
+
+
+def _emit_oracle_gated_fields(modules: dict) -> None:
+    """Emit every public property the reference records on the SAME class and this
+    port's own signature oracle confirms. See the block comment above."""
+    ref = _oracle_surface_members()
+    if not ref:
+        return
+    port_members = _port_signature_members()
+    for (mod, cls), have in port_members.items():
+        want = ref.get((mod, cls))
+        if not want:
+            continue
+        entry = modules.get(mod)
+        if entry is None or cls not in entry["classes"]:
+            continue  # port does not emit the class -> a real gap, leave it
+        candidate = want & have
+        if not candidate:
+            continue
+        existing = set(entry["classes"][cls])
+        entry["classes"][cls] = sorted(existing | candidate)
+
+
+# ---------------------------------------------------------------------------
+# GENERAL FOLD 2 — ORACLE-GATED ACCESSOR FOLD (``get_<x>``/``is_<x>`` -> ``<x>``).
+#
+# The other half of the same B2 idiom: where PHP exposes a reference ATTRIBUTE
+# through an explicit getter over a private field, the getter IS the read-back —
+# a differently-named accessor for a reference attribute is a RENAME, which keeps
+# comparing, never an omission (AGENT_RULES §2 / ALLOWLIST_DISCIPLINE §7 row 1).
+#
+# This was previously three HAND-WRITTEN tables (``METHOD_ALIASES`` entries,
+# ``CLASS_METHOD_ALIASES``, and ``_relay_event_field_renames`` — the last of which
+# only covered ``signalwire.relay.event``). Hand lists do not track an oracle that
+# is still growing, so this derives the whole fold FROM the oracle instead:
+#
+#   fold ``get_<x>`` (or ``is_<x>``/``has_<x>``) on port class C to ``<x>``
+#   IFF the reference records ``<x>`` as a surface member of C
+#   AND the reference does NOT record that accessor spelling on C.
+#
+# The second condition is friction warning #3 in reverse: never eat an accessor
+# the reference records verbatim. ``AgentServer.get_agents`` is the live case —
+# the reference exposes BOTH a ``get_agents`` METHOD and an ``agents`` dict, so
+# folding would ORPHAN the reference method; the guard leaves it alone and
+# ``agents`` correctly stays a real gap.
+#
+# Getter AND setter both fold to the one field (a public attribute is read+write),
+# per §7 row 1 — but ONLY when the reference records the bare field, so a
+# ``set_<x>`` with no oracle field twin is untouched.
+#
+# Applied to the EMITTED tree, keyed by (emitted module, emitted class). This is
+# the invariant two ports paid for: a member table must be keyed by the name the
+# emitter will EMIT, or keyed by source name and looked up pre-alias — typescript
+# keyed ``classFields`` by the raw TS class name while the consuming pass iterated
+# the emitted tree, silently dropping every public field of an aliased class.
+# ---------------------------------------------------------------------------
+_ACCESSOR_PREFIXES = ("get_", "is_", "has_", "set_")
+
+
+def _oracle_accessor_fold() -> dict[tuple[str, str], dict[str, str]]:
+    """(module, class) -> {port accessor name: reference attribute name}, derived
+    entirely from the reference oracle's own per-class surface member set."""
+    ref = _oracle_surface_members()
+    out: dict[tuple[str, str], dict[str, str]] = {}
+    for key, members in ref.items():
+        renames: dict[str, str] = {}
+        for field in members:
+            if field.startswith("_"):
+                continue  # private / dunder — never a fold target
+            for prefix in _ACCESSOR_PREFIXES:
+                accessor = f"{prefix}{field}"
+                # Never eat an accessor spelling the reference records verbatim
+                # (friction warning #3 / the AgentServer.get_agents case).
+                if accessor in members:
+                    continue
+                renames[accessor] = field
+        if renames:
+            out[key] = renames
+    return out
+
+
+# Built once at import so BOTH enumerators fold in lockstep (the signature
+# enumerator imports this). A rename table present in one gate and absent from its
+# twin folds a name in one and reds it in the other — go shipped exactly that
+# (``FAQs``/``URLs`` in SIGNATURES but not SURFACE) and fixed it by SHARING the
+# table rather than duplicating it. Sharing is the fix; duplication is future drift.
+ORACLE_ACCESSOR_FOLD: dict[tuple[str, str], dict[str, str]] = _oracle_accessor_fold()
+
+
+def _fold_accessors(modules: dict) -> None:
+    """Rename each port accessor onto the reference attribute it reads, same class."""
+    if not ORACLE_ACCESSOR_FOLD:
+        return
+    for mod, entry in modules.items():
+        for cls in list(entry["classes"].keys()):
+            renames = ORACLE_ACCESSOR_FOLD.get((mod, cls))
+            if not renames:
+                continue
+            members = set(entry["classes"][cls])
+            folded = {renames.get(m, m) for m in members}
+            entry["classes"][cls] = sorted(folded)
+
+
+# ---------------------------------------------------------------------------
+# NATIVE-NAME SIDECAR (port_surface_native.json) — the fold->doc-drift fix.
+#
+# The accessor and field folds above change the ENUMERATED SURFACE: php's real,
+# compiling ``getBody()`` is recorded as the reference's ``body``. DOC-AUDIT
+# resolves doc/example symbol references against that enumerated surface, so a
+# CORRECT doc line — ``$message->getBody()``, which is exactly what a php
+# developer writes — stops resolving the moment the fold lands. Rewriting those
+# doc sites would be WRONG: ``$message->body()`` does not exist.
+#
+# The consumer half is already shared infrastructure: ``audit_docs.py
+# --native-names`` adds these names to the resolvable set VERBATIM, and
+# ``suites/_doc_audit.py`` passes the flag for any port that ships the file. Only
+# the PRODUCER was missing here (cpp, java, dotnet, go and ts each ship one).
+#
+# The names are recorded BEFORE any translation: raw php method names and raw
+# public property names, exactly as declared. Two caveats carried from cpp:
+#   1. A sidecar resolves FOLD IDIOM; it does NOT certify a doc. It is name-keyed,
+#      not class-scoped, so an unrelated class declaring the same name can let a
+#      genuinely stale doc resolve by coincidence. Verify a suspicious name's
+#      actual absence rather than trusting green.
+#   2. A RENAME is not fold idiom. If a doc names a method that exists under NO
+#      spelling, the sidecar cannot and must not paper over it — fix the doc.
+# ---------------------------------------------------------------------------
+_RE_NATIVE_METHOD = re.compile(
+    r"^\s*(?:abstract\s+)?public\s+(?:abstract\s+)?(?:static\s+)?function\s+(\w+)\s*\("
+)
+# ``public [readonly] [?]Type $name`` / ``public $name`` / promoted ctor params.
+_RE_NATIVE_PROPERTY = re.compile(
+    r"^\s*public\s+(?:readonly\s+)?(?:static\s+)?(?:[\w\\|?]+\s+)?\$(\w+)"
+)
+
+
+def build_native_names() -> dict:
+    """Every PUBLIC member name php actually declares, in php's own spelling."""
+    names: set[str] = set()
+    for path in _walk_source_files():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = _RE_NATIVE_METHOD.match(line)
+            if m:
+                names.add(m.group(1))
+                continue
+            m = _RE_NATIVE_PROPERTY.match(line)
+            if m:
+                names.add(m.group(1))
+    return {
+        "names": "php-native",
+        "generated_from": f"signalwire-php @ {_git_sha()}",
+        "native_names": sorted(names),
+    }
+
+
 def build_surface() -> dict:
     modules: dict[str, dict] = defaultdict(
         lambda: {"classes": defaultdict(list), "functions": []}
@@ -1588,8 +1876,24 @@ def build_surface() -> dict:
             # PORT_OMISSIONS.md rather than fabricated here. Everything else folds.
             "__init__", "chat", "close",
             "create_conversation", "delete", "end", "log", "summarize",
+            # ``url`` is a real ``public readonly string $url`` on the php class
+            # (AIChatClient.php:75) — the reference's ``self.url`` attribute
+            # (ai_chat/client.py:152). It was invisible only because this dict
+            # PINNED the member list and predates the class-B2 oracle widening.
+            "url",
         ],
-        "AIChatError": ["__init__"],
+        # AIChatError's ``code``/``message`` come from the reference's bare
+        # attributes. php CANNOT name its readers ``getCode``/``getMessage`` —
+        # ``\RuntimeException`` already declares ``getCode(): int`` (php cannot
+        # widen it to ``?int``) and ``getMessage(): string`` — so it names them
+        # ``getErrorCode``/``getServerMessage``. That is a RENAME, folded in
+        # CLASS_METHOD_ALIASES so it keeps comparing; it was previously hidden by
+        # this dict pinning the member list to ``["__init__"]`` back when the
+        # oracle did not record scalar state. Emit the oracle's own member set,
+        # gated on the port's signature oracle, exactly like the three records
+        # below. (cpp's AI-Chat projection carried the same stale "DROPPED
+        # url/code/message" pin — it is wrong fleet-wide now that B2 landed.)
+        "AIChatError": _oracle_class_members(_AICHAT_MODULE, "AIChatError"),
         "AuthenticationError": [],
         "ChatInProgressError": [],
         "ConversationNotFoundError": [],
@@ -1635,18 +1939,27 @@ def build_surface() -> dict:
         _ab.add("handle_request")
         modules[_ab_mod]["classes"]["AgentBase"] = sorted(_ab)
 
-    agent_base_methods = _lookup_class_methods("AgentBase")
-    swml_service_methods = _lookup_class_methods("SWMLService")
+    # The projection SOURCE sets are looked up under their php spellings, but the
+    # projection TARGETS are named in reference spelling (that is what a
+    # projection IS). So a member php exposes under an accessor name — e.g.
+    # `AgentBase::getAgent()` standing in for the reference's `PromptManager.agent`
+    # back-reference — must be matched under the FOLDED name, or the projection
+    # silently drops it. Fold each source set against the TARGET class's oracle
+    # rename map, not the source's: the target is the class whose reference member
+    # set defines the names being projected.
+    def _projection_source(class_name: str, target: tuple[str, str]) -> set[str]:
+        members = _lookup_class_methods(class_name)
+        renames = ORACLE_ACCESSOR_FOLD.get(target)
+        if not renames:
+            return members
+        return {renames.get(m, m) for m in members} | members
 
     for (target_mod, target_cls), (source_cls, expected) in MIXIN_PROJECTIONS.items():
-        primary = (
-            agent_base_methods if source_cls == "AgentBase"
-            else swml_service_methods
-        )
-        secondary = (
-            swml_service_methods if source_cls == "AgentBase"
-            else agent_base_methods
-        )
+        _target = (target_mod, target_cls)
+        _ab = _projection_source("AgentBase", _target)
+        _svc = _projection_source("SWMLService", _target)
+        primary = _ab if source_cls == "AgentBase" else _svc
+        secondary = _svc if source_cls == "AgentBase" else _ab
         # Try the configured primary source first, fall back to the
         # alternate base class. WebMixin's manual_set_proxy_url is a
         # typical case — Python projects it under the mixin while PHP
@@ -1671,7 +1984,22 @@ def build_surface() -> dict:
     _SWMLSERVICE_TOOL_REGISTRY_RELOCATED = {
         "define_tool", "register_swaig_function", "has_function",
         "get_function", "get_all_functions", "remove_function",
+        # ``getAgent()`` exists ONLY to satisfy the reference's
+        # ``ToolRegistry.agent`` / ``PromptManager.agent`` back-reference: php
+        # flattens both collaborators onto AgentBase / Service, so the
+        # back-reference is `$this`. It is the SAME capability the projection
+        # emits under the reference class — relocated, not net-new — so strip it
+        # from the source class's own set, exactly like the registry methods
+        # above. Left on both it would read as a phantom addition, which is what
+        # SURFACE-DIFF correctly reported the first time round.
+        "get_agent",
     }
+    # Same relocation on AgentBase (the PromptManager projection source).
+    _ab_entry = modules.get(_ab_mod)
+    if _ab_entry is not None and "AgentBase" in _ab_entry["classes"]:
+        _ab_entry["classes"]["AgentBase"] = sorted(
+            m for m in _ab_entry["classes"]["AgentBase"] if m != "get_agent"
+        )
     _swml_mod = "signalwire.core.swml_service"
     _swml_entry = modules.get(_swml_mod)
     if _swml_entry is not None and "SWMLService" in _swml_entry["classes"]:
@@ -1694,24 +2022,19 @@ def build_surface() -> dict:
     # signature oracle). See _enrich_composition_attributes above.
     _enrich_composition_attributes(modules)
 
-    # RequestOptions PRIMITIVE-field emit (wave-4 re-drift, 2026-07-24). The oracle
-    # now records RequestOptions' @dataclass fields — including the PRIMITIVE-typed
-    # ones (timeout/retries/retry_on_status/retry_backoff) that the comp-attr enrich
-    # above skips (it only projects CLASS-typed members). PHP declares each as a real
-    # public typed property (``public ?float $timeout;`` …), so the port's OWN
-    # signature oracle already records them; the method-only surface parser does not.
-    # EMIT the oracle's own RequestOptions field set, GATED on the port's signature
-    # oracle recording each member, so the surface reconciles EQUAL by construction and
-    # never invents surface PHP lacks (AGENT_RULES §2). abort_signal/merge are handled
-    # elsewhere (comp-attr enrich / parser); this union is idempotent.
-    _RO_MODULE = "signalwire.rest._request_options"
-    _ro_entry = modules.get(_RO_MODULE)
-    if _ro_entry is not None and "RequestOptions" in _ro_entry["classes"]:
-        _ro_oracle = set(_oracle_class_members(_RO_MODULE, "RequestOptions"))
-        _ro_have = _port_signature_members().get((_RO_MODULE, "RequestOptions"), set())
-        _ro_emit = _ro_oracle & _ro_have
-        _ro_existing = set(_ro_entry["classes"]["RequestOptions"])
-        _ro_entry["classes"]["RequestOptions"] = sorted(_ro_existing | _ro_emit)
+    # GENERAL FOLD 2 — oracle-gated accessor fold (get_<x>/is_<x>/set_<x> -> <x>).
+    # Runs BEFORE the field emit so a class that exposes the value BOTH ways
+    # (a getter and a public property) converges on the one reference field name
+    # instead of carrying both spellings. See _fold_accessors above.
+    _fold_accessors(modules)
+
+    # GENERAL FOLD 1 — oracle-gated public-property emission (class B2). Replaces the
+    # former hardcoded per-class ``_oracle_class_members`` field emits (RequestOptions
+    # and the three AI-Chat records); the ORACLE is now the sole gate, so a class the
+    # reference grows a field on emits it without editing a list here. Idempotent and
+    # unable to over-emit: it needs the reference AND this port's own signature oracle
+    # to agree on the name, on the same class. See _emit_oracle_gated_fields above.
+    _emit_oracle_gated_fields(modules)
 
     # Stable sort
     out_modules: dict = {}
@@ -1729,9 +2052,16 @@ def build_surface() -> dict:
     }
 
 
+_NATIVE_PATH = REPO_ROOT / "port_surface_native.json"
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default=str(REPO_ROOT / "port_surface.json"))
+    parser.add_argument(
+        "--native-output", default=str(_NATIVE_PATH),
+        help="Where to write the native-name sidecar DOC-AUDIT reads.",
+    )
     parser.add_argument(
         "--check",
         action="store_true",
@@ -1742,6 +2072,31 @@ def main(argv: list[str]) -> int:
     surface = build_surface()
     rendered = json.dumps(surface, indent=2, sort_keys=False) + "\n"
     out_path = Path(args.output)
+
+    # The native-name sidecar rides with the surface: it is derived from the SAME
+    # source walk, so emitting it here keeps the two consistent by construction and
+    # makes it impossible to fold an accessor without refreshing what DOC-AUDIT
+    # resolves against.
+    native_rendered = (
+        json.dumps(build_native_names(), indent=2, sort_keys=False) + "\n"
+    )
+    native_path = Path(args.native_output)
+
+    if args.check:
+        if not native_path.exists():
+            print(
+                f"enumerate_surface: {native_path} does not exist", file=sys.stderr
+            )
+            return 1
+        if native_path.read_text(encoding="utf-8") != native_rendered:
+            print(
+                f"enumerate_surface: {native_path} is out of date — "
+                "re-run without --check",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        native_path.write_text(native_rendered, encoding="utf-8")
 
     if args.check:
         if not out_path.exists():

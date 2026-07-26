@@ -19,6 +19,17 @@ class Call
     public ?string $callId;
     public ?string $nodeId;
     public ?string $tag;
+    /**
+     * The SignalWire project this call belongs to. The reference takes it as a
+     * required construction param, reading it off the event frame and falling
+     * back to the client's own project (relay/client.py:1064, 1149, 1203).
+     */
+    public ?string $projectId;
+    /**
+     * The call segment identifier. The reference reads it off the frame with an
+     * empty-string default (relay/client.py:1071).
+     */
+    public ?string $segmentId;
 
     // ── state ─────────────────────────────────────────────────────────
     public string $state = 'created';
@@ -61,6 +72,12 @@ class Call
         $this->callId    = self::asNullableString($params['call_id']   ?? null);
         $this->nodeId    = self::asNullableString($params['node_id']   ?? null);
         $this->tag       = self::asNullableString($params['tag']       ?? null);
+        // Both ride the wire frame. php previously never read either, so a
+        // caller could not tell which project or segment a call belonged to —
+        // the same defect cpp, java and go each carried (event frames carried
+        // the fields, the port read none).
+        $this->projectId = self::asNullableString($params['project_id'] ?? null);
+        $this->segmentId = self::asNullableString($params['segment_id'] ?? null);
         $this->device    = self::asStringKeyedArray($params['device']  ?? null);
         $this->peer      = self::asStringKeyedArray($params['peer']    ?? null);
         $this->context   = self::asNullableString($params['context']   ?? null);
@@ -1163,13 +1180,16 @@ class Call
         $nodeId = $this->nodeId ?? '';
 
         // Construct the action with the right signature.
+        // The owning Call — the reference's `Action.call` back-reference
+        // (relay/call.py:82). Supplied here, at the ONE construction site, so the
+        // action's identity can never disagree with its call.
         if ($actionClass === FaxAction::class) {
             $faxTypeRaw = $opts['fax_type'] ?? 'send';
             $faxType = is_string($faxTypeRaw) ? $faxTypeRaw : 'send';
-            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $faxType);
+            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $faxType, $this);
         } else {
             /** @psalm-suppress UnsafeInstantiation */
-            $action = new $actionClass($controlId, $callId, $nodeId, $this->client);
+            $action = new $actionClass($controlId, $callId, $nodeId, $this->client, $this);
         }
 
         // CollectAction is shared between calling.collect and

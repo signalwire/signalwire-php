@@ -408,10 +408,29 @@ class AgentBase extends Service implements AgentInterface
     /**
      * This agent's unique ID — the constructor's `agentId` or a generated
      * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     *
+     * PUBLIC, deliberately: the caller supplies `agentId` at construction, so
+     * the caller must be able to read it back. It was `protected`, which is the
+     * exact failure CONSTRUCTION-READBACK exists to catch — cpp made the same
+     * two members (`agent_id`, `token_expiry_secs`) protected purely to pass
+     * SURFACE-DIFF, and the consequence was that its callers could not read what
+     * Python callers can.
      */
-    protected function getAgentId(): string
+    public function getAgentId(): string
     {
         return $this->agentId;
+    }
+
+    /**
+     * This agent, for the reference's `PromptManager.agent` / `ToolRegistry.agent`
+     * back-reference. Python factors prompt handling and tool registration into
+     * collaborator objects that hold a reference BACK to the agent; php flattens
+     * both onto the agent itself, so the back-reference resolves to `$this` (the
+     * same resolution cpp used when it merged the manager into the agent).
+     */
+    public function getAgent(): self
+    {
+        return $this;
     }
 
     /**
@@ -1114,6 +1133,21 @@ class AgentBase extends Service implements AgentInterface
     {
         $this->nativeFunctions = $functions;
         return $this;
+    }
+
+    /**
+     * The native functions advertised to the platform. The reference records
+     * ``AgentBase.native_functions`` (the attribute) and
+     * ``AIConfigMixin.set_native_functions`` (the setter) as TWO DISTINCT
+     * members — so the setter does not stand in for the reader. php had only the
+     * setter, with the field ``protected``, so a caller could pass
+     * ``nativeFunctions`` at construction and never read it back.
+     *
+     * @return list<string>
+     */
+    public function getNativeFunctions(): array
+    {
+        return $this->nativeFunctions;
     }
 
     /**
