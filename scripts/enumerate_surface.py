@@ -1725,9 +1725,14 @@ def build_native_names() -> dict:
             m = _RE_NATIVE_PROPERTY.match(line)
             if m:
                 names.add(m.group(1))
+    # Deliberately NO provenance SHA. This file's ``--check`` mode is a BYTE
+    # comparison, so a commit-SHA stamp would stale it on every single commit
+    # (including commits that touch no php source) and CI would red on a file
+    # whose actual content — the name list — had not changed. port_surface.json can
+    # carry a stamp because SURFACE-FRESH compares semantically and ignores it;
+    # this file has no such check, so the stamp would be a self-inflicted red.
     return {
         "names": "php-native",
-        "generated_from": f"signalwire-php @ {_git_sha()}",
         "native_names": sorted(names),
     }
 

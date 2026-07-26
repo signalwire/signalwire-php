@@ -1,6 +1,5 @@
 {
   "names": "php-native",
-  "generated_from": "signalwire-php @ 5eb7ca2b07c34b4f89353d6b1ada16d9d6487743",
   "native_names": [
     "RestClient",
     "SWAIG",
