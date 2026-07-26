@@ -51,6 +51,16 @@ jobs:
 
       - name: Enumerate PHP public API surface
         working-directory: signalwire-php
+        # PORTING_SDK is set EXPLICITLY rather than left to directory adjacency.
+        # enumerate_surface.py ORACLE-GATES its field and accessor emission, so a
+        # resolution failure would not merely skip an enrich — it would emit a
+        # valid-looking snapshot with members missing. The checkouts above happen to
+        # be siblings today, which is why the adjacency walk works; declaring the
+        # path means a future layout change cannot silently degrade the snapshot.
+        # (dotnet lost ~300 members and go ~200 to exactly that, both behind reds
+        # that took a full investigation to attribute.)
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
         run: python3 scripts/enumerate_surface.py
 
       - name: Diff against Python reference
