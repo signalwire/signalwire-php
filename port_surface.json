@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ e0652751a1dae1ead54cf3d94c370e56d6824026",
+  "generated_from": "signalwire-php @ b56a107246a4049fd32268bdd5e6496defc1bfd7",
   "modules": {
     "signalwire": {
       "classes": {
@@ -870,6 +870,7 @@
           "as_router",
           "define_tools",
           "dispatch_from_globals",
+          "domain",
           "extract_sip_username",
           "full_validation_enabled",
           "get_basic_auth_credentials",
@@ -898,6 +899,9 @@
           "run",
           "schema_utils",
           "serve",
+          "ssl_cert_path",
+          "ssl_enabled",
+          "ssl_key_path",
           "stop",
           "validate_basic_auth"
         ]
@@ -1365,6 +1369,7 @@
         "Action": [
           "__init__",
           "call",
+          "completed",
           "control_id",
           "execute_subcommand",
           "get_call_id",
@@ -3676,6 +3681,7 @@
           "get_name",
           "get_parameter_schema",
           "register_tools",
+          "remove_xpaths",
           "setup",
           "supports_multiple_instances"
         ]

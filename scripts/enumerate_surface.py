@@ -829,9 +829,11 @@ CLASS_METHOD_ALIASES: dict[tuple[str, str], str] = {
     # (``self::extractRequestId($headers)``) and reads it back through
     # ``getRequestId()``. The reference records NO ``get_request_id`` spelling, so
     # the fold is clean: a differently-named accessor for a reference attribute is
-    # a RENAME, which keeps comparing, never an addition (AGENT_RULES §2). This is
-    # NOT reachable by the derived ORACLE_ACCESSOR_FOLD, which is keyed off
-    # python_surface.json — the ruling widened the SIGNATURE oracle only.
+    # a RENAME, which keeps comparing, never an addition (AGENT_RULES §2).
+    # Since porting-sdk 387667e the SURFACE oracle records ``request_id`` too, so
+    # the derived ORACLE_ACCESSOR_FOLD now covers this pair as well; the explicit
+    # entry is kept as a no-op belt-and-braces (it is also what the SIGNATURE
+    # enumerator imports) and is harmless if the derived fold is ever narrowed.
     ("SignalWireRestError", "get_request_id"): "request_id",
 }
 
