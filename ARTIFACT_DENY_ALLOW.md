@@ -30,6 +30,7 @@ root, so it must stay tracked.
 - port_signatures.json — audit contract; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - port_signatures.baseline.json — porting release-floor snapshot read by scripts/run-ci.sh SEMVER-DIFF and porting-sdk semver_diff.py; audit-pipeline artifact, not shipped library code (orchestrator, 2026-07-14)
 - port_surface.json — audit contract; export-ignore in .gitattributes (orchestrator, 2026-07-06)
+- port_surface_native.json — audit contract (the native-name sidecar audit_docs.py --native-names reads; same class as port_surface.json); export-ignore in .gitattributes (b2-php lane, 2026-07-26)
 - examples/RelayAuditHarness.php — in-repo audit tooling; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - examples/RestAuditHarness.php — in-repo audit tooling; export-ignore in .gitattributes (orchestrator, 2026-07-06)
 - examples/SkillsAuditHarness.php — in-repo audit tooling; export-ignore in .gitattributes (orchestrator, 2026-07-06)

@@ -103,6 +103,18 @@ class ConfigLoader
     }
 
     /**
+     * The candidate config paths this loader searches, as supplied at
+     * construction (or the defaults when the caller passed none). The reference
+     * exposes it as a plain ``self.config_paths`` attribute.
+     *
+     * @return list<string>
+     */
+    public function getConfigPaths(): array
+    {
+        return $this->configPaths;
+    }
+
+    /**
      * The raw (pre-substitution) configuration array.
      *
      * @return array<string, mixed>

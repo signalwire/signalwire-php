@@ -24,6 +24,14 @@ class Message
     protected array $media;
     /** @var list<string> */
     protected array $tags;
+    /**
+     * How many SMS segments the message was split into. The reference reads it
+     * off the wire params with a 0 default (relay/message.py:53, 65); php
+     * previously dropped it, so a caller could not tell a multi-segment message
+     * from a single one — the same class of defect cpp found with
+     * ``Message.context``/``segments``.
+     */
+    protected int $segments = 0;
     protected ?string $state = null;
     protected ?string $reason = null;
     protected bool $completed = false;
@@ -55,6 +63,10 @@ class Message
         $this->body = self::asNullableString($params['body'] ?? null);
         $this->media = self::asStringList($params['media'] ?? null);
         $this->tags = self::asStringList($params['tags'] ?? null);
+        $segments = $params['segments'] ?? null;
+        $this->segments = is_int($segments)
+            ? $segments
+            : (is_string($segments) && ctype_digit($segments) ? (int) $segments : 0);
         $this->state = self::asNullableString($params['state'] ?? null);
         $this->reason = self::asNullableString($params['reason'] ?? null);
     }
@@ -258,6 +270,12 @@ class Message
     public function getTags(): array
     {
         return $this->tags;
+    }
+
+    /** How many SMS segments the message was split into (0 when unreported). */
+    public function getSegments(): int
+    {
+        return $this->segments;
     }
 
     /** The state. */

@@ -70,8 +70,15 @@ class AgentServer
                 ? (int) $envPort
                 : 3000;
         }
-        $this->logLevel = $logLevel;
+        // The reference NORMALIZES the level to lower case (agent_server.py:63)
+        // and then hands it to the serving runtime (:716, :721). php previously
+        // stored the raw string and never applied it, so `new AgentServer(logLevel:
+        // 'debug')` had no effect on anything the server logged.
+        $this->logLevel = strtolower($logLevel);
         $this->logger   = Logger::getLogger('agent_server');
+        // Applied to THIS server's own logger only — never to global logging
+        // configuration, which the state/wire dump binaries deliberately silence.
+        $this->logger->setLevel($this->logLevel);
     }
 
     // ======================================================================
@@ -627,6 +634,12 @@ class AgentServer
     public function getPort(): int
     {
         return $this->port;
+    }
+
+    /** The configured logging level, normalized to lower case. */
+    public function getLogLevel(): string
+    {
+        return $this->logLevel;
     }
 
     // ======================================================================

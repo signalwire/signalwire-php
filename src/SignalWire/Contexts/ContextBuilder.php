@@ -90,6 +90,49 @@ class GatherQuestion
         return $this->key;
     }
 
+    /** The question text asked of the caller. */
+    public function getQuestion(): string
+    {
+        return $this->question;
+    }
+
+    /** The JSON-schema type expected for the answer. */
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    /** Whether the model must confirm the answer before moving on. */
+    public function getConfirm(): bool
+    {
+        return $this->confirm;
+    }
+
+    /** Extra instruction text appended after the question, or null. */
+    public function getPrompt(): ?string
+    {
+        return $this->prompt;
+    }
+
+    /**
+     * The functions unlocked while this question is asked, or null.
+     *
+     * @return list<string>|null
+     */
+    public function getFunctions(): ?array
+    {
+        return $this->functions;
+    }
+
+    /**
+     * This question's override of the gather's isolated setting; null inherits
+     * the gather default (the reference's tri-state ``isolated``).
+     */
+    public function getIsolated(): ?bool
+    {
+        return $this->isolated;
+    }
+
     /**
      * @return array<string, mixed>
      */

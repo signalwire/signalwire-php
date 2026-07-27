@@ -298,4 +298,25 @@ class ConciergeAgent extends AgentBase
     {
         return $this->amenities;
     }
+
+    /**
+     * The per-label opening hours, keyed by day/label exactly as the caller
+     * supplied them (the reference's ``hours_of_operation: dict[str, str]``).
+     *
+     * @return array<string, string>
+     */
+    public function getHoursOfOperation(): array
+    {
+        return $this->hoursOfOperation;
+    }
+
+    /**
+     * The caller-supplied special instructions.
+     *
+     * @return list<string>
+     */
+    public function getSpecialInstructions(): array
+    {
+        return $this->specialInstructions;
+    }
 }

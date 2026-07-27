@@ -29,16 +29,17 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 PORT_ROOT = HERE.parent
-PSDK = (PORT_ROOT.parent / "porting-sdk").resolve()
-if not PSDK.is_dir():
-    raise SystemExit(
-        f"porting-sdk not found adjacent to this repo (looked for {PSDK}); "
-        "clone signalwire/porting-sdk as a sibling of this port repo."
-    )
 
 sys.path.insert(0, str(HERE))
+# PSDK is resolved by the SURFACE enumerator's multi-layout, fail-loud resolver and
+# IMPORTED here rather than re-derived. A resolver duplicated across the two
+# enumerators is guaranteed future drift (go shipped a rename table in one gate and
+# not its twin, so a name folded in one and reddened in the other); sharing is the
+# fix. Same reason CLASS_METHOD_ALIASES / ORACLE_ACCESSOR_FOLD are imported below.
 from enumerate_surface import (  # type: ignore
-    CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES,
+    PSDK,
+    CLASS_MODULE_MAP, MIXIN_PROJECTIONS, METHOD_ALIASES, CLASS_METHOD_ALIASES,
+    ORACLE_ACCESSOR_FOLD,
     camel_to_snake, _module_path_for_class, _translate_class,
     _TYPES_SUB_TO_MODULE, _TYPES_RESERVED_UNRENAME,
     _SWML_VERBS_MODULE, _RELAY_PROTO_MODULE,
@@ -518,8 +519,13 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 # oracle signature (AGENT_RULES §2; mirrors the .NET splice + the REST §5 unfold).
 #
 # Keyed: canonical_class -> {canonical_method -> full signature dict}. When a class
-# appears here, its enumerated methods_out is REPLACED by exactly this map (so the
-# spurious ``url`` property-method is dropped and ``close`` is present). __init__
+# appears here, its enumerated methods_out is REPLACED by exactly this map, so every
+# member the reference records must be PRESENT here or it silently vanishes from the
+# port's surface. (Corrected 2026-07-26: this comment used to say the ``url``
+# property-method was "spurious" and dropped. That was true only while the oracle did
+# not enumerate scalar instance state; class B2 made it FALSE, and the drop was hiding
+# a real reader — ``url``, ``AIChatError.code``, ``AIChatError.message``. cpp's AI-Chat
+# projection carried the identical stale rationale.) ``close`` is present. __init__
 # folds to the oracle's four params (project/token/space/url) verbatim: the PHP
 # ctor's trailing optional convenience knob ``readIdleTimeoutSeconds`` (byte-idle
 # read timeout; the reference's async DI ``session`` seam has no PHP counterpart)
@@ -596,6 +602,14 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "string",
         },
+        # The resolved endpoint URL. php declares it ``public readonly string
+        # $url`` (AIChatClient.php:75) — the reference's ``self.url`` attribute
+        # (ai_chat/client.py:152), which the oracle records as a zero-arg accessor.
+        # The block comment above still says this property-method is "spurious" and
+        # gets DROPPED: that rationale predates class B2 and is now WRONG (cpp's
+        # AI-Chat projection carried the identical stale note). A caller supplies
+        # ``url`` at construction, so it must be readable back.
+        "url": {"params": [{"name": "self", "kind": "self"}], "returns": "any"},
     },
     "AIChatError": {
         "__init__": {
@@ -606,7 +620,22 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        # The reference's public ``self.code`` / ``self.message`` attributes
+        # (ai_chat/client.py:67-68), recorded by the oracle as zero-arg accessors.
+        # php exposes them as ``getErrorCode()`` / ``getServerMessage()`` — it
+        # CANNOT reuse the reference names because ``\RuntimeException`` already
+        # declares ``getCode(): int`` (unwidenable to the reference's ``int|None``)
+        # and ``getMessage(): string``. Spliced here to the oracle's own shape,
+        # with the rename recorded in CLASS_METHOD_ALIASES so both gates agree.
+        "code": {"params": [{"name": "self", "kind": "self"}], "returns": "any"},
+        "message": {"params": [{"name": "self", "kind": "self"}], "returns": "any"},
     },
+    # The three response records now carry their @dataclass PUBLIC FIELDS on the
+    # oracle (wave-4 re-drift): each field is recorded as a zero-arg ``(self) ->
+    # <type>`` accessor. PHP exposes each as a constructor-promoted ``public
+    # readonly`` property carrying the SAME data; splice the field members here so
+    # the SIGNATURE gate reconciles EQUAL (parallel to the surface field emit in
+    # enumerate_surface.py). Field types mirror the oracle exactly.
     "ConversationInfo": {
         "__init__": {
             "params": [
@@ -617,6 +646,9 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        "id": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "status": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "initial_message": {"params": [{"name": "self", "kind": "self"}], "returns": "optional<string>"},
     },
     "ChatResponse": {
         "__init__": {
@@ -628,6 +660,9 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        "text": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "conversation_id": {"params": [{"name": "self", "kind": "self"}], "returns": "string"},
+        "user_event": {"params": [{"name": "self", "kind": "self"}], "returns": "optional<dict<string,any>>"},
     },
     "ChatLog": {
         "__init__": {
@@ -638,6 +673,8 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        "messages": {"params": [{"name": "self", "kind": "self"}], "returns": "list<dict<string,any>>"},
+        "call_timeline": {"params": [{"name": "self", "kind": "self"}], "returns": "list<dict<string,any>>"},
     },
     # NOTE: the five code-mapped error subclasses (AuthenticationError/
     # ChatInProgressError/ConversationNotFoundError/RateLimitError/SummaryError)
@@ -733,11 +770,366 @@ PROPERTY_TYPE_REMAPS: dict[tuple[str, str], str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Construction contract (porting-sdk ALLOWLIST_DISCIPLINE.md §10)
+# ---------------------------------------------------------------------------
+
+# A construction param whose PHP spelling genuinely differs from the reference's.
+# ADAPTER_CONTRACT rule 3: names are canonicalized to the reference spelling AT
+# ADAPTER TIME, and a genuine rename is a RENAME-table entry — never an omission.
+# Keyed by canonical "module.Class" (or ``None`` for the class-agnostic default),
+# mapping the PHP-side canonical (already snake_case) name -> reference name.
+#
+# ``basic_auth_user`` / ``basic_auth_password``: the reference takes a single
+# ``basic_auth: optional<tuple<string,string>>``. PHP has no tuple type, so the
+# pair is expressed as two nullable strings — the same §7 typed-split row java
+# has. Fold BOTH onto ``basic_auth`` so the capability compares present rather
+# than reading as one missing param plus two extras. (First-listed wins; the
+# password half is dropped as a duplicate of the same reference configurable.)
+_CONSTRUCTION_PARAM_RENAMES: dict[str | None, dict[str, str]] = {
+    None: {
+        "basic_auth_user": "basic_auth",
+        "basic_auth_password": "basic_auth",
+    },
+    # src/SignalWire/REST/HttpClient.php:62 — same two configurables, PHP spelling.
+    # ``$projectId`` is the SignalWire project id (reference ``project``) and
+    # ``$baseUrl`` is the API host the client talks to (reference ``host``).
+    "signalwire.rest._base.HttpClient": {
+        "project_id": "project",
+        "base_url": "host",
+    },
+}
+
+# The reference type for a param the rename table folds into a different shape
+# than PHP's own reflected type (the typed-split above): PHP's ``?string`` halves
+# reconstruct the reference's 2-tuple, so record the reference's type for the
+# folded name rather than the half's.
+_CONSTRUCTION_FOLDED_TYPE: dict[str, str] = {
+    "basic_auth": "optional<tuple<string,string>>",
+}
+
+# Classes whose PHP constructor takes an untyped ``array $options`` / ``array
+# $params`` bag. The bag KEYS are the real named configurables — that is PHP's
+# options-object idiom — but reflection sees only ``array``, so the key set
+# cannot be recovered mechanically. Declare it here, read off the constructor
+# body, so the contract compares the actual capability instead of one opaque
+# ``options`` param. Keyed by canonical "module.Class".
+_OPTIONS_BAG_CONSTRUCTS: dict[str, dict[str, dict]] = {
+    # The two MIXIN_PROJECTIONS targets that have no PHP class of their own:
+    # Python extracted PromptManager/ToolRegistry out of AgentBase and constructs
+    # each FROM the agent (``PromptManager(agent)``), while PHP keeps the same
+    # capability on AgentBase and the enumerator projects the methods across
+    # (see MIXIN_PROJECTIONS). Their construction contract is therefore that
+    # same single ``agent`` handle — declared here so the projection is in
+    # LOCKSTEP on the construction node too, not silently missing.
+    "signalwire.core.agent.prompt.manager.PromptManager": {
+        "agent": {"type": "class:signalwire.core.agent_base.AgentBase",
+                  "required": True},
+    },
+    "signalwire.core.agent.tools.registry.ToolRegistry": {
+        "agent": {"type": "class:signalwire.core.agent_base.AgentBase",
+                  "required": True},
+    },
+    # src/SignalWire/Relay/Client.php::__construct — $options['<key>'] reads.
+    "signalwire.relay.client.RelayClient": {
+        "project": {"type": "optional<string>", "required": False},
+        "token": {"type": "optional<string>", "required": False},
+        "contexts": {"type": "optional<list<string>>", "required": False},
+        "jwt_token": {"type": "optional<string>", "required": False},
+        "host": {"type": "optional<string>", "required": False},
+    },
+    # src/SignalWire/Pom/Section.php::__construct(?string $title, array $params)
+    # — the reference's four keyword-only params (body/bullets/numbered/
+    # numberedBullets) are $params['<key>'] reads; $title stays a real param.
+    "signalwire.pom.pom.Section": {
+        "title": {"type": "optional<string>", "required": False},
+        "body": {"type": "string", "required": False},
+        "bullets": {"type": "optional<list<string>>", "required": False},
+        "numbered": {"type": "optional<bool>", "required": False},
+        "numberedBullets": {"type": "bool", "required": False},
+    },
+    # src/SignalWire/Relay/Message.php::__construct — $params['<key>'] reads.
+    # ``id``/``from``/``to`` are accepted as wire-payload aliases of
+    # message_id/from_number/to_number; the canonical spelling is recorded.
+    "signalwire.relay.message.Message": {
+        "message_id": {"type": "string", "required": False},
+        "context": {"type": "string", "required": False},
+        "direction": {"type": "string", "required": False},
+        "from_number": {"type": "string", "required": False},
+        "to_number": {"type": "string", "required": False},
+        "body": {"type": "string", "required": False},
+        "media": {"type": "optional<list<string>>", "required": False},
+        "tags": {"type": "optional<list<string>>", "required": False},
+        "state": {"type": "string", "required": False},
+        "reason": {"type": "string", "required": False},
+    },
+}
+
+# ``**kwargs``-forwarding subclasses (ALLOWLIST_DISCIPLINE.md §11, idiom-completion).
+#
+# The reference's prefab/derived agents declare only their OWN new params and then
+# forward everything else to the base:
+#
+#     def __init__(self, venue_name, ..., name="concierge", route="/concierge",
+#                  **kwargs):                       # prefabs/concierge.py:45-55
+#         super().__init__(name=name, route=route, use_pom=True, **kwargs)
+#
+# So `host`, `port`, `basic_auth`, `auto_answer`, `record_call`, `use_pom`, … ARE
+# configurable on the reference's ConciergeAgent — the oracle simply cannot expand
+# `**kwargs`, so it records none of them. PHP has no `**kwargs`: the only way to
+# offer the same capability is to RE-DECLARE the base params explicitly and pass
+# them up. That is the idiomatic completion of the same contract member, not port-only
+# surface, so those params are attributed to the BASE's construction entry (where they
+# are already compared) rather than read as extras on the subclass.
+#
+# Keyed by canonical "module.Class" -> the canonical base whose construction contract
+# absorbs the forwarded params. Verified against the reference source: every entry's
+# reference twin ends its ``__init__`` with ``super().__init__(..., **kwargs)``.
+_KWARGS_FORWARDING_BASE: dict[str, str] = {
+    "signalwire.agents.bedrock.BedrockAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.concierge.ConciergeAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.faq_bot.FAQBotAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.info_gatherer.InfoGathererAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.receptionist.ReceptionistAgent": "signalwire.core.agent_base.AgentBase",
+    "signalwire.prefabs.survey.SurveyAgent": "signalwire.core.agent_base.AgentBase",
+}
+
+def _load_reference_construction() -> dict:
+    """The reference's ``construction`` node — the ONLY authority on whether the
+    oracle flattened a base class's params into a subclass.
+
+    Raises rather than defaulting: a missing node would silently turn every
+    oracle-gated decision below into a guess, and a wrong guess here fabricates
+    or deletes contract params. Fail loud instead.
+    """
+    path = PSDK / "python_signatures.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    node = data.get("construction")
+    if not node:
+        raise RuntimeError(
+            f"{path} has no `construction` node — cannot decide per class whether "
+            f"the reference flattens a base's params into its subclass. Refusing "
+            f"to guess (ALLOWLIST_DISCIPLINE.md §10)."
+        )
+    return node
+
+
+def _oracle_flattens(ref_construction: dict, cls_key: str, base_key: str) -> set[str]:
+    """Return the base params the ORACLE records on ``cls_key`` itself.
+
+    This is the split the ruby lane proved cannot be assumed, because the
+    reference has TWO subclass shapes and the oracle records them differently:
+
+      * ``@dataclass``-style — Python flattens the base's fields into the
+        generated ``__init__`` and the oracle records ALL of them (php's Action
+        subclasses: the oracle records ``call`` + ``control_id`` on AIAction even
+        though its Python ``__init__`` adds only ``control_id``). The port's
+        inherited-ctor params are contract here — FOLD IN.
+      * ``**kwargs``-forwarding — the reference ALSO calls ``super().__init__``,
+        but the oracle records ONLY the child's own params (the 6 agent
+        subclasses record just ``name``/``route`` of AgentBase's 22). The port's
+        re-declared base params belong to the BASE's entry — DO NOT fold in;
+        folding there fabricates ~20 bogus extras per subclass.
+
+    Only the oracle can answer it: the split lives in the REFERENCE's shapes, not
+    in anything observable from PHP. Fails loud if either class is unknown to the
+    reference, rather than silently choosing a direction.
+    """
+    if cls_key not in ref_construction:
+        raise RuntimeError(
+            f"construction: {cls_key} is not in the reference construction node; "
+            f"cannot determine whether the oracle flattens {base_key} into it."
+        )
+    if base_key not in ref_construction:
+        raise RuntimeError(
+            f"construction: base {base_key} is not in the reference construction "
+            f"node; cannot compute its overlap with {cls_key}."
+        )
+    return set(ref_construction[cls_key]["params"]) & set(
+        ref_construction[base_key]["params"]
+    )
+
+# Classes whose constructor mixes REAL named params with an untyped bag carrying
+# the rest. Unlike _OPTIONS_BAG_CONSTRUCTS (which REPLACES the reflected set), these
+# entries MERGE: the reflected named params stay, the bag's opaque ``array`` param is
+# dropped, and its keys are added. Keyed by canonical "module.Class" ->
+# (reflected param name to drop, {key: spec}).
+_PARTIAL_BAG_CONSTRUCTS: dict[str, tuple[str, dict[str, dict]]] = {
+    # src/SignalWire/Prefabs/ConciergeAgent.php:41 — ``array $venueInfo`` carries
+    # exactly the reference's six venue params as $venueInfo['<key>'] reads
+    # (lines 53-104); name/route/host/... stay real named params.
+    "signalwire.prefabs.concierge.ConciergeAgent": ("venue_info", {
+        "venue_name": {"type": "string", "required": True},
+        "services": {"type": "list<string>", "required": True},
+        "amenities": {"type": "dict<string,dict<string,string>>", "required": True},
+        "hours_of_operation": {"type": "optional<dict<string,string>>", "required": False},
+        "special_instructions": {"type": "optional<list<string>>", "required": False},
+        "welcome_message": {"type": "optional<string>", "required": False},
+    }),
+}
+
+# Constructor params that are PLUMBING, not configurable capability: a handle the
+# SDK itself threads in when it builds the object (the owning client, the HTTP
+# transport, the parent call's ids). They are not something a user configures, so
+# they are not part of the construction contract in any port.
+_CONSTRUCTION_NON_PARAMS = frozenset({"self", "cls"})
+
+
+def build_construction(
+    ctor_params: dict[str, list[dict]],
+    php_to_canonical: dict[str, str],
+    php_parents: dict[str, list[str]],
+) -> dict:
+    """Return ``{"module.Class": {"params": {name: {type, required}}}}``.
+
+    A NAME-KEYED, unordered SET of configurable construction parameters — see
+    porting-sdk ALLOWLIST_DISCIPLINE.md §10. Order, arity, and mechanism are
+    idiom; the named set is the capability. This is why the node exists
+    separately from ``modules``: ``compare_param`` matches BY POSITION and
+    ignores names, which is meaningless against a 22-param kwargs constructor,
+    so one blanket ``__init__`` omission used to hide every parameter at once.
+
+    Three sources, in precedence order:
+
+      1. ``_OPTIONS_BAG_CONSTRUCTS`` — the class's ctor takes an untyped
+         ``array $options``; the bag's keys are the configurables and cannot be
+         reflected, so they are declared.
+      2. the class's OWN ``__construct`` params (PHP 8 named arguments ARE the
+         named set — no builder needed).
+      3. the nearest ANCESTOR that declares a ``__construct``, because a PHP
+         subclass with no constructor of its own inherits the parent's, and a
+         caller genuinely configures it through those same names.
+
+    Names are canonicalized to the reference spelling via
+    ``_CONSTRUCTION_PARAM_RENAMES`` (ADAPTER_CONTRACT rule 3). ``required``
+    mirrors the PHP signature and is compared as contract: a port that makes a
+    defaulted reference param required breaks a valid reference program, and one
+    that defaults a required param silently accepts an under-specified
+    construction.
+    """
+    out: dict = {}
+
+    def _params_from(raw_params: list[dict], cls_key: str) -> dict:
+        renames = dict(_CONSTRUCTION_PARAM_RENAMES.get(None, {}))
+        renames.update(_CONSTRUCTION_PARAM_RENAMES.get(cls_key, {}))
+        params: dict = {}
+        for p in raw_params:
+            if not isinstance(p, dict):
+                continue
+            if (p.get("kind") or "positional") in _CONSTRUCTION_NON_PARAMS:
+                continue
+            if p.get("kind") in ("var_keyword", "var_positional"):
+                continue
+            name = p.get("name")
+            if not name or name.startswith("_"):
+                continue
+            name = renames.get(name, name)
+            if name in params:
+                # A typed-split fold (two PHP params -> one reference param):
+                # the halves describe one configurable, so keep the first.
+                continue
+            params[name] = {
+                "type": _CONSTRUCTION_FOLDED_TYPE.get(name, p.get("type", "any")),
+                "required": bool(p.get("required", True)),
+            }
+        return params
+
+    # Short name -> the FQNs declaring it, for resolving the short-named parent
+    # chain signature_dump.php emits.
+    by_short: dict[str, list[str]] = {}
+    for fqn in php_to_canonical:
+        by_short.setdefault(fqn.rsplit("\\", 1)[-1], []).append(fqn)
+
+    def _resolve_parent(child_fqn: str, parent_short: str) -> str | None:
+        """Resolve a short-named parent to its FQN.
+
+        Same-namespace first (PHP resolves an unqualified extends against the
+        current namespace), then a globally unique match. An ambiguous
+        cross-namespace short name resolves to nothing rather than guessing —
+        the generated REST Types tree repeats ~300 class names, and picking one
+        arbitrarily would attach the wrong constructor.
+        """
+        candidates = by_short.get(parent_short, [])
+        if len(candidates) == 1:
+            return candidates[0]
+        ns = child_fqn.rsplit("\\", 1)[0] if "\\" in child_fqn else ""
+        same_ns = [c for c in candidates if c.rsplit("\\", 1)[0] == ns]
+        return same_ns[0] if len(same_ns) == 1 else None
+
+    def _inherited_key(php_fqn: str) -> str | None:
+        """Nearest ancestor that declares its own constructor, canonically keyed."""
+        for parent_short in php_parents.get(php_fqn, []):
+            parent_fqn = _resolve_parent(php_fqn, parent_short)
+            if parent_fqn is None:
+                continue
+            pk = php_to_canonical.get(parent_fqn)
+            if pk and pk in ctor_params:
+                return pk
+        return None
+
+    # Declared bags first — some (the projection targets) have no PHP class of
+    # their own, so they are not reachable from php_to_canonical.
+    for cls_key, bag in _OPTIONS_BAG_CONSTRUCTS.items():
+        out[cls_key] = {"params": {k: dict(v) for k, v in sorted(bag.items())}}
+
+    for php_name, cls_key in php_to_canonical.items():
+        if cls_key in _OPTIONS_BAG_CONSTRUCTS:
+            continue
+        raw = ctor_params.get(cls_key)
+        if raw is None:
+            inherited = _inherited_key(php_name)
+            if inherited is None:
+                continue
+            raw = ctor_params[inherited]
+        params = _params_from(raw, cls_key)
+        partial = _PARTIAL_BAG_CONSTRUCTS.get(cls_key)
+        if partial is not None:
+            drop_name, bag_keys = partial
+            params.pop(drop_name, None)
+            for k, v in bag_keys.items():
+                params.setdefault(k, dict(v))
+        if params:
+            out[cls_key] = {"params": dict(sorted(params.items()))}
+
+    # §11 idiom-completion fold, ORACLE-GATED: a ``**kwargs``-forwarding
+    # subclass's re-declared base params belong to the BASE's construction entry,
+    # where they are already compared. Which base params the subclass KEEPS is not
+    # assumed — it is read from the reference construction node per class, because
+    # only the oracle knows whether the reference flattened the base into this
+    # subclass (see _oracle_flattens). Applied after the main pass so the base
+    # entry is populated.
+    ref_construction = _load_reference_construction()
+    for cls_key, base_key in _KWARGS_FORWARDING_BASE.items():
+        entry = out.get(cls_key)
+        base = out.get(base_key)
+        if not entry or not base:
+            continue
+        keep = _oracle_flattens(ref_construction, cls_key, base_key)
+        base_names = set(base["params"])
+        entry["params"] = {
+            n: v for n, v in entry["params"].items()
+            if n not in base_names or n in keep
+        }
+
+    return dict(sorted(out.items()))
+
+
 def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None = None) -> tuple[dict, list]:
     if rest_sidecar is None:
         rest_sidecar = {}
     out_modules: dict = {}
     failures: list = []
+    # Construction-contract bookkeeping (ALLOWLIST_DISCIPLINE.md §10). Filled as
+    # classes are processed, consumed by build_construction() at the end:
+    #   ctor_params  canonical "module.Class" -> the class's OWN __init__ params
+    #                (captured HERE, before the mixin projection can move or pop
+    #                __init__ off AgentBase — see build_construction docstring)
+    #   class_parents  canonical "module.Class" -> [canonical parent, ...], so a
+    #                subclass that declares no __construct inherits the parent's
+    #                construction parameters, which is exactly PHP's semantics.
+    ctor_params: dict[str, list[dict]] = {}
+    php_to_canonical: dict[str, str] = {}
+    php_parents: dict[str, list[str]] = {}
 
     for type_entry in raw.get("types", []):
         ns = type_entry.get("namespace", "")
@@ -846,6 +1238,11 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             else:
                 snake = camel_to_snake(native)
                 method_canonical = METHOD_ALIASES.get(snake, snake)
+                # Class-scoped accessor rename (getter -> reference attribute
+                # name), scoped to the declaring PHP class. Mirrors the surface
+                # enumerator's CLASS_METHOD_ALIASES so both gates rename in lockstep.
+                method_canonical = CLASS_METHOD_ALIASES.get(
+                    (php_name, method_canonical), method_canonical)
 
             ff_key = (full_php, native)
             if ff_key in FREE_FUNCTION_PROJECTIONS:
@@ -957,6 +1354,13 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
                 else:
                     snake = camel_to_snake(pname)
                 method_canonical = METHOD_ALIASES.get(snake, snake)
+                # Class-scoped rename, same table the METHOD path uses. A public
+                # PROPERTY is a reader too, so a property whose php spelling was
+                # forced off the reference name (RelayError::$relayCode, because
+                # \Throwable already declares getCode()) folds onto the reference
+                # attribute here — a rename keeps comparing (AGENT_RULES §2).
+                method_canonical = CLASS_METHOD_ALIASES.get(
+                    (php_name, method_canonical), method_canonical)
                 if method_canonical in methods_out:
                     continue
                 ctx = f"{mod}.{canonical_name}.{method_canonical}"
@@ -1052,6 +1456,26 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             "methods": dict(sorted(methods_out.items())),
         }
 
+        # Construction contract: remember this class's OWN constructor params and
+        # its inheritance edge, keyed canonically. Recorded here (not re-derived
+        # from out_modules later) because the mixin projection below both POPS
+        # AgentBase's __init__ and re-hosts it on PromptManager.
+        canonical_key = f"{mod}.{canonical_name}"
+        # Keyed by PHP FQN — a SHORT name is ambiguous (the generated REST Types
+        # tree repeats ~300 names across the per-namespace subtrees). ``parents``
+        # from signature_dump.php are short names, so build_construction resolves
+        # them namespace-first (see _resolve_parent).
+        php_to_canonical[full_php] = canonical_key
+        php_parents[full_php] = [
+            p for p in (type_entry.get("parents") or []) if isinstance(p, str)
+        ]
+        own_init = next(
+            (m for m in type_entry.get("methods", []) if m.get("name") == "__construct"),
+            None,
+        )
+        if own_init is not None and "__init__" in methods_out:
+            ctor_params[canonical_key] = methods_out["__init__"].get("params", [])
+
     # Free functions declared in SignalWire\* namespaces (e.g.
     # SignalWire\Contexts\create_simple_context). Map them onto
     # canonical Python module paths just like classes.
@@ -1102,9 +1526,28 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
 
     if ab_methods or sm_methods:
         projected_ab: set[str] = set()
+        # A projection SOURCE is looked up under its php spelling but the TARGET
+        # names are reference spellings, so a member php exposes via an accessor
+        # (AgentBase::getAgent standing in for PromptManager.agent) must be
+        # matched under the FOLDED name or the projection silently drops it.
+        # Keyed by the TARGET class, whose reference member set defines the names.
+        # Mirrors the surface enumerator's ``_projection_source``.
+        def _fold_source(src: dict, target: tuple[str, str]) -> dict:
+            renames = ORACLE_ACCESSOR_FOLD.get(target)
+            if not renames:
+                return src
+            out = dict(src)
+            for acc, field in renames.items():
+                if acc in src and field not in out:
+                    out[field] = src[acc]
+            return out
+
         for (target_mod, target_cls), (source_cls, expected) in MIXIN_PROJECTIONS.items():
-            primary = sm_methods if source_cls == "SWMLService" else ab_methods
-            secondary = ab_methods if source_cls == "SWMLService" else sm_methods
+            _tgt = (target_mod, target_cls)
+            _ab = _fold_source(ab_methods, _tgt)
+            _sm = _fold_source(sm_methods, _tgt)
+            primary = _sm if source_cls == "SWMLService" else _ab
+            secondary = _ab if source_cls == "SWMLService" else _sm
             present: dict = {}
             ab_picked: list[str] = []
             for m in expected:
@@ -1139,6 +1582,34 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
             if not out_modules["signalwire.core.agent_base"]["classes"]:
                 out_modules.pop("signalwire.core.agent_base")
 
+    # ORACLE-GATED ACCESSOR FOLD — the SIGNATURE twin of the surface enumerator's
+    # ``_fold_accessors``. PHP exposes a reference ATTRIBUTE either as a bare public
+    # property (which signature_dump.php already reflects under the bare name) or as
+    # a ``getX()`` accessor over a private field; the accessor IS the read-back, so it
+    # folds onto the reference attribute name. A rename keeps comparing; an omission
+    # is a permanent blind spot (AGENT_RULES §2).
+    #
+    # Derived from the shared ``ORACLE_ACCESSOR_FOLD`` table IMPORTED from
+    # enumerate_surface — not a second copy. A rename table in one gate and not its
+    # twin folds a name in one and reds it in the other (go shipped exactly that).
+    #
+    # Applied here on the EMITTED tree, keyed by (emitted module, emitted class), so
+    # the key space matches the lookup space — the keying bug typescript and go both
+    # paid for. A fold that would COLLIDE with a member the port already records
+    # under the reference name is skipped (the bare property already satisfies it;
+    # the accessor stays a distinct member rather than silently overwriting it).
+    for _mod, _entry in out_modules.items():
+        for _cls, _ce in _entry.get("classes", {}).items():
+            _renames = ORACLE_ACCESSOR_FOLD.get((_mod, _cls))
+            if not _renames:
+                continue
+            _methods = _ce.get("methods")
+            if not isinstance(_methods, dict):
+                continue
+            for _acc, _field in _renames.items():
+                if _acc in _methods and _field not in _methods:
+                    _methods[_field] = _methods.pop(_acc)
+
     sorted_modules = {}
     for k in sorted(out_modules):
         entry = out_modules[k]
@@ -1158,6 +1629,7 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
         "version": "2",
         "generated_from": "signalwire-php via PHP Reflection",
         "modules": sorted_modules,
+        "construction": build_construction(ctor_params, php_to_canonical, php_parents),
     }, failures
 
 

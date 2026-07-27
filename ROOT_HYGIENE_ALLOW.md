@@ -19,6 +19,7 @@ audit pipeline (which this repo cannot edit). Verified reader per file below.
 - port_signatures.json — required audit-contract file read by porting-sdk audit scripts (diff_port_signatures.py, run-ci.sh, and 8 others) (orchestrator, 2026-07-06)
 - port_signatures.baseline.json — release-floor snapshot read at root by scripts/run-ci.sh SEMVER-DIFF and porting-sdk semver_diff.py (BASELINE_FILE), the authoritative SemVer floor (orchestrator, 2026-07-14)
 - port_surface.json — required audit-contract file read by porting-sdk audit scripts (audit_docs.py, ignore_ledger_verify.py, run-ci.sh) (orchestrator, 2026-07-06)
+- port_surface_native.json — required audit-contract file: the shared porting-sdk consumers look for it AT THE REPO ROOT by that exact name (suites/_doc_audit.py resolves `repo_path / "port_surface_native.json"`, then passes it to audit_docs.py --native-names), so it cannot move to eng/. Holds php's own member spellings so DOC-AUDIT can resolve the port's correct doc examples after the accessor fold. export-ignore in .gitattributes, so it never ships. (b2-php lane, 2026-07-26)
 - ARTIFACT_DENY_ALLOW.md — gate-control file for the artifact_deny gate (orchestrator, 2026-07-06)
 - META_CONSISTENT_ALLOW.md — gate-control file for the meta_consistent gate (orchestrator, 2026-07-06)
 - ROOT_HYGIENE_ALLOW.md — gate-control file for this root_hygiene gate (orchestrator, 2026-07-06)

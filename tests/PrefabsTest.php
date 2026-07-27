@@ -219,7 +219,119 @@ class PrefabsTest extends TestCase
         $this->assertSame('/survey', $agent->getRoute());
         $this->assertTrue($agent->promptHasSection('Survey Introduction'));
         $this->assertTrue($agent->promptHasSection('Survey Questions'));
-        $this->assertCount(2, $agent->getSurveyQuestions());
+        $this->assertCount(2, $agent->getQuestions());
+    }
+
+    /**
+     * brand_name / conclusion / max_retries were accepted at construction and
+     * then DISCARDED — stored on the object and rendered nowhere, so configuring
+     * them had no effect on the document the platform receives. The reference
+     * renders all three (survey.py:149 Personality, :163 retry instruction,
+     * :198 Conclusion) and puts brand_name + max_retries in global_data (:241).
+     * Asserts the RENDERED prompt text, not just that the value round-trips.
+     */
+    public function testSurveyRendersBrandConclusionAndMaxRetries(): void
+    {
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5, 'required' => true],
+            ],
+            surveyName: 'Satisfaction Survey',
+            conclusion: 'Thanks a million for your time.',
+            brandName: 'Acme Widgets',
+            maxRetries: 4,
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
+
+        // Read-back: the caller can retrieve every value it supplied.
+        $this->assertSame('Acme Widgets', $agent->getBrandName());
+        $this->assertSame('Thanks a million for your time.', $agent->getConclusion());
+        $this->assertSame(4, $agent->getMaxRetries());
+
+        // Rendered: each value reaches the prompt the platform actually reads.
+        $this->assertTrue($agent->promptHasSection('Personality'));
+        $this->assertTrue($agent->promptHasSection('Conclusion'));
+
+        $rendered = json_encode($agent->getPrompt());
+        $this->assertIsString($rendered);
+        $this->assertStringContainsString('Acme Widgets', $rendered);
+        $this->assertStringContainsString('Thanks a million for your time.', $rendered);
+        $this->assertStringContainsString('retry up to 4 times', $rendered);
+
+        // global_data carries brand_name + max_retries, as the reference does —
+        // asserted on the RENDERED SWML the platform receives, not on internal
+        // state, so the assertion cannot pass on storage alone.
+        $swml = json_encode($agent->renderSwml());
+        $this->assertIsString($swml);
+        $this->assertStringContainsString('"brand_name":"Acme Widgets"', $swml);
+        $this->assertStringContainsString('"max_retries":4', $swml);
+    }
+
+    /**
+     * The introduction and conclusion DEFAULT when the caller omits them
+     * (survey.py:97-103) rather than rendering an empty section.
+     */
+    public function testSurveyDefaultsIntroductionAndConclusion(): void
+    {
+        $agent = new SurveyAgent(
+            name: 'survey',
+            questions: [
+                ['id' => 'q1', 'text' => 'Rate us', 'type' => 'rating', 'scale' => 5],
+            ],
+            surveyName: 'Satisfaction Survey',
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
+
+        $this->assertSame('Our Company', $agent->getBrandName());
+        $this->assertStringContainsString('Satisfaction Survey', $agent->getIntroduction());
+        $this->assertStringContainsString('Thank you', $agent->getConclusion());
+    }
+
+    /** FAQBot's persona is rendered AND readable back. */
+    public function testFaqBotPersonaIsReadableAndRendered(): void
+    {
+        $agent = new FAQBotAgent(
+            name: 'faq',
+            faqs: [['question' => 'Where?', 'answer' => 'Here.']],
+            persona: 'You are a laconic support bot.',
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
+
+        $this->assertSame('You are a laconic support bot.', $agent->getPersona());
+        $rendered = json_encode($agent->getPrompt());
+        $this->assertIsString($rendered);
+        $this->assertStringContainsString('You are a laconic support bot.', $rendered);
+    }
+
+    /**
+     * Concierge's per-label hours are a MAP (the reference's
+     * ``hours_of_operation: dict[str, str]``), readable back per label — not a
+     * single flattened string, which would make per-label hours unreachable.
+     */
+    public function testConciergeHoursAndInstructionsReadBack(): void
+    {
+        $agent = new ConciergeAgent(
+            name: 'concierge',
+            venueInfo: [
+                'venue_name' => 'The Grand',
+                'hours_of_operation' => ['Mon-Fri' => '9-5', 'Sat' => '10-2'],
+                'special_instructions' => ['Valet parking only'],
+            ],
+            basicAuthUser: 'testuser',
+            basicAuthPassword: 'testpass'
+        );
+
+        $this->assertSame(
+            ['Mon-Fri' => '9-5', 'Sat' => '10-2'],
+            $agent->getHoursOfOperation()
+        );
+        $this->assertSame(['Valet parking only'], $agent->getSpecialInstructions());
+        $this->assertTrue($agent->promptHasSection('Hours of Operation'));
+        $this->assertTrue($agent->promptHasSection('Special Instructions'));
     }
 
     public function testSurveyHasExpectedTools(): void

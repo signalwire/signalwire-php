@@ -1,5 +1,53 @@
 # PORT_SIGNATURE_OMISSIONS.md
 
+<!-- ══════════════════════════════════════════════════════════════════════════
+BEFORE YOU ADD AN ENTRY TO THIS FILE — READ THIS.
+
+Every entry here is a place the parity checker STOPS comparing. That is a real cost:
+a divergence you list is a divergence no gate will ever catch again. So entries must
+be RARE, and each one must earn its place. Default to skepticism: assume the entry is
+NOT needed and make the case that it is.
+
+The order of preference, always:
+  1. FIX THE PORT so it matches the reference (add the missing member; make the
+     signature match).
+  2. FIX THE EMISSION so idiom folds onto the reference shape — the enumerator/emitter
+     canonicalizes your language's spelling onto the oracle's (builder → __init__,
+     getters → attributes, Result<T,E> → the plain return, CamelCase → the reference
+     name, options-object/kwargs → the expanded param list, RAII/dispose → close).
+     MOST divergences are idiom and belong here, not in this file.
+  3. FIX THE REFERENCE if the oracle itself is wrong or stale (a Python-only symbol
+     that leaked into the contract, a param the reference added and the oracle never
+     re-enumerated). Fix Python / the oracle, then re-drift — do not paper over a
+     broken reference with a per-port entry.
+  4. Only when 1–3 genuinely cannot apply does an entry here become justified.
+
+An entry is JUSTIFIED ONLY IF it is irreducible after correct emission — i.e. the
+divergence survives because the two languages genuinely cannot express the same thing,
+not because the emitter hasn't folded the idiom yet. If emission COULD fold it, the
+entry is a bug in this file; go fix the emitter.
+
+Each entry MUST state WHY, concretely, in one of these forms:
+  • ADDITION — this symbol exists in the port but not the reference. Answer: is it
+    genuine port-only surface with NO reference twin (say what it is and why the
+    reference has no equivalent), or is it IDIOM the emitter should have folded (then
+    it does not belong here — fold it)? A convenience/alias/back-compat wrapper is NOT
+    a justification.
+  • OMISSION — this reference symbol has no port member. Answer: WHY can it not exist
+    here — what specific language feature is absent (e.g. no async-context-manager
+    protocol, no __init__ method protocol)? "impossible:" means the construct cannot
+    be expressed at all; if it merely LOOKS different, that's idiom → fold it, don't
+    omit it. Cite a precedent when one exists (e.g. RelayClient omits the same dunder).
+  • SIGNATURE — the symbol matches by name but its parameters differ. Answer: is the
+    difference a foldable idiom collapse (options-object, leading context/self,
+    builder) — then EXPAND it in the signature emitter so names+count match, don't list
+    it — or a genuine reference-only parameter with no cross-language analogue?
+
+If you cannot write a crisp, specific WHY that survives the "could emission fold this?"
+test, the entry is not ready. Prove it's needed before you add it.
+═══════════════════════════════════════════════════════════════════════════════ -->
+
+
 Documented signature divergences between this port and the Python reference. Every entry has a one-line rationale describing why the PHP shape is functionally equivalent. As of phase 4 cleanup, all `not_yet_implemented` entries have been closed; new entries should reuse one of the rationale categories below or a new `PHP-*` tag.
 
 Categories used in rationales:
@@ -44,7 +92,7 @@ signalwire.core.agent.prompt.manager.PromptManager.prompt_add_section: PHP-idiom
 signalwire.core.agent.prompt.manager.PromptManager.prompt_add_subsection: PHP-idiom-options-trim: PHP's prompt_add_subsection accepts (parent_title, title, body) — the bullets variant is set via the returned Section builder
 signalwire.core.agent.prompt.manager.PromptManager.prompt_add_to_section: PHP-idiom-options-trim: PHP's prompt_add_to_section accepts (title, body, bullets) — Python's separate (bullet, bullets) split is not needed since PHP's bullets array carries both
 signalwire.core.agent.tools.registry.ToolRegistry.define_tool: PHP-idiom-options-trim: PHP's define_tool accepts (name, description, parameters, handler, secure) — fillers/wait_file/webhook_url/required/is_typed_handler/swaig_fields are configured via subsequent builder methods on the returned tool
-signalwire.core.agent_base.AgentBase.__init__: PHP-idiom-options-collapse: PHP's __construct takes an 'array $options' carrying every field Python passes positionally (name/route/host/port/basic_auth/use_pom/...); same construction surface, different shape
+signalwire.core.agent_base.AgentBase.__init__: PHP-construction-positional: excuses the POSITIONAL __init__ comparison only. PHP's __construct declares the same named configurables via PHP 8 named arguments, but the §7 basic_auth typed-split (one reference `basic_auth` tuple -> `basicAuthUser` + `basicAuthPassword`) shifts every later position by one, so a by-position diff is meaningless here. The named set IS compared, unexcused, by the `construction` node (ALLOWLIST_DISCIPLINE.md §10), which is keyed on `module.Class` and therefore NOT covered by this line — all 22 reference params are present there.
 signalwire.core.agent_base.AgentBase.add_answer_verb: PHP-extra-param: PHP's add_answer_verb accepts (verb, config) so the verb name can be supplied by the caller; Python's addAnswerVerb takes config-only and infers the verb. Same effect, more explicit shape
 signalwire.core.agent_base.AgentBase.create_tool_token: PHP-additional-API: PHP's AgentBase exposes create_tool_token as a public helper (paired with validate_tool_token); Python keeps token creation internal to SessionManager
 signalwire.core.agent_base.AgentBase.enable_sip_routing: PHP-idiom-options-trim: PHP's enable_sip_routing() takes no args (uses configuration defaults); the (auto_map, path) overrides go through setupSipRouting() instead
@@ -84,7 +132,8 @@ signalwire.core.skill_manager.SkillManager.load_skill: PHP-param-shape: PHP's lo
 signalwire.core.skill_manager.SkillManager.logger: PHP-idiom-getter: Python's '@property logger' is a property-style getter; PHP exposes it as the explicit 'getLogger()' method (already in PORT_ADDITIONS)
 signalwire.core.swml_handler.AIVerbHandler.build_config: PHP-idiom-kwargs: PHP has no **kwargs and an override must keep the abstract's signature, so build_config(prompt_text, prompt_pom, contexts, post_prompt, post_prompt_url, swaig, **kwargs) collapses to build_config(array $kwargs) — the same keys (prompt_text/prompt_pom/contexts/post_prompt/post_prompt_url/swaig + extras) are read out of the array, producing byte-identical verb config. Matches TS's buildConfig(opts) single-options shape.
 signalwire.core.swml_handler.AIVerbHandler.validate_config: PHP-additional-API: the reference records validate_config only on the SWMLVerbHandler base (the concrete AIVerbHandler override is folded into the base in Python's enumeration); PHP declares the concrete override on AIVerbHandler as PSR-4/LSP require, so the enumerator sees an extra node. Same (config)->[bool, errors] contract as the base.
-signalwire.core.swml_service.SWMLService.__init__: PHP-idiom-options-collapse: PHP's __construct takes an 'array $options' carrying every field Python passes positionally (name/route/host/port/basic_auth/use_pom/...); same construction surface, different shape
+signalwire.core.swml_service.SWMLService.__init__: PHP-construction-positional: excuses the POSITIONAL __init__ comparison only — same basic_auth typed-split position shift as AgentBase.__init__ above. The named set IS compared, unexcused, by the `construction` node; all 8 reference params are present there.
+signalwire.core.swml_service.SWMLService.define_tool: PHP-additional-API: PHP flattens Python's composed ToolRegistry onto Service (SWMLService), so 'define_tool' is a real public method on SWMLService (surface-folded onto the reference ToolRegistry.define_tool via the enumerator's ToolRegistry projection). Reflection therefore emits it on SWMLService too; the reference SWMLService has no such member — same callable surface, different (flattened) filing. Surface-dead/signature-live twin of the folded SWMLService->ToolRegistry composition-collapse.
 signalwire.core.swml_service.SWMLService.get_basic_auth_credentials: PHP-idiom-method-split: PHP exposes get_basic_auth_credentials() (no include_source param) and a separate get_basic_auth_credentials_with_source() (already documented in PORT_ADDITIONS as PHP-extra surface)
 signalwire.core.swml_service.SWMLService.get_document: PHP-builder-api: PHP's get_document() returns a Document builder object; Python returns a serialized dict<string,any>. Document::toArray() yields the same dict shape
 signalwire.core.swml_service.SWMLService.get_function: PHP-additional-API: PHP's SWMLService exposes 'get_function' as a public method (Python keeps the same functionality but via internal modules); same callable surface, different visibility
@@ -92,6 +141,7 @@ signalwire.core.swml_service.SWMLService.handle_request: PHP-param-shape: PHP's 
 signalwire.core.swml_service.SWMLService.has_function: PHP-additional-API: PHP's SWMLService exposes 'has_function' as a public method (Python keeps the same functionality but via internal modules); same callable surface, different visibility
 signalwire.core.swml_service.SWMLService.on_swml_request: PHP-additional-API: PHP's SWMLService exposes 'on_swml_request' as a public method (Python keeps the same functionality but via internal modules); same callable surface, different visibility
 signalwire.core.swml_service.SWMLService.register_routing_callback: PHP-callable-typing: PHP's register_routing_callback uses string-typed callback names (PHP callable convention) where Python uses typed callable signatures. Same dispatch contract
+signalwire.core.swml_service.SWMLService.register_swaig_function: PHP-additional-API: PHP flattens Python's composed ToolRegistry onto Service (SWMLService), so 'register_swaig_function' is a real public method on SWMLService (surface-folded onto the reference ToolRegistry.register_swaig_function via the enumerator's ToolRegistry projection). Reflection therefore emits it on SWMLService too; the reference SWMLService has no such member — same callable surface, different (flattened) filing. Surface-dead/signature-live twin of the folded SWMLService->ToolRegistry composition-collapse.
 signalwire.core.swml_service.SWMLService.remove_function: PHP-additional-API: PHP's SWMLService exposes 'remove_function' as a public method (Python keeps the same functionality but via internal modules); same callable surface, different visibility
 signalwire.core.swml_service.SWMLService.security: PHP-idiom-internal: Python's '@property security' is internal accessor; PHP exposes equivalent functionality via SessionManager and validate_basic_auth methods
 signalwire.core.swml_service.SWMLService.serve: PHP-server-serve: PHP's serve() handles the same TLS / host / port wiring via AgentServer configuration getters/setters; not exposed as method args

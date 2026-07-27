@@ -32,6 +32,22 @@ class FunctionResult
     }
 
     /**
+     * The response text. The reference exposes BOTH a ``response`` attribute
+     * and a ``set_response`` method (function_result.py), so the reader is a
+     * genuine second member — not a fold target for the setter.
+     */
+    public function getResponse(): string
+    {
+        return $this->response;
+    }
+
+    /** Whether the AI should post-process this result (the reference's flag). */
+    public function getPostProcess(): bool
+    {
+        return $this->postProcess;
+    }
+
+    /**
      * @param array<string,mixed> $action
      */
     public function addAction(array $action): self

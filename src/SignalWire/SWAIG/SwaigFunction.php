@@ -86,6 +86,20 @@ class SwaigFunction
     }
 
     /**
+     * The handler this function was constructed with. The reference exposes it as
+     * a plain public ``self.handler`` attribute (swaig_function.py) — every other
+     * field on this class is a public property here, and the handler was the lone
+     * private one, so a caller could supply a handler and never read it back
+     * (e.g. to wrap or re-register it).
+     *
+     * @return callable
+     */
+    public function getHandler(): callable
+    {
+        return $this->handler;
+    }
+
+    /**
      * Ensure the parameters are correctly structured as a full JSON Schema
      * object (`{type: object, properties: {...}}`). Mirrors Python's
      * `_ensure_parameter_structure`.

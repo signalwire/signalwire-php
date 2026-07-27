@@ -18,13 +18,20 @@ class SessionManagerTest extends TestCase
     }
 
     // ---------------------------------------------------------------
-    // 1. Construction — default expiry 3600
+    // 1. Construction — default expiry 900 (the reference's default)
     // ---------------------------------------------------------------
 
+    /**
+     * The reference defaults to 900 seconds (session_manager.py:30). These two
+     * assertions previously demanded 3600 — the port's OWN divergent convention —
+     * so they locked in a token lifetime four times the reference's. AgentBase
+     * still passes 3600 explicitly, which is the reference's AgentBase default
+     * (agent_base.py:130, 247); it is SessionManager's bare default that differed.
+     */
     public function testConstructorSetsDefaultExpiry(): void
     {
         $manager = new SessionManager();
-        $this->assertSame(3600, $manager->getTokenExpirySecs());
+        $this->assertSame(900, $manager->getTokenExpirySecs());
     }
 
     public function testConstructorAcceptsCustomExpiry(): void
@@ -252,7 +259,7 @@ class SessionManagerTest extends TestCase
 
     public function testGetTokenExpirySecsReturnsDefaultValue(): void
     {
-        $this->assertSame(3600, $this->manager->getTokenExpirySecs());
+        $this->assertSame(900, $this->manager->getTokenExpirySecs());
     }
 
     public function testGetTokenExpirySecsReturnsCustomValue(): void

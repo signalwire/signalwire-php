@@ -55,6 +55,7 @@ class AgentBaseSigningKeyTest extends TestCase
      *     basic_auth_user?: string|null,
      *     basic_auth_password?: string|null,
      *     signing_key?: string|null,
+     *     trust_proxy_for_signature?: bool,
      * } $opts
      */
     private function makeAgent(array $opts = []): AgentBase
@@ -67,6 +68,12 @@ class AgentBaseSigningKeyTest extends TestCase
             basicAuthUser: $opts['basic_auth_user'] ?? 'testuser',
             basicAuthPassword: $opts['basic_auth_password'] ?? 'testpass',
             signingKey: $opts['signing_key'] ?? null,
+            // These cases sign against a PROXY-forwarded URL, which the SDK
+            // only reconstructs when the agent opts in — mirroring the
+            // reference's `trust_proxy` (default False; proxy headers are
+            // spoofable). The default-deny path is covered by its own tests
+            // at the bottom of this file.
+            trustProxyForSignature: $opts['trust_proxy_for_signature'] ?? true,
         );
     }
 
@@ -369,5 +376,82 @@ class AgentBaseSigningKeyTest extends TestCase
 
         [$status, ,] = $agent->handleRequest('POST', '/', $headers, $whitespacey);
         $this->assertSame(403, $status);
+    }
+
+    // ------------------------------------------------------------------
+    // trust_proxy_for_signature — default-deny on spoofable proxy headers
+    // ------------------------------------------------------------------
+
+    /**
+     * The reference defaults ``trust_proxy_for_signature`` to False, so
+     * X-Forwarded-Proto / X-Forwarded-Host are NOT used to rebuild the URL a
+     * signature is checked against (core/security/webhook_middleware.py:129).
+     * A caller who signs the forwarded URL is therefore rejected unless the
+     * agent opted in — otherwise anyone able to set those headers could pick
+     * the URL their own signature is verified against.
+     */
+    public function testProxySignedRequestRejectedWhenTrustProxyDefaultsOff(): void
+    {
+        $agent = $this->makeAgent([
+            'signing_key' => self::SIGNING_KEY,
+            'trust_proxy_for_signature' => false,
+        ]);
+
+        $body = '{}';
+        [$status, ,] = $agent->handleRequest(
+            'POST',
+            '/',
+            $this->signedHeaders('/', $body),
+            $body,
+        );
+
+        $this->assertSame(
+            403,
+            $status,
+            'proxy-header-derived URL must not be trusted for signature validation by default',
+        );
+    }
+
+    public function testProxySignedRequestAcceptedWhenTrustProxyEnabled(): void
+    {
+        $agent = $this->makeAgent([
+            'signing_key' => self::SIGNING_KEY,
+            'trust_proxy_for_signature' => true,
+        ]);
+
+        $body = '{}';
+        [$status, ,] = $agent->handleRequest(
+            'POST',
+            '/',
+            $this->signedHeaders('/', $body),
+            $body,
+        );
+
+        $this->assertSame(200, $status, 'opting in must honour the forwarded URL');
+    }
+
+    /**
+     * SWML_PROXY_URL_BASE outranks trust_proxy in the reference
+     * (webhook_middleware.py:125-127) — it is operator-set, not
+     * request-supplied, so it applies with trust_proxy off.
+     */
+    public function testProxyUrlBaseEnvAppliesEvenWithTrustProxyOff(): void
+    {
+        putenv('SWML_PROXY_URL_BASE=https://signed-host.example.com');
+
+        $agent = $this->makeAgent([
+            'signing_key' => self::SIGNING_KEY,
+            'trust_proxy_for_signature' => false,
+        ]);
+
+        $body = '{}';
+        [$status, ,] = $agent->handleRequest(
+            'POST',
+            '/',
+            $this->signedHeaders('/', $body),
+            $body,
+        );
+
+        $this->assertSame(200, $status, 'operator-set proxy base applies regardless of trust_proxy');
     }
 }

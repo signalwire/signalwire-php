@@ -205,4 +205,10 @@ class FAQBotAgent extends AgentBase
     {
         return $this->suggestRelated;
     }
+
+    /** The personality description rendered into the Personality section. */
+    public function getPersona(): string
+    {
+        return $this->persona;
+    }
 }

@@ -51,14 +51,35 @@ jobs:
         with:
           python-version: '3.14'
 
+      - name: Install porting-sdk script dependencies
+        # NOT optional: the gate scripts reach the reference oracle through
+        # generate_rest.py, which needs PyYAML, and a swallowed ImportError turned its
+        # absence into an EMPTY oracle — 266 gated members silently vanished and the diff
+        # reported "311 symbols missing from port" against a port that was correct.
+        run: python3 -m pip install --quiet -r ${{ github.workspace }}/porting-sdk/scripts/requirements.txt
+
       - name: Enumerate PHP surface (input for audit_docs)
         working-directory: signalwire-php
+        # Declared, not left to adjacency — see the note in surface-audit.yml. This
+        # step also produces port_surface_native.json, the sidecar DOC-AUDIT
+        # resolves the port's own (correct) doc spellings against, so a degraded
+        # oracle here would red the doc gate on doc lines that are perfectly valid.
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
         run: python3 scripts/enumerate_surface.py
 
       - name: Audit doc / example references
         working-directory: signalwire-php
+        # --native-names is LOAD-BEARING, not optional. The enumerator folds php's
+        # real accessors onto the reference attribute names (getBody -> body), so
+        # without the sidecar every correct, compiling doc line using the php
+        # spelling becomes unresolvable — a check bug, not a doc bug. The local
+        # suites/doc_truth.py passes this flag automatically for any port shipping
+        # the file; this workflow invokes audit_docs.py directly, so it must pass it
+        # itself or local and CI disagree on the same tree.
         run: |
           python3 ${{ github.workspace }}/porting-sdk/scripts/audit_docs.py \
               --root . \
               --surface port_surface.json \
+              --native-names port_surface_native.json \
               --ignore DOC_AUDIT_IGNORE.md

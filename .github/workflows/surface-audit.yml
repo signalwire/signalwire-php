@@ -48,9 +48,29 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.14'
+      # Install the porting-sdk gate scripts' declared dependencies. NOT optional: the
+      # enumerator reaches the reference oracle through generate_rest.py, which needs
+      # PyYAML, and a bare `except Exception: return None` turned its absence into an EMPTY
+      # oracle — 266 oracle-gated members silently failed to emit and the diff reported
+      # "311 Python symbol(s) missing from port", blaming a port that was correct. A dev box
+      # has PyYAML, so the failure is CI-only by construction. One manifest, shared by all
+      # ten repos; check_script_deps.py fails if a script imports something it omits.
+      - name: Install porting-sdk script dependencies
+        run: python3 -m pip install --quiet -r ${{ github.workspace }}/porting-sdk/scripts/requirements.txt
+
 
       - name: Enumerate PHP public API surface
         working-directory: signalwire-php
+        # PORTING_SDK is set EXPLICITLY rather than left to directory adjacency.
+        # enumerate_surface.py ORACLE-GATES its field and accessor emission, so a
+        # resolution failure would not merely skip an enrich — it would emit a
+        # valid-looking snapshot with members missing. The checkouts above happen to
+        # be siblings today, which is why the adjacency walk works; declaring the
+        # path means a future layout change cannot silently degrade the snapshot.
+        # (dotnet lost ~300 members and go ~200 to exactly that, both behind reds
+        # that took a full investigation to attribute.)
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
         run: python3 scripts/enumerate_surface.py
 
       - name: Diff against Python reference

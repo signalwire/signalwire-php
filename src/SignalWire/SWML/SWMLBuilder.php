@@ -65,6 +65,16 @@ class SWMLBuilder
     }
 
     /**
+     * The service this builder delegates to. The reference exposes it as a plain
+     * ``self.service`` attribute; php held it private with no reader, so a caller
+     * who constructed the builder around a service could not get back to it.
+     */
+    public function getService(): Service
+    {
+        return $this->service;
+    }
+
+    /**
      * Add an 'answer' verb to the main section.
      *
      * @param int|null    $maxDuration Maximum duration in seconds.

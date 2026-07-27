@@ -32,7 +32,7 @@ class ConnectConfig
     /** @var array<string,mixed>|null */
     public ?array $session_timeout = null;
 
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $ringback = null;
 
     /** @var array<string,mixed>|null */
