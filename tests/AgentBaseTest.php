@@ -848,7 +848,102 @@ class AgentBaseTest extends TestCase
         $this->assertSame('Get the weather', $func['purpose'] ?? null);
         $this->assertArrayNotHasKey('_handler', $func);
         $this->assertArrayNotHasKey('_secure', $func);
-        $this->assertArrayHasKey('web_hook_url', $func);
+        // No call_id and no SWAIG query params => no token is minted, so the
+        // entry carries NO per-tool web_hook_url and falls back to the shared
+        // SWAIG.defaults.web_hook_url (python agent_base.py:1085-1099: the
+        // local URL is built ONLY under ``elif token or _swaig_query_params``).
+        $this->assertArrayNotHasKey('web_hook_url', $func);
+    }
+
+    // ------------------------------------------------------------------
+    // 22a. An INSECURE tool must NOT get its own per-tool web_hook_url
+    // ------------------------------------------------------------------
+
+    /**
+     * A ``secure=false`` tool mints no token, and a tokenless per-tool
+     * ``web_hook_url`` is an UNAUTHENTICATED function-specific callback on the
+     * wire. The reference (signalwire-python core/agent_base.py:1085-1099)
+     * emits the key ONLY when an external URL was supplied, or when a token /
+     * SWAIG query params exist; otherwise the key is ABSENT and the function
+     * falls back to the shared ``SWAIG.defaults.web_hook_url``.
+     *
+     * Renders one default (secure) tool and one ``secure=false`` tool with a
+     * call_id, and pins both directions in the same render.
+     */
+    public function testInsecureToolGetsNoOwnWebhookUrl(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->defineTool(
+            'sec_tool',
+            'A default-secure tool',
+            [],
+            fn (array $args, array $raw) => new FunctionResult('ok'),
+        );
+        $agent->defineTool(
+            'ins_tool',
+            'An explicitly-insecure tool',
+            [],
+            fn (array $args, array $raw) => new FunctionResult('ok'),
+            secure: false,
+        );
+
+        $ai = $this->extractAiVerb($agent->renderSwml(null, [], 'call-webhook-fixture'));
+        $byName = [];
+        foreach (Shape::sub($ai, 'SWAIG', 'functions') as $fn) {
+            $this->assertIsArray($fn);
+            $fnName = $fn['function'] ?? null;
+            $this->assertIsString($fnName);
+            $byName[$fnName] = $fn;
+        }
+
+        // The SECURE tool HAS its own webhook and it carries the __token.
+        $this->assertArrayHasKey('web_hook_url', $byName['sec_tool']);
+        $secureUrl = $byName['sec_tool']['web_hook_url'];
+        $this->assertIsString($secureUrl);
+        $this->assertStringContainsString('__token=', $secureUrl);
+
+        // The INSECURE tool has NO web_hook_url key AT ALL — not an empty
+        // string, not null, not a tokenless URL. The key must be absent.
+        $this->assertArrayNotHasKey('web_hook_url', $byName['ins_tool']);
+
+        // ...and the shared fallback it relies on is present AND correct. The
+        // guard above is only safe because this block exists: without it an
+        // insecure tool would render with NO reachable callback at all. The
+        // SECURE-DEFAULT gate inspects only functions[], so it cannot catch a
+        // missing defaults block — this assertion is the only thing that does.
+        // (Reference: python agent_base.py:1108-1113 adds defaults whenever
+        // functions exist.)
+        $defaultUrl = Shape::at($ai, 'SWAIG', 'defaults', 'web_hook_url');
+        $this->assertIsString($defaultUrl);
+        $this->assertStringNotContainsString('__token=', $defaultUrl);
+        // It is the agent's real SWAIG endpoint, not a placeholder.
+        $this->assertStringEndsWith('/swaig', $defaultUrl);
+        $this->assertStringStartsWith('http', $defaultUrl);
+    }
+
+    /**
+     * SWAIG query params alone (no token) are enough to give even an INSECURE
+     * tool its own local URL — the reference's ``elif token or
+     * _swaig_query_params`` branch. Pins that the guard keys off BOTH
+     * conditions, not the token alone.
+     */
+    public function testInsecureToolGetsWebhookWhenSwaigQueryParamsSet(): void
+    {
+        $agent = $this->makeAgent();
+        $agent->addSwaigQueryParams(['tier' => 'premium']);
+        $agent->defineTool(
+            'ins_tool',
+            'An explicitly-insecure tool',
+            [],
+            fn (array $args, array $raw) => new FunctionResult('ok'),
+            secure: false,
+        );
+
+        $ai = $this->extractAiVerb($agent->renderSwml(null, [], 'call-webhook-fixture'));
+        $url = Shape::at($ai, 'SWAIG', 'functions', 0, 'web_hook_url');
+        $this->assertIsString($url);
+        $this->assertStringContainsString('tier=premium', $url);
+        $this->assertStringNotContainsString('__token=', $url);
     }
 
     // ------------------------------------------------------------------
@@ -1216,10 +1311,19 @@ class AgentBaseTest extends TestCase
             fn () => new FunctionResult('ok'),
         );
 
-        $ai = $this->extractAiVerb($agent->renderSwml());
+        // Render WITH a call_id so the secure tool mints a token and therefore
+        // gets its own web_hook_url — the only render in which a per-tool URL
+        // exists to carry the proxy base (python agent_base.py:1088).
+        $ai = $this->extractAiVerb($agent->renderSwml(null, [], 'call-proxy-fixture'));
         $webhookUrl = Shape::at($ai, 'SWAIG', 'functions', 0, 'web_hook_url');
         $this->assertIsString($webhookUrl);
         $this->assertStringContainsString('my-proxy.example.com', $webhookUrl);
+
+        // The shared defaults URL carries the proxy base too, and is what an
+        // insecure/tokenless function falls back to.
+        $defaultUrl = Shape::at($ai, 'SWAIG', 'defaults', 'web_hook_url');
+        $this->assertIsString($defaultUrl);
+        $this->assertStringContainsString('my-proxy.example.com', $defaultUrl);
     }
 
     public function testPromptSectionWithBullets(): void

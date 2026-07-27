@@ -2213,8 +2213,10 @@ class AgentBase extends Service implements AgentInterface
      *   per-tool ``__token`` appended to its ``web_hook_url`` (the wire
      *   manifestation of ``secure`` — mirrors python agent_base.py:1040/1096-1100:
      *   ``if func.secure and call_id: url_params['__token'] = token``). An
-     *   INSECURE tool (``secure=False``) never gets a token. When $callId is
-     *   null no token is minted (the render-without-call_id default).
+     *   INSECURE tool (``secure=False``) never gets a token, and therefore gets
+     *   NO per-tool ``web_hook_url`` at all — it falls back to the shared
+     *   ``SWAIG.defaults.web_hook_url``. When $callId is null no token is minted
+     *   (the render-without-call_id default).
      * @return array<string, mixed>
      */
     private function buildSwaigBlock(array $headers, ?string $callId = null): array
@@ -2233,25 +2235,47 @@ class AgentBase extends Service implements AgentInterface
             // Strip internal keys
             $funcDef = array_filter($tool, fn (string $key): bool => !str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
 
-            // Add web_hook_url for callable tools (those with a handler)
-            if (isset($tool['_handler'])) {
+            // Resolve the per-tool web_hook_url for callable tools (those with a
+            // handler). Mirrors python agent_base.py:1085-1099 EXACTLY:
+            //
+            //   1. an EXTERNAL url supplied by the caller wins verbatim;
+            //   2. else emit a local URL ONLY when a token was minted OR SWAIG
+            //      query params exist;
+            //   3. else emit NO ``web_hook_url`` key at all.
+            //
+            // Case 3 is load-bearing security, not a cosmetic omission: an
+            // INSECURE tool (``secure=false``, therefore no token) must fall back
+            // to the shared ``SWAIG.defaults.web_hook_url``. Handing it its own
+            // URL would publish an UNAUTHENTICATED function-specific callback —
+            // a tokenless endpoint bound to one tool.
+            if (isset($tool['_handler']) && !isset($funcDef['web_hook_url'])) {
                 // Mint a per-tool token ONLY for a SECURE tool when we have a
-                // call_id — the platform validates that token on the callback,
+                // call_id — the platform round-trips that token on the callback,
                 // so its PRESENCE on the wire is what makes ``secure`` real.
-                // (python: ``if func.secure and call_id``). An insecure tool
-                // gets the plain webhook URL (no token).
+                // (python: ``if func.secure and call_id``.)
                 $token = null;
                 if ($callId !== null && $callId !== '' && ($tool['_secure'] ?? false) === true) {
                     $minted = $this->createToolToken($name, $callId);
                     $token = $minted !== '' ? $minted : null;
                 }
-                $funcDef['web_hook_url'] = $this->buildSwaigWebhookUrl($headers, $token);
+                // python's ``elif token or agent._swaig_query_params``.
+                if ($token !== null || !empty($this->swaigQueryParams)) {
+                    $funcDef['web_hook_url'] = $this->buildSwaigWebhookUrl($headers, $token);
+                }
             }
 
             $functions[] = $funcDef;
         }
         if (!empty($functions)) {
             $swaig['functions'] = $functions;
+            // The SHARED fallback endpoint every function without its own
+            // ``web_hook_url`` calls — notably an INSECURE tool, which by
+            // contract carries no per-tool URL. Mirrors python
+            // agent_base.py:1109-1113 (emitted whenever functions exist) and
+            // :972-979 (the ``setWebHookUrl`` override wins over the built URL).
+            $swaig['defaults'] = [
+                'web_hook_url' => $this->webhookUrl ?? $this->buildSwaigWebhookUrl($headers),
+            ];
         }
 
         // Native functions
