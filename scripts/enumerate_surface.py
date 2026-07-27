@@ -822,6 +822,17 @@ CLASS_METHOD_ALIASES: dict[tuple[str, str], str] = {
     # route in EITHER language — ALLOWLIST_DISCIPLINE §14). A different spelling
     # is a RENAME, so it keeps comparing.
     ("SwaigFunction", "extra_fields"): "extra_swaig_fields",
+    # The reference extracts the platform request id from the response headers and
+    # exposes it as ``self.request_id`` (rest/_base.py) — a DERIVED but
+    # caller-observable value, recorded by the signature oracle as of the
+    # 2026-07-27 class-B2 ruling. php computes the identical value in its ctor
+    # (``self::extractRequestId($headers)``) and reads it back through
+    # ``getRequestId()``. The reference records NO ``get_request_id`` spelling, so
+    # the fold is clean: a differently-named accessor for a reference attribute is
+    # a RENAME, which keeps comparing, never an addition (AGENT_RULES §2). This is
+    # NOT reachable by the derived ORACLE_ACCESSOR_FOLD, which is keyed off
+    # python_surface.json — the ruling widened the SIGNATURE oracle only.
+    ("SignalWireRestError", "get_request_id"): "request_id",
 }
 
 

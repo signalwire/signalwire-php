@@ -120,6 +120,10 @@ class ActionsMockTest extends TestCase
         $event = $action->wait(5);
         $this->assertNotNull($event);
         $this->assertTrue($action->isDone());
+        // Reference parity: Action exposes the terminal-state flag BOTH as the
+        // `completed` value (relay/call.py:90/102) and the `is_done` property.
+        // Same flag, two reads — a caller may branch on either.
+        $this->assertTrue($action->completed);
         $this->assertSame('finished', $event->getParams()['state'] ?? null);
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.play'));

@@ -165,6 +165,65 @@ class SWMLServiceTest extends TestCase
     }
 
     // ------------------------------------------------------------------
+    // TLS-serving values mirrored onto the service (reference parity:
+    // core/swml_service.py:143-146 sets self.ssl_enabled / self.domain /
+    // self.ssl_cert_path / self.ssl_key_path off self.security).
+    // ------------------------------------------------------------------
+
+    public function testTlsValuesDefaultOff(): void
+    {
+        $svc = $this->makeService();
+        $this->assertFalse($svc->sslEnabled);
+        $this->assertNull($svc->domain);
+        $this->assertNull($svc->sslCertPath);
+        $this->assertNull($svc->sslKeyPath);
+    }
+
+    public function testTlsValuesMirrorSecurityConfigFromEnv(): void
+    {
+        putenv('SWML_SSL_ENABLED=true');
+        putenv('SWML_SSL_CERT_PATH=/etc/tls/fullchain.pem');
+        putenv('SWML_SSL_KEY_PATH=/etc/tls/privkey.pem');
+        putenv('SWML_DOMAIN=agent.example.com');
+        try {
+            $svc = $this->makeService();
+            $this->assertTrue($svc->sslEnabled);
+            $this->assertSame('agent.example.com', $svc->domain);
+            $this->assertSame('/etc/tls/fullchain.pem', $svc->sslCertPath);
+            $this->assertSame('/etc/tls/privkey.pem', $svc->sslKeyPath);
+        } finally {
+            putenv('SWML_SSL_ENABLED');
+            putenv('SWML_SSL_CERT_PATH');
+            putenv('SWML_SSL_KEY_PATH');
+            putenv('SWML_DOMAIN');
+        }
+    }
+
+    public function testGetFullUrlUsesHttpsAndDomainWhenTlsEnabled(): void
+    {
+        $svc = $this->makeService();
+        $svc->sslEnabled = true;
+        $svc->domain = 'agent.example.com';
+        // Non-standard port -> the port stays in the authority.
+        $this->assertSame('https://agent.example.com:3000/', $svc->getFullUrl());
+    }
+
+    public function testGetFullUrlElidesStandardHttpsPort(): void
+    {
+        $svc = $this->makeService(['port' => 443]);
+        $svc->sslEnabled = true;
+        $svc->domain = 'agent.example.com';
+        $this->assertSame('https://agent.example.com/', $svc->getFullUrl());
+    }
+
+    public function testGetFullUrlHttpsWithoutDomainKeepsHost(): void
+    {
+        $svc = $this->makeService();
+        $svc->sslEnabled = true;
+        $this->assertSame('https://0.0.0.0:3000/', $svc->getFullUrl());
+    }
+
+    // ------------------------------------------------------------------
     // Verb auto-vivification (__call)
     // ------------------------------------------------------------------
 

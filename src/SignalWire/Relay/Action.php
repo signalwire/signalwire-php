@@ -19,7 +19,16 @@ class Action
     protected string $callId;
     protected string $nodeId;
     protected ?string $state = null;
-    protected bool $completed = false;
+
+    /**
+     * Whether this action has reached a terminal state. Starts false, flipped
+     * true by {@see complete()}. Public because the reference records it as a
+     * caller-observable value on Action itself (``self.completed``,
+     * relay/call.py:90/102) alongside the ``is_done`` property — the same flag
+     * read two ways. {@see isDone()} is the accessor spelling; this is the
+     * field.
+     */
+    public bool $completed = false;
     /** @var mixed */
     protected $result = null;
     /** @var list<Event> */

@@ -29,6 +29,31 @@ class Spider extends SkillBase
     private const BASE_URL_ENV = 'SPIDER_BASE_URL';
 
     /**
+     * XPath expressions for the unwanted elements stripped before text
+     * extraction. PREFILLED with the reference's seven defaults
+     * (skills/spider/skill.py:191-199) — an empty list would strip nothing, so
+     * the contents ARE the default. Public because the reference records it as
+     * a caller-observable value on the skill instance: a caller appends to it
+     * (or replaces it) to control what is dropped from a scraped page.
+     *
+     * PHP ships no `lxml`, so extraction is a regex pipeline rather than a real
+     * XPath engine; {@see htmlToText()} compiles each simple `//tag` expression
+     * to the matching element-stripping pattern. An expression this pipeline
+     * cannot compile is skipped rather than silently mis-stripping.
+     *
+     * @var list<string>
+     */
+    public array $removeXpaths = [
+        '//script',
+        '//style',
+        '//nav',
+        '//header',
+        '//footer',
+        '//aside',
+        '//noscript',
+    ];
+
+    /**
      * Initialize the spider skill with configuration parameters.
      *
      * Mirrors Python `SpiderSkill.__init__` (skill.py:151): the base
@@ -272,7 +297,7 @@ class Spider extends SkillBase
                 }
 
                 $rawHtml = self::extractHtmlBody($body, $parsed);
-                $text = self::htmlToText($rawHtml, $maxLength);
+                $text = $this->htmlToText($rawHtml, $maxLength);
                 if ($text === '') {
                     return new FunctionResult("No content extracted from {$url}");
                 }
@@ -346,7 +371,7 @@ class Spider extends SkillBase
                     }
                     $visited[$nextUrl] = true;
                     $rawHtml = self::extractHtmlBody($body, $parsed);
-                    $text = self::htmlToText($rawHtml, $maxLength);
+                    $text = $this->htmlToText($rawHtml, $maxLength);
                     if ($text !== '') {
                         $summary = strlen($text) > 500
                             ? substr($text, 0, 500) . '...'
@@ -531,25 +556,28 @@ class Spider extends SkillBase
      * intro and the conclusion of the page (matches the python
      * port's _fast_text_extract's "keep_start / keep_end" behavior).
      */
-    private static function htmlToText(string $html, int $maxLength): string
+    private function htmlToText(string $html, int $maxLength): string
     {
         if ($html === '') {
             return '';
         }
-        // Drop noisy elements wholesale.
-        $cleaned = preg_replace(
-            [
-                '#<script\b[^>]*>.*?</script>#is',
-                '#<style\b[^>]*>.*?</style>#is',
-                '#<nav\b[^>]*>.*?</nav>#is',
-                '#<header\b[^>]*>.*?</header>#is',
-                '#<footer\b[^>]*>.*?</footer>#is',
-                '#<aside\b[^>]*>.*?</aside>#is',
-                '#<noscript\b[^>]*>.*?</noscript>#is',
-            ],
-            ' ',
-            $html,
-        ) ?? $html;
+        // Drop the elements named by $removeXpaths wholesale. Driven by the
+        // public field so a caller that edits the list actually changes what is
+        // stripped (the reference iterates the same list in
+        // _fast_text_extract, skill.py:313).
+        $patterns = [];
+        foreach ($this->removeXpaths as $xpath) {
+            if (preg_match('#^//([a-zA-Z][a-zA-Z0-9]*)$#', $xpath, $m) !== 1) {
+                // Not a simple element selector — the regex pipeline cannot
+                // compile it. Skip rather than mis-strip.
+                continue;
+            }
+            $tag = $m[1];
+            $patterns[] = '#<' . $tag . '\b[^>]*>.*?</' . $tag . '>#is';
+        }
+        $cleaned = $patterns === []
+            ? $html
+            : (preg_replace($patterns, ' ', $html) ?? $html);
         $text = strip_tags($cleaned);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = (string) preg_replace('/\s+/', ' ', $text);

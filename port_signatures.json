@@ -10766,6 +10766,15 @@
               ],
               "returns": "void"
             },
+            "domain": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
             "extract_sip_username": {
               "params": [
                 {
@@ -11197,6 +11206,33 @@
                 }
               ],
               "returns": "void"
+            },
+            "ssl_cert_path": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "ssl_enabled": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "ssl_key_path": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
             },
             "stop": {
               "params": [
@@ -21494,6 +21530,15 @@
                 }
               ],
               "returns": "optional<class:signalwire.relay.call.Call>"
+            },
+            "completed": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "bool"
             },
             "control_id": {
               "params": [
@@ -34450,15 +34495,6 @@
               ],
               "returns": "string"
             },
-            "get_request_id": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "optional<string>"
-            },
             "get_response_body": {
               "params": [
                 {
@@ -34485,6 +34521,15 @@
                 }
               ],
               "returns": "string"
+            },
+            "request_id": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "optional<string>"
             },
             "status_code": {
               "params": [
@@ -87558,6 +87603,15 @@
                 }
               ],
               "returns": "void"
+            },
+            "remove_xpaths": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
             },
             "setup": {
               "params": [

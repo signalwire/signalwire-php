@@ -55,6 +55,37 @@ class Service implements RequestHandlerLike
      */
     protected SecurityConfig $security;
 
+    /**
+     * Whether TLS serving is enabled. Mirrored off ``$this->security`` at
+     * construction, exactly as the reference does
+     * (``self.ssl_enabled = self.security.ssl_enabled``,
+     * core/swml_service.py:143). Public because it is a caller-observable
+     * VALUE the reference records on SWMLService itself: a caller reads it to
+     * know which scheme the service serves, and may set it before ``serve()``
+     * to flip TLS on (the reference's ``serve(ssl_enabled=…)`` assigns the
+     * same attribute).
+     */
+    public bool $sslEnabled = false;
+
+    /**
+     * TLS certificate path (PEM). Mirrored off ``$this->security``; see
+     * ``$sslEnabled``. Null when TLS is not configured.
+     */
+    public ?string $sslCertPath = null;
+
+    /**
+     * TLS private-key path (PEM). Mirrored off ``$this->security``; see
+     * ``$sslEnabled``. Null when TLS is not configured.
+     */
+    public ?string $sslKeyPath = null;
+
+    /**
+     * The domain this service is served under. Mirrored off
+     * ``$this->security``. Used as the host part of the public URL when TLS
+     * is enabled, mirroring the reference's ``_get_base_url``.
+     */
+    public ?string $domain = null;
+
     protected Logger $logger;
 
     protected string $basicAuthUser;
@@ -152,6 +183,15 @@ class Service implements RequestHandlerLike
         // Python SWMLService.__init__: `self.security = SecurityConfig(
         // config_file=config_file, service_name=name)`.
         $this->security = new SecurityConfig(configFile: $configFile, serviceName: $name);
+
+        // Mirror the TLS-serving values onto the service itself, exactly as the
+        // reference does (core/swml_service.py:143-146). These are the values a
+        // caller reads to know how the service is served, and writes to flip TLS
+        // on before serve().
+        $this->sslEnabled = $this->security->sslEnabled;
+        $this->domain = $this->security->domain;
+        $this->sslCertPath = $this->security->sslCertPath;
+        $this->sslKeyPath = $this->security->sslKeyPath;
 
         // Auth: explicit > env > config file > auto-generated. The middle two
         // layers both live in SecurityConfig (env first, then the config
@@ -293,14 +333,27 @@ class Service implements RequestHandlerLike
 
     /**
      * Build the full URL for this service.
+     *
+     * Honours the TLS-serving values ($sslEnabled / $domain), mirroring the
+     * reference's ``_get_base_url`` (core/swml_service.py:1516-1540): https
+     * when TLS is on, the domain as the host part when one is configured, and
+     * the port elided for the scheme's standard port (443/80).
      */
     public function getFullUrl(bool $includeAuth = false): string
     {
         $auth = $includeAuth
             ? "{$this->basicAuthUser}:{$this->basicAuthPassword}@"
             : '';
+        $scheme = $this->sslEnabled ? 'https' : 'http';
+        if ($this->sslEnabled && $this->domain !== null && $this->domain !== '') {
+            $hostPart = ($this->port === 443 || $this->port === 80)
+                ? $this->domain
+                : "{$this->domain}:{$this->port}";
+        } else {
+            $hostPart = "{$this->host}:{$this->port}";
+        }
         $path = $this->route;
-        return "http://{$auth}{$this->host}:{$this->port}{$path}";
+        return "{$scheme}://{$auth}{$hostPart}{$path}";
     }
 
     // ------------------------------------------------------------------
