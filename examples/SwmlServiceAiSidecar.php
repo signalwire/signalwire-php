@@ -99,11 +99,11 @@ function buildAiSidecarService(string $publicUrl = 'https://your-host.example.co
 
     // 3. Optional: mount an event sink for ai_sidecar lifecycle events at
     //    POST /sales-sidecar/events. mod_openai POSTs each event as JSON.
-    $svc->registerRoutingCallback('/events', function (?array $body, array $headers): array {
+    $svc->registerRoutingCallback(function (?array $body, array $headers): array {
         $type = is_array($body) ? ($body['type'] ?? '<unknown>') : '<unknown>';
         fwrite(STDERR, "[sidecar event] type={$type} body=" . json_encode($body) . "\n");
         return ['ok' => true];
-    });
+    }, path: '/events');
 
     return $svc;
 }

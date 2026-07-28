@@ -123,7 +123,7 @@ $out['http_handle_request_401_bad_password'] = observeResponse($s, $h, $b, 'resp
 
 // ---- handle_request: 307 redirect via routing callback ----
 $svc = newService();
-$svc->registerRoutingCallback('/sip', 'redirectCB');
+$svc->registerRoutingCallback('redirectCB', '/sip');
 [$s, $h, $b] = $svc->handleRequest(
     'POST',
     urlPath('http://localhost:3000/swml/sip'),
@@ -134,7 +134,7 @@ $out['http_handle_request_307_redirect'] = observeResponse($s, $h, $b, 'response
 
 // ---- handle_request: callback returns null -> normal 200 SWML ----
 $svc = newService();
-$svc->registerRoutingCallback('/sip', 'redirectCB');
+$svc->registerRoutingCallback('redirectCB', '/sip');
 [$s, $h, $b] = $svc->handleRequest(
     'POST',
     urlPath('http://localhost:3000/swml/sip'),

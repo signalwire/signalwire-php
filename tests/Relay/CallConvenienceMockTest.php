@@ -214,8 +214,10 @@ class CallConvenienceMockTest extends TestCase
     public function playSilenceJournalsSilenceMediaShape(): void
     {
         $call = $this->answeredInboundCall('call-psil');
+        // The reference takes exactly one option, `on_completed`; a caller who
+        // omits it gets null (no completion handler), NOT an invented default.
         // Return type is PlayAction; instanceof would be redundant.
-        $call->playSilence(2.5, ['control_id' => 'psil-ctl']);
+        $call->playSilence(2.5);
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);

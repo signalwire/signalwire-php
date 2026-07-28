@@ -441,7 +441,7 @@ class Client implements RelayClientLike
      * @return array<string,mixed>
      * @throws \RuntimeException on error responses or transport timeout.
      */
-    public function execute(string $method, array $params = []): array
+    public function execute(string $method, array $params): array
     {
         $id = $this->generateUuid();
 

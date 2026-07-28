@@ -30,10 +30,14 @@ class SkillManager
     }
 
     /**
-     * @param array<string,mixed> $params
+     * Parameter ORDER mirrors the reference (core/skill_manager.py:26):
+     * (skill_name, skill_class, params) — `skill_class` is param 1.
+     *
+     * @param class-string<SkillBase>|null $skillClass
+     * @param array<string,mixed>|null $params
      * @return array{bool, string}
      */
-    public function loadSkill(string $skillName, array $params = [], ?string $skillClass = null): array
+    public function loadSkill(string $skillName, ?string $skillClass = null, ?array $params = null): array
     {
         if ($skillClass === null) {
             $skillClass = $this->registry->getFactory($skillName);
@@ -44,7 +48,7 @@ class SkillManager
         }
 
         /** @var SkillBase $instance */
-        $instance = new $skillClass($this->agent, $params);
+        $instance = new $skillClass($this->agent, $params ?? []);
         $instanceKey = $instance->getInstanceKey();
 
         if (isset($this->loadedSkills[$instanceKey])) {

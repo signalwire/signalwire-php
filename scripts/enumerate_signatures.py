@@ -413,6 +413,22 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\SWML\\Service", "handleRequest"): {
         "headers": "dict<string,string>",
     },
+    # Service::registerRoutingCallback — PHP's bare `callable` type hint reflects
+    # to a loose callable; the PHPDoc records the concrete
+    # `(array, array): ?string` shape the oracle types as
+    # callable<list<dict<string,any>,dict<string,any>>,optional<string>>.
+    # Projected onto both SWMLService.register_routing_callback and
+    # WebMixin.register_routing_callback.
+    ("SignalWire\\SWML\\Service", "registerRoutingCallback"): {
+        "callback": "callable<list<dict<string,any>,dict<string,any>>,optional<string>>",
+    },
+    # SkillManager::loadSkill — Python passes the skill CLASS OBJECT; PHP passes
+    # its class-string (`new $skillClass(...)` is the PHP idiom for the same
+    # capability) and the PHPDoc records `class-string<SkillBase>`. Re-establish
+    # the oracle's class reference so the two compare EQUAL.
+    ("SignalWire\\Skills\\SkillManager", "loadSkill"): {
+        "skill_class": "optional<class:signalwire.core.skill_base.SkillBase>",
+    },
     # --- AgentBase: AI-config / prompt / skill mixin params (projected onto the
     # AIConfigMixin/PromptMixin/PromptManager/SkillMixin targets by MIXIN_PROJECTIONS
     # after this remap runs, so tightening here clears every projected copy too). ---
@@ -430,6 +446,13 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     },
     ("SignalWire\\Agent\\AgentBase", "setInternalFillers"): {
         "fillers": "dict<string,dict<string,list<string>>>",
+    },
+    # addInternalFiller's `array $fillers` is the per-(function,language) phrase
+    # list; the PHPDoc `@param list<string> $fillers` records the concrete type
+    # PHP reflection erases. Surfaced once the param-order/required fix aligned
+    # this param positionally with the reference's `fillers: list[str]`.
+    ("SignalWire\\Agent\\AgentBase", "addInternalFiller"): {
+        "fillers": "list<string>",
     },
     ("SignalWire\\Agent\\AgentBase", "setLanguages"): {
         "languages": "list<dict<string,any>>",
@@ -710,9 +733,54 @@ _AICHAT_SIG_DROP = frozenset({
 # the documented set_*_llm_params required-array idiom; these concrete no-op
 # overrides return void/self and carry no distinct wire surface, so the
 # oracle-mirror drop is exact.)
+# Also scoped to the two HAND-WRITTEN REST read methods whose reference
+# signatures are ``paginate(self, *, request_options=None, **params)`` and
+# ``list_addresses(self, resource_id, *, request_options=None, **params)``
+# (rest/_base.py:357 / :454). The oracle drops the bare ``**params`` and records
+# ``request_options`` as the last param. PHP realizes that same query-door as a
+# concrete ``array $params`` positioned BEFORE ``$requestOptions``, so reflection
+# alone reports an extra param and — because the diff matches params BY POSITION
+# — reads PHP's ``$params = []`` against the reference's
+# ``request_options = None`` as a default-mismatch. This is the identical fold
+# the GENERATED fabric resources already get for free: generate_rest.py's §5.3
+# GET query door registers a sidecar of ``[...id..., request_options]`` and omits
+# the ``array $params`` record, which is why CallFlows::listAddresses compares
+# clean while the hand-written base does not. Dropping ``params`` here applies
+# the same rule to the hand-written base; ``request_options`` still compares.
 VAR_KEYWORD_DROP_METHODS: dict[tuple[str, str], str] = {
     ("SignalWire\\Agents\\BedrockAgent", "setPromptLlmParams"): "params",
     ("SignalWire\\Agents\\BedrockAgent", "setPostPromptLlmParams"): "params",
+    ("SignalWire\\REST\\ReadResource", "paginate"): "params",
+    ("SignalWire\\REST\\CrudWithAddresses", "listAddresses"): "params",
+}
+
+
+# Param-KIND remaps for params the reference declares KEYWORD-ONLY (Python
+# ``*,``) that PHP can only express as a trailing optional positional. PHP has
+# no keyword-only parameters — a caller reaches them via a NAMED ARGUMENT
+# (``foo(bar: $x)``), which is the exact capability Python's ``*,`` grants — so
+# the kind difference is pure idiom and is folded HERE, at the enumerator, not
+# excused. This is the same fold the GENERATED REST resources already get from
+# generate_rest.py's sidecar (which records ``"kind": "keyword"`` for
+# ``request_options``); these entries extend it to the hand-written classes and
+# to the two RELAY methods whose single option the reference keyword-gates.
+# Keyed by (PHP fully-qualified class, PHP method name) -> {snake_param: kind}.
+PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
+    # rest/_base.py:357 / :454 — ``*, request_options=None``.
+    ("SignalWire\\REST\\ReadResource", "paginate"): {
+        "request_options": "keyword",
+    },
+    ("SignalWire\\REST\\CrudWithAddresses", "listAddresses"): {
+        "request_options": "keyword",
+    },
+    # relay/call.py:620 — ``play_silence(duration, *, on_completed=None)``.
+    ("SignalWire\\Relay\\Call", "playSilence"): {
+        "on_completed": "keyword",
+    },
+    # relay/call.py:1567 — ``user_event(*, event=None, **kwargs)``.
+    ("SignalWire\\Relay\\Call", "userEvent"): {
+        "event": "keyword",
+    },
 }
 
 
@@ -1308,6 +1376,15 @@ def collect(raw: dict, aliases: dict, rest_sidecar: dict[str, list[dict]] | None
                     new_type = remap.get(prm.get("name", ""))
                     if new_type is not None:
                         prm["type"] = new_type
+            # Keyword-only kind remap: PHP reaches a Python ``*,`` param via a
+            # NAMED ARGUMENT, the same capability — fold the kind (see
+            # PARAM_KIND_REMAPS). Matched on the reflected (snake) param name.
+            kind_remap = PARAM_KIND_REMAPS.get((full_php, native))
+            if kind_remap:
+                for prm in sig.get("params", []):
+                    new_kind = kind_remap.get(prm.get("name", ""))
+                    if new_kind is not None:
+                        prm["kind"] = new_kind
             # Concrete-collection return remap: re-establish the return element
             # type where PHP's bare ``array`` erased it (see RETURN_TYPE_REMAPS).
             ret_remap = RETURN_TYPE_REMAPS.get((full_php, native))

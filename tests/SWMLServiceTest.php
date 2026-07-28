@@ -331,7 +331,7 @@ class SWMLServiceTest extends TestCase
     public function testHealthEndpoint(): void
     {
         $svc = $this->makeService();
-        [$status, $headers, $body] = $svc->handleRequest('GET', '/health');
+        [$status, $headers, $body] = $svc->handleRequest('GET', '/health', []);
 
         $this->assertSame(200, $status);
         $this->assertSame('application/json', $headers['Content-Type']);
@@ -342,7 +342,7 @@ class SWMLServiceTest extends TestCase
     public function testReadyEndpoint(): void
     {
         $svc = $this->makeService();
-        [$status, $headers, $body] = $svc->handleRequest('GET', '/ready');
+        [$status, $headers, $body] = $svc->handleRequest('GET', '/ready', []);
 
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
@@ -352,7 +352,7 @@ class SWMLServiceTest extends TestCase
     public function testHealthNoAuthRequired(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('GET', '/health');
+        [$status,,] = $svc->handleRequest('GET', '/health', []);
         $this->assertSame(200, $status);
     }
 
@@ -363,7 +363,7 @@ class SWMLServiceTest extends TestCase
     public function testRootWithoutAuthReturns401(): void
     {
         $svc = $this->makeService();
-        [$status, $headers,] = $svc->handleRequest('GET', '/');
+        [$status, $headers,] = $svc->handleRequest('GET', '/', []);
 
         $this->assertSame(401, $status);
         $this->assertArrayHasKey('WWW-Authenticate', $headers);
@@ -396,7 +396,7 @@ class SWMLServiceTest extends TestCase
     public function testNoAuthHeaderReturns401(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('GET', '/');
+        [$status,,] = $svc->handleRequest('GET', '/', []);
         $this->assertSame(401, $status);
     }
 
@@ -424,7 +424,7 @@ class SWMLServiceTest extends TestCase
         $this->assertSame(200, $status);
         $this->assertSame([], $headers, '200 SWML core response must carry no headers');
 
-        [$status401, $headers401,] = $svc->handleRequest('GET', '/');
+        [$status401, $headers401,] = $svc->handleRequest('GET', '/', []);
         $this->assertSame(401, $status401);
         $this->assertSame(['WWW-Authenticate'], array_keys($headers401));
         $this->assertSame('Basic', $headers401['WWW-Authenticate']);
@@ -450,7 +450,7 @@ class SWMLServiceTest extends TestCase
     public function testSwaigEndpointAuth(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('POST', '/swaig');
+        [$status,,] = $svc->handleRequest('POST', '/swaig', []);
         $this->assertSame(401, $status);
     }
 
@@ -468,7 +468,7 @@ class SWMLServiceTest extends TestCase
     public function testPostPromptEndpointAuth(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('POST', '/post_prompt');
+        [$status,,] = $svc->handleRequest('POST', '/post_prompt', []);
         $this->assertSame(401, $status);
     }
 
@@ -515,7 +515,7 @@ class SWMLServiceTest extends TestCase
     public function testCustomRouteHealthStillWorks(): void
     {
         $svc = $this->makeService(['route' => '/agent']);
-        [$status,,] = $svc->handleRequest('GET', '/health');
+        [$status,,] = $svc->handleRequest('GET', '/health', []);
         $this->assertSame(200, $status);
     }
 
@@ -549,10 +549,10 @@ class SWMLServiceTest extends TestCase
         // preserving method+body, with the returned route as the Location.
         $svc = $this->makeService();
         $called = false;
-        $svc->registerRoutingCallback('/custom', function (?array $data, array $headers) use (&$called) {
+        $svc->registerRoutingCallback(function (?array $data, array $headers) use (&$called) {
             $called = true;
             return '/other-service';
-        });
+        }, path: '/custom');
 
         [$status, $headers, $body] = $svc->handleRequest('POST', '/custom', $this->authHeader(), '{}');
         $this->assertTrue($called);
@@ -567,10 +567,10 @@ class SWMLServiceTest extends TestCase
         // this service — it renders and returns the SWML document (200).
         $svc = $this->makeService();
         $called = false;
-        $svc->registerRoutingCallback('/custom', function (?array $data, array $headers) use (&$called) {
+        $svc->registerRoutingCallback(function (?array $data, array $headers) use (&$called) {
             $called = true;
             return null;
-        });
+        }, path: '/custom');
 
         [$status, , $body] = $svc->handleRequest('POST', '/custom', $this->authHeader(), '{}');
         $this->assertTrue($called);

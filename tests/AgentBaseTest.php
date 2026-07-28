@@ -594,11 +594,36 @@ class AgentBaseTest extends TestCase
     public function testAddInternalFiller(): void
     {
         $agent = $this->makeAgent();
-        $agent->addInternalFiller('hmm');
-        $agent->addInternalFiller('uh');
+        // Reference contract (ai_config_mixin.py:462): all three args are
+        // REQUIRED and the result nests function_name -> language_code -> list.
+        $agent->addInternalFiller('next_step', 'en-US', ['Moving on...']);
+        $agent->addInternalFiller('next_step', 'es', ['Continuemos...']);
+        $agent->addInternalFiller('change_context', 'en-US', ['One moment...']);
 
         $ai = $this->extractAiVerb($agent->renderSwml());
-        $this->assertSame(['hmm', 'uh'], Shape::at($ai, 'params', 'internal_fillers'));
+        $this->assertSame([
+            'next_step' => [
+                'en-US' => ['Moving on...'],
+                'es' => ['Continuemos...'],
+            ],
+            'change_context' => [
+                'en-US' => ['One moment...'],
+            ],
+        ], Shape::at($ai, 'params', 'internal_fillers'));
+    }
+
+    /**
+     * `language_code` and `fillers` are REQUIRED — the port previously
+     * defaulted both to null and silently accepted a one-arg "legacy" call
+     * that appended a bare string. Omitting either argument must now be an
+     * ArgumentCountError, matching the reference's required params.
+     */
+    public function testAddInternalFillerRequiresAllThreeArguments(): void
+    {
+        $agent = $this->makeAgent();
+        $this->expectException(\ArgumentCountError::class);
+        /** @phpstan-ignore-next-line intentionally under-applied */
+        $agent->addInternalFiller('next_step');
     }
 
     // ------------------------------------------------------------------
@@ -1110,7 +1135,7 @@ class AgentBaseTest extends TestCase
         $this->assertSame($agent, $agent->updateGlobalData([]));
         $this->assertSame($agent, $agent->setNativeFunctions([]));
         $this->assertSame($agent, $agent->setInternalFillers([]));
-        $this->assertSame($agent, $agent->addInternalFiller('f'));
+        $this->assertSame($agent, $agent->addInternalFiller('next_step', 'en-US', ['One sec...']));
         $this->assertSame($agent, $agent->enableDebugEvents());
         $this->assertSame($agent, $agent->addFunctionInclude([]));
         $this->assertSame($agent, $agent->setFunctionIncludes([]));

@@ -171,13 +171,16 @@ class Message
      * another mechanism (e.g. the client's read loop).  This method
      * simply spins until completion.
      *
+     * ``$timeout = null`` (the reference default, relay/message.py:93) waits
+     * INDEFINITELY — there is no invented cap.
+     *
      * @return mixed The resolved result, or null on timeout.
      */
-    public function wait(int $timeout = 30)
+    public function wait(int|float|null $timeout = null)
     {
-        $deadline = microtime(true) + $timeout;
+        $deadline = $timeout === null ? null : microtime(true) + $timeout;
 
-        while (!$this->completed && microtime(true) < $deadline) {
+        while (!$this->completed && ($deadline === null || microtime(true) < $deadline)) {
             // Yield the CPU briefly so we don't spin at 100%.
             usleep(5000);
         }

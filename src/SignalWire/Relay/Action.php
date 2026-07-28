@@ -94,17 +94,20 @@ class Action
      * keeps processing inbound frames.
      *
      * Returns the resolving Event when the action completes (mirrors
-     * Python's ``return self._wait_event.wait()``). Returns null on
-     * timeout. The numeric ``$timeout`` is interpreted as seconds and
-     * accepts integers or floats.
+     * Python's ``return await self._done``). Returns null on timeout.
+     * The numeric ``$timeout`` is interpreted as seconds and accepts
+     * integers or floats.
+     *
+     * ``$timeout = null`` (the reference default, relay/call.py:114) waits
+     * INDEFINITELY — there is no invented cap.
      *
      * @return Event|null
      */
-    public function wait(int|float $timeout = 30): ?Event
+    public function wait(int|float|null $timeout = null): ?Event
     {
-        $deadline = microtime(true) + $timeout;
+        $deadline = $timeout === null ? null : microtime(true) + $timeout;
 
-        while (!$this->completed && microtime(true) < $deadline) {
+        while (!$this->completed && ($deadline === null || microtime(true) < $deadline)) {
             if (method_exists($this->client, 'readOnce')) {
                 $this->client->readOnce();
             }

@@ -1222,29 +1222,24 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Add a single internal filler entry.
+     * Add internal fillers for a single internal function and language.
      *
-     * Two calling conventions are supported for backward
-     * compatibility:
-     *
-     *   $agent->addInternalFiller('plain text')  // legacy
      *   $agent->addInternalFiller($functionName, $languageCode, $fillers)
      *
      * See setInternalFillers() for the complete list of supported
      * function names and what fillers do. Names outside the supported
      * set log a warning.
      *
-     * @param list<string>|null $fillers
+     * @param list<string> $fillers
      */
-    public function addInternalFiller(string $filler_or_function, ?string $languageCode = null, ?array $fillers = null): self
+    public function addInternalFiller(string $functionName, string $languageCode, array $fillers): self
     {
-        if ($languageCode === null || $fillers === null) {
-            // Legacy: single string argument.
-            $this->internalFillers[] = $filler_or_function;
+        // Python: the whole body is guarded on all three being truthy
+        // (ai_config_mixin.py:489) — an empty name/code/list is a no-op.
+        if ($functionName === '' || $languageCode === '' || $fillers === []) {
             return $this;
         }
 
-        $functionName = $filler_or_function;
         if (!in_array($functionName, self::SUPPORTED_INTERNAL_FILLER_NAMES, true)) {
             $supported = self::SUPPORTED_INTERNAL_FILLER_NAMES;
             sort($supported);
@@ -1592,13 +1587,13 @@ class AgentBase extends Service implements AgentInterface
      * ``ValueError(f"Failed to load skill '{name}': {error}")``; PHP's idiom for
      * that value-domain error is ``\InvalidArgumentException``.
      *
-     * @param array<string, mixed> $params
+     * @param array<string, mixed>|null $params
      * @throws \InvalidArgumentException when the skill fails to load.
      */
-    public function addSkill(SkillName|string $name, array $params = []): static
+    public function addSkill(SkillName|string $name, ?array $params = null): static
     {
         $skillName = $name instanceof SkillName ? $name->value : $name;
-        [$success, $error] = $this->getSkillManager()->loadSkill($skillName, $params);
+        [$success, $error] = $this->getSkillManager()->loadSkill($skillName, params: $params);
         if (!$success) {
             throw new \InvalidArgumentException(
                 "Failed to load skill '{$skillName}': {$error}"
@@ -1767,7 +1762,7 @@ class AgentBase extends Service implements AgentInterface
             return null;
         };
 
-        $this->registerRoutingCallback($path, $callback);
+        $this->registerRoutingCallback($callback, $path);
 
         // auto_map defaults to true in the reference.
         $this->autoMapSipUsernames();

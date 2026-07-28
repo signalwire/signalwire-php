@@ -139,8 +139,8 @@ $out['server_unregister'] = $s->getAgents();
 // ---- routing-callback registration on SWMLService (path-normalized) ----
 $svc = new Service(name: 'svc', route: '/svc');
 $noop = static fn (array $body, array $headers): ?string => null;
-$svc->registerRoutingCallback('/sip/', $noop);
-$svc->registerRoutingCallback('voice', $noop);
+$svc->registerRoutingCallback($noop, '/sip/');
+$svc->registerRoutingCallback($noop, 'voice');
 $paths = array_keys(reflectProp($svc, 'routingCallbacks'));
 sort($paths);
 $out['state_register_routing_callback'] = $paths;

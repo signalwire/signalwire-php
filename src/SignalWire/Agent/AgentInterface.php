@@ -28,9 +28,9 @@ use SignalWire\Skills\SkillName;
 interface AgentInterface
 {
     /**
-     * @param array<string, mixed> $params
+     * @param array<string, mixed>|null $params
      */
-    public function addSkill(SkillName|string $name, array $params = []): static;
+    public function addSkill(SkillName|string $name, ?array $params = null): static;
 
     /**
      * @param list<string> $hints

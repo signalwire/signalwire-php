@@ -28,7 +28,7 @@ interface RequestHandlerLike
     public function handleRequest(
         string $method,
         string $path,
-        array $headers = [],
+        array $headers,
         ?string $body = null,
     ): array;
 

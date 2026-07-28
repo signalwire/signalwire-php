@@ -151,21 +151,23 @@ class HttpClient
     }
 
     /**
-     * @param array<string,mixed> $data JSON body payload.
+     * @param array<string,mixed>|null $data JSON body payload. Defaults to
+     *   null (no body), matching the reference (rest/_base.py:306).
      * @param RequestOptions|null $requestOptions Per-request override.
      * @return array<string,mixed>
      */
-    public function put(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    public function put(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
         return $this->request('PUT', $path, [], $data, $requestOptions);
     }
 
     /**
-     * @param array<string,mixed> $data JSON body payload.
+     * @param array<string,mixed>|null $data JSON body payload. Defaults to
+     *   null (no body), matching the reference (rest/_base.py:314).
      * @param RequestOptions|null $requestOptions Per-request override.
      * @return array<string,mixed>
      */
-    public function patch(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    public function patch(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
         return $this->request('PATCH', $path, [], $data, $requestOptions);
     }

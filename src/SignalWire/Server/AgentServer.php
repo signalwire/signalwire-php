@@ -125,8 +125,7 @@ class AgentServer
         $path = rtrim($path, '/');
 
         foreach ($this->agents as $agent) {
-            // Service::registerRoutingCallback takes (path, callback).
-            $agent->registerRoutingCallback($path, $callbackFn);
+            $agent->registerRoutingCallback($callbackFn, $path);
         }
 
         $this->logger->info("Registered global routing callback at {$path} on all agents");
@@ -267,7 +266,7 @@ class AgentServer
      *
      * @throws \RuntimeException If the directory does not exist.
      */
-    public function serveStaticFiles(string $directory, string $urlPrefix): self
+    public function serveStaticFiles(string $directory, string $urlPrefix = '/'): self
     {
         $realDir = realpath($directory);
         if ($realDir === false || !is_dir($realDir)) {

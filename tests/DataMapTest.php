@@ -187,6 +187,34 @@ class DataMapTest extends TestCase
         $this->assertArrayNotHasKey('require_args', $wh);
     }
 
+    /**
+     * DEFAULT COVERAGE: the optional webhook args default to NULL, matching
+     * the reference (data_map.py:207 — `headers=None, form_param=None,
+     * require_args=None`). The port previously defaulted them to `[]` / `''`,
+     * which is a different value on the caller-visible contract even though
+     * both are falsy. Passing null EXPLICITLY must behave exactly like
+     * omitting the argument.
+     */
+    public function testWebhookOptionalArgsDefaultToNull(): void
+    {
+        $dm = new DataMap('fn');
+        $dm->webhook('GET', 'https://example.com', null, null, false, null);
+        $result = $dm->toSwaigFunction();
+        $wh = Shape::sub($result, 'data_map', 'webhooks', 0);
+
+        $this->assertArrayNotHasKey('headers', $wh);
+        $this->assertArrayNotHasKey('form_param', $wh);
+        $this->assertArrayNotHasKey('input_args_as_params', $wh);
+        $this->assertArrayNotHasKey('require_args', $wh);
+
+        // A reflection-level assertion so a re-introduced `= []` / `= ''`
+        // default fails here even if the emitted wire happens to match.
+        $rp = (new \ReflectionMethod(DataMap::class, 'webhook'))->getParameters();
+        $this->assertNull($rp[2]->getDefaultValue(), 'headers must default to null');
+        $this->assertNull($rp[3]->getDefaultValue(), 'formParam must default to null');
+        $this->assertNull($rp[5]->getDefaultValue(), 'requireArgs must default to null');
+    }
+
     // ── webhookExpressions ───────────────────────────────────────────────
 
     public function testWebhookExpressionsModifiesLastWebhook(): void

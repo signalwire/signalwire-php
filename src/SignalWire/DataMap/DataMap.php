@@ -99,14 +99,14 @@ class DataMap
      *           . 'provide one. Include the state or country if the '
      *           . 'city name is ambiguous.')
      *
-     * @param array<string> $enum
+     * @param array<string>|null $enum
      */
     public function parameter(
         string $name,
         string $type,
         string $description,
         bool $required = false,
-        array $enum = []
+        ?array $enum = null
     ): self {
         $prop = [
             'type' => $type,
@@ -152,16 +152,16 @@ class DataMap
     /**
      * Add a webhook definition.
      *
-     * @param array<string, string> $headers
-     * @param array<string> $requireArgs
+     * @param array<string, string>|null $headers
+     * @param array<string>|null $requireArgs
      */
     public function webhook(
         string $method,
         string $url,
-        array $headers = [],
-        string $formParam = '',
+        ?array $headers = null,
+        ?string $formParam = null,
         bool $inputArgsAsParams = false,
-        array $requireArgs = []
+        ?array $requireArgs = null
     ): self {
         $wh = [
             'method' => $method,
@@ -172,7 +172,7 @@ class DataMap
             $wh['headers'] = $headers;
         }
 
-        if ($formParam !== '') {
+        if ($formParam !== null && $formParam !== '') {
             $wh['form_param'] = $formParam;
         }
 

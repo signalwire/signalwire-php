@@ -295,7 +295,7 @@ class SkillsTest extends TestCase
         // Datetime has no required env vars and setup returns true.
         // Pass skip_prompt to keep this test focused on load bookkeeping
         // (skips the promptAddSection path).
-        [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
     }
@@ -305,7 +305,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
         $this->assertSame('', $msg);
@@ -316,8 +316,8 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
-        [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('already loaded', $msg);
@@ -328,7 +328,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
         $this->assertTrue($manager->hasSkill('datetime'));
 
         $removed = $manager->unloadSkill('datetime');
@@ -362,7 +362,7 @@ class SkillsTest extends TestCase
 
         $this->assertSame([], $manager->listLoadedSkills());
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
         $this->assertSame(['datetime'], $manager->listLoadedSkills());
     }
 
@@ -390,7 +390,7 @@ class SkillsTest extends TestCase
 
         $this->assertFalse($manager->hasSkill('datetime'));
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
         $this->assertTrue($manager->hasSkill('datetime'));
     }
 
@@ -399,7 +399,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        [$ok, $msg] = $manager->loadSkill('math', ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('math', params: ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
         $this->assertSame('', $msg);

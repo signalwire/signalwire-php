@@ -584,6 +584,32 @@ class AgentServerTest extends TestCase
         }
     }
 
+    /**
+     * DEFAULT COVERAGE: `serveStaticFiles($directory)` must be callable with
+     * ONE argument and mount at the root prefix "/" — the reference declares
+     * `route: str = "/"` (agent_server.py:750). The port previously required
+     * the prefix, so this call was a fatal ArgumentCountError.
+     */
+    public function testServeStaticFilesUrlPrefixDefaultsToRoot(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/sw_static_defprefix_' . uniqid();
+        mkdir($tmpDir, 0755, true);
+        file_put_contents($tmpDir . '/root.txt', 'at the root');
+
+        try {
+            $server = new AgentServer();
+            $server->serveStaticFiles($tmpDir);
+
+            // Mounted at "/" -> the file is reachable at its bare name.
+            [$status, , $body] = $server->handleRequest('GET', '/root.txt');
+            $this->assertSame(200, $status);
+            $this->assertSame('at the root', $body);
+        } finally {
+            unlink($tmpDir . '/root.txt');
+            rmdir($tmpDir);
+        }
+    }
+
     public function testServeStaticMethodChaining(): void
     {
         $tmpDir = sys_get_temp_dir() . '/sw_static_chain_' . uniqid();

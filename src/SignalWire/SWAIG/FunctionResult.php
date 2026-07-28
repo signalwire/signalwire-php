@@ -107,10 +107,10 @@ class FunctionResult
 
     // ── Call Control ─────────────────────────────────────────────────────
 
-    public function connect(string $destination, bool $final = true, string $from = ''): self
+    public function connect(string $destination, bool $final = true, ?string $from = null): self
     {
         $connectObj = ['to' => $destination];
-        if ($from !== '') {
+        if ($from !== null && $from !== '') {
             $connectObj['from'] = $from;
         }
 
@@ -275,8 +275,8 @@ class FunctionResult
     }
 
     public function switchContext(
-        string $systemPrompt,
-        string $userPrompt = '',
+        ?string $systemPrompt = null,
+        ?string $userPrompt = null,
         bool $consolidate = false,
         bool $fullReset = false,
         bool $isolated = false
@@ -287,14 +287,21 @@ class FunctionResult
         // STRING ({"context_switch": "<prompt>"}), not an object. Parity with
         // the simple/object branch in function_result.py:switch_context and the
         // verified Go/Rust siblings.
-        if ($systemPrompt !== '' && $userPrompt === '' && !$consolidate && !$fullReset && !$isolated) {
+        $hasSystem = $systemPrompt !== null && $systemPrompt !== '';
+        $hasUser = $userPrompt !== null && $userPrompt !== '';
+
+        if ($hasSystem && !$hasUser && !$consolidate && !$fullReset && !$isolated) {
             $this->actions[] = ['context_switch' => $systemPrompt];
             return $this;
         }
 
-        $ctx = ['system_prompt' => $systemPrompt];
+        // Python emits system_prompt only when truthy (function_result.py:730).
+        $ctx = [];
+        if ($hasSystem) {
+            $ctx['system_prompt'] = $systemPrompt;
+        }
 
-        if ($userPrompt !== '') {
+        if ($hasUser) {
             $ctx['user_prompt'] = $userPrompt;
         }
         if ($consolidate) {
@@ -907,16 +914,16 @@ class FunctionResult
      * full SWML document via executeSwml. Optional fields (body/media/tags/
      * region) are emitted only when supplied.
      *
-     * @param list<string> $media URLs to send (optional if $body is given).
-     * @param list<string> $tags  tags for UI searching.
+     * @param list<string>|null $media URLs to send (optional if $body is given).
+     * @param list<string>|null $tags  tags for UI searching.
      * @throws \InvalidArgumentException if neither body nor media is provided.
      */
     public function sendSms(
         string $toNumber,
         string $fromNumber,
         ?string $body = null,
-        array $media = [],
-        array $tags = [],
+        ?array $media = null,
+        ?array $tags = null,
         ?string $region = null
     ): self {
         // Validate that at least body or media is provided.

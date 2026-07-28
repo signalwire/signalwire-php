@@ -30,7 +30,7 @@ $service->addVerb('prompt', [
 $service->hangup();
 
 // Register routing callback for /customer
-$service->registerRoutingCallback('/customer', function (?array $requestData) use ($service) {
+$service->registerRoutingCallback(function (?array $requestData) use ($service) {
     $service->resetDocument();
     $service->answer();
 
@@ -48,10 +48,10 @@ $service->registerRoutingCallback('/customer', function (?array $requestData) us
     ]);
     $service->hangup();
     return null;
-});
+}, path: '/customer');
 
 // Register routing callback for /product
-$service->registerRoutingCallback('/product', function (?array $requestData) use ($service) {
+$service->registerRoutingCallback(function (?array $requestData) use ($service) {
     $service->resetDocument();
     $service->answer();
 
@@ -69,7 +69,7 @@ $service->registerRoutingCallback('/product', function (?array $requestData) use
     ]);
     $service->hangup();
     return null;
-});
+}, path: '/product');
 
 echo "Starting Routing Example Service\n";
 echo "Endpoints:\n";

@@ -446,12 +446,14 @@ class Call
      * was named ``calling.hangup`` — we send ``calling.end`` to match the
      * RELAY schema set extracted from switchblade.
      *
+     * ``$reason`` defaults to ``"hangup"`` and is ALWAYS sent, matching the
+     * reference (relay/call.py:542 — ``_execute("end", {"reason": reason})``).
+     *
      * @return array<string,mixed>
      */
-    public function hangup(?string $reason = null): array
+    public function hangup(string $reason = 'hangup'): array
     {
-        $extra = $reason !== null ? ['reason' => $reason] : [];
-        return $this->execute('calling.end', $extra);
+        return $this->execute('calling.end', ['reason' => $reason]);
     }
 
     /** @return array<string,mixed> */
@@ -639,11 +641,23 @@ class Call
     }
 
     /**
-     * @param array<string,mixed> $params
+     * Send a custom user-defined event.
+     *
+     * Mirrors Python's Call.user_event(*, event=None, **kwargs)
+     * (relay/call.py:1567): ``$event`` is OPTIONAL and emitted only when
+     * supplied; anything else the caller wants on the wire rides in
+     * ``$kwargs``.
+     *
+     * @param array<string,mixed> $kwargs
      * @return array<string,mixed>
      */
-    public function userEvent(array $params): array
+    public function userEvent(?string $event = null, array $kwargs = []): array
     {
+        $params = [];
+        if ($event !== null) {
+            $params['event'] = $event;
+        }
+        $params = array_merge($params, $kwargs);
         return $this->execute('calling.user_event', $params);
     }
 
@@ -660,15 +674,13 @@ class Call
      * Remove the call from a named queue.
      *
      * Mirrors Python's Call.queue_leave(queue_name, *, control_id=None,
-     * queue_id=None, status_url=None, **kwargs). When called with no args
-     * the legacy "leave the current queue" behavior is preserved.
+     * queue_id=None, status_url=None, **kwargs). ``$queue_name`` is REQUIRED —
+     * the reference has no default for it (relay/call.py:1603) and always
+     * emits it on the wire, so the port cannot invent a "leave-current" shape.
      *
-     * @param ?string $queue_name  Name of the queue to leave. Required when
-     *                             also supplying control_id / queue_id; when
-     *                             null the legacy no-arg "leave-current"
-     *                             behavior is preserved.
+     * @param string  $queue_name  Name of the queue to leave.
      * @param ?string $control_id  Optional control_id; auto-generated when
-     *                             null and other named-args are supplied.
+     *                             null.
      * @param ?string $queue_id    Optional explicit queue_id passed to the
      *                             server.
      * @param ?string $status_url  Optional status callback URL.
@@ -677,28 +689,16 @@ class Call
      * @return array<string,mixed>
      */
     public function queueLeave(
-        ?string $queue_name = null,
+        string $queue_name,
         ?string $control_id = null,
         ?string $queue_id = null,
         ?string $status_url = null,
         array $kwargs = []
     ): array {
-        if ($queue_name === null
-            && $control_id === null
-            && $queue_id === null
-            && $status_url === null
-            && empty($kwargs)
-        ) {
-            // Legacy no-arg shape: leave whatever queue the call is in.
-            return $this->execute('calling.queue.leave');
-        }
-
         $params = [
             'control_id' => $control_id ?? bin2hex(random_bytes(16)),
+            'queue_name' => $queue_name,
         ];
-        if ($queue_name !== null) {
-            $params['queue_name'] = $queue_name;
-        }
         if ($queue_id !== null) {
             $params['queue_id'] = $queue_id;
         }
@@ -802,14 +802,15 @@ class Call
      *
      * Wire shape: play ``[{type:"silence", params:{duration}}]``.
      *
-     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     * The reference (relay/call.py:620) takes exactly ONE keyword option here —
+     * ``on_completed`` — so it is declared explicitly rather than folded into a
+     * generic opts bag, and its default is ``null``.
      */
-    public function playSilence(int|float $duration, array $opts = []): PlayAction
+    public function playSilence(int|float $duration, ?callable $onCompleted = null): PlayAction
     {
-        $playOpts = $this->carryPlayOpts($opts);
         return $this->play(
             [['type' => 'silence', 'params' => ['duration' => $duration]]],
-            $playOpts,
+            $onCompleted === null ? [] : ['on_completed' => $onCompleted],
         );
     }
 

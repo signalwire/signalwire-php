@@ -450,6 +450,47 @@ class FunctionResultTest extends TestCase
         $this->assertArrayNotHasKey('user_prompt', $cs);
     }
 
+    /**
+     * DEFAULT COVERAGE: `switchContext()` takes NO required argument — the
+     * reference declares `system_prompt: str | None = None` and
+     * `user_prompt: str | None = None` (function_result.py:706). The port
+     * previously REQUIRED `$systemPrompt` and defaulted `$userPrompt` to `''`.
+     *
+     * With no system_prompt the reference falls through to the object branch
+     * and emits an EMPTY object — it only sets `system_prompt` when truthy
+     * (function_result.py:730).
+     */
+    public function testSwitchContextTakesNoRequiredArgument(): void
+    {
+        $fr = new FunctionResult();
+        $fr->switchContext();
+        $cs = Shape::at($fr->toArray(), 'action', 0, 'context_switch');
+
+        $this->assertIsArray($cs);
+        $this->assertSame([], $cs, 'no truthy field -> empty context_switch object');
+
+        $rp = (new \ReflectionMethod(FunctionResult::class, 'switchContext'))->getParameters();
+        $this->assertTrue($rp[0]->isOptional(), 'systemPrompt must be optional');
+        $this->assertNull($rp[0]->getDefaultValue());
+        $this->assertNull($rp[1]->getDefaultValue(), 'userPrompt must default to null');
+    }
+
+    /**
+     * DEFAULT COVERAGE for the user_prompt-only path: with no system_prompt
+     * the simple-string branch must NOT fire, and system_prompt must be
+     * absent from the emitted object rather than present-and-null.
+     */
+    public function testSwitchContextUserPromptOnlyOmitsSystemPrompt(): void
+    {
+        $fr = new FunctionResult();
+        $fr->switchContext(userPrompt: 'just the user side');
+        $cs = Shape::at($fr->toArray(), 'action', 0, 'context_switch');
+
+        $this->assertIsArray($cs);
+        $this->assertArrayNotHasKey('system_prompt', $cs);
+        $this->assertSame('just the user side', $cs['user_prompt']);
+    }
+
     public function testReplaceInHistoryWithString(): void
     {
         // Python action name is "replace_in_history"; the string is emitted

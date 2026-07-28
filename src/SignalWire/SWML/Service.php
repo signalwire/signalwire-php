@@ -360,7 +360,13 @@ class Service implements RequestHandlerLike
     // Routing callbacks
     // ------------------------------------------------------------------
 
-    public function registerRoutingCallback(string $path, callable $callback): void
+    /**
+     * Parameter ORDER + default mirror the reference
+     * (core/swml_service.py:918): (callback_fn, path="/sip").
+     *
+     * @param callable(array<string,mixed>, array<string,mixed>): ?string $callback
+     */
+    public function registerRoutingCallback(callable $callback, string $path = '/sip'): void
     {
         // Normalize the path for consistent lookup (Python parity: strip a
         // trailing slash, ensure a single leading slash). "/sip/" -> "/sip",
@@ -691,10 +697,10 @@ class Service implements RequestHandlerLike
     /**
      * Dispatch a function call to the registered handler.
      *
-     * @param array<string, mixed> $args    parsed function arguments
-     * @param array<string, mixed> $rawData full SWAIG request payload
+     * @param array<string, mixed>      $args    parsed function arguments
+     * @param array<string, mixed>|null $rawData full SWAIG request payload
      */
-    public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
+    public function onFunctionCall(string $name, array $args, ?array $rawData = null): ?FunctionResult
     {
         if (!isset($this->tools[$name])) {
             return null;
@@ -881,7 +887,7 @@ class Service implements RequestHandlerLike
     public function handleRequest(
         string $method,
         string $path,
-        array $headers = [],
+        array $headers,
         ?string $body = null,
     ): array {
         // Health/ready: no auth

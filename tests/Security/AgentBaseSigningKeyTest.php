@@ -296,7 +296,7 @@ class AgentBaseSigningKeyTest extends TestCase
     {
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);
 
-        [$status, ,] = $agent->handleRequest('GET', '/health');
+        [$status, ,] = $agent->handleRequest('GET', '/health', []);
         $this->assertSame(200, $status);
     }
 
