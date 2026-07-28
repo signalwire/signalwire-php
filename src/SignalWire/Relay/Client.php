@@ -653,7 +653,7 @@ class Client implements RelayClientLike
 
         // ── inbound call ─────────────────────────────────────────────
         if ($eventType === 'calling.call.receive') {
-            $this->handleInboundCall($event, $params);
+            $this->handleInboundCall($params);
             return;
         }
 
@@ -673,7 +673,7 @@ class Client implements RelayClientLike
                 $this->messages[$msgId] = $msg;
             }
             if ($this->onMessageHandler !== null) {
-                ($this->onMessageHandler)($msg, $event);
+                ($this->onMessageHandler)($msg);
             }
             return;
         }
@@ -1032,7 +1032,7 @@ class Client implements RelayClientLike
      *
      * @param array<string,mixed> $params
      */
-    private function handleInboundCall(Event $event, array $params): void
+    private function handleInboundCall(array $params): void
     {
         $callId = $params['call_id'] ?? null;
         if (!is_string($callId)) {
@@ -1050,7 +1050,7 @@ class Client implements RelayClientLike
 
         if ($this->onCallHandler !== null) {
             try {
-                ($this->onCallHandler)($call, $event);
+                ($this->onCallHandler)($call);
             } catch (\Throwable $e) {
                 // A raising handler must NOT take down the recv loop —
                 // log and continue. (Mirrors Python's

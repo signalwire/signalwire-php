@@ -193,8 +193,6 @@ signalwire.relay.call.PlayAction.volume: PHP-return-typing: PHP returns void; Py
 signalwire.relay.call.RecordAction.pause: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.record.pause).
 signalwire.relay.call.RecordAction.resume: PHP-return-typing: PHP returns void; Python returns the dict reply. Same wire effect (calling.record.resume).
 signalwire.relay.client.RelayClient.dial: PHP-idiom-options-trim: PHP's RelayClient.dial takes (devices, opts); Python expands tag/max_duration/dial_timeout as positional params (now nested under opts)
-signalwire.relay.client.RelayClient.on_call: PHP-callable-typing: PHP's reflection emits typed handler classes; Python uses canonical 'callable<list<any>,any>'. Same call shape, different reflection encoding
-signalwire.relay.client.RelayClient.on_message: PHP-callable-typing: PHP's reflection emits typed handler classes; Python uses canonical 'callable<list<any>,any>'. Same call shape, different reflection encoding
 signalwire.relay.client.RelayClient.send_message: PHP-idiom-options-collapse: PHP's RelayClient.send_message takes (params) array carrying to_number/from_number/context/body/media/tags/region/on_completed; Python expands them as positional params
 signalwire.relay.message.Message.on: PHP-callable-typing: PHP's Message.on handler typed as 'class:Callable' (PHP reflection idiom); Python uses canonical 'callable<list<any>,any>'. Same call shape
 signalwire.relay.message.Message.wait: PHP-param-typing: PHP's Message.wait timeout typed as int (seconds); Python uses optional<float>. Functional behavior identical for integer second timeouts

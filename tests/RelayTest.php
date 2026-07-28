@@ -979,10 +979,12 @@ class RelayTest extends TestCase
         $client = $this->makeClient();
 
         $receivedCall = null;
-        $receivedEvent = null;
-        $client->onCall(function (Call $c, Event $e) use (&$receivedCall, &$receivedEvent) {
+        // The handler receives the Call and NOTHING else — the reference invokes
+        // ``await self._on_call_handler(call)`` with exactly one argument
+        // (relay/client.py:1102), and CallHandler is
+        // ``Callable[["Call"], Coroutine[Any, Any, None]]`` (relay/client.py:74).
+        $client->onCall(function (Call $c) use (&$receivedCall) {
             $receivedCall = $c;
-            $receivedEvent = $e;
         });
 
         $client->handleEvent([
@@ -997,9 +999,49 @@ class RelayTest extends TestCase
 
         $this->assertNotNull($receivedCall);
         $this->assertSame('inbound-1', $receivedCall->callId);
-        $this->assertNotNull($receivedEvent);
-        $this->assertSame('calling.call.receive', $receivedEvent->getEventType());
         $this->assertArrayHasKey('inbound-1', $client->calls);
+    }
+
+    /**
+     * Handler ARITY is part of the contract, not an implementation detail: the
+     * reference calls the on_call/on_message handler with EXACTLY one argument
+     * (relay/client.py:1102 / :1134), and ts/java/ruby all do the same. PHP
+     * silently tolerates surplus arguments to a closure, so a port passing an
+     * extra ``$event`` stays green under every ordinary test — this variadic
+     * probe is what makes the arity observable.
+     */
+    #[Test]
+    public function inboundHandlersAreInvokedWithExactlyOneArgument(): void
+    {
+        $client = $this->makeClient();
+
+        $callArgs = null;
+        $client->onCall(function (...$args) use (&$callArgs) {
+            $callArgs = $args;
+        });
+
+        $client->handleEvent([
+            'event_type' => 'calling.call.receive',
+            'params' => ['call_id' => 'arity-1', 'node_id' => 'node-1'],
+        ]);
+
+        $this->assertIsArray($callArgs);
+        $this->assertCount(1, $callArgs, 'on_call handler must receive only the Call');
+        $this->assertInstanceOf(Call::class, $callArgs[0]);
+
+        $messageArgs = null;
+        $client->onMessage(function (...$args) use (&$messageArgs) {
+            $messageArgs = $args;
+        });
+
+        $client->handleEvent([
+            'event_type' => 'messaging.receive',
+            'params' => ['message_id' => 'arity-2', 'context' => 'office'],
+        ]);
+
+        $this->assertIsArray($messageArgs);
+        $this->assertCount(1, $messageArgs, 'on_message handler must receive only the Message');
+        $this->assertInstanceOf(Message::class, $messageArgs[0]);
     }
 
     #[Test]

@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 4cbd5d19ecae64cdcc6f482c9fa500ceeab43fcb",
+  "generated_from": "signalwire-php @ 1e7a65c1f3b8a9658c39d4274038a3ffcd4ad656",
   "modules": {
     "signalwire": {
       "classes": {
@@ -77,15 +77,18 @@
         "AuthenticationError": [],
         "ChatInProgressError": [],
         "ChatLog": [
+          "__init__",
           "call_timeline",
           "messages"
         ],
         "ChatResponse": [
+          "__init__",
           "conversation_id",
           "text",
           "user_event"
         ],
         "ConversationInfo": [
+          "__init__",
           "id",
           "initial_message",
           "status"
@@ -252,10 +255,12 @@
           "verify_bearer_token"
         ],
         "BasicCredentials": [
+          "__init__",
           "password",
           "username"
         ],
         "BearerCredentials": [
+          "__init__",
           "credentials",
           "scheme"
         ]
