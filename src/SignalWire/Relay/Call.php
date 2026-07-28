@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\Relay;
 
 use SignalWire\Logging\Logger;
+use SignalWire\Relay\Event\RelayEvent;
 
 /**
  * Represents a RELAY voice call.
@@ -264,35 +265,73 @@ class Call
     ];
 
     /**
+     * Project a raw dispatch {@see Event} onto the typed {@see RelayEvent} the
+     * reference's wait_for* family returns.
+     *
+     * The port ships BOTH classes and they are NOT a rename of one another:
+     * {@see Event} is the raw dispatch envelope (`Call::dispatchEvent`,
+     * `Action::handleEvent`, `Message::handleEvent` route a frame with it) and
+     * has no reference counterpart; {@see RelayEvent} is the reference's twin
+     * (same field set, same `from_payload`/`fromPayload` factory, plus the 23
+     * typed subclasses). The public wait surface speaks RelayEvent, so the
+     * boundary projects — reading exactly the four fields the reference's
+     * `RelayEvent.from_payload` extracts.
+     */
+    private static function toRelayEvent(Event $event): RelayEvent
+    {
+        return new RelayEvent(
+            $event->getEventType(),
+            $event->getParams(),
+            $event->getCallId() ?? '',
+            $event->getTimestamp(),
+        );
+    }
+
+    /**
+     * Build the synthetic `calling.call.state` event the reference returns when
+     * a state wait short-circuits (`_wait_for_state` constructs
+     * ``RelayEvent(event_type=EVENT_CALL_STATE, params={"call_state": state})``
+     * with no wire event in hand).
+     */
+    private static function stateSnapshot(string $state): RelayEvent
+    {
+        return new RelayEvent('calling.call.state', ['call_state' => $state]);
+    }
+
+    /**
      * Wait until the call reaches ``$target`` (or a later lifecycle state),
      * pumping inbound frames via ``$client->readOnce()`` — the same loop
      * {@see Action::wait()} uses, so we never mock the transport.
      *
      * If the call is ALREADY at or past ``$target`` this returns immediately
-     * (matching Python's ``_wait_for_state`` which short-circuits when
-     * ``rank(state) >= rank(target)``). Returns null on timeout.
+     * with a synthetic state snapshot (matching Python's ``_wait_for_state``
+     * which short-circuits when ``rank(state) >= rank(target)`` and returns a
+     * constructed RelayEvent). Otherwise it delegates to {@see waitFor()} with
+     * the reference's ``call_state == target`` predicate.
+     *
+     * The rank comparison governs only the SHORT-CIRCUIT (`rank(state) >=
+     * rank(target)`); the forward wait then matches the target state EXACTLY,
+     * as the reference does. The two are not interchangeable: an exact forward
+     * match means a server that skips a lifecycle state never satisfies a wait
+     * for the skipped one, which is the reference's contract.
      *
      * @param string         $target  Target lifecycle state.
      * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @throws RelayError When the timeout elapses before the state is reached.
      */
-    private function waitForState(string $target, int|float|null $timeout): bool
+    private function waitForState(string $target, int|float|null $timeout): RelayEvent
     {
-        $targetRank = $this->stateRank($target);
-
         // Already at or past the target -> return immediately.
-        if ($this->stateRank($this->state) >= $targetRank) {
-            return true;
+        if ($this->stateRank($this->state) >= $this->stateRank($target)) {
+            return self::stateSnapshot($this->state);
         }
 
-        $deadline = microtime(true) + ($timeout ?? 30);
-        while ($this->stateRank($this->state) < $targetRank
-            && microtime(true) < $deadline
-        ) {
-            // readOnce() is part of the RelayClientLike contract.
-            $this->client->readOnce();
-        }
-
-        return $this->stateRank($this->state) >= $targetRank;
+        return $this->waitFor(
+            'calling.call.state',
+            fn (RelayEvent $event): bool
+                => ($event->getParams()['call_state'] ?? null) === $target,
+            $timeout,
+        );
     }
 
     /**
@@ -311,10 +350,12 @@ class Call
      * it). Typed wait over the call lifecycle, mirroring Python's
      * ``Call.wait_for_answered(timeout)``.
      *
-     * @return bool True once the call is answered (or already past it); false
-     *   on timeout.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return RelayEvent The `calling.call.state` event that satisfied the wait
+     *   (a synthetic snapshot when the call was already at or past answered).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForAnswered(int|float|null $timeout = null): bool
+    public function waitForAnswered(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_ANSWERED, $timeout);
     }
@@ -324,10 +365,12 @@ class Call
      * it). Typed wait over the call lifecycle, mirroring Python's
      * ``Call.wait_for_ringing(timeout)``.
      *
-     * @return bool True once the call is ringing (or already past it); false
-     *   on timeout.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return RelayEvent The `calling.call.state` event that satisfied the wait
+     *   (a synthetic snapshot when the call was already at or past ringing).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForRinging(int|float|null $timeout = null): bool
+    public function waitForRinging(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_RINGING, $timeout);
     }
@@ -337,10 +380,12 @@ class Call
      * Typed wait over the call lifecycle, mirroring Python's
      * ``Call.wait_for_ending(timeout)``.
      *
-     * @return bool True once the call is ending (or already past it); false
-     *   on timeout.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return RelayEvent The `calling.call.state` event that satisfied the wait
+     *   (a synthetic snapshot when the call was already at or past ending).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForEnding(int|float|null $timeout = null): bool
+    public function waitForEnding(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_ENDING, $timeout);
     }
@@ -353,20 +398,31 @@ class Call
      * and TS ``Call.waitFor``; the PHP port is synchronous (single-threaded),
      * so instead of awaiting a future it drives the same read loop
      * {@see waitForState}/{@see Action::wait} use until a matching event
-     * arrives. A one-shot listener captures the first matching {@see Event}.
+     * arrives. A one-shot listener captures the first matching event and
+     * projects it onto the typed {@see RelayEvent} the reference returns.
      *
-     * @param string                     $eventType The event type to wait for.
-     * @param (callable(Event): bool)|null $predicate Optional filter — only an
-     *        event for which this returns true resolves the wait.
-     * @param int|float|null             $timeout   Seconds to wait; null uses
-     *        the 30s default.
-     * @return Event|null The first matching event, or null on timeout.
+     * TIMEOUT RAISES. The reference awaits ``asyncio.wait_for(future,
+     * timeout=timeout)``, which throws ``TimeoutError`` — it never resolves to
+     * None, which is why its annotation is a non-optional ``RelayEvent``. The
+     * timeout is purely a CLIENT-SIDE deadline on a local future: it is not a
+     * wire concept, the server never sees it and never sends a timeout
+     * response. ts, java, go and dotnet all return non-optional too. This port
+     * raises {@see RelayError} with the 408 client-timeout sentinel already
+     * used for the dial timeout (`Client::dial`).
+     *
+     * @param string                          $eventType The event type to wait for.
+     * @param (callable(RelayEvent): bool)|null $predicate Optional filter — only
+     *        an event for which this returns true resolves the wait.
+     * @param int|float|null                  $timeout   Seconds to wait; null
+     *        uses the 30s default.
+     * @return RelayEvent The first matching event.
+     * @throws RelayError When the timeout elapses before a matching event arrives.
      */
     public function waitFor(
         string $eventType,
         ?callable $predicate = null,
         int|float|null $timeout = null
-    ): ?Event {
+    ): RelayEvent {
         $matched = null;
         $listener = function (Event $event, Call $call) use (
             &$matched,
@@ -379,8 +435,9 @@ class Call
             if ($event->getEventType() !== $eventType) {
                 return;
             }
-            if ($predicate === null || $predicate($event)) {
-                $matched = $event;
+            $typed = self::toRelayEvent($event);
+            if ($predicate === null || $predicate($typed)) {
+                $matched = $typed;
             }
         };
 
@@ -400,6 +457,14 @@ class Call
             $this->onEventCallbacks = array_values($this->onEventCallbacks);
         }
 
+        if ($matched === null) {
+            throw new RelayError(
+                408,
+                "wait_for({$eventType}) timed out after "
+                . ($timeout ?? 30) . 's',
+            );
+        }
+
         return $matched;
     }
 
@@ -409,9 +474,11 @@ class Call
      * / TS ``Call.waitForEnded``.
      *
      * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
-     * @return bool True once the call has ended; false on timeout.
+     * @return RelayEvent The `calling.call.state` event that ended the call
+     *   (a synthetic snapshot when the call had already ended).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForEnded(int|float|null $timeout = null): bool
+    public function waitForEnded(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_ENDED, $timeout);
     }

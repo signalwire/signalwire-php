@@ -22737,7 +22737,7 @@
                   "default": null
                 }
               ],
-              "returns": "optional<class:signalwire.relay.event.Event>"
+              "returns": "class:signalwire.relay.event.RelayEvent"
             },
             "wait_for_answered": {
               "params": [
@@ -22752,7 +22752,7 @@
                   "default": null
                 }
               ],
-              "returns": "bool"
+              "returns": "class:signalwire.relay.event.RelayEvent"
             },
             "wait_for_ended": {
               "params": [
@@ -22767,7 +22767,7 @@
                   "default": null
                 }
               ],
-              "returns": "bool"
+              "returns": "class:signalwire.relay.event.RelayEvent"
             },
             "wait_for_ending": {
               "params": [
@@ -22782,7 +22782,7 @@
                   "default": null
                 }
               ],
-              "returns": "bool"
+              "returns": "class:signalwire.relay.event.RelayEvent"
             },
             "wait_for_ringing": {
               "params": [
@@ -22797,7 +22797,7 @@
                   "default": null
                 }
               ],
-              "returns": "bool"
+              "returns": "class:signalwire.relay.event.RelayEvent"
             }
           }
         },
