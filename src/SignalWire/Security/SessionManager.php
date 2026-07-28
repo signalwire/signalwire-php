@@ -326,11 +326,20 @@ class SessionManager
     }
 
     /**
-     * Base64url-encode a string (RFC 4648 without padding).
+     * Base64url-encode a string, PADDING INTACT.
+     *
+     * The reference is ``base64.urlsafe_b64encode``, which KEEPS the '=' padding, and
+     * its ``validate_token`` decodes with ``urlsafe_b64decode``, which RAISES on a
+     * stripped '='. Stripping it (the previous ``rtrim(strtr(..., '+/=', '-_ '), ' ')``)
+     * made every token this port minted unusable to the reference and to any port that
+     * decodes strictly, even though the message and HMAC were correct. Our own
+     * ``base64urlDecode`` still accepted them because it re-pads before decoding — that
+     * asymmetry is why round-tripping against ourselves could not catch it, and why
+     * TOKEN-INTEROP validates against the REFERENCE decoder instead.
      */
     private function base64urlEncode(string $data): string
     {
-        return rtrim(strtr(base64_encode($data), '+/=', '-_ '), ' ');
+        return strtr(base64_encode($data), '+/', '-_');
     }
 
     /**
