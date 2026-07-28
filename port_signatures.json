@@ -8115,11 +8115,11 @@
           "params": [
             {
               "name": "headers",
-              "type": "any",
+              "type": "dict<string,class:signalwire.core.security.security_utils._V>",
               "required": true
             }
           ],
-          "returns": "any"
+          "returns": "dict<string,class:signalwire.core.security.security_utils._V>"
         },
         "is_valid_hostname": {
           "params": [
@@ -34193,7 +34193,7 @@
                 },
                 {
                   "name": "params",
-                  "type": "any",
+                  "type": "optional<dict<string,any>>",
                   "required": false,
                   "default": []
                 },
@@ -34300,10 +34300,16 @@
                   "required": true
                 },
                 {
-                  "name": "data",
-                  "type": "any",
+                  "name": "body",
+                  "type": "optional<any>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "params",
+                  "type": "optional<dict<string,any>>",
+                  "required": false,
+                  "default": null
                 },
                 {
                   "name": "request_options",

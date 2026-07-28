@@ -41,7 +41,7 @@ class NumberGroups extends \SignalWire\REST\CrudResource
         $__body = [];
         $__body['phone_number_id'] = $phoneNumberId;
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path($groupId, 'number_group_memberships'), $__body, $requestOptions);
+        return $this->client->post($this->path($groupId, 'number_group_memberships'), $__body, requestOptions: $requestOptions);
     }
 
     /**

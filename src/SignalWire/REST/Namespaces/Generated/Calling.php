@@ -42,7 +42,7 @@ class Calling
         if ($callId !== null) {
             $body['id'] = $callId;
         }
-        return $this->http->post(self::BASE_PATH, $body, $requestOptions);
+        return $this->http->post(self::BASE_PATH, $body, requestOptions: $requestOptions);
     }
 
     /**

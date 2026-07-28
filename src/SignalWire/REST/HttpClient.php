@@ -141,13 +141,23 @@ class HttpClient
     }
 
     /**
-     * @param array<string,mixed> $data JSON body payload.
+     * @param array<string,mixed>|null $body JSON body payload. Defaults to null
+     *   (no body), matching the reference (rest/_base.py:295).
+     * @param array<string,mixed>|null $params Query-string parameters (scalars
+     *   are url-encoded; nested arrays use PHP's bracketed query syntax). A POST
+     *   may carry BOTH a JSON body and a query string — the reference
+     *   (rest/_base.py:295) passes `params` straight through to the query, so
+     *   the port exposes the same door.
      * @param RequestOptions|null $requestOptions Per-request override.
      * @return array<string,mixed>
      */
-    public function post(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
-    {
-        return $this->request('POST', $path, [], $data, $requestOptions);
+    public function post(
+        string $path,
+        ?array $body = null,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null
+    ): array {
+        return $this->request('POST', $path, $params ?? [], $body, $requestOptions);
     }
 
     /**

@@ -167,7 +167,7 @@ class CrudResource extends ReadResource
      */
     public function create(array $data, ?RequestOptions $requestOptions = null): array
     {
-        return $this->client->post($this->basePath, $data, $requestOptions);
+        return $this->client->post($this->basePath, $data, requestOptions: $requestOptions);
     }
 
     /**

@@ -70,6 +70,6 @@ class ShortCodes extends \SignalWire\REST\BaseResource
             $__body['message_relay_context'] = $messageRelayContext;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->path($id), $__body, $requestOptions);
+        return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
     }
 }

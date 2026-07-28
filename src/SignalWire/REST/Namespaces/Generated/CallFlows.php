@@ -48,6 +48,6 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      */
     public function deployVersion(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post('/api/fabric/resources/call_flow/' . $id . '/versions', $body, $requestOptions);
+        return $this->client->post('/api/fabric/resources/call_flow/' . $id . '/versions', $body, requestOptions: $requestOptions);
     }
 }

@@ -88,9 +88,17 @@ final class PlanRecordingHttpClient extends HttpClient
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function post(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
-    {
+    /**
+     * @param array<string,mixed>|null $body
+     * @param array<string,mixed>|null $params
+     * @return array<string,mixed>
+     */
+    public function post(
+        string $path,
+        ?array $body = null,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null
+    ): array {
         $this->calls[] = ['POST', $path];
         return [];
     }

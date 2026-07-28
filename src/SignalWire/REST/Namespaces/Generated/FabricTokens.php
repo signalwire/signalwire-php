@@ -64,7 +64,7 @@ class FabricTokens extends \SignalWire\REST\BaseResource
             $__body['company_name'] = $companyName;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/subscribers/tokens', $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -77,7 +77,7 @@ class FabricTokens extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['refresh_token'] = $refreshToken;
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -93,7 +93,7 @@ class FabricTokens extends \SignalWire\REST\BaseResource
             $__body['expires_at'] = $expiresAt;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscriber/invites', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/subscriber/invites', $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -110,7 +110,7 @@ class FabricTokens extends \SignalWire\REST\BaseResource
             $__body['expire_at'] = $expireAt;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/guests/tokens', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/guests/tokens', $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -123,6 +123,6 @@ class FabricTokens extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['token'] = $token;
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/embeds/tokens', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/embeds/tokens', $__body, requestOptions: $requestOptions);
     }
 }

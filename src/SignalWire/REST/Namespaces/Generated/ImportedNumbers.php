@@ -36,6 +36,6 @@ class ImportedNumbers extends \SignalWire\REST\BaseResource
             $__body['capabilities'] = $capabilities;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body, $requestOptions);
+        return $this->http->post($this->basePath, $__body, requestOptions: $requestOptions);
     }
 }

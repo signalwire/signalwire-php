@@ -835,16 +835,25 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
             body_arg = "$body"
             doc.append("     * @param array<string,mixed> $body JSON request body.")
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
+        # ``requestOptions:`` is passed as a NAMED argument, not positionally:
+        # HttpClient::post carries the reference's `params` query door between
+        # `$body` and `$requestOptions` (rest/_base.py:295) while put/patch do
+        # not, so the transport override sits at a different index per verb.
+        # Naming it binds correctly for every verb and survives any future
+        # insertion.
         call_line = (
             f"        return $this->{recv}->{verb_fn}"
-            f"({path_expr}, {body_arg}, $requestOptions);"
+            f"({path_expr}, {body_arg}, requestOptions: $requestOptions);"
         )
     elif write_verb:
         # write verb, no body → empty body.
         params = id_params
         _register_sidecar(cls, name, id_records + [_request_options_record()])
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
-        call_line = f"        return $this->{recv}->{verb_fn}({path_expr}, [], $requestOptions);"
+        call_line = (
+            f"        return $this->{recv}->{verb_fn}"
+            f"({path_expr}, [], requestOptions: $requestOptions);"
+        )
     elif verb == "get":
         # §5.3 GET query door — the PHP ``array $params`` realizes Python's
         # ``**params`` var_keyword catch-all. The reference oracle DROPS the bare
@@ -1070,7 +1079,10 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
     lines.append("        if ($callId !== null) {")
     lines.append("            $body['id'] = $callId;")
     lines.append("        }")
-    lines.append("        return $this->http->post(self::BASE_PATH, $body, $requestOptions);")
+    lines.append(
+        "        return $this->http->post(self::BASE_PATH, $body, "
+        "requestOptions: $requestOptions);"
+    )
     lines.append("    }")
     mapping = (spec.schemas.get(request).get("discriminator") or {}).get("mapping") or {}
     for cmd in commands:

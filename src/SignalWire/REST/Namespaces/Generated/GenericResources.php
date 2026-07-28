@@ -71,7 +71,7 @@ class GenericResources extends \SignalWire\REST\BaseResource
         $__body['phone_route_id'] = $phoneRouteId;
         $__body['handler'] = $handler;
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path($id, 'phone_routes'), $__body, $requestOptions);
+        return $this->http->post($this->path($id, 'phone_routes'), $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -84,6 +84,6 @@ class GenericResources extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['domain_application_id'] = $domainApplicationId;
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path($id, 'domain_applications'), $__body, $requestOptions);
+        return $this->http->post($this->path($id, 'domain_applications'), $__body, requestOptions: $requestOptions);
     }
 }

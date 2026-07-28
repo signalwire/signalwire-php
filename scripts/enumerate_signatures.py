@@ -340,6 +340,22 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
          "type": "class:signalwire.rest._request_options._EffectiveOptions",
          "required": True},
     ],
+    # filter_sensitive_headers is generic in the reference —
+    # ``dict[str, _V] -> dict[str, _V]`` over a module-level TypeVar — so the
+    # oracle records the value type as the TypeVar's own class identity. PHP's
+    # only map type is the bare ``array``, which reflects as ``any`` and erases
+    # it. The PHPDoc on SecurityUtils::filterSensitiveHeaders already documents
+    # the identity-preserving contract (``@param array<string, mixed>`` ->
+    # ``@return array<string, mixed>``: every non-sensitive value is copied
+    # through UNCHANGED), which is exactly what the TypeVar encodes. Re-establish
+    # the oracle's type so the param keeps COMPARING — ruby and perl already
+    # emit this same TypeVar type verbatim from their adapters, so it is a
+    # type-map fold, not a language ceiling.
+    ("signalwire.core.security.security_utils", "filter_sensitive_headers"): [
+        {"name": "headers",
+         "type": "dict<string,class:signalwire.core.security.security_utils._V>",
+         "required": True},
+    ],
 }
 
 
@@ -366,6 +382,10 @@ FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
     # param override above for the rationale).
     ("signalwire.rest._request_options", "resolve"):
         "class:signalwire.rest._request_options._EffectiveOptions",
+    # Identity-preserving generic filter (see the param override above): the
+    # reference's return type is the SAME ``dict[str, _V]`` as its input.
+    ("signalwire.core.security.security_utils", "filter_sensitive_headers"):
+        "dict<string,class:signalwire.core.security.security_utils._V>",
 }
 
 
@@ -382,6 +402,20 @@ FREE_FUNCTION_RETURN_OVERRIDES: dict[tuple[str, str], str] = {
 # the whole param). The keys mirror the ``@param`` generics on the source method.
 # Keyed by (PHP fully-qualified class, PHP method name) -> {snake_param_name: type}.
 PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
+    # HttpClient's query door. ``$params`` is the query-string map the reference
+    # types ``dict[str, Any] | None`` (rest/_base.py:285/295); PHP's only map
+    # type is the bare ``array``, which reflects as ``any``. The concrete shape
+    # is already on the method's ``@param array<string,mixed>|null $params``
+    # PHPDoc — re-establish it so the param keeps COMPARING. (``get`` is listed
+    # too even though the differ currently excuses it under its CRUD-verb name:
+    # that excusal is incidental to the method being spelled ``get``, and the
+    # type is just as knowable there.)
+    ("SignalWire\\REST\\HttpClient", "get"): {
+        "params": "optional<dict<string,any>>",
+    },
+    ("SignalWire\\REST\\HttpClient", "post"): {
+        "params": "optional<dict<string,any>>",
+    },
     # RequestOptions envelope (plan 4.2). The oracle types the ``abort_signal``
     # constructor param as the _AbortSignal protocol; PHP's ``$abortSignal`` is a
     # ``callable|object|null`` union (-> ``any``). Re-establish the oracle's
