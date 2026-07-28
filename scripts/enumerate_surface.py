@@ -157,8 +157,14 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # ADDITION (mirrors the SecurityUtils / UrlValidator host precedent).
     "TypeInference": "signalwire.core.agent.tools.type_inference",
 
-    # core/auth
+    # core/auth. The two credential carriers are the argument types of
+    # verify_basic_auth / verify_bearer_token; the reference houses them in the
+    # same auth_handler module (griffe resolves them out of FastAPI's
+    # security.http into signalwire.core.auth_handler), while PSR-4 puts each in
+    # its own file under Security/ — a path/module split, so route them by name.
     "AuthHandler": "signalwire.core.auth_handler",
+    "BasicCredentials": "signalwire.core.auth_handler",
+    "BearerCredentials": "signalwire.core.auth_handler",
 
     # core/swml renderer (standalone renderer the Python reference records)
     "SwmlRenderer": "signalwire.core.swml_renderer",
@@ -1932,6 +1938,31 @@ def build_surface() -> dict:
     }
     for _ac_cls, _ac_methods in _AICHAT_SURFACE.items():
         modules[_AICHAT_MODULE]["classes"][_ac_cls] = sorted(_ac_methods)
+
+    # Credential-carrier surface fold (signalwire.core.auth_handler).
+    #
+    # ``verify_basic_auth`` / ``verify_bearer_token`` take a credential OBJECT,
+    # not loose strings (core/auth_handler.py:98,113). The reference types those
+    # params as FastAPI's HTTPBasicCredentials / HTTPAuthorizationCredentials,
+    # which griffe resolves into signalwire.core.auth_handler as BasicCredentials
+    # {username, password} and BearerCredentials {scheme, credentials} — two
+    # pydantic models of two ``str`` each (fastapi/security/http.py). php ships the
+    # same pair as framework-free readonly records under Security/.
+    #
+    # Both are pure DATA RECORDS: the reference declares no explicit ``__init__``,
+    # so griffe records only the two fields on the SURFACE (the generated ctor
+    # lives on the signature side alone — the same asymmetry the AI-Chat response
+    # records above hit). php's method-only surface parser sees ``__construct``
+    # and would emit a phantom ``__init__`` ADDITION, and never sees the promoted
+    # ``public readonly`` fields at all. Pin each class to the ORACLE'S OWN member
+    # set so both halves reconcile in EMIT (AGENT_RULES §2), driven by the oracle
+    # rather than a hand list so it cannot go stale. Never invents: an empty
+    # oracle read (degraded env, no porting-sdk adjacency) leaves the parser's set.
+    _AUTH_MODULE = "signalwire.core.auth_handler"
+    for _cred_cls in ("BasicCredentials", "BearerCredentials"):
+        _cred_members = _oracle_class_members(_AUTH_MODULE, _cred_cls)
+        if _cred_members and _cred_cls in modules[_AUTH_MODULE]["classes"]:
+            modules[_AUTH_MODULE]["classes"][_cred_cls] = sorted(_cred_members)
 
     # Apply mixin projections — pick matching methods off AgentBase / SWMLService
     # and emit them under each Python mixin module path so the diff lines up.

@@ -13,6 +13,8 @@ namespace SignalWire\Tests\Security;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Security\AuthHandler;
+use SignalWire\Security\BasicCredentials;
+use SignalWire\Security\BearerCredentials;
 use SignalWire\Tests\Support\Shape;
 
 /**
@@ -39,16 +41,37 @@ class AuthHandlerTest extends TestCase
     public function testVerifyBearerTokenValidAndInvalid(): void
     {
         $h = new AuthHandler(bearerToken: 'abc123');
-        $this->assertTrue($h->verifyBearerToken('abc123'));
-        $this->assertFalse($h->verifyBearerToken('nope'));
+        $this->assertTrue($h->verifyBearerToken(new BearerCredentials('Bearer', 'abc123')));
+        $this->assertFalse($h->verifyBearerToken(new BearerCredentials('Bearer', 'nope')));
+    }
+
+    /**
+     * Only the token is matched — the scheme the carrier records is not part of
+     * the comparison (the reference reads `credentials.credentials` alone).
+     */
+    public function testVerifyBearerTokenIgnoresTheScheme(): void
+    {
+        $h = new AuthHandler(bearerToken: 'abc123');
+        $this->assertTrue($h->verifyBearerToken(new BearerCredentials('Token', 'abc123')));
     }
 
     public function testVerifyBasicAuthValidAndInvalid(): void
     {
         $h = new AuthHandler(basicAuth: ['admin', 'pw']);
-        $this->assertTrue($h->verifyBasicAuth('admin', 'pw'));
-        $this->assertFalse($h->verifyBasicAuth('admin', 'wrong'));
-        $this->assertFalse($h->verifyBasicAuth('other', 'pw'));
+        $this->assertTrue($h->verifyBasicAuth(new BasicCredentials('admin', 'pw')));
+        $this->assertFalse($h->verifyBasicAuth(new BasicCredentials('admin', 'wrong')));
+        $this->assertFalse($h->verifyBasicAuth(new BasicCredentials('other', 'pw')));
+    }
+
+    public function testCredentialCarriersExposeTheirFields(): void
+    {
+        $basic = new BasicCredentials('admin', 'pw');
+        $this->assertSame('admin', $basic->username);
+        $this->assertSame('pw', $basic->password);
+
+        $bearer = new BearerCredentials('Bearer', 'abc123');
+        $this->assertSame('Bearer', $bearer->scheme);
+        $this->assertSame('abc123', $bearer->credentials);
     }
 
     public function testGetAuthInfoReflectsConfiguredMethods(): void

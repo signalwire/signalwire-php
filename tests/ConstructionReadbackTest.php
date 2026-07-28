@@ -17,6 +17,7 @@ use SignalWire\POM\Section;
 use SignalWire\Relay\Message;
 use SignalWire\Relay\RelayError;
 use SignalWire\Security\AuthHandler;
+use SignalWire\Security\BasicCredentials;
 use SignalWire\Security\SessionManager;
 use SignalWire\Server\AgentServer;
 use SignalWire\SWAIG\FunctionResult;
@@ -231,8 +232,8 @@ class ConstructionReadbackTest extends TestCase
         // The reference derives basic-auth FROM the config (auth_handler.py:77),
         // so the credentials the config yields must actually authenticate.
         [$user, $pass] = $cfg->getBasicAuth();
-        $this->assertTrue($handler->verifyBasicAuth($user, $pass));
-        $this->assertFalse($handler->verifyBasicAuth($user, $pass . 'x'));
+        $this->assertTrue($handler->verifyBasicAuth(new BasicCredentials($user, $pass)));
+        $this->assertFalse($handler->verifyBasicAuth(new BasicCredentials($user, $pass . 'x')));
 
         // Null when the caller supplied credentials directly instead.
         $this->assertNull((new AuthHandler(apiKey: 'k'))->getSecurityConfig());

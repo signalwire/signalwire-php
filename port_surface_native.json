@@ -326,6 +326,7 @@
     "createToolToken",
     "createTypedHandlerWrapper",
     "created_at",
+    "credentials",
     "csp_brand_reference",
     "csp_campaign_reference",
     "csp_self_registered",

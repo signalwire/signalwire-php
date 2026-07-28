@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ b56a107246a4049fd32268bdd5e6496defc1bfd7",
+  "generated_from": "signalwire-php @ 4cbd5d19ecae64cdcc6f482c9fa500ceeab43fcb",
   "modules": {
     "signalwire": {
       "classes": {
@@ -250,6 +250,14 @@
           "verify_api_key",
           "verify_basic_auth",
           "verify_bearer_token"
+        ],
+        "BasicCredentials": [
+          "password",
+          "username"
+        ],
+        "BearerCredentials": [
+          "credentials",
+          "scheme"
         ]
       },
       "functions": []
