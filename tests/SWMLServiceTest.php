@@ -407,6 +407,45 @@ class SWMLServiceTest extends TestCase
         $this->assertSame(401, $status);
     }
 
+    /**
+     * RFC 7235 makes the auth-scheme token case-insensitive, and the reference
+     * compares `scheme.lower() != "basic"`, so `basic <cred>` authenticates.
+     */
+    public function testLowercaseBasicSchemeAuthenticates(): void
+    {
+        $svc = $this->makeService();
+        $cred = base64_encode('testuser:testpass');
+        foreach (['basic', 'BaSiC', 'BASIC', 'Basic'] as $scheme) {
+            [$status,,] = $svc->handleRequest('GET', '/', ['Authorization' => $scheme . ' ' . $cred]);
+            $this->assertSame(200, $status, $scheme);
+        }
+    }
+
+    /**
+     * Case-insensitivity must not widen the accepted scheme set, and a
+     * colon-less decoded payload stays rejected (the reference partitions on
+     * ':' and raises when there is no separator).
+     */
+    public function testWrongSchemesAndColonLessPayloadStillReturn401(): void
+    {
+        $svc = $this->makeService();
+        $cred = base64_encode('testuser:testpass');
+        $noColon = base64_encode('testuser');
+        foreach ([
+            'Digest ' . $cred,
+            'Negotiate ' . $cred,
+            'Basicx ' . $cred,
+            'basicx ' . $cred,
+            'Bearer ' . $cred,
+            $cred,
+            'Basic ' . $noColon,
+            'basic ' . $noColon,
+        ] as $header) {
+            [$status,,] = $svc->handleRequest('GET', '/', ['Authorization' => $header]);
+            $this->assertSame(401, $status, $header);
+        }
+    }
+
     // ------------------------------------------------------------------
     // HTTP Handling: Security Headers
     // ------------------------------------------------------------------

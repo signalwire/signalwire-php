@@ -1481,11 +1481,12 @@ class Service implements RequestHandlerLike
             return false;
         }
 
-        if (!str_starts_with($authHeader, 'Basic ')) {
+        $param = self::schemeParam($authHeader, 'Basic');
+        if ($param === null) {
             return false;
         }
 
-        $decoded = base64_decode(substr($authHeader, 6), true);
+        $decoded = base64_decode($param, true);
         if ($decoded === false) {
             return false;
         }
@@ -1503,6 +1504,28 @@ class Service implements RequestHandlerLike
         $passOk = hash_equals($this->basicAuthPassword, $inputPass);
 
         return $userOk && $passOk;
+    }
+
+    /**
+     * Split an ``Authorization`` header into its scheme and credential,
+     * mirroring FastAPI's ``get_authorization_scheme_param`` (partition on the
+     * FIRST space, strip the credential).
+     *
+     * Returns ``null`` when the header is empty or its scheme token does not
+     * case-insensitively equal ``$expectedScheme``. RFC 7235 makes the
+     * auth-scheme token case-insensitive and the reference compares
+     * ``scheme.lower() != "basic"``, so ``basic <cred>`` is legal.
+     */
+    private static function schemeParam(string $authHeader, string $expectedScheme): ?string
+    {
+        $sep = strpos($authHeader, ' ');
+        if ($sep === false) {
+            return null;
+        }
+        if (strcasecmp(substr($authHeader, 0, $sep), $expectedScheme) !== 0) {
+            return null;
+        }
+        return trim(substr($authHeader, $sep + 1));
     }
 
     /**

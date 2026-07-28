@@ -490,15 +490,38 @@ class WebService
     private function checkAuth(array $headers, string $user, string $pass): bool
     {
         $auth = $headers['Authorization'] ?? '';
-        if (!str_starts_with($auth, 'Basic ')) {
+        $param = self::schemeParam($auth, 'Basic');
+        if ($param === null) {
             return false;
         }
-        $decoded = base64_decode(substr($auth, 6), true);
+        $decoded = base64_decode($param, true);
         if ($decoded === false || !str_contains($decoded, ':')) {
             return false;
         }
         [$givenUser, $givenPass] = explode(':', $decoded, 2);
         return hash_equals($user, $givenUser) && hash_equals($pass, $givenPass);
+    }
+
+    /**
+     * Split an ``Authorization`` header into its scheme and credential,
+     * mirroring FastAPI's ``get_authorization_scheme_param`` (partition on the
+     * FIRST space, strip the credential).
+     *
+     * Returns ``null`` when the header is empty or its scheme token does not
+     * case-insensitively equal ``$expectedScheme``. RFC 7235 makes the
+     * auth-scheme token case-insensitive and the reference compares
+     * ``scheme.lower() != "basic"``, so ``basic <cred>`` is legal.
+     */
+    private static function schemeParam(string $authHeader, string $expectedScheme): ?string
+    {
+        $sep = strpos($authHeader, ' ');
+        if ($sep === false) {
+            return null;
+        }
+        if (strcasecmp(substr($authHeader, 0, $sep), $expectedScheme) !== 0) {
+            return null;
+        }
+        return trim(substr($authHeader, $sep + 1));
     }
 
     private function dispatchFromGlobals(): void
