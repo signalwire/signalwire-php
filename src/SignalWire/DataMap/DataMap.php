@@ -142,7 +142,10 @@ class DataMap
         ];
 
         if ($nomatchOutput !== null) {
-            $expr['nomatch_output'] = $nomatchOutput;
+            // HYPHENATED wire key per the reference (data_map.py:202). An underscore
+            // is a key the server does not recognise, so the no-match branch would
+            // never fire.
+            $expr['nomatch-output'] = $nomatchOutput;
         }
 
         $this->expressions[] = $expr;

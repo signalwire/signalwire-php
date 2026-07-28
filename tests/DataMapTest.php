@@ -117,7 +117,7 @@ class DataMapTest extends TestCase
         $this->assertSame('${args.color}', Shape::at($result, 'data_map', 'expressions', 0, 'string'));
         $this->assertSame('/^red$/', Shape::at($result, 'data_map', 'expressions', 0, 'pattern'));
         $this->assertSame(['response' => 'Red detected'], Shape::at($result, 'data_map', 'expressions', 0, 'output'));
-        $this->assertArrayNotHasKey('nomatch_output', Shape::sub($result, 'data_map', 'expressions', 0));
+        $this->assertArrayNotHasKey('nomatch-output', Shape::sub($result, 'data_map', 'expressions', 0));
     }
 
     public function testExpressionWithNomatchOutput(): void
@@ -126,7 +126,10 @@ class DataMapTest extends TestCase
         $dm->expression('${args.x}', '/yes/', 'matched', 'not matched');
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame('not matched', Shape::at($result, 'data_map', 'expressions', 0, 'nomatch_output'));
+        // HYPHENATED key per the reference (data_map.py:202); an underscored key is
+        // one the server ignores, so the no-match branch would never fire.
+        $this->assertSame('not matched', Shape::at($result, 'data_map', 'expressions', 0, 'nomatch-output'));
+        $this->assertArrayNotHasKey('nomatch_output', Shape::sub($result, 'data_map', 'expressions', 0));
     }
 
     public function testMultipleExpressionsAccumulate(): void
