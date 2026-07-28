@@ -109,7 +109,7 @@ class DataMapTest extends TestCase
     public function testExpressionAddsToExpressionsList(): void
     {
         $dm = new DataMap('fn');
-        $dm->expression('${args.color}', '/^red$/', ['response' => 'Red detected']);
+        $dm->expression('${args.color}', '/^red$/', new FunctionResult('Red detected'));
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayHasKey('data_map', $result);
@@ -123,20 +123,20 @@ class DataMapTest extends TestCase
     public function testExpressionWithNomatchOutput(): void
     {
         $dm = new DataMap('fn');
-        $dm->expression('${args.x}', '/yes/', 'matched', 'not matched');
+        $dm->expression('${args.x}', '/yes/', new FunctionResult('matched'), new FunctionResult('not matched'));
         $result = $dm->toSwaigFunction();
 
         // HYPHENATED key per the reference (data_map.py:202); an underscored key is
         // one the server ignores, so the no-match branch would never fire.
-        $this->assertSame('not matched', Shape::at($result, 'data_map', 'expressions', 0, 'nomatch-output'));
+        $this->assertSame(['response' => 'not matched'], Shape::at($result, 'data_map', 'expressions', 0, 'nomatch-output'));
         $this->assertArrayNotHasKey('nomatch_output', Shape::sub($result, 'data_map', 'expressions', 0));
     }
 
     public function testMultipleExpressionsAccumulate(): void
     {
         $dm = new DataMap('fn');
-        $dm->expression('${a}', '/1/', 'one');
-        $dm->expression('${b}', '/2/', 'two');
+        $dm->expression('${a}', '/1/', new FunctionResult('one'));
+        $dm->expression('${b}', '/2/', new FunctionResult('two'));
         $result = $dm->toSwaigFunction();
 
         $this->assertCount(2, Shape::sub($result, 'data_map', 'expressions'));
@@ -311,29 +311,6 @@ class DataMapTest extends TestCase
 
     // ── output on webhook ────────────────────────────────────────────────
 
-    public function testOutputOnWebhookWithArray(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->webhook('GET', 'https://a.com');
-        $dm->output(['response' => 'Done: ${response}']);
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame(
-            ['response' => 'Done: ${response}'],
-            Shape::at($result, 'data_map', 'webhooks', 0, 'output')
-        );
-    }
-
-    public function testOutputOnWebhookWithString(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->webhook('GET', 'https://a.com');
-        $dm->output('plain string');
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame('plain string', Shape::at($result, 'data_map', 'webhooks', 0, 'output'));
-    }
-
     public function testOutputOnWebhookWithFunctionResult(): void
     {
         // post_process flows through DataMap output only alongside an action
@@ -354,22 +331,13 @@ class DataMapTest extends TestCase
     public function testOutputIgnoredWithNoWebhooks(): void
     {
         $dm = new DataMap('fn');
-        $dm->output('ignored');
+        $dm->output(new FunctionResult('ignored'));
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayNotHasKey('data_map', $result);
     }
 
     // ── fallbackOutput ───────────────────────────────────────────────────
-
-    public function testFallbackOutputSetsGlobalOutput(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->fallbackOutput(['response' => 'Fallback']);
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame(['response' => 'Fallback'], Shape::at($result, 'data_map', 'output'));
-    }
 
     public function testFallbackOutputWithFunctionResult(): void
     {
@@ -380,15 +348,6 @@ class DataMapTest extends TestCase
         $result = $dm->toSwaigFunction();
 
         $this->assertSame(['response' => 'Error occurred'], Shape::at($result, 'data_map', 'output'));
-    }
-
-    public function testFallbackOutputWithString(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->fallbackOutput('simple fallback');
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame('simple fallback', Shape::at($result, 'data_map', 'output'));
     }
 
     // ── errorKeys on webhook ─────────────────────────────────────────────
@@ -431,10 +390,10 @@ class DataMapTest extends TestCase
         $dm->purpose('Get the weather for a city')
             ->parameter('city', 'string', 'City name', true)
             ->parameter('unit', 'string', 'Unit', false, ['celsius', 'fahrenheit'])
-            ->expression('${args.city}', '/^test$/', ['response' => 'Test mode'])
+            ->expression('${args.city}', '/^test$/', new FunctionResult('Test mode'))
             ->webhook('GET', 'https://api.weather.com', ['X-Key' => 'abc'])
-            ->output(['response' => 'Weather: ${temp}'])
-            ->fallbackOutput(['response' => 'Unable to retrieve weather'])
+            ->output(new FunctionResult('Weather: ${temp}'))
+            ->fallbackOutput(new FunctionResult('Unable to retrieve weather'))
             ->globalErrorKeys(['error']);
 
         $result = $dm->toSwaigFunction();
@@ -584,7 +543,7 @@ class DataMapTest extends TestCase
         $r3 = $dm->parameter('p', 'string', 'd');
         $this->assertSame($dm, $r3);
 
-        $r4 = $dm->expression('s', 'p', 'o');
+        $r4 = $dm->expression('s', 'p', new FunctionResult('o'));
         $this->assertSame($dm, $r4);
 
         $r5 = $dm->webhook('GET', 'https://x.com');
@@ -602,10 +561,10 @@ class DataMapTest extends TestCase
         $r9 = $dm->foreach(['input_key' => 'a', 'output_key' => 'b']);
         $this->assertSame($dm, $r9);
 
-        $r10 = $dm->output('x');
+        $r10 = $dm->output(new FunctionResult('x'));
         $this->assertSame($dm, $r10);
 
-        $r11 = $dm->fallbackOutput('x');
+        $r11 = $dm->fallbackOutput(new FunctionResult('x'));
         $this->assertSame($dm, $r11);
 
         $r12 = $dm->errorKeys([]);
@@ -622,7 +581,7 @@ class DataMapTest extends TestCase
             ->parameter('q', 'string', 'Query', true)
             ->webhook('POST', 'https://api.test.com')
             ->body(['query' => '${args.q}'])
-            ->output(['response' => '${result}'])
+            ->output(new FunctionResult('${result}'))
             ->globalErrorKeys(['err'])
             ->toSwaigFunction();
 
@@ -641,7 +600,7 @@ class DataMapTest extends TestCase
         $dm = new DataMap('fn');
         $dm->webhook('GET', 'https://first.com');
         $dm->webhook('POST', 'https://second.com');
-        $dm->output(['response' => 'from second']);
+        $dm->output(new FunctionResult('from second'));
         $dm->body(['key' => 'val']);
         $dm->params(['p' => 'v']);
         $dm->errorKeys(['err']);

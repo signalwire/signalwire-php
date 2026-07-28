@@ -3692,12 +3692,12 @@
                 },
                 {
                   "name": "output",
-                  "type": "optional<any>",
+                  "type": "class:signalwire.core.function_result.FunctionResult",
                   "required": true
                 },
                 {
                   "name": "nomatch_output",
-                  "type": "optional<any>",
+                  "type": "optional<class:signalwire.core.function_result.FunctionResult>",
                   "required": false,
                   "default": null
                 }
@@ -3712,7 +3712,7 @@
                 },
                 {
                   "name": "result",
-                  "type": "optional<any>",
+                  "type": "class:signalwire.core.function_result.FunctionResult",
                   "required": true
                 }
               ],
@@ -3763,7 +3763,7 @@
                 },
                 {
                   "name": "result",
-                  "type": "optional<any>",
+                  "type": "class:signalwire.core.function_result.FunctionResult",
                   "required": true
                 }
               ],

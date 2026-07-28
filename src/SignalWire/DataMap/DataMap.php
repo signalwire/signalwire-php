@@ -132,20 +132,20 @@ class DataMap
     public function expression(
         string $testValue,
         string $pattern,
-        mixed $output,
-        mixed $nomatchOutput = null
+        FunctionResult $output,
+        ?FunctionResult $nomatchOutput = null
     ): self {
         $expr = [
             'string' => $testValue,
             'pattern' => $pattern,
-            'output' => $output,
+            'output' => $output->toArray(),
         ];
 
         if ($nomatchOutput !== null) {
             // HYPHENATED wire key per the reference (data_map.py:202). An underscore
             // is a key the server does not recognise, so the no-match branch would
             // never fire.
-            $expr['nomatch-output'] = $nomatchOutput;
+            $expr['nomatch-output'] = $nomatchOutput->toArray();
         }
 
         $this->expressions[] = $expr;
@@ -245,25 +245,21 @@ class DataMap
 
     /**
      * Set output on the last webhook.
-     *
-     * @param mixed $result FunctionResult, array, or string
      */
-    public function output(mixed $result): self
+    public function output(FunctionResult $result): self
     {
         if (!empty($this->webhooks)) {
-            $this->webhooks[array_key_last($this->webhooks)]['output'] = self::resolveOutput($result);
+            $this->webhooks[array_key_last($this->webhooks)]['output'] = $result->toArray();
         }
         return $this;
     }
 
     /**
      * Set global fallback output.
-     *
-     * @param mixed $result FunctionResult, array, or string
      */
-    public function fallbackOutput(mixed $result): self
+    public function fallbackOutput(FunctionResult $result): self
     {
-        $this->globalOutput = self::resolveOutput($result);
+        $this->globalOutput = $result->toArray();
         $this->hasGlobalOutput = true;
         return $this;
     }
@@ -442,15 +438,4 @@ class DataMap
         return $dataMap;
     }
 
-    /**
-     * Convert a result value: FunctionResult calls toArray(), arrays and strings pass through.
-     */
-    private static function resolveOutput(mixed $result): mixed
-    {
-        if ($result instanceof FunctionResult) {
-            return $result->toArray();
-        }
-
-        return $result;
-    }
 }
