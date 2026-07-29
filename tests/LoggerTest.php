@@ -439,8 +439,17 @@ PHP;
      *
      * STDERR cannot be redirected from inside PHPUnit's own process (see
      * testLogOutputFormat), so the logger has to be exercised out-of-process for the
-     * emitted bytes to be inspectable. Scratch files go in a repo-local dir, never a
-     * shared global temp.
+     * emitted bytes to be inspectable.
+     *
+     * Scratch files go under the repo-local `.sw-tmp/` (never a shared global temp),
+     * which is BOTH gitignored and listed in composer.json's `archive.exclude`. That
+     * pairing is load-bearing: `composer archive` enumerates every path git does not
+     * ignore, so a transient child script written anywhere else races the
+     * PACKAGE-SMOKE gate — the archiver stats a filename that this helper has already
+     * unlinked and aborts with "returned a file that could not be opened".
+     *
+     * Each call gets its OWN directory (paratest runs these tests across 8 concurrent
+     * workers) and removes that directory wholesale, so nothing is left behind.
      */
     private function runChildLogger(string $body): string
     {
@@ -454,11 +463,11 @@ PHP;
             {$body}
             PHP;
 
-        $scratch = $root . '/.tmp';
-        if (!\is_dir($scratch)) {
-            \mkdir($scratch, 0o777, true);
+        $scratch = $root . '/.sw-tmp/logger-child-' . \getmypid() . '-' . \bin2hex(\random_bytes(6));
+        if (!\mkdir($scratch, 0o700, true) && !\is_dir($scratch)) {
+            self::fail('Failed to create scratch dir ' . $scratch);
         }
-        $tmp = \tempnam($scratch, 'sw_scrub_') . '.php';
+        $tmp = $scratch . '/child.php';
         \file_put_contents($tmp, $script);
 
         try {
@@ -478,6 +487,7 @@ PHP;
             return $stderr;
         } finally {
             @\unlink($tmp);
+            @\rmdir($scratch);
         }
     }
 }
