@@ -155,6 +155,12 @@ class DataMap
     /**
      * Add a webhook definition.
      *
+     * `$method` is normalised to UPPER CASE on the way to the wire, matching
+     * the reference (`data_map.py:230` — `{"url": url, "method":
+     * method.upper()}`), so a caller writing the natural lowercase `'get'`
+     * emits `"method": "GET"` like every other port.
+     *
+     * @param string $method HTTP verb; case-insensitive, emitted upper-cased.
      * @param array<string, string>|null $headers
      * @param array<string>|null $requireArgs
      */
@@ -167,7 +173,7 @@ class DataMap
         ?array $requireArgs = null
     ): self {
         $wh = [
-            'method' => $method,
+            'method' => strtoupper($method),
             'url' => $url,
         ];
 

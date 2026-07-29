@@ -177,6 +177,66 @@ class DataMapTest extends TestCase
         $this->assertSame(['city'], $wh['require_args']);
     }
 
+    /**
+     * WIRE VALUE: the HTTP method is normalised to UPPER CASE before it
+     * reaches the wire, matching the reference
+     * (`data_map.py:230` — `{"url": url, "method": method.upper()}`).
+     *
+     * Every pre-existing webhook test passed an already-uppercase literal
+     * (`'GET'` / `'POST'`), so a port that echoed the caller's string
+     * verbatim was indistinguishable from one that normalised it. A caller
+     * writing the natural lowercase `'get'` put `"method": "get"` on the
+     * wire where the reference puts `"GET"`.
+     *
+     * The engine's data-map webhook reader compares case-insensitively
+     * (`mod_openai/actions.c:749` — `strcasecmp(method, "post")`), so a
+     * lowercase verb still *functions*; this is a cross-port wire-payload
+     * parity divergence, not a broken call. It is fixed rather than
+     * excused because the emitted document is compared byte-for-byte
+     * against the reference's.
+     */
+    public function testWebhookUpperCasesMethodOnTheWire(): void
+    {
+        $dm = new DataMap('fn');
+        $dm->webhook('get', 'https://api.example.com/data');
+        $result = $dm->toSwaigFunction();
+
+        $this->assertSame(
+            'GET',
+            Shape::at($result, 'data_map', 'webhooks', 0, 'method'),
+            'a lowercase verb must reach the wire upper-cased'
+        );
+    }
+
+    /**
+     * The same normalisation on the mixed-case and already-uppercase paths,
+     * and through the `createSimpleApiTool` factory, whose `$method`
+     * argument reaches the wire via the same `webhook()` call.
+     */
+    public function testWebhookMethodNormalisationIsIdempotentAndCoversTheFactory(): void
+    {
+        $dm = new DataMap('fn');
+        $dm->webhook('Post', 'https://a.com');
+        $dm->webhook('DELETE', 'https://b.com');
+        $result = $dm->toSwaigFunction();
+
+        $this->assertSame('POST', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
+        $this->assertSame('DELETE', Shape::at($result, 'data_map', 'webhooks', 1, 'method'));
+
+        $factory = DataMap::createSimpleApiTool(
+            'weather',
+            'https://api.example.com/w',
+            '${response.temp}',
+            null,
+            'put'
+        );
+        $this->assertSame(
+            'PUT',
+            Shape::at($factory->toSwaigFunction(), 'data_map', 'webhooks', 0, 'method'),
+            'createSimpleApiTool must normalise the method it forwards to webhook()'
+        );
+    }
+
     public function testWebhookOmitsEmptyOptionalFields(): void
     {
         $dm = new DataMap('fn');
