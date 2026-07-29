@@ -68,7 +68,7 @@ class ReadResource extends BaseResource
 
     /**
      * Keeps its own `$client` reference alongside the base class's `$http` —
-     * they are the SAME object, exposed under both names for reference parity.
+     * they are the SAME object, exposed under both names to match the reference.
      */
     public function __construct(HttpClient $client, string $basePath)
     {

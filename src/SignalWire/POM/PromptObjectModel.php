@@ -23,7 +23,7 @@ class PromptObjectModel
     public bool $debug;
 
     /**
-     * @param bool $debug parity flag mirroring the reference's constructor
+     * @param bool $debug flag mirroring the reference's constructor
      *   argument; it is recorded on the public `$debug` property and read by
      *   nothing in this class.
      */
