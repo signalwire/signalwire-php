@@ -398,4 +398,86 @@ PHP;
         $this->assertFalse($stringLogger->shouldLog(LogLevel::Info));
         $this->assertTrue($stringLogger->shouldLog(LogLevel::Warn));
     }
+
+    /**
+     * The control-char scrub must be ON THE EMISSION PATH, not merely available.
+     *
+     * `LoggingConfig::stripControlChars` shipped public and correct with ZERO call
+     * sites, so a caller-supplied NUL or ESC-[ escape reached the terminal verbatim
+     * and could forge log lines. A test that calls the scrub helper directly passes
+     * even with the wiring deleted — the only assertion that can tell the difference
+     * is one that reads what the logger ACTUALLY wrote.
+     */
+    public function testEmittedLineHasControlCharsStripped(): void
+    {
+        // The escapes are written for the CHILD's parser: this single-quoted string
+        // carries a literal backslash-x-0-0, which becomes a real NUL when the child
+        // compiles its own double-quoted literal. Asserted on the bytes below.
+        $stderr = $this->runChildLogger('$logger->info("user said\x00\x1b[31mRED\x07");');
+
+        $this->assertStringNotContainsString("\x00", $stderr, 'NUL survived into the emitted line');
+        $this->assertStringNotContainsString("\x1b", $stderr, 'ESC survived into the emitted line');
+        $this->assertStringNotContainsString("\x07", $stderr, 'BEL survived into the emitted line');
+        // The ordinary space is legal and survives; only the control bytes are removed,
+        // so the ESC-[ escape is defanged down to the visible text "[31mRED".
+        $this->assertStringContainsString('user said[31mRED', $stderr);
+    }
+
+    /**
+     * Tab/newline/CR are LEGAL in a log line and must survive — a scrub that ate
+     * them would satisfy "no control chars" while mangling every multi-line message.
+     */
+    public function testEmittedLineKeepsLegalWhitespace(): void
+    {
+        $stderr = $this->runChildLogger('$logger->info("line1\tcol\nline2\r end");');
+
+        $this->assertStringContainsString("line1\tcol\nline2\r end", $stderr);
+    }
+
+    /**
+     * Drive the real Logger in a child PHP process and return its stderr.
+     *
+     * STDERR cannot be redirected from inside PHPUnit's own process (see
+     * testLogOutputFormat), so the logger has to be exercised out-of-process for the
+     * emitted bytes to be inspectable. Scratch files go in a repo-local dir, never a
+     * shared global temp.
+     */
+    private function runChildLogger(string $body): string
+    {
+        $root = dirname(__DIR__);
+        $autoload = $root . '/vendor/autoload.php';
+        $script = <<<PHP
+            <?php
+            require '{$autoload}';
+            \$logger = \\SignalWire\\Logging\\Logger::getLogger('inject.test');
+            \$logger->setLevel('debug');
+            {$body}
+            PHP;
+
+        $scratch = $root . '/.tmp';
+        if (!\is_dir($scratch)) {
+            \mkdir($scratch, 0o777, true);
+        }
+        $tmp = \tempnam($scratch, 'sw_scrub_') . '.php';
+        \file_put_contents($tmp, $script);
+
+        try {
+            $cmd = \escapeshellcmd(PHP_BINARY) . ' ' . \escapeshellarg($tmp);
+            $descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+            $proc = \proc_open($cmd, $descriptors, $pipes, $root, ['PHPUNIT_TEST_LOGGER' => '1']);
+            $this->assertIsResource($proc, 'Failed to spawn child PHP process');
+            \fclose($pipes[0]);
+            $stdout = \stream_get_contents($pipes[1]);
+            $stderr = \stream_get_contents($pipes[2]);
+            \fclose($pipes[1]);
+            \fclose($pipes[2]);
+            \proc_close($proc);
+
+            $this->assertNotSame('', $stderr, 'child emitted nothing; stdout was: ' . $stdout);
+
+            return $stderr;
+        } finally {
+            @\unlink($tmp);
+        }
+    }
 }

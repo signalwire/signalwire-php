@@ -128,7 +128,13 @@ class Logger
         $timestamp = date('Y-m-d H:i:s');
         $upperLevel = strtoupper($level);
         $message = implode(' ', $messages);
-        $line = "[{$timestamp}] [{$upperLevel}] [{$this->name}] {$message}" . PHP_EOL;
+        // Scrub control characters BEFORE emitting — log-injection defence, and the
+        // reason the reference registers strip_control_chars in both of its structlog
+        // processor chains. A port that merely EXPOSES the scrub without putting it on
+        // the emission path offers no protection at all: a caller-supplied NUL or an
+        // ESC-[ escape reaches the terminal verbatim and can forge log lines.
+        $safe = LoggingConfig::stripControlCharsValue($message);
+        $line = "[{$timestamp}] [{$upperLevel}] [{$this->name}] {$safe}" . PHP_EOL;
 
         // Resolve a stderr handle that works in every SAPI:
         //   - CLI: the global \STDERR constant is defined.
