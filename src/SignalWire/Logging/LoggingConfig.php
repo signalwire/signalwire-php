@@ -104,24 +104,12 @@ final class LoggingConfig
     {
         foreach ($eventDict as $key => $value) {
             if (is_string($value)) {
-                $eventDict[$key] = self::stripControlCharsValue($value);
+                $eventDict[$key] = (string) preg_replace(self::CONTROL_CHAR_RE, '', $value);
             } elseif (is_array($value)) {
                 $eventDict[$key] = self::stripControlChars($value);
             }
         }
         return $eventDict;
-    }
-
-    /**
-     * Strip control characters from a SINGLE string.
-     *
-     * INTERNAL: the reference's public contract is the event-map form
-     * (stripControlChars above); this is the per-value scrub that form is built
-     * out of, and the unit the emitter needs. Not port surface.
-     */
-    public static function stripControlCharsValue(string $value): string
-    {
-        return (string) preg_replace(self::CONTROL_CHAR_RE, '', $value);
     }
 
     /**

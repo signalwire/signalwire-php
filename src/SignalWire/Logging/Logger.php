@@ -133,7 +133,16 @@ class Logger
         // processor chains. A port that merely EXPOSES the scrub without putting it on
         // the emission path offers no protection at all: a caller-supplied NUL or an
         // ESC-[ escape reaches the terminal verbatim and can forge log lines.
-        $safe = LoggingConfig::stripControlCharsValue($message);
+        // Route through the reference's event-map contract rather than a second
+        // public helper: a port-only `stripControlCharsValue` would be surface the
+        // reference does not have, and the surface gate reports it as an invented
+        // addition. One key in, one key out.
+        $scrubbed = LoggingConfig::stripControlChars(['event' => $message])['event'];
+        // The event-map contract is `array<mixed>` in and `array<mixed>` out, so the
+        // value reads back as mixed. A string went in and scrubbing only ever swaps a
+        // string for a string, so this narrowing always takes the first branch — it is
+        // a type-checker proof obligation, not a cast that could hide a real mismatch.
+        $safe = is_string($scrubbed) ? $scrubbed : $message;
         $line = "[{$timestamp}] [{$upperLevel}] [{$this->name}] {$safe}" . PHP_EOL;
 
         // Resolve a stderr handle that works in every SAPI:
