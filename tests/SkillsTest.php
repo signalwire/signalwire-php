@@ -11,6 +11,7 @@ use SignalWire\Skills\SkillManager;
 use SignalWire\Skills\SkillName;
 use SignalWire\Skills\SkillRegistry;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\SchemaProbeSkill;
 use SignalWire\Tests\Support\Shape;
 
 class SkillsTest extends TestCase
@@ -133,6 +134,98 @@ class SkillsTest extends TestCase
         foreach ($expected as $name) {
             $this->assertContains($name, $skills, "Builtin skill '{$name}' missing from listSkills");
         }
+    }
+
+    // ── getAllSkillsSchema parity with Python ────────────────────────────
+    // Mirrors registry.py:274 `get_all_skills_schema`, which documents EIGHT
+    // fields per skill. These assert POPULATED CONTENT, not merely that the
+    // method returns an array: the method previously did `new $className()`
+    // against a constructor that requires an agent, so every lookup threw
+    // ArgumentCountError into an empty catch and description/version were
+    // silently never populated for any skill.
+
+    public function testGetAllSkillsSchemaPopulatesDescriptionAndVersion(): void
+    {
+        $registry = SkillRegistry::instance();
+        $schema = $registry->getAllSkillsSchema();
+
+        $this->assertArrayHasKey('web_search', $schema);
+        $entry = $schema['web_search'];
+
+        $this->assertSame('web_search', $entry['name']);
+        $this->assertNotEmpty(
+            $entry['description'] ?? '',
+            'description must be POPULATED, not merely present'
+        );
+        $this->assertSame(
+            'Search the web for information using Google Custom Search API',
+            $entry['description']
+        );
+        $this->assertNotEmpty($entry['version'] ?? '', 'version must be POPULATED');
+        $this->assertSame('2.0.0', $entry['version']);
+    }
+
+    public function testGetAllSkillsSchemaPopulatesEverySkill(): void
+    {
+        $registry = SkillRegistry::instance();
+        $schema = $registry->getAllSkillsSchema();
+
+        $this->assertCount(18, $schema);
+        foreach ($schema as $name => $entry) {
+            $this->assertNotEmpty(
+                $entry['description'] ?? '',
+                "skill '{$name}' has an empty description"
+            );
+            $this->assertNotEmpty(
+                $entry['version'] ?? '',
+                "skill '{$name}' has an empty version"
+            );
+        }
+    }
+
+    public function testGetAllSkillsSchemaReturnsTheEightReferenceFields(): void
+    {
+        $registry = SkillRegistry::instance();
+        $schema = $registry->getAllSkillsSchema();
+        $entry = $schema['web_search'];
+
+        foreach (
+            [
+                'name',
+                'description',
+                'version',
+                'supports_multiple_instances',
+                'required_packages',
+                'required_env_vars',
+                'parameters',
+                'source',
+            ] as $field
+        ) {
+            $this->assertArrayHasKey($field, $entry, "missing reference field '{$field}'");
+        }
+
+        $this->assertTrue($entry['supports_multiple_instances']);
+        $this->assertSame([], $entry['required_packages']);
+        $this->assertSame([], $entry['required_env_vars']);
+        $this->assertSame('built-in', $entry['source']);
+        // parameters is the skill's own get_parameter_schema(), not an empty stub.
+        $this->assertIsArray($entry['parameters']);
+        $this->assertArrayHasKey('properties', $entry['parameters']);
+        $this->assertArrayHasKey('api_key', $entry['parameters']['properties']);
+    }
+
+    public function testGetAllSkillsSchemaMarksRegisteredSkillsAsRegistered(): void
+    {
+        $registry = SkillRegistry::instance();
+        $registry->registerSkill('registered_probe', SchemaProbeSkill::class);
+
+        $schema = $registry->getAllSkillsSchema();
+
+        $this->assertArrayHasKey('registered_probe', $schema);
+        $this->assertSame('registered', $schema['registered_probe']['source']);
+        $this->assertSame('probe description', $schema['registered_probe']['description']);
+        $this->assertSame('9.9.9', $schema['registered_probe']['version']);
+        $this->assertSame(['PROBE_KEY'], $schema['registered_probe']['required_env_vars']);
     }
 
     public function testRegistrySingletonBehavior(): void
