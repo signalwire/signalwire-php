@@ -81,6 +81,10 @@ class Spider extends SkillBase
         return 'Fast web scraping and crawling capabilities';
     }
 
+    /**
+     * True — several crawlers with different limits may coexist,
+     * distinguished by `tool_name` (default `spider`).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -225,11 +229,25 @@ class Spider extends SkillBase
         return $schema;
     }
 
+    /**
+     * Always succeeds — every crawl parameter has a default, so there is no
+     * required configuration to validate.
+     */
     public function setup(): bool
     {
         return true;
     }
 
+    /**
+     * Define the crawl tools, prefixed by the `tool_prefix` param.
+     *
+     * Crawl bounds are clamped rather than rejected: `max_text_length` to a
+     * minimum of 100 (default 5000), `timeout` to a minimum of 2 (default 15),
+     * `max_pages` to a minimum of 1 (default 5), `max_depth` to a minimum of 0
+     * (default 2). `follow_patterns` restricts which links are followed, and
+     * `user_agent` (default `Spider/1.0 (SignalWire AI Agent)`) plus `headers`
+     * set the outbound request headers.
+     */
     public function registerTools(): void
     {
         $prefix = $this->paramString('tool_prefix');

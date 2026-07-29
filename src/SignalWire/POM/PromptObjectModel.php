@@ -22,6 +22,11 @@ class PromptObjectModel
     public array $sections = [];
     public bool $debug;
 
+    /**
+     * @param bool $debug parity flag mirroring the reference's constructor
+     *   argument; it is recorded on the public `$debug` property and read by
+     *   nothing in this class.
+     */
     public function __construct(bool $debug = false)
     {
         $this->debug = $debug;
@@ -285,6 +290,16 @@ class PromptObjectModel
         return self::yamlEncodeList($data, 0);
     }
 
+    /**
+     * Render the whole document to Markdown — top-level sections as `##`
+     * headings, nested subsections one level deeper.
+     *
+     * Numbering is decided document-wide, not per section: if ANY top-level
+     * section has `numbered === true`, every titled top-level section is
+     * numbered EXCEPT those that explicitly set `numbered === false`. If none
+     * opts in, nothing is numbered. Subsections apply the same rule among their
+     * own siblings, producing dotted numbers like `1.2.`.
+     */
     public function renderMarkdown(): string
     {
         $anySectionNumbered = false;
@@ -314,6 +329,12 @@ class PromptObjectModel
         return implode("\n", $md);
     }
 
+    /**
+     * Render the whole document to XML: a UTF-8 declaration followed by a
+     * single `<prompt>` root wrapping the sections. Section numbering follows
+     * the same document-wide opt-in rule as
+     * {@see PromptObjectModel::renderMarkdown()}.
+     */
     public function renderXml(): string
     {
         $xml = [

@@ -6,6 +6,15 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * DataSphere knowledge search executed SERVERLESS: the tool is emitted as a
+ * DataMap webhook, so the SignalWire platform calls the search endpoint
+ * directly and no request reaches this SDK.
+ *
+ * Because the credentials travel in the emitted DataMap, the project_id/token
+ * pair is base64-encoded into a basic-auth header baked into the tool
+ * definition. Use {@see Datasphere} instead when the search must run in-process.
+ */
 class DatasphereServerless extends SkillBase
 {
     /** The name. */
@@ -20,6 +29,10 @@ class DatasphereServerless extends SkillBase
         return 'Search knowledge using SignalWire DataSphere with serverless DataMap execution';
     }
 
+    /**
+     * True — one instance per DataSphere document, distinguished by
+     * `tool_name` (default `search_knowledge`).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -137,6 +150,11 @@ class DatasphereServerless extends SkillBase
         return $schema;
     }
 
+    /**
+     * Require all four connection params — `space_name`, `project_id`,
+     * `token`, `document_id`. Returns false (skill not loaded) if any is
+     * empty.
+     */
     public function setup(): bool
     {
         $required = ['space_name', 'project_id', 'token', 'document_id'];
@@ -150,6 +168,13 @@ class DatasphereServerless extends SkillBase
         return true;
     }
 
+    /**
+     * Emit the search tool (`search_knowledge` unless overridden by
+     * `tool_name`) as a DataMap webhook. The caller's query is interpolated
+     * by the platform via the `${args.query}` template, and `count` is
+     * clamped to [1, 10]. Optional `tags` / `language` params are added to
+     * the request body only when non-empty.
+     */
     public function registerTools(): void
     {
         $toolName = $this->getToolName('search_knowledge');

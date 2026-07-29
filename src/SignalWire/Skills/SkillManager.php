@@ -6,6 +6,15 @@ namespace SignalWire\Skills;
 
 use SignalWire\Agent\AgentInterface;
 
+/**
+ * Loads skills onto one agent and owns their lifecycle.
+ *
+ * Instances are keyed by {@see SkillBase::getInstanceKey()} (the skill name,
+ * suffixed with a `tool_name` param when given) rather than the bare skill name,
+ * so a skill that supports multiple instances can be loaded more than once
+ * under distinct tool names. Class lookup falls back to the process-wide
+ * {@see SkillRegistry} singleton.
+ */
 class SkillManager
 {
     protected AgentInterface $agent;
@@ -13,6 +22,10 @@ class SkillManager
     protected array $loadedSkills = [];
     protected SkillRegistry $registry;
 
+    /**
+     * @param AgentInterface $agent the agent every loaded skill registers its
+     *   tools, hints, global data, and prompt sections onto.
+     */
     public function __construct(AgentInterface $agent)
     {
         $this->agent = $agent;
@@ -93,6 +106,19 @@ class SkillManager
         return [true, ''];
     }
 
+    /**
+     * Unload a skill instance: run its `cleanup()` hook and drop it from the
+     * loaded set.
+     *
+     * Note this does NOT undo the skill's registrations — the tools, hints,
+     * global data, and prompt sections {@see SkillManager::loadSkill()} pushed
+     * onto the agent stay there.
+     *
+     * @param string $key the INSTANCE key (see {@see SkillBase::getInstanceKey()}),
+     *   not necessarily the bare skill name.
+     * @return bool false when no such instance is loaded; true when one was
+     *   cleaned up and removed.
+     */
     public function unloadSkill(string $key): bool
     {
         if (!isset($this->loadedSkills[$key])) {

@@ -6,6 +6,18 @@ namespace SignalWire\DataMap;
 
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Fluent builder for a SERVERLESS SWAIG tool.
+ *
+ * A data-map tool carries its own execution plan — pattern `expressions` and/or
+ * HTTP `webhooks` — inside the tool definition, so the SignalWire platform runs
+ * it directly and no request ever reaches this SDK. That is the trade-off
+ * against a handler-backed tool: no PHP code runs at call time, and anything the
+ * plan needs (API keys, headers) is baked into the definition the platform
+ * receives.
+ *
+ * Every mutator returns `$this` for chaining.
+ */
 class DataMap
 {
     private string $functionName;
@@ -30,6 +42,10 @@ class DataMap
     /** @var array<string>|null */
     private ?array $globalErrorKeys = null;
 
+    /**
+     * @param string $functionName the SWAIG tool name the LLM calls; it is what
+     *   the emitted definition's `function` key carries.
+     */
     public function __construct(string $functionName)
     {
         $this->functionName = $functionName;

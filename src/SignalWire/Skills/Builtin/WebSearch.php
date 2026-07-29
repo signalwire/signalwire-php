@@ -83,6 +83,11 @@ class WebSearch extends SkillBase
         return '2.0.0';
     }
 
+    /**
+     * True — several search engines may be configured on one agent. The
+     * instance key combines `search_engine_id` and `tool_name`, so two
+     * different engines coexist even under the same tool name.
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -114,6 +119,10 @@ class WebSearch extends SkillBase
         return 'web_search_' . $searchEngineId . '_' . $toolName;
     }
 
+    /**
+     * Require BOTH `api_key` and `search_engine_id`; returns false (skill not
+     * loaded) if either is empty.
+     */
     public function setup(): bool
     {
         if (empty($this->params['api_key']) || empty($this->params['search_engine_id'])) {
@@ -197,6 +206,15 @@ class WebSearch extends SkillBase
         return $schema;
     }
 
+    /**
+     * Define the search tool (`web_search` unless overridden by `tool_name`),
+     * whose handler queries the Google Custom Search API from this process.
+     *
+     * Param clamping: `num_results` to [1, 10] (default 3), `timeout` to a
+     * minimum of 2 seconds (default 15). `no_results_message` is spoken when
+     * the search returns nothing, and the optional prefix/postfix params wrap
+     * each non-empty result.
+     */
     public function registerTools(): void
     {
         $toolName = $this->getToolName('web_search');

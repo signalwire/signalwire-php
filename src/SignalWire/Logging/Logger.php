@@ -4,6 +4,23 @@ declare(strict_types=1);
 
 namespace SignalWire\Logging;
 
+/**
+ * Named, per-name-singleton logger writing one line per record to stderr.
+ *
+ * Instances are interned by name in {@see Logger::getLogger()} and the
+ * constructor is private, so two calls with the same name yield the same
+ * object — a level or suppression change is therefore visible to every holder
+ * of that name. Initial state is read from the environment at first
+ * construction: `SIGNALWIRE_LOG_LEVEL` (one of debug/info/warn/error,
+ * case-insensitive; anything else falls back to `info`) and
+ * `SIGNALWIRE_LOG_MODE=off` to start suppressed.
+ *
+ * Every message is passed through the shared control-character scrubber before
+ * it is written — a log-injection defence, so a caller-supplied NUL or ANSI
+ * escape cannot forge log lines. Output goes to stderr via a SAPI-agnostic
+ * handle (`\STDERR` under CLI, an opened `php://stderr` elsewhere), and a
+ * stream that cannot be opened silently drops the record rather than throwing.
+ */
 class Logger
 {
     private const LEVELS = [
@@ -80,6 +97,12 @@ class Logger
         return $this->suppressed;
     }
 
+    /**
+     * Turn all output from this logger on or off, independent of the level.
+     * Suppression short-circuits {@see Logger::shouldLog()}, so it beats any
+     * level. Because loggers are interned by name, this affects every holder of
+     * the same name.
+     */
     public function setSuppressed(bool $suppressed): void
     {
         $this->suppressed = $suppressed;
@@ -100,21 +123,31 @@ class Logger
         return $levelNum >= $currentNum;
     }
 
+    /**
+     * Log at the lowest severity. Variadic parts are joined with a single
+     * space before scrubbing and emission.
+     */
     public function debug(string ...$messages): void
     {
         $this->log('debug', ...$messages);
     }
 
+    /** Log at `info` — the default severity when the environment sets none. */
     public function info(string ...$messages): void
     {
         $this->log('info', ...$messages);
     }
 
+    /** Log at `warn`. */
     public function warn(string ...$messages): void
     {
         $this->log('warn', ...$messages);
     }
 
+    /**
+     * Log at the highest severity. Note this still writes to stderr like every
+     * other level and never throws — it does not raise or exit.
+     */
     public function error(string ...$messages): void
     {
         $this->log('error', ...$messages);

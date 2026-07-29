@@ -146,6 +146,15 @@ abstract class SkillBase
         return [];
     }
 
+    /**
+     * Whether several instances of this skill may be loaded on one agent.
+     *
+     * False by default, which makes {@see SkillManager::loadSkill()} reject a
+     * second load. A skill that overrides this to true must be distinguishable
+     * by a `tool_name` param, since that is what varies
+     * {@see SkillBase::getInstanceKey()} and keeps the instances from
+     * colliding in the manager and in namespaced global_data.
+     */
     public function supportsMultipleInstances(): bool
     {
         return false;
@@ -179,6 +188,12 @@ abstract class SkillBase
         return [];
     }
 
+    /**
+     * Release any resources this skill holds. Called by
+     * {@see SkillManager::unloadSkill()}; the base implementation is a no-op
+     * that subclasses override. It is NOT expected to un-register the tools,
+     * hints, or prompt sections the skill added to the agent.
+     */
     public function cleanup(): void
     {
     }

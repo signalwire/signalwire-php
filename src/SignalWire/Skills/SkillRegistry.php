@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace SignalWire\Skills;
 
+/**
+ * Name → implementing-class map for skills, with a process-wide singleton
+ * ({@see SkillRegistry::instance()}) that {@see SkillManager} consults.
+ *
+ * Resolution is lazy and convention-based rather than eager: an unregistered
+ * name is snake_case→CamelCase'd and looked up under
+ * `SignalWire\Skills\Builtin\`, and a successful hit is memoized into the map.
+ * That is why the built-in skill names are a static table here — nothing scans
+ * the filesystem to find them.
+ */
 class SkillRegistry
 {
     private static ?self $instance = null;
@@ -49,6 +59,16 @@ class SkillRegistry
     {
     }
 
+    /**
+     * Bind a skill name to its implementing class, overriding the
+     * convention-based `Builtin\<CamelName>` lookup {@see getFactory()} would
+     * otherwise perform. Re-registering a name replaces the previous binding;
+     * the class is not validated here (existence is checked at resolve time by
+     * {@see getSkillClass()}).
+     *
+     * @param string $name      the snake_case skill name callers load by.
+     * @param string $className fully-qualified {@see SkillBase} subclass name.
+     */
     public function registerSkill(string $name, string $className): void
     {
         $this->registeredSkills[$name] = $className;

@@ -18,6 +18,12 @@ class BaseResource
     protected HttpClient $http;
     protected string $basePath;
 
+    /**
+     * @param HttpClient $http      the transport every request on this resource goes through.
+     * @param string     $base_path collection path this resource is rooted at;
+     *   {@see BaseResource::path()} appends item segments to it. Stored
+     *   verbatim — no trailing-slash normalization is applied.
+     */
     public function __construct(HttpClient $http, string $base_path)
     {
         $this->http = $http;
@@ -60,6 +66,10 @@ class ReadResource extends BaseResource
 {
     protected HttpClient $client;
 
+    /**
+     * Keeps its own `$client` reference alongside the base class's `$http` —
+     * they are the SAME object, exposed under both names for reference parity.
+     */
     public function __construct(HttpClient $client, string $basePath)
     {
         parent::__construct($client, $basePath);
@@ -150,6 +160,11 @@ class CrudResource extends ReadResource
      */
     protected string $updateMethod = 'PATCH';
 
+    /**
+     * @param string $updateMethod HTTP verb {@see CrudResource::update()} uses;
+     *   UPPERCASED on assignment, so a lowercase `'put'` is accepted. The value
+     *   is not validated against a verb set.
+     */
     public function __construct(HttpClient $client, string $basePath, string $updateMethod = 'PATCH')
     {
         parent::__construct($client, $basePath);

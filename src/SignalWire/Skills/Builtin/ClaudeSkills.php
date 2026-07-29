@@ -82,6 +82,11 @@ class ClaudeSkills extends SkillBase
         return 'Load Claude SKILL.md files as agent tools';
     }
 
+    /**
+     * True — one instance per skills directory. The instance key is derived
+     * from `skills_path` (a crc32 modulo 10000), NOT from `tool_name`, so two
+     * instances pointed at the same directory still collide.
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -173,6 +178,17 @@ class ClaudeSkills extends SkillBase
         return $schema;
     }
 
+    /**
+     * Validate the declared package requirements and the skills load path, then
+     * discover the available skills.
+     *
+     * Returns false (skill not loaded) when a required package is missing, or
+     * when `skills_path` is absent, empty, unresolvable, or not a directory.
+     * Discovering ZERO skills is NOT a failure — an empty skill set loads fine.
+     *
+     * Also latches the filtering configuration: `include` (an all-non-string
+     * list degrades to `['*']`), `exclude`, and `ignore_invocation_control`.
+     */
     public function setup(): bool
     {
         // Mirror Python `ClaudeSkillsSkill.setup` (skill.py:63): validate the
@@ -215,6 +231,12 @@ class ClaudeSkills extends SkillBase
         return true;
     }
 
+    /**
+     * Define one SWAIG tool per skill discovered by
+     * {@see ClaudeSkills::setup()}, named `<tool_prefix><skill>` (prefix
+     * defaults to `claude_`). A `skill_descriptions` map supplies per-skill
+     * descriptions; only string keys mapped to string values are honoured.
+     */
     public function registerTools(): void
     {
         $prefixParam = $this->params['tool_prefix'] ?? 'claude_';

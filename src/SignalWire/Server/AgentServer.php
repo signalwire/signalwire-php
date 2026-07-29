@@ -7,6 +7,15 @@ namespace SignalWire\Server;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 
+/**
+ * Hosts several {@see AgentBase} instances behind one HTTP listener, dispatching
+ * each inbound request to the agent registered at its route.
+ *
+ * Beyond agent routing it can also serve static files under a URL prefix
+ * ({@see AgentServer::serveStaticFiles()}) and route inbound SIP by username
+ * ({@see AgentServer::setupSipRouting()}), mapping a SIP username to the route
+ * of the agent that should answer it.
+ */
 class AgentServer
 {
     protected string $host;

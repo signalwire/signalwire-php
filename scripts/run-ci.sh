@@ -371,7 +371,7 @@ sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start a
 
 # DOC-SURFACE (plan §6.3): docblock coverage floor on the hand-written public API
 # surface (generated code is excluded — it's documented by the generator). The
-# floor is pinned in .doc_surface_floor (84.3% today) and ratchets up via
+# floor is pinned in .doc_surface_floor (100.0% today) and ratchets up via
 # --write-floor; report-only at graduation, so a doc regression is visible without
 # failing the run yet (never-regress is enforced once the floor flips blocking).
 # GUARDED: doc_surface.py ships on the porting-sdk plan branch; until it merges to

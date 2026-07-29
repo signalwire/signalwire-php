@@ -502,12 +502,21 @@ class AgentBase extends Service implements AgentInterface
     //  Prompt Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Set the agent's main prompt as one plain-text string, an alternative to
+     * building it out of POM sections.
+     */
     public function setPromptText(string $text): self
     {
         $this->promptText = $text;
         return $this;
     }
 
+    /**
+     * Set the post-prompt — the instruction the AI runs after the conversation
+     * ends (typically a summary request). Its result is delivered to the
+     * post-prompt URL.
+     */
     public function setPostPrompt(string $text): self
     {
         $this->postPrompt = $text;
@@ -845,6 +854,11 @@ class AgentBase extends Service implements AgentInterface
     //  AI Config Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Append one speech-recognition hint — a word or phrase the recognizer
+     * should bias toward. Appends; it does not replace the existing list (use
+     * {@see AgentBase::addHints()} for a batch).
+     */
     public function addHint(string $hint): self
     {
         $this->hints[] = $hint;
@@ -1086,6 +1100,14 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Set ONE AI-verb parameter, leaving the others intact — unlike
+     * {@see AgentBase::setParams()}, which replaces the whole `params` map.
+     *
+     * @param string $key   the wire parameter name, passed through verbatim
+     *   (this is not a validated closed set).
+     * @param mixed  $value the value, emitted as-is under `ai.params`.
+     */
     public function setParam(string $key, mixed $value): self
     {
         $this->params[$key] = $value;
@@ -1461,12 +1483,31 @@ class AgentBase extends Service implements AgentInterface
     //  Verb Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Append a SWML verb that runs BEFORE the `answer` verb — i.e. while the
+     * call is still ringing (for example `play` on early media).
+     *
+     * Verbs are emitted into `sections.main` in call order:
+     * pre-answer → answer → record_call → post-answer → ai → post-ai.
+     * Repeated calls append, preserving insertion order.
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param mixed  $config the verb's configuration, emitted as-is.
+     */
     public function addPreAnswerVerb(string $verb, mixed $config): self
     {
         $this->preAnswerVerbs[] = [$verb, $config];
         return $this;
     }
 
+    /**
+     * Append a SWML verb that runs after the call is answered but BEFORE the
+     * `ai` verb takes over. See {@see AgentBase::addPreAnswerVerb()} for the
+     * full ordering.
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param mixed  $config the verb's configuration, emitted as-is.
+     */
     public function addPostAnswerVerb(string $verb, mixed $config): self
     {
         $this->postAnswerVerbs[] = [$verb, $config];
@@ -1481,24 +1522,37 @@ class AgentBase extends Service implements AgentInterface
         return $this->addPostAnswerVerb($verb, $config);
     }
 
+    /**
+     * Append a SWML verb that runs AFTER the `ai` verb finishes — the tail of
+     * `sections.main` (for example a closing `play` or `hangup`).
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param mixed  $config the verb's configuration, emitted as-is.
+     */
     public function addPostAiVerb(string $verb, mixed $config): self
     {
         $this->postAiVerbs[] = [$verb, $config];
         return $this;
     }
 
+    /** Drop every verb registered by {@see AgentBase::addPreAnswerVerb()}. */
     public function clearPreAnswerVerbs(): self
     {
         $this->preAnswerVerbs = [];
         return $this;
     }
 
+    /**
+     * Drop every verb registered by {@see AgentBase::addPostAnswerVerb()} (and
+     * therefore by its `addAnswerVerb` alias).
+     */
     public function clearPostAnswerVerbs(): self
     {
         $this->postAnswerVerbs = [];
         return $this;
     }
 
+    /** Drop every verb registered by {@see AgentBase::addPostAiVerb()}. */
     public function clearPostAiVerbs(): self
     {
         $this->postAiVerbs = [];
@@ -1602,6 +1656,16 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Unload a previously-added skill, running its `cleanup()` hook and
+     * dropping it from the skill manager.
+     *
+     * Unlike {@see AgentBase::addSkill()}, this does not throw when the skill is
+     * absent — the unload is silently a no-op, and the boolean the manager
+     * returns is discarded in favour of the fluent `$this`.
+     *
+     * @param SkillName|string $name the typed skill enum or its bare string name.
+     */
     public function removeSkill(SkillName|string $name): self
     {
         $this->getSkillManager()->unloadSkill($name instanceof SkillName ? $name->value : $name);
@@ -1632,6 +1696,18 @@ class AgentBase extends Service implements AgentInterface
     //  Web / Callback Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Install the per-request reconfiguration callback used for multi-tenancy.
+     *
+     * The request handler retrieves it via
+     * {@see AgentBase::getDynamicConfigCallback()} and invokes it as
+     * `$cb($queryParams, $body, $headers, $agent)` against a
+     * {@see AgentBase::cloneForRequest()} copy just before SWML rendering, so
+     * mutations apply to that one request and never to the long-lived agent.
+     * Only one callback is held — a second call replaces the first.
+     *
+     * @param callable $callback `(array $queryParams, array $body, array $headers, AgentBase $agent): void`.
+     */
     public function setDynamicConfigCallback(callable $callback): self
     {
         $this->dynamicConfigCallback = $callback;
@@ -1648,12 +1724,26 @@ class AgentBase extends Service implements AgentInterface
         return $this->dynamicConfigCallback;
     }
 
+    /**
+     * Override the SHARED SWAIG callback endpoint emitted as
+     * `SWAIG.defaults.web_hook_url`.
+     *
+     * When unset, that default is derived from the request headers by the
+     * agent's own URL builder (which embeds basic-auth credentials and any
+     * SWAIG query params). Setting it here WINS over the derived URL, so the
+     * override must itself be reachable and authenticated — every tool without
+     * a per-tool `web_hook_url`, including every insecure tool, calls it.
+     */
     public function setWebHookUrl(string $url): self
     {
         $this->webhookUrl = $url;
         return $this;
     }
 
+    /**
+     * Override the URL the post-prompt summary is delivered to, emitted as
+     * `ai.post_prompt_url`. Omitted from the AI verb entirely when unset.
+     */
     public function setPostPromptUrl(string $url): self
     {
         $this->postPromptUrl = $url;
@@ -1672,6 +1762,15 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Drop every query param registered by
+     * {@see AgentBase::addSwaigQueryParams()}.
+     *
+     * Note this also changes WHICH tools get a per-tool `web_hook_url`: a
+     * handler-backed tool is given its own URL when it has a minted token OR
+     * when swaig query params exist, so clearing the params can push tokenless
+     * tools back onto the shared `SWAIG.defaults.web_hook_url`.
+     */
     public function clearSwaigQueryParams(): self
     {
         $this->swaigQueryParams = [];
@@ -1715,6 +1814,13 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Register the handler for debug events, invoked as `$callback($event)`.
+     *
+     * Only one handler is held — a second call replaces the first — and it is
+     * carried across a {@see AgentBase::cloneForRequest()} by reference (the
+     * clone shares the same callable, it is not deep-copied).
+     */
     public function onDebugEvent(callable $callback): self
     {
         $this->debugEventHandler = $callback;
@@ -1770,6 +1876,20 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Register a SIP username this agent answers on.
+     *
+     * Does two things: sets the `sip_username` (and, when a route is given,
+     * `sip_route`) AI param, and adds the LOWERCASED username to the set the
+     * SIP routing callback matches inbound requests against — so matching is
+     * case-insensitive while the param keeps the caller's original casing.
+     *
+     * Successive calls overwrite the single `sip_username` param but ACCUMULATE
+     * in the matchable set, so an agent can answer on several usernames.
+     *
+     * @param string $route optional route to record as `sip_route`; the empty
+     *   default leaves the param unset.
+     */
     public function registerSipUsername(string $username, string $route = ''): self
     {
         $this->setParam('sip_username', $username);
@@ -2154,6 +2274,21 @@ class AgentBase extends Service implements AgentInterface
         }
     }
 
+    /**
+     * Produce an isolated per-request copy of this agent, so a dynamic-config
+     * callback ({@see AgentBase::setDynamicConfigCallback()}) can reshape the
+     * agent for ONE request without mutating the long-lived instance shared by
+     * concurrent calls.
+     *
+     * The isolation is deliberate and partial:
+     *   - mutable configuration arrays (POM sections, tools, hints, languages,
+     *     pronunciations, params, global data, LLM params, the three verb
+     *     lists, answer config, SWAIG query params, includes, MCP servers) are
+     *     DEEP-copied, so per-request edits do not leak;
+     *   - the session manager and the context builder are cloned;
+     *   - the three callbacks (dynamic-config, summary, debug-event) are shared
+     *     BY REFERENCE — they are behaviour, not per-request state.
+     */
     public function cloneForRequest(): static
     {
         $clone = clone $this;

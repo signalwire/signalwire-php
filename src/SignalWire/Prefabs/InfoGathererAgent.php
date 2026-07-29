@@ -7,6 +7,16 @@ namespace SignalWire\Prefabs;
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Ready-made agent that walks a caller through a question list, one question
+ * at a time, via the `start_questions` and `submit_answer` SWAIG tools.
+ *
+ * Two modes. STATIC: pass `$questions` at construction. DYNAMIC: leave it null
+ * and install a callback with {@see InfoGathererAgent::setQuestionCallback()},
+ * which is invoked per request as `($queryParams, $bodyParams, $headers)` and
+ * returns the question list — so the questions can vary by caller. Default
+ * route `/info_gatherer`; an empty `$name` falls back to `info_gatherer`.
+ */
 class InfoGathererAgent extends AgentBase
 {
     /** @var list<array{key_name: string, question_text: string, confirm?: bool}> */

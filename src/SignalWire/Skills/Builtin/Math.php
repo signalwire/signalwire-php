@@ -7,6 +7,10 @@ namespace SignalWire\Skills\Builtin;
 use SignalWire\Skills\SkillBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Evaluates arithmetic expressions in-process — no API key and no network
+ * access.
+ */
 class Math extends SkillBase
 {
     /** The name. */
@@ -21,6 +25,7 @@ class Math extends SkillBase
         return 'Perform basic mathematical calculations';
     }
 
+    /** Always succeeds — this skill has no configuration to validate. */
     public function setup(): bool
     {
         return true;
@@ -51,6 +56,11 @@ class Math extends SkillBase
         return parent::getParameterSchema();
     }
 
+    /**
+     * Define the `calculate` tool, which evaluates an `expression` string
+     * over the basic operators (+, -, *, /, %, **). The tool name is fixed —
+     * it does not honour a `tool_name` override.
+     */
     public function registerTools(): void
     {
         $this->defineTool(

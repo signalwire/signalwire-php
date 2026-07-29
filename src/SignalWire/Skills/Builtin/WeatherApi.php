@@ -6,6 +6,10 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Current weather via the WeatherAPI service, emitted as a DataMap tool so
+ * the platform calls the API directly. Requires an `api_key` param.
+ */
 class WeatherApi extends SkillBase
 {
     /**
@@ -88,6 +92,7 @@ class WeatherApi extends SkillBase
         return $schema;
     }
 
+    /** Require a non-empty `api_key`; returns false (skill not loaded) without one. */
     public function setup(): bool
     {
         if (empty($this->params['api_key'])) {
@@ -97,6 +102,11 @@ class WeatherApi extends SkillBase
         return true;
     }
 
+    /**
+     * Register every definition from {@see WeatherApi::getTools()} as a raw
+     * SWAIG function, merging this skill's `swaig_fields` in as TOP-LEVEL
+     * function-definition keys.
+     */
     public function registerTools(): void
     {
         foreach ($this->getTools() as $funcDef) {

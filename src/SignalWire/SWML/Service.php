@@ -852,11 +852,27 @@ class Service implements RequestHandlerLike
         return $this->schemaUtils;
     }
 
+    /**
+     * Render this service's document as compact SWML JSON, with slashes and
+     * unicode left unescaped.
+     *
+     * Renders the DOCUMENT as built — it does not go through
+     * {@see Service::renderSwml()}, so a subclass that overrides that
+     * per-request hook is bypassed here.
+     *
+     * @throws \RuntimeException if the document cannot be JSON-encoded.
+     */
     public function render(): string
     {
         return $this->document->render();
     }
 
+    /**
+     * As {@see Service::render()}, but pretty-printed for human reading.
+     * Same content, different whitespace.
+     *
+     * @throws \RuntimeException if the document cannot be JSON-encoded.
+     */
     public function renderPretty(): string
     {
         return $this->document->renderPretty();

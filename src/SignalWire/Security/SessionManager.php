@@ -6,6 +6,24 @@ namespace SignalWire\Security;
 
 use RuntimeException;
 
+/**
+ * Mints and validates the per-tool SWAIG callback tokens.
+ *
+ * STATELESS by design: no session table is kept in memory — every fact a token
+ * asserts travels inside the token itself. A token is the base64url encoding of
+ * `<callId>.<functionName>.<expiry>.<nonce>.<signature>`, where the signature is
+ * HMAC-SHA256 over `callId:functionName:expiry:nonce` under this manager's
+ * secret. Validation compares the function name, the signature, and the call id
+ * with `hash_equals` (timing-safe) and rejects an expired token.
+ *
+ * Because the secret is what makes a token verifiable, a manager constructed
+ * WITHOUT an explicit `$secretKey` generates a random one — so tokens it mints
+ * cannot be validated by any other instance or after a restart. Pass an explicit
+ * key whenever tokens must survive either.
+ *
+ * The `activateSession` / `endSession` / `*SessionMetadata` methods are
+ * API-compatibility no-ops that keep no state and always report success.
+ */
 class SessionManager
 {
     private string $secret;

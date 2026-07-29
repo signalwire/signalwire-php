@@ -41,6 +41,10 @@ class Datasphere extends SkillBase
         return 'Search knowledge using SignalWire DataSphere RAG stack';
     }
 
+    /**
+     * True — one instance per DataSphere document, distinguished by
+     * `tool_name` (default `search_knowledge`).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -179,6 +183,11 @@ class Datasphere extends SkillBase
         ];
     }
 
+    /**
+     * Require all four connection params — `space_name`, `project_id`,
+     * `token`, `document_id`. Returns false (skill not loaded) if any is
+     * empty.
+     */
     public function setup(): bool
     {
         $required = ['space_name', 'project_id', 'token', 'document_id'];
@@ -190,6 +199,18 @@ class Datasphere extends SkillBase
         return true;
     }
 
+    /**
+     * Define the knowledge-search tool (`search_knowledge` unless overridden
+     * by `tool_name`), whose handler calls the DataSphere search endpoint
+     * from THIS process using project_id/token basic auth — contrast
+     * {@see DatasphereServerless}, which hands the platform a DataMap so the
+     * call never reaches the SDK.
+     *
+     * Param clamping: `count` to [1, 10], `timeout` to a minimum of 2 seconds;
+     * `distance` defaults to 3.0. A timeout, a non-2xx status, and an empty
+     * result set each return a spoken fallback rather than raising. The
+     * response is read from `chunks`, falling back to `results`.
+     */
     public function registerTools(): void
     {
         $toolName = $this->getToolName('search_knowledge');

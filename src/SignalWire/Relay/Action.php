@@ -343,6 +343,10 @@ class PlayAction extends Action
         $this->executeSubcommand('calling.play.pause', $extra);
     }
 
+    /**
+     * Resume playback paused by {@see PlayAction::pause()}.
+     * Sends the `calling.play.resume` RELAY sub-command.
+     */
     public function resume(): void
     {
         $this->executeSubcommand('calling.play.resume');
@@ -385,6 +389,10 @@ class RecordAction extends Action
         $this->executeSubcommand('calling.record.pause', $extra);
     }
 
+    /**
+     * Resume a recording paused by {@see RecordAction::pause()}.
+     * Sends the `calling.record.resume` RELAY sub-command.
+     */
     public function resume(): void
     {
         $this->executeSubcommand('calling.record.resume');
@@ -429,6 +437,16 @@ class CollectAction extends Action
      */
     private string $stopMethod = 'calling.collect.stop';
 
+    /**
+     * Override the RELAY stop sub-command for this handle.
+     *
+     * `calling.collect` and `calling.play_and_collect` both produce a
+     * CollectAction, but their wire sub-commands differ, so the dispatcher
+     * sets this to the originating verb's `.stop`. It also determines the
+     * prefix {@see CollectAction::commandPrefix()} derives for
+     * pause/resume/volume — so setting it re-routes those too, not just
+     * `stop()`.
+     */
     public function setStopMethod(string $method): void
     {
         $this->stopMethod = $method;
@@ -464,6 +482,11 @@ class CollectAction extends Action
         $this->executeSubcommand($this->commandPrefix() . '.pause', $extra);
     }
 
+    /**
+     * Resume a collect paused by {@see CollectAction::pause()}.
+     * Sends `<prefix>.resume`, where the prefix follows the originating
+     * verb (see {@see CollectAction::setStopMethod()}).
+     */
     public function resume(): void
     {
         $this->executeSubcommand($this->commandPrefix() . '.resume');

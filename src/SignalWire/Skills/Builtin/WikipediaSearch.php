@@ -38,6 +38,7 @@ class WikipediaSearch extends SkillBase
         return 'Search Wikipedia for information about a topic and get article summaries';
     }
 
+    /** Always succeeds — the Wikipedia API needs no key or configuration. */
     public function setup(): bool
     {
         return true;
@@ -206,6 +207,11 @@ class WikipediaSearch extends SkillBase
         return implode("\n\n" . str_repeat('=', 50) . "\n\n", $articles);
     }
 
+    /**
+     * Define the `search_wiki` tool, whose handler fetches article summaries
+     * for a `query` from the public Wikipedia API. The tool name is fixed —
+     * it does not honour a `tool_name` override.
+     */
     public function registerTools(): void
     {
         $this->defineTool(
