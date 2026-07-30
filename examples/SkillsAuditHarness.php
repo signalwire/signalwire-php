@@ -107,10 +107,7 @@ if ($factoryClass === null) {
 
 // Build a minimal AgentBase to satisfy SkillBase->defineTool() (and
 // the DataMap path's $this->agent->registerSwaigFunction()).
-$agent = new AgentBase([
-    'name' => 'skills-audit',
-    'route' => '/audit',
-]);
+$agent = new AgentBase(name: 'skills-audit', route: '/audit');
 
 /** @var \SignalWire\Skills\SkillBase $skill */
 $skill = new $factoryClass($agent, $params);
