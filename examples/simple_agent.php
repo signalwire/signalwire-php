@@ -112,9 +112,12 @@ PROMPT);
             ],
         ],
         handler: function (array $args, array $rawData): FunctionResult {
-            $location = $args['location'] ?? 'Unknown location';
+            $location = is_string($args['location'] ?? null) ? $args['location'] : 'Unknown location';
             $result = new FunctionResult("It's sunny and 72F in {$location}.");
-            $result->addAction('set_global_data', ['weather_location' => $location]);
+            // updateGlobalData() IS the set_global_data action. PHP's
+            // addAction() takes ONE pre-wrapped array — unlike the Python
+            // reference's two-argument add_action(name, data).
+            $result->updateGlobalData(['weather_location' => $location]);
             return $result;
         },
     );
