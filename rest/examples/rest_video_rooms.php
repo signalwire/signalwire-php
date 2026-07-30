@@ -213,7 +213,7 @@ $conf = safe('Create conference', fn () => $client->video()->conferences()->crea
     'name'         => 'all-hands-stream',
     'display_name' => 'All Hands Meeting',
 ]));
-$confId = $conf ? ($conf['id'] ?? null) : null;
+$confId = field($conf, 'id');
 
 // 8. List conference tokens
 if ($confId) {
@@ -235,7 +235,7 @@ if ($confId) {
         fn () =>
         $client->video()->conferences()->createStream($confId, 'rtmp://live.example.com/stream-key')
     );
-    $streamId = $stream ? ($stream['id'] ?? null) : null;
+    $streamId = field($stream, 'id');
 }
 
 // 10. Get and update stream

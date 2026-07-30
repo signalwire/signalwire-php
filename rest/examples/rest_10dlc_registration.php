@@ -124,7 +124,7 @@ $brand = safe('Brand', fn () => $client->registry()->brands()->create([
     'company_website'     => 'https://acme.example.com',
     'ein_issuing_country' => 'US',
 ]));
-$brandId = $brand ? ($brand['id'] ?? null) : null;
+$brandId = field($brand, 'id');
 
 // 2. List brands
 echo "\nListing brands...\n";
@@ -160,7 +160,7 @@ if ($brandId) {
             'sample1'      => 'Your order #12345 has shipped.',
         ],
     ));
-    $campaignId = $campaign ? ($campaign['id'] ?? null) : null;
+    $campaignId = field($campaign, 'id');
 }
 
 // 5. List campaigns for the brand
@@ -202,7 +202,7 @@ if ($campaignId) {
         fn () =>
         $client->registry()->campaigns()->createOrder($campaignId, phoneNumbers: ['+15125551234'])
     );
-    $orderId = $order ? ($order['id'] ?? null) : null;
+    $orderId = field($order, 'id');
 }
 
 // 8. Get order status

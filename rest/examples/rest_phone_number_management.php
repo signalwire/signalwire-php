@@ -130,7 +130,7 @@ $number = safe('Purchase', function () use ($client, $available) {
     $first = firstRow($available);
     return $client->phoneNumbers()->create(['number' => field($first, 'e164', '+15125551234')]);
 });
-$numId = $number ? ($number['id'] ?? null) : null;
+$numId = field($number, 'id');
 
 // 3. List and get owned numbers
 echo "\nListing owned numbers...\n";
@@ -157,14 +157,14 @@ if ($numId) {
 echo "\nCreating number group...\n";
 $groupId = null;
 $group = safe('Create group', fn () => $client->numberGroups()->create(['name' => 'Sales Pool']));
-$groupId = $group ? ($group['id'] ?? null) : null;
+$groupId = field($group, 'id');
 
 // 6. Add a membership
 if ($groupId && $numId) {
     echo "\nAdding number to group...\n";
     safe('Add membership', function () use ($client, $groupId, $numId) {
         $membership = $client->numberGroups()->addMembership($groupId, $numId);
-        $memId = $membership['id'] ?? null;
+        $memId = field($membership, 'id');
         if ($memId) {
             echo "  Membership: {$memId}\n";
         }
@@ -188,7 +188,7 @@ echo "\nCreating verified caller...\n";
 $callerId = null;
 safe('Verified caller', function () use ($client, &$callerId) {
     $caller = $client->verifiedCallers()->create(['number' => '+15125559999']);
-    $callerId = $caller['id'] ?? null;
+    $callerId = field($caller, 'id');
     echo "  Created verified caller: {$callerId}\n";
     if ($callerId) {
         $client->verifiedCallers()->submitVerification($callerId, '123456');
@@ -229,7 +229,7 @@ safe('Address', function () use ($client, &$addrId) {
         state:        'TX',
         postalCode:   '78701',
     );
-    $addrId = $addr['id'] ?? null;
+    $addrId = field($addr, 'id');
     echo "  Created address: {$addrId}\n";
 });
 

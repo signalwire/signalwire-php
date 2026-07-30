@@ -120,7 +120,7 @@ $queue = safe(
     fn () =>
     $client->queues()->create(['name' => 'Support Queue', 'max_size' => 50])
 );
-$queueId = $queue ? ($queue['id'] ?? null) : null;
+$queueId = field($queue, 'id');
 
 // 2. List queues
 echo "\nListing queues...\n";
