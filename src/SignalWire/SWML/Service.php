@@ -746,17 +746,144 @@ class Service implements RequestHandlerLike
     }
 
     /**
+     * Enforce `secure=true` for one SWAIG call, independent of transport.
+     *
+     * This is the SOLE security decision for a SWAIG call, deliberately free of
+     * any request/transport type so that EVERY transport — the direct HTTP
+     * dispatcher and all four serverless envelopes (lambda, cgi, google cloud
+     * function, azure function) — reaches the identical check with identical
+     * semantics. A transport is responsible only for EXTRACTING the credential
+     * from its own payload shape; none of them re-implements the decision.
+     *
+     * A tool registered with `secure: true` REQUIRES a valid `__token`. An
+     * ABSENT token is refused exactly like an invalid one — omitting the
+     * credential must never be weaker than presenting a wrong one, or `secure`
+     * would be a flag that permits anonymous calls. Likewise a missing
+     * `$callId`: a token is only meaningful bound to a call, so with none there
+     * is nothing to validate against and the call counts as unvalidated.
+     *
+     * The refusal is delivered as a **200 + FunctionResult body**, never an
+     * HTTP error status: the engine has no handling for a SWAIG refusal
+     * status, so the tool reports that it cannot execute and the model relays
+     * that to the caller.
+     *
+     * @param  string|null $token   The `__token` credential, or null when absent.
+     * @param  string|null $callId  The call the token must be bound to, or null.
+     * @return array<string, mixed>|null null to proceed with dispatch, or the
+     *         FunctionResult-shaped refusal to return INSTEAD of dispatching.
+     */
+    protected function swaigValidateToken(
+        string $functionName,
+        ?string $token,
+        ?string $callId,
+    ): ?array {
+        $func = $this->tools[$functionName] ?? null;
+        if ($func === null) {
+            // Unknown function: not this hook's decision — dispatch reports it.
+            return null;
+        }
+
+        // No token machinery on this service — nothing can be minted, so
+        // nothing can be validated, and enforcing would make every secure tool
+        // permanently unreachable rather than protected. The reference draws
+        // the same line: its base SWMLService hook returns "proceed", and the
+        // enforcing override is guarded on the session manager's presence
+        // (`hasattr(self, "_session_manager")`). Enforcement therefore begins
+        // exactly where credentials can exist: at AgentBase.
+        if (!$this->hasSwaigTokenValidation()) {
+            return null;
+        }
+
+        // A token can only be validated against a call_id; without one there is
+        // nothing to check it against, so treat it as unvalidated.
+        $isValid = false;
+        if ($token !== null && $token !== '' && $callId !== null && $callId !== '') {
+            $isValid = $this->validateSwaigToolToken($functionName, $token, $callId);
+        }
+
+        if ($isValid) {
+            return null;
+        }
+
+        if (($func['_secure'] ?? true) === true) {
+            $this->logger->warn(
+                'secure_function_refused: function="' . $functionName . '" '
+                . 'token_present="' . (($token !== null && $token !== '') ? 'true' : 'false') . '"'
+            );
+            return (new FunctionResult(
+                "I'm sorry, the security token for this function is invalid "
+                . 'or expired. I cannot execute this action.'
+            ))->toArray();
+        }
+
+        // secure: false — the tool runs ungated regardless of the credential.
+        return null;
+    }
+
+    /**
+     * Whether this service can validate per-call SWAIG tool tokens at all.
+     *
+     * False on the bare Service (it has no session manager, so it can neither
+     * MINT nor check a token); AgentBase overrides it to true. This is what
+     * scopes enforcement to the services that actually issue credentials —
+     * see {@see swaigValidateToken()} for why.
+     */
+    protected function hasSwaigTokenValidation(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Validate a per-call SWAIG tool token. Only ever reached when
+     * {@see hasSwaigTokenValidation()} is true; AgentBase overrides it to
+     * delegate to its SessionManager.
+     */
+    protected function validateSwaigToolToken(string $functionName, string $token, string $callId): bool
+    {
+        return false;
+    }
+
+    /**
+     * Extract the `__token` credential from a parsed query mapping.
+     *
+     * The reserved `__token` name is preferred (it cannot collide with a
+     * caller's own `token` parameter); a bare `token` is accepted as the alias
+     * the reference also honours.
+     *
+     * @param array<string, mixed> $query
+     */
+    protected static function swaigTokenFromQuery(array $query): ?string
+    {
+        foreach (['__token', 'token'] as $key) {
+            $value = $query[$key] ?? null;
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Extension point: invoked between argument parsing and function dispatch.
-     * AgentBase may override to add session-token validation or ephemeral
-     * config. Returns [target, shortCircuit]: shortCircuit non-null replies
-     * directly without dispatch.
+     * AgentBase may override to add ephemeral per-request config. Returns
+     * [target, shortCircuit]: shortCircuit non-null replies directly without
+     * dispatch.
+     *
+     * Security is NOT decided here — {@see swaigValidateToken()} owns that, and
+     * {@see handleSwaigRequest()} runs it BEFORE this hook, so a subclass that
+     * overrides this hook cannot accidentally drop token enforcement.
      *
      * @param array<string, mixed> $requestData
      * @param array<string, string> $headers
+     * @param array<string, mixed> $query
      * @return array{0: self, 1: ?array<string, mixed>}
      */
-    protected function swaigPreDispatch(array $requestData, array $headers, string $functionName): array
-    {
+    protected function swaigPreDispatch(
+        array $requestData,
+        array $headers,
+        string $functionName,
+        array $query = [],
+    ): array {
         return [$this, null];
     }
 
@@ -913,6 +1040,27 @@ class Service implements RequestHandlerLike
         array $headers,
         ?string $body = null,
     ): array {
+        // Split any query string off the path BEFORE routing. Routing compares
+        // $path against $this->route by exact match / prefix, so a path that
+        // still carries "?..." would never match and would 404. The parsed
+        // query is load-bearing for SWAIG: the per-call `__token` credential
+        // rides the query string on every transport (the call_id rides the
+        // POST body), so it must survive to handleSwaigRequest().
+        $query = [];
+        $qPos = strpos($path, '?');
+        if ($qPos !== false) {
+            $parsed = [];
+            parse_str(substr($path, $qPos + 1), $parsed);
+            // parse_str yields int keys for numeric parameter names; the query
+            // map is string-keyed by contract, so those are dropped.
+            foreach ($parsed as $k => $v) {
+                if (is_string($k)) {
+                    $query[$k] = $v;
+                }
+            }
+            $path = substr($path, 0, $qPos);
+        }
+
         // Health/ready: no auth
         if ($path === '/health') {
             return $this->jsonResponse(200, ['status' => 'healthy']);
@@ -989,7 +1137,7 @@ class Service implements RequestHandlerLike
             return $this->handleSwmlRequest($method, $requestData, $headers);
         }
         if ($subPath === '/swaig') {
-            return $this->handleSwaigRequest($method, $requestData, $headers);
+            return $this->handleSwaigRequest($method, $requestData, $headers, $query);
         }
         if ($subPath === '/post_prompt') {
             return $this->handlePostPrompt($requestData, $headers);
@@ -1056,18 +1204,25 @@ class Service implements RequestHandlerLike
      * Handle SWAIG function dispatch.
      *
      * GET: return the rendered SWML document (parallel to root /).
-     * POST: parse {function, argument, call_id}, validate, run pre-dispatch
-     * hook, call onFunctionCall, return the FunctionResult.
+     * POST: parse {function, argument, call_id}, enforce `secure` via
+     * {@see swaigValidateToken()}, run the pre-dispatch hook, call
+     * onFunctionCall, return the FunctionResult.
      *
      * Lifted from AgentBase so non-agent SWMLServices (e.g. ai_sidecar host)
      * can serve /swaig without subclassing AgentBase.
      *
      * @param array<string, string> $headers
      * @param array<string, mixed>|null $requestData
+     * @param array<string, mixed> $query parsed query string — where the
+     *        per-call `__token` credential rides, on every transport.
      * @return array{int, array<string, string>, string}
      */
-    protected function handleSwaigRequest(string $method, ?array $requestData, array $headers): array
-    {
+    protected function handleSwaigRequest(
+        string $method,
+        ?array $requestData,
+        array $headers,
+        array $query = [],
+    ): array {
         if (strtoupper($method) === 'GET') {
             $swml = $this->renderSwml($requestData, $headers);
             return $this->jsonResponse(200, $swml);
@@ -1099,7 +1254,18 @@ class Service implements RequestHandlerLike
             $args = [];
         }
 
-        [$target, $shortCircuit] = $this->swaigPreDispatch($requestData, $headers, $functionName);
+        // Security FIRST, and unconditionally — before the (overridable)
+        // pre-dispatch hook and before any handler runs. The credential rides
+        // the query string; the call_id rides the POST body. That split is
+        // identical on every transport, so serverless is not a weaker one.
+        $callIdRaw = $requestData['call_id'] ?? null;
+        $callId = is_string($callIdRaw) && $callIdRaw !== '' ? $callIdRaw : null;
+        $refusal = $this->swaigValidateToken($functionName, self::swaigTokenFromQuery($query), $callId);
+        if ($refusal !== null) {
+            return $this->jsonResponse(200, $refusal);
+        }
+
+        [$target, $shortCircuit] = $this->swaigPreDispatch($requestData, $headers, $functionName, $query);
         if ($shortCircuit !== null) {
             return $this->jsonResponse(200, $shortCircuit);
         }
@@ -1262,8 +1428,15 @@ class Service implements RequestHandlerLike
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $method = is_string($method) ? $method : 'GET';
-        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
+        $requestUri = is_string($_SERVER['REQUEST_URI'] ?? null) ? $_SERVER['REQUEST_URI'] : '/';
+        $parsedPath = parse_url($requestUri, PHP_URL_PATH);
+        $path = is_string($parsedPath) && $parsedPath !== '' ? $parsedPath : '/';
+        // Keep the query string: the per-call SWAIG `__token` rides it, and
+        // handleRequest() splits it back off before routing.
+        $parsedQuery = parse_url($requestUri, PHP_URL_QUERY);
+        if (is_string($parsedQuery) && $parsedQuery !== '') {
+            $path .= '?' . $parsedQuery;
+        }
 
         // Reconstruct headers from $_SERVER (cli-server doesn't populate
         // getallheaders() reliably; this works in every SAPI).

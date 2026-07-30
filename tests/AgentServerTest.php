@@ -633,7 +633,9 @@ class AgentServerTest extends TestCase
         $server = new AgentServer();
         $agent  = $this->makeAgent('sub', '/sub');
 
-        // Add a tool so swaig dispatch has something to call
+        // Add a tool so swaig dispatch has something to call. secure: false —
+        // this test exercises AgentServer's sub-path ROUTING, not the
+        // `secure=true` token contract (that is SwaigTokenEnforcementTest).
         $agent->defineTool(
             name: 'test_func',
             description: 'A test function',
@@ -641,6 +643,7 @@ class AgentServerTest extends TestCase
             handler: function (array $args, array $rawData): \SignalWire\SWAIG\FunctionResult {
                 return new \SignalWire\SWAIG\FunctionResult('test response');
             },
+            secure: false,
         );
 
         $server->register($agent);

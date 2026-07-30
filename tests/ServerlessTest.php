@@ -43,6 +43,7 @@ class ServerlessTest extends TestCase
             $_SERVER['REQUEST_METHOD'],
             $_SERVER['PATH_INFO'],
             $_SERVER['REQUEST_URI'],
+            $_SERVER['QUERY_STRING'],
             $_SERVER['CONTENT_TYPE'],
             $_SERVER['CONTENT_LENGTH'],
             $_SERVER['HTTP_AUTHORIZATION'],
@@ -255,6 +256,64 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
+    // 14b. handleLambda — query string reaches handleRequest()
+    // ==================================================================
+
+    /**
+     * Both lambda payload shapes carry the query differently: the parsed
+     * `queryStringParameters` mapping (REST API v1 and HTTP API v2) and the raw
+     * `rawQueryString` (HTTP API v2 only). The parsed mapping wins, mirroring
+     * the reference's extractor order. This is load-bearing rather than
+     * cosmetic: the per-call SWAIG `__token` rides the query string.
+     */
+    public function testHandleLambdaAppendsParsedQueryStringParameters(): void
+    {
+        $agent = $this->createMockAgent(200, ['ok' => true], 'POST', '/swaig?__token=abc123', [], null);
+
+        $event = [
+            'requestContext'         => ['http' => ['method' => 'POST']],
+            'rawPath'                => '/swaig',
+            'queryStringParameters'  => ['__token' => 'abc123'],
+            'headers'                => [],
+            'body'                   => null,
+        ];
+
+        $result = Adapter::handleLambda($agent, $event, new \stdClass());
+        $this->assertSame(200, $result['statusCode']);
+    }
+
+    public function testHandleLambdaFallsBackToRawQueryString(): void
+    {
+        $agent = $this->createMockAgent(200, ['ok' => true], 'POST', '/swaig?__token=abc123', [], null);
+
+        $event = [
+            'requestContext' => ['http' => ['method' => 'POST']],
+            'rawPath'        => '/swaig',
+            'rawQueryString' => '__token=abc123',
+            'headers'        => [],
+            'body'           => null,
+        ];
+
+        $result = Adapter::handleLambda($agent, $event, new \stdClass());
+        $this->assertSame(200, $result['statusCode']);
+    }
+
+    public function testHandleLambdaWithNoQueryLeavesPathUnchanged(): void
+    {
+        $agent = $this->createMockAgent(200, ['ok' => true], 'POST', '/swaig', [], null);
+
+        $event = [
+            'requestContext' => ['http' => ['method' => 'POST']],
+            'rawPath'        => '/swaig',
+            'headers'        => [],
+            'body'           => null,
+        ];
+
+        $result = Adapter::handleLambda($agent, $event, new \stdClass());
+        $this->assertSame(200, $result['statusCode']);
+    }
+
+    // ==================================================================
     // 15. handleLambda — Headers passed through
     // ==================================================================
 
@@ -431,16 +490,41 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
-    // 23. handleCgi — Query string stripped from path
+    // 23. handleCgi — Query string PRESERVED on the path
     // ==================================================================
 
-    public function testHandleCgiStripsQueryString(): void
+    /**
+     * The query string reaches handleRequest(), which splits it back off before
+     * routing. It cannot be dropped here: the per-call SWAIG `__token`
+     * credential rides the query, so stripping it would silently make CGI a
+     * weaker transport than direct HTTP.
+     */
+    public function testHandleCgiPreservesQueryStringOnPathInfo(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['PATH_INFO']      = '/test?foo=bar';
 
-        // Path passed to handleRequest should be /test without query string
-        $agent = $this->createMockAgent(200, ['ok' => true], 'GET', '/test', [], null);
+        $agent = $this->createMockAgent(200, ['ok' => true], 'GET', '/test?foo=bar', [], null);
+
+        ob_start();
+        Adapter::handleCgi($agent);
+        $output = ob_get_clean();
+        $this->assertNotFalse($output);
+
+        $this->assertStringStartsWith('Status: 200 OK', $output);
+    }
+
+    /**
+     * PATH_INFO never carries the query; when the query lives only in
+     * QUERY_STRING it must still be recovered onto the path.
+     */
+    public function testHandleCgiRecoversQueryStringFromServerVar(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['PATH_INFO']      = '/test';
+        $_SERVER['QUERY_STRING']   = '__token=abc123';
+
+        $agent = $this->createMockAgent(200, ['ok' => true], 'GET', '/test?__token=abc123', [], null);
 
         ob_start();
         Adapter::handleCgi($agent);

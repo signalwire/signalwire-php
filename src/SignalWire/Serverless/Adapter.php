@@ -77,6 +77,16 @@ class Adapter
         $method = strtoupper(self::asString($event['httpMethod'] ?? $ctxMethod ?? 'GET', 'GET'));
         $path   = self::asString($event['path'] ?? $event['rawPath'] ?? '/', '/');
 
+        // Re-attach the query string to the path. Both lambda payload shapes are
+        // reachable here and they carry it differently: the REST API v1 (and
+        // HTTP API v2) provide the PARSED `queryStringParameters` mapping, while
+        // HTTP API v2 may instead provide the raw `rawQueryString`. The parsed
+        // mapping is read first, mirroring the reference's extractor order.
+        // This is load-bearing, not cosmetic: the per-call SWAIG `__token`
+        // rides the query string, so dropping it would make serverless a
+        // weaker transport than HTTP.
+        $path .= self::queryStringFrom($event);
+
         $rawBody = $event['body'] ?? null;
         $body    = is_string($rawBody) ? $rawBody : null;
 
@@ -117,13 +127,9 @@ class Adapter
     public static function handleGcf(RequestHandlerLike $agent): void
     {
         $method = strtoupper(self::asString($_SERVER['REQUEST_METHOD'] ?? 'GET', 'GET'));
-        $path   = self::asString($_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/', '/');
-
-        // Strip query string from path
-        $qPos = strpos($path, '?');
-        if ($qPos !== false) {
-            $path = substr($path, 0, $qPos);
-        }
+        $path   = self::withServerQueryString(
+            self::asString($_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/', '/')
+        );
 
         // file_get_contents(...) ?: null already collapses an empty body to null.
         $body = file_get_contents('php://input') ?: null;
@@ -155,9 +161,14 @@ class Adapter
         $method = strtoupper(self::asString($request['method'] ?? $request['Method'] ?? 'GET', 'GET'));
         $url    = self::asString($request['url'] ?? $request['Url'] ?? '/', '/');
 
-        // Parse the URL to extract just the path
+        // Extract the path, KEEPING any query string: the per-call SWAIG
+        // `__token` rides the query, and handleRequest() splits it back off
+        // before routing.
         $parsed = parse_url($url);
         $path = (is_array($parsed) && isset($parsed['path'])) ? $parsed['path'] : '/';
+        if (is_array($parsed) && isset($parsed['query']) && $parsed['query'] !== '') {
+            $path .= '?' . $parsed['query'];
+        }
 
         $rawBody = $request['body'] ?? $request['Body'] ?? null;
         $body    = is_string($rawBody) ? $rawBody : null;
@@ -193,13 +204,9 @@ class Adapter
     public static function handleCgi(RequestHandlerLike $agent): void
     {
         $method = self::asString($_SERVER['REQUEST_METHOD'] ?? 'GET', 'GET');
-        $path   = self::asString($_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/', '/');
-
-        // Strip query string from path
-        $qPos = strpos($path, '?');
-        if ($qPos !== false) {
-            $path = substr($path, 0, $qPos);
-        }
+        $path   = self::withServerQueryString(
+            self::asString($_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '/', '/')
+        );
 
         // file_get_contents(...) ?: null already collapses an empty body to null.
         $body = file_get_contents('php://input') ?: null;
@@ -273,6 +280,64 @@ class Adapter
                 $agent->run();
                 break;
         }
+    }
+
+    /**
+     * Build the `?a=b&c=d` suffix for a lambda event, or '' when it carries no
+     * query. Reads the parsed `queryStringParameters` mapping first (provided by
+     * both the REST API v1 and HTTP API v2 payload shapes) and falls back to the
+     * raw `rawQueryString` string (HTTP API v2 only).
+     *
+     * @param array<string, mixed> $event
+     */
+    private static function queryStringFrom(array $event): string
+    {
+        $params = $event['queryStringParameters'] ?? null;
+        if (is_array($params) && $params !== []) {
+            $pairs = [];
+            foreach ($params as $k => $v) {
+                if (is_string($k) && (is_string($v) || is_int($v) || is_float($v) || is_bool($v))) {
+                    $pairs[$k] = is_bool($v) ? ($v ? '1' : '0') : (string) $v;
+                }
+            }
+            if ($pairs !== []) {
+                return '?' . http_build_query($pairs);
+            }
+        }
+
+        $raw = $event['rawQueryString'] ?? null;
+        if (is_string($raw) && $raw !== '') {
+            return '?' . ltrim($raw, '?');
+        }
+
+        return '';
+    }
+
+    /**
+     * Ensure $path carries a query string, recovering it from `QUERY_STRING` /
+     * `REQUEST_URI` when the path source (`PATH_INFO`) dropped it. CGI and GCF
+     * both read `PATH_INFO` first, which never includes the query.
+     */
+    private static function withServerQueryString(string $path): string
+    {
+        if (str_contains($path, '?')) {
+            return $path;
+        }
+
+        $query = $_SERVER['QUERY_STRING'] ?? null;
+        if (is_string($query) && $query !== '') {
+            return $path . '?' . $query;
+        }
+
+        $requestUri = $_SERVER['REQUEST_URI'] ?? null;
+        if (is_string($requestUri)) {
+            $qPos = strpos($requestUri, '?');
+            if ($qPos !== false) {
+                return $path . substr($requestUri, $qPos);
+            }
+        }
+
+        return $path;
     }
 
     /**

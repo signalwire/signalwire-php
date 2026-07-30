@@ -2204,6 +2204,32 @@ class AgentBase extends Service implements AgentInterface
     // version handles GET (renders SWML) and POST (dispatches via onFunctionCall).
 
     /**
+     * An agent carries a SessionManager, so it CAN mint and check per-call
+     * tokens — which is what turns `secure: true` from an unenforceable flag
+     * into a real credential check. This is the switch that scopes SWAIG token
+     * enforcement to agents (see Service::swaigValidateToken()).
+     */
+    protected function hasSwaigTokenValidation(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Validate a per-call SWAIG tool token against this agent's SessionManager.
+     *
+     * The parent Service has no session manager and so fails closed; an agent
+     * DOES, which is what turns `secure: true` from a refuse-everything flag
+     * into a real credential check. The decision itself — what an absent token
+     * or an absent call_id means, and what the refusal looks like — stays in
+     * the transport-agnostic {@see \SignalWire\SWML\Service::swaigValidateToken()};
+     * this override supplies only the cryptographic answer.
+     */
+    protected function validateSwaigToolToken(string $functionName, string $token, string $callId): bool
+    {
+        return $this->validateToolToken($functionName, $token, $callId);
+    }
+
+    /**
      * Handle the post-prompt callback.
      *
      * @param array<string, mixed>|null $requestData

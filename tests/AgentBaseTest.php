@@ -1164,6 +1164,9 @@ class AgentBaseTest extends TestCase
     public function testHandleSwaigRequest(): void
     {
         $agent = $this->makeAgent();
+        // secure: false — this test exercises DISPATCH, not the `secure=true`
+        // token contract (that is SwaigTokenEnforcementTest), and a secure tool
+        // called without a `__token` is correctly refused.
         $agent->defineTool(
             'echo_tool',
             'Echoes input',
@@ -1171,6 +1174,7 @@ class AgentBaseTest extends TestCase
             function (array $args, array $raw): FunctionResult {
                 return new FunctionResult('Echo: ' . ($args['msg'] ?? ''));
             },
+            secure: false,
         );
 
         $swaigBody = json_encode([

@@ -315,6 +315,16 @@ class AgentServer
         array $headers = [],
         ?string $body = null,
     ): array {
+        // Split any query string off before routing, and re-attach it when the
+        // request is handed to the matched agent: routing here is exact/prefix
+        // match on the path, but the per-call SWAIG `__token` rides the query
+        // and the agent's own dispatcher needs it.
+        $query = '';
+        $qPos = strpos($path, '?');
+        if ($qPos !== false) {
+            $query = substr($path, $qPos);
+            $path = substr($path, 0, $qPos);
+        }
         $path = $this->normalizePath($path);
 
         // Health endpoint (no auth)
@@ -350,7 +360,7 @@ class AgentServer
 
         if ($matchedRoute !== null) {
             $agent = $this->agents[$matchedRoute];
-            return $agent->handleRequest($method, $path, $headers, $body);
+            return $agent->handleRequest($method, $path . $query, $headers, $body);
         }
 
         return $this->jsonResponse(404, ['error' => 'Not Found']);
@@ -384,8 +394,16 @@ class AgentServer
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $method = is_string($method) ? $method : 'GET';
-        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
+        $requestUri = is_string($_SERVER['REQUEST_URI'] ?? null) ? $_SERVER['REQUEST_URI'] : '/';
+        $parsedPath = parse_url($requestUri, PHP_URL_PATH);
+        $path = is_string($parsedPath) && $parsedPath !== '' ? $parsedPath : '/';
+        // Keep the query string: handleRequest() splits it back off before
+        // routing and forwards it to the matched agent, where the SWAIG
+        // `__token` credential is read from it.
+        $parsedQuery = parse_url($requestUri, PHP_URL_QUERY);
+        if (is_string($parsedQuery) && $parsedQuery !== '') {
+            $path .= '?' . $parsedQuery;
+        }
 
         // Reconstruct headers from $_SERVER (works in every SAPI).
         $headers = [];
