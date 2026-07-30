@@ -678,6 +678,134 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 
 
 # ---------------------------------------------------------------------------
+# RELAY Call options-bag UNFOLD (AGENT_RULES §2).
+#
+# The reference's RELAY convenience methods take KEYWORD-ONLY params
+# (``play_tts(text, *, language=None, gender=None, voice=None, volume=None,
+# on_completed=None)``). PHP has no keyword-only params, so the port's idiom is
+# the options ARRAY — ``playTts(string $text, array $opts = [])`` — and the
+# method then reads exactly those keys out of the bag.
+#
+# That is pure NAMED-PARAMETER-SHAPE idiom, so §2 requires it be reconciled at
+# the ENUMERATOR (so port and reference compare EQUAL) rather than documented as
+# a signature omission. Each entry below UNFOLDS the trailing ``$opts`` param
+# back into the reference's keyword params, exactly as the REST §5 sidecar does
+# for the generated resources.
+#
+# Keyed ``(canonical_module, canonical_class, canonical_method)`` ->
+# ``(opts_param_name, [param dicts to splice in place of it])``.
+#
+# INVARIANTS, enforced at splice time (a mismatch ABORTS the enumeration rather
+# than silently emitting a wrong surface):
+#   * the method must be present, and its LAST param must be named
+#     ``opts_param_name`` — if the PHP signature changes shape, this table is
+#     stale and must be re-derived, not quietly ignored;
+#   * the spliced params are written out verbatim, so they must be the keys the
+#     PHP body actually reads. Every entry here was verified against
+#     src/SignalWire/Relay/Call.php: the explicit ``isset($opts[...])`` reads in
+#     the method body, plus the shared carryPlayOpts()/carryDetectOpts() helpers
+#     which carry ``volume``/``timeout`` + ``on_completed``.
+#
+# ``control_id`` is deliberately NOT spliced: the carry helpers accept it, but
+# the reference does not declare it on these methods, so emitting it would be
+# INVENTED SURFACE. It stays an undeclared extra key in the bag.
+_RELAY_KW_CALLBACK = (
+    "optional<callable<list<class:signalwire.relay.event.RelayEvent>,any>>"
+)
+
+
+def _kw(name: str, type_: str) -> dict:
+    """A keyword-only, optional, null-defaulted param — the reference's shape."""
+    return {
+        "name": name,
+        "kind": "keyword",
+        "type": type_,
+        "required": False,
+        "default": None,
+    }
+
+
+RELAY_OPTS_UNFOLD: dict[tuple[str, str, str], tuple[str, list[dict]]] = {
+    # --- play convenience: params read in-body, then carryPlayOpts() ---
+    ("signalwire.relay.call", "Call", "play_tts"): (
+        "opts",
+        [
+            _kw("language", "optional<string>"),
+            _kw("gender", "optional<string>"),
+            _kw("voice", "optional<string>"),
+            _kw("volume", "optional<float>"),
+            _kw("on_completed", _RELAY_KW_CALLBACK),
+        ],
+    ),
+    ("signalwire.relay.call", "Call", "play_audio"): (
+        "opts",
+        [
+            _kw("volume", "optional<float>"),
+            _kw("on_completed", _RELAY_KW_CALLBACK),
+        ],
+    ),
+    # --- detect convenience: params read in-body, then carryDetectOpts() ---
+    ("signalwire.relay.call", "Call", "detect_fax"): (
+        "opts",
+        [
+            _kw("tone", "optional<string>"),
+            _kw("timeout", "optional<float>"),
+            _kw("on_completed", _RELAY_KW_CALLBACK),
+        ],
+    ),
+    ("signalwire.relay.call", "Call", "detect_digit"): (
+        "opts",
+        [
+            _kw("digits", "optional<string>"),
+            _kw("timeout", "optional<float>"),
+            _kw("on_completed", _RELAY_KW_CALLBACK),
+        ],
+    ),
+    ("signalwire.relay.call", "Call", "detect_answering_machine"): (
+        "opts",
+        [
+            _kw("initial_timeout", "optional<float>"),
+            _kw("end_silence_timeout", "optional<float>"),
+            _kw("machine_voice_threshold", "optional<float>"),
+            _kw("machine_words_threshold", "optional<int>"),
+            _kw("detect_interruptions", "optional<bool>"),
+            _kw("detect_message_end", "optional<bool>"),
+            _kw("timeout", "optional<float>"),
+            _kw("on_completed", _RELAY_KW_CALLBACK),
+        ],
+    ),
+}
+
+
+def apply_relay_opts_unfold(mod: str, cls: str, methods_out: dict) -> None:
+    """Unfold each registered options-bag param back into the reference's
+    keyword params, in place.
+
+    Aborts loudly on a stale entry (missing method, or a trailing param that is
+    no longer the expected options bag) — a silently-skipped unfold would
+    reintroduce the very drift this fold exists to close.
+    """
+    for (m, c, method), (opts_name, spliced) in RELAY_OPTS_UNFOLD.items():
+        if m != mod or c != cls:
+            continue
+        sig = methods_out.get(method)
+        if sig is None:
+            raise SystemExit(
+                f"RELAY_OPTS_UNFOLD is STALE: {mod}.{cls}.{method} is not in the "
+                f"enumerated surface. Re-derive the entry or delete it."
+            )
+        params = list(sig.get("params", []))
+        if not params or params[-1].get("name") != opts_name:
+            tail = params[-1].get("name") if params else "<none>"
+            raise SystemExit(
+                f"RELAY_OPTS_UNFOLD is STALE: {mod}.{cls}.{method} last param is "
+                f"{tail!r}, expected the options bag {opts_name!r}. The PHP "
+                f"signature changed shape; re-derive the entry."
+            )
+        sig["params"] = params[:-1] + [dict(p) for p in spliced]
+
+
+# ---------------------------------------------------------------------------
 # AI-Chat whole-signature fold (item: ai-chat surface tighten).
 #
 # The oracle enumerates signalwire.ai_chat.client with an EXACT own-signature per
@@ -1810,6 +1938,11 @@ def collect(
                 continue
             if canonical_name in AICHAT_SIGNATURES:
                 methods_out = dict(AICHAT_SIGNATURES[canonical_name])
+
+        # RELAY options-bag unfold: restore the reference's keyword params in
+        # place of PHP's single ``array $opts`` idiom (see RELAY_OPTS_UNFOLD).
+        apply_relay_opts_unfold(mod, canonical_name, methods_out)
+
         out_modules.setdefault(mod, {"classes": {}})
         out_modules[mod]["classes"][canonical_name] = {
             "methods": dict(sorted(methods_out.items())),

@@ -22010,10 +22010,60 @@
                   "kind": "self"
                 },
                 {
-                  "name": "opts",
-                  "type": "any",
+                  "name": "initial_timeout",
+                  "kind": "keyword",
+                  "type": "optional<float>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "end_silence_timeout",
+                  "kind": "keyword",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "machine_voice_threshold",
+                  "kind": "keyword",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "machine_words_threshold",
+                  "kind": "keyword",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "detect_interruptions",
+                  "kind": "keyword",
+                  "type": "optional<bool>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "detect_message_end",
+                  "kind": "keyword",
+                  "type": "optional<bool>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "timeout",
+                  "kind": "keyword",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "on_completed",
+                  "kind": "keyword",
+                  "type": "optional<callable<list<class:signalwire.relay.event.RelayEvent>,any>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "class:signalwire.relay.call.DetectAction"
@@ -22025,10 +22075,25 @@
                   "kind": "self"
                 },
                 {
-                  "name": "opts",
-                  "type": "any",
+                  "name": "digits",
+                  "kind": "keyword",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "timeout",
+                  "kind": "keyword",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "on_completed",
+                  "kind": "keyword",
+                  "type": "optional<callable<list<class:signalwire.relay.event.RelayEvent>,any>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "class:signalwire.relay.call.DetectAction"
@@ -22040,10 +22105,25 @@
                   "kind": "self"
                 },
                 {
-                  "name": "opts",
-                  "type": "any",
+                  "name": "tone",
+                  "kind": "keyword",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "timeout",
+                  "kind": "keyword",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "on_completed",
+                  "kind": "keyword",
+                  "type": "optional<callable<list<class:signalwire.relay.event.RelayEvent>,any>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "class:signalwire.relay.call.DetectAction"
@@ -22359,10 +22439,18 @@
                   "required": true
                 },
                 {
-                  "name": "opts",
-                  "type": "any",
+                  "name": "volume",
+                  "kind": "keyword",
+                  "type": "optional<float>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "on_completed",
+                  "kind": "keyword",
+                  "type": "optional<callable<list<class:signalwire.relay.event.RelayEvent>,any>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "class:signalwire.relay.call.PlayAction"
@@ -22420,10 +22508,39 @@
                   "required": true
                 },
                 {
-                  "name": "opts",
-                  "type": "any",
+                  "name": "language",
+                  "kind": "keyword",
+                  "type": "optional<string>",
                   "required": false,
-                  "default": []
+                  "default": null
+                },
+                {
+                  "name": "gender",
+                  "kind": "keyword",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "voice",
+                  "kind": "keyword",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "volume",
+                  "kind": "keyword",
+                  "type": "optional<float>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "on_completed",
+                  "kind": "keyword",
+                  "type": "optional<callable<list<class:signalwire.relay.event.RelayEvent>,any>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "class:signalwire.relay.call.PlayAction"
