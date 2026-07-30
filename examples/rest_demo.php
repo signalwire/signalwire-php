@@ -32,7 +32,16 @@ $client = new RestClient(
     host:    env('SIGNALWIRE_SPACE'),
 );
 
-function safe(string $label, callable $fn): mixed
+/**
+ * Run an SDK call, reporting OK/FAILED instead of aborting the demo.
+ *
+ * Every REST method returns the decoded JSON body as array<string,mixed>, so
+ * that is what a success yields; a failure yields null.
+ *
+ * @param callable(): array<string,mixed> $fn
+ * @return array<string,mixed>|null
+ */
+function safe(string $label, callable $fn): ?array
 {
     try {
         $result = $fn();
