@@ -46,15 +46,19 @@ class SwmlRenderer
         string $format = 'json',
         ?string $defaultWebhookUrl = null,
     ): string {
-        $doc = $service->getDocument();
-        $doc->reset();
+        // Route through Service::addVerb, not the raw Document — the raw entry
+        // point (Document::addVerb) bypasses schema validation entirely, which
+        // is how the schema-forbidden `play` `text` key shipped unnoticed. Every
+        // emission below therefore goes through the validating path, so a wrong
+        // verb name or an unknown config key fails loud at build time.
+        $service->resetDocument();
 
         if ($addAnswer) {
-            $doc->addVerb('answer', new \stdClass());
+            $service->addVerb('answer', []);
         }
 
         if ($recordCall) {
-            $doc->addVerb('record_call', ['format' => $recordFormat, 'stereo' => $recordStereo]);
+            $service->addVerb('record_call', ['format' => $recordFormat, 'stereo' => $recordStereo]);
         }
 
         // Assemble the SWAIG function list, prepending startup/hangup hooks.
@@ -114,7 +118,7 @@ class SwmlRenderer
             $ai[$k] = $v;
         }
 
-        $doc->addVerb('ai', $ai);
+        $service->addVerb('ai', $ai);
 
         return self::renderIn($service, $format);
     }

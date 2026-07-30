@@ -712,20 +712,20 @@ class AgentBaseTest extends TestCase
     public function testAddPreAnswerVerb(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPreAnswerVerb('play', ['url' => 'ring.wav']);
+        $agent->addPreAnswerVerb('play', ['url' => 'https://example.com/ring.wav']);
 
         $swml = $agent->renderSwml();
         $first = Shape::sub($swml, 'sections', 'main', 0);
 
         // Pre-answer verb should be the first verb
         $this->assertSame('play', array_key_first($first));
-        $this->assertSame(['url' => 'ring.wav'], $first['play'] ?? null);
+        $this->assertSame(['url' => 'https://example.com/ring.wav'], $first['play'] ?? null);
     }
 
     public function testAddPostAnswerVerb(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPostAnswerVerb('play', ['url' => 'welcome.wav']);
+        $agent->addPostAnswerVerb('play', ['url' => 'https://example.com/welcome.wav']);
 
         $swml = $agent->renderSwml();
         // Post-answer verb should be after 'answer', before 'ai'
@@ -754,7 +754,7 @@ class AgentBaseTest extends TestCase
     public function testClearPreAnswerVerbs(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPreAnswerVerb('play', ['url' => 'ring.wav']);
+        $agent->addPreAnswerVerb('play', ['url' => 'https://example.com/ring.wav']);
         $agent->clearPreAnswerVerbs();
 
         $swml = $agent->renderSwml();
@@ -765,7 +765,7 @@ class AgentBaseTest extends TestCase
     public function testClearPostAnswerVerbs(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPostAnswerVerb('play', ['url' => 'welcome.wav']);
+        $agent->addPostAnswerVerb('play', ['url' => 'https://example.com/welcome.wav']);
         $agent->clearPostAnswerVerbs();
 
         $swml = $agent->renderSwml();
@@ -1241,7 +1241,7 @@ class AgentBaseTest extends TestCase
     public function testVerbPhasesOrder(): void
     {
         $agent = $this->makeAgent();
-        $agent->addPreAnswerVerb('play', ['url' => 'ring.wav']);
+        $agent->addPreAnswerVerb('play', ['url' => 'https://example.com/ring.wav']);
         $agent->addPostAnswerVerb('record_call', ['format' => 'mp3']);
         $agent->addPostAiVerb('hangup', []);
 

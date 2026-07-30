@@ -285,7 +285,14 @@ class Service implements RequestHandlerLike
             }
         }
 
-        $this->document->addVerbToSection($section, $method, $config);
+        // Route through the VALIDATING addVerbToSection, not the raw Document.
+        // A caller writing `$service->play([...])` reads exactly like the
+        // validating `$service->addVerb('play', [...])` and must behave the
+        // same; going raw here made this a silent second entry point that
+        // accepted schema-invalid configs. Mirrors the reference's generated
+        // verb methods, which call `self_instance.add_verb(name, config)`
+        // (core/swml_service.py:316) — the validating path.
+        $this->addVerbToSection($section, $method, $config);
         return $this;
     }
 

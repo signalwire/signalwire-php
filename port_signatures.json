@@ -1652,7 +1652,7 @@
                 },
                 {
                   "name": "config",
-                  "type": "optional<any>",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -1671,7 +1671,7 @@
                 },
                 {
                   "name": "config",
-                  "type": "optional<any>",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -1690,7 +1690,7 @@
                 },
                 {
                   "name": "config",
-                  "type": "optional<any>",
+                  "type": "any",
                   "required": true
                 }
               ],
@@ -1709,7 +1709,7 @@
                 },
                 {
                   "name": "config",
-                  "type": "optional<any>",
+                  "type": "any",
                   "required": true
                 }
               ],

@@ -110,11 +110,11 @@ class AgentBase extends Service implements AgentInterface
     protected array $sipUsernames = [];
 
     // ── Verbs ───────────────────────────────────────────────────────────
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string,mixed>}> */
     protected array $preAnswerVerbs;
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string,mixed>}> */
     protected array $postAnswerVerbs;
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string,mixed>}> */
     protected array $postAiVerbs;
     /** @var array<string,mixed> */
     protected array $answerConfig;
@@ -1492,9 +1492,13 @@ class AgentBase extends Service implements AgentInterface
      * Repeated calls append, preserving insertion order.
      *
      * @param string $verb   the SWML verb name, used verbatim as the object key.
-     * @param mixed  $config the verb's configuration, emitted as-is.
+     * @param array<string,mixed> $config the verb's configuration. Typed to
+     *        match what the validating Service::addVerb accepts — renderSwml
+     *        emits these through it, so a `mixed` here only deferred the type
+     *        error to render time. Mirrors the reference's `config: dict[str, Any]`
+     *        (core/agent_base.py:558).
      */
-    public function addPreAnswerVerb(string $verb, mixed $config): self
+    public function addPreAnswerVerb(string $verb, array $config): self
     {
         $this->preAnswerVerbs[] = [$verb, $config];
         return $this;
@@ -1506,9 +1510,13 @@ class AgentBase extends Service implements AgentInterface
      * full ordering.
      *
      * @param string $verb   the SWML verb name, used verbatim as the object key.
-     * @param mixed  $config the verb's configuration, emitted as-is.
+     * @param array<string,mixed> $config the verb's configuration. Typed to
+     *        match what the validating Service::addVerb accepts — renderSwml
+     *        emits these through it, so a `mixed` here only deferred the type
+     *        error to render time. Mirrors the reference's `config: dict[str, Any]`
+     *        (core/agent_base.py:558).
      */
-    public function addPostAnswerVerb(string $verb, mixed $config): self
+    public function addPostAnswerVerb(string $verb, array $config): self
     {
         $this->postAnswerVerbs[] = [$verb, $config];
         return $this;
@@ -1516,8 +1524,11 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Alias for addPostAnswerVerb().
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param array<string,mixed> $config the verb's configuration.
      */
-    public function addAnswerVerb(string $verb, mixed $config): self
+    public function addAnswerVerb(string $verb, array $config): self
     {
         return $this->addPostAnswerVerb($verb, $config);
     }
@@ -1527,9 +1538,13 @@ class AgentBase extends Service implements AgentInterface
      * `sections.main` (for example a closing `play` or `hangup`).
      *
      * @param string $verb   the SWML verb name, used verbatim as the object key.
-     * @param mixed  $config the verb's configuration, emitted as-is.
+     * @param array<string,mixed> $config the verb's configuration. Typed to
+     *        match what the validating Service::addVerb accepts — renderSwml
+     *        emits these through it, so a `mixed` here only deferred the type
+     *        error to render time. Mirrors the reference's `config: dict[str, Any]`
+     *        (core/agent_base.py:558).
      */
-    public function addPostAiVerb(string $verb, mixed $config): self
+    public function addPostAiVerb(string $verb, array $config): self
     {
         $this->postAiVerbs[] = [$verb, $config];
         return $this;
@@ -1994,46 +2009,48 @@ class AgentBase extends Service implements AgentInterface
      */
     public function renderSwml(?array $requestBody = null, array $headers = [], ?string $callId = null): array
     {
-        $main = [];
+        // Build the document through the VALIDATING Service entry point rather
+        // than hand-assembling the `{version, sections}` literal. The old code
+        // path touched neither Service nor Document, so nothing ever checked a
+        // verb name or its config — a third, entirely unvalidated way to emit
+        // SWML. Mirrors the reference `AgentBase._render_swml`, which resets the
+        // document and calls `add_verb(...)` for every phase before returning
+        // `render_document()` (core/agent_base.py:1194-1330).
+        $this->resetDocument();
 
         // 1. Pre-answer verbs
         foreach ($this->preAnswerVerbs as [$verb, $config]) {
-            $main[] = [$verb => $config];
+            $this->addVerb($verb, $config);
         }
 
         // 2. Answer verb
         if ($this->autoAnswer) {
             $answerParams = array_merge(['max_duration' => 14400], $this->answerConfig);
-            $main[] = ['answer' => $answerParams];
+            $this->addVerb('answer', $answerParams);
         }
 
         // 3. Record call verb
         if ($this->recordCall) {
-            $main[] = ['record_call' => [
+            $this->addVerb('record_call', [
                 'format' => $this->recordFormat,
                 'stereo' => $this->recordStereo,
-            ]];
+            ]);
         }
 
         // 4. Post-answer verbs
         foreach ($this->postAnswerVerbs as [$verb, $config]) {
-            $main[] = [$verb => $config];
+            $this->addVerb($verb, $config);
         }
 
         // 5. AI verb
-        $main[] = ['ai' => $this->buildAiVerb($headers, $callId)];
+        $this->addVerb('ai', $this->buildAiVerb($headers, $callId));
 
         // 6. Post-AI verbs
         foreach ($this->postAiVerbs as [$verb, $config]) {
-            $main[] = [$verb => $config];
+            $this->addVerb($verb, $config);
         }
 
-        return [
-            'version'  => '1.0.0',
-            'sections' => [
-                'main' => $main,
-            ],
-        ];
+        return $this->getDocument()->toArray();
     }
 
     /**

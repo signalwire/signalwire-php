@@ -299,22 +299,67 @@ class SWMLServiceTest extends TestCase
         $this->assertCount(3, $verbs);
     }
 
-    public function testAllSchemaVerbsCallable(): void
+    /**
+     * Every schema verb is reachable through `__call`, and `__call` routes
+     * through the VALIDATING path (Service::addVerbToSection) rather than the
+     * raw Document.
+     *
+     * Reachability is proven by the absence of BadMethodCallException ("Unknown
+     * method"): a verb the schema does not know never gets as far as
+     * validation. A SchemaValidationError therefore PROVES the verb resolved
+     * AND that its config was checked — which is the property under test. The
+     * old version of this test passed `[]` for every verb and asserted all of
+     * them landed in the document; that only held because `__call` went raw, so
+     * it was asserting the bypass itself. Verbs with required properties (ai,
+     * connect, transfer, …) legitimately reject an empty config now.
+     */
+    public function testAllSchemaVerbsCallableAndValidated(): void
     {
         $svc = $this->makeService();
-        $schema = Schema::instance();
-        $names = $schema->getVerbNames();
+        $names = Schema::instance()->getVerbNames();
+        $this->assertNotEmpty($names, 'schema must expose verbs');
 
+        $added = 0;
+        $rejected = 0;
         foreach ($names as $verb) {
-            if ($verb === 'sleep') {
-                $svc->sleep(1000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
-            } else {
-                $svc->$verb([]);
+            try {
+                if ($verb === 'sleep') {
+                    $svc->sleep(1000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+                } else {
+                    $svc->$verb([]);
+                }
+                $added++;
+            } catch (\SignalWire\Utils\SchemaValidationError $e) {
+                // Resolved as a verb, then its config was validated and refused.
+                $rejected++;
+            } catch (\BadMethodCallException $e) {
+                $this->fail("schema verb '{$verb}' is not reachable via __call: " . $e->getMessage());
             }
         }
 
-        $verbs = $svc->getDocument()->getVerbs('main');
-        $this->assertCount(count($names), $verbs);
+        $this->assertSame(count($names), $added + $rejected);
+        $this->assertGreaterThan(
+            0,
+            $rejected,
+            '__call must validate: verbs with required properties (ai, transfer, …) '
+            . 'have to reject an empty config, or the auto-vivified path is going raw',
+        );
+        $this->assertCount($added, $svc->getDocument()->getVerbs('main'));
+    }
+
+    /**
+     * The auto-vivified verb path enforces the same schema rules as the
+     * explicit `addVerb`. `play` has no `text` key, so `$svc->play(['text' =>
+     * ...])` must throw exactly as `$svc->addVerb('play', ['text' => ...])`
+     * does. Before `__call` was routed onto the validating path, the first of
+     * these silently produced a document the server rejects.
+     */
+    public function testAutoVivifiedVerbRejectsSchemaInvalidConfig(): void
+    {
+        $svc = $this->makeService();
+
+        $this->expectException(\SignalWire\Utils\SchemaValidationError::class);
+        $svc->play(['text' => 'hello']); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
     }
 
     public function testUnknownMethodThrows(): void
