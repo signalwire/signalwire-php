@@ -7,8 +7,8 @@ namespace SignalWire\REST;
 /**
  * Common base class for namespace and resource classes.
  *
- * Mirrors Python's signalwire.rest._base.BaseResource — minimal wrapper
- * around an HttpClient and a base path. ReadResource extends this to add
+ * A minimal wrapper around an HttpClient and a base path. ReadResource
+ * extends this to add
  * list/get; CrudResource extends ReadResource for the full CRUD surface;
  * namespace classes that want a shared base path (without inheriting any
  * collection methods) can subclass BaseResource directly.
@@ -57,8 +57,8 @@ class BaseResource
 /**
  * Read-only collection wrapper: list + get.
  *
- * Mirrors Python's signalwire.rest._base.ReadResource — a BaseResource that
- * exposes the two read verbs (list over the collection, get by id). Resources
+ * A BaseResource exposing the two read verbs: list over the collection, get
+ * by id. Resources
  * that only read (logs, sessions, sip_profile-style reads) subclass this; the
  * full-CRUD CrudResource composes it so list/get are defined exactly once.
  */
@@ -67,8 +67,8 @@ class ReadResource extends BaseResource
     protected HttpClient $client;
 
     /**
-     * Keeps its own `$client` reference alongside the base class's `$http` —
-     * they are the SAME object, exposed under both names to match the reference.
+     * Keeps its own `$client` handle alongside the base class's `$http`.
+     * They are the SAME object, reachable under both names.
      */
     public function __construct(HttpClient $client, string $basePath)
     {
@@ -87,8 +87,7 @@ class ReadResource extends BaseResource
      *
      * @param array<string,mixed> $params Query-string parameters.
      * @param RequestOptions|null $requestOptions Per-call transport override
-     *   (timeout / retry / abort); null uses the client default. Mirrors the
-     *   python reference ``ReadResource.list(*, request_options=None, **params)``.
+     *   (timeout / retry / abort); null uses the client default.
      * @return array<string,mixed>
      */
     public function list(array $params = [], ?RequestOptions $requestOptions = null): array
@@ -109,14 +108,12 @@ class ReadResource extends BaseResource
      *
      * Wires the resource layer to the tested {@see PaginatedIterator} (which
      * walks ``resp["data"]`` and follows ``resp["links"]["next"]``), so callers
-     * no longer hand-construct the path + token loop. Mirrors Python's
-     * ``ReadResource.paginate(**params) -> PaginatedIterator``.
+     * no longer hand-construct the path + token loop.
      *
      * @param array<string,mixed> $params Initial query-string parameters.
      * @param RequestOptions|null $requestOptions Per-call transport override
      *   applied to EVERY page fetch (timeout / retry / abort); null uses the
-     *   client default. Mirrors the python reference
-     *   ``ReadResource.paginate(*, request_options=None, **params)``.
+     *   client default.
      */
     public function paginate(array $params = [], ?RequestOptions $requestOptions = null): PaginatedIterator
     {
@@ -133,8 +130,7 @@ class ReadResource extends BaseResource
      * Retrieve a single resource by ID (GET basePath/{id}).
      *
      * @param RequestOptions|null $requestOptions Per-call transport override
-     *   (timeout / retry / abort); null uses the client default. Mirrors the
-     *   python reference ``ReadResource.get(resource_id, *, request_options=None)``.
+     *   (timeout / retry / abort); null uses the client default.
      * @return array<string,mixed>
      */
     public function get(string $id, ?RequestOptions $requestOptions = null): array
@@ -146,17 +142,16 @@ class ReadResource extends BaseResource
 /**
  * Generic CRUD wrapper around an HttpClient and a base API path.
  *
- * Mirrors Python's signalwire.rest._base.CrudResource — composes ReadResource
- * (list/get) and adds create / update / delete for any REST resource that
- * follows the standard SignalWire collection+item URL pattern.
+ * Composes ReadResource (list/get) and adds create / update / delete for any
+ * REST resource following the standard SignalWire collection+item URL
+ * pattern.
  */
 class CrudResource extends ReadResource
 {
     /**
-     * HTTP verb used by update(). Mirrors Python's
-     * ``CrudResource._update_method`` class attribute: the base default is
-     * PATCH, and PUT-update resources override it (either via a subclass that
-     * sets this property, or by passing ``$updateMethod`` to the constructor).
+     * HTTP verb used by update(). The base default is PATCH; PUT-update
+     * resources override it, either via a subclass that sets this property or
+     * by passing ``$updateMethod`` to the constructor.
      */
     protected string $updateMethod = 'PATCH';
 
@@ -176,8 +171,7 @@ class CrudResource extends ReadResource
      *
      * @param array<string,mixed> $data JSON body.
      * @param RequestOptions|null $requestOptions Per-call transport override
-     *   (timeout / retry / abort); null uses the client default. Mirrors the
-     *   python reference ``CrudResource.create(*, request_options=None, **kwargs)``.
+     *   (timeout / retry / abort); null uses the client default.
      * @return array<string,mixed>
      */
     public function create(array $data, ?RequestOptions $requestOptions = null): array
@@ -191,8 +185,7 @@ class CrudResource extends ReadResource
      *
      * @param array<string,mixed> $data JSON body.
      * @param RequestOptions|null $requestOptions Per-call transport override
-     *   (timeout / retry / abort); null uses the client default. Mirrors the
-     *   python reference ``CrudResource.update(resource_id, *, request_options=None, **kwargs)``.
+     *   (timeout / retry / abort); null uses the client default.
      * @return array<string,mixed>
      */
     public function update(string $id, array $data, ?RequestOptions $requestOptions = null): array
@@ -207,8 +200,7 @@ class CrudResource extends ReadResource
      * Delete a resource by ID (DELETE basePath/{id}).
      *
      * @param RequestOptions|null $requestOptions Per-call transport override
-     *   (timeout / retry / abort); null uses the client default. Mirrors the
-     *   python reference ``CrudResource.delete(resource_id, *, request_options=None)``.
+     *   (timeout / retry / abort); null uses the client default.
      * @return array<string,mixed>
      */
     public function delete(string $id, ?RequestOptions $requestOptions = null): array
@@ -220,8 +212,7 @@ class CrudResource extends ReadResource
 /**
  * CRUD resource that also supports listing addresses for an item.
  *
- * Mirrors Python's signalwire.rest._base.CrudWithAddresses — adds
- * list_addresses(resource_id, **params) on top of the standard CRUD set.
+ * Adds list_addresses(resource_id, ...) on top of the standard CRUD set.
  */
 class CrudWithAddresses extends CrudResource
 {
@@ -230,9 +221,7 @@ class CrudWithAddresses extends CrudResource
      *
      * @param array<string,mixed> $params Query-string parameters.
      * @param RequestOptions|null $requestOptions Per-call transport override
-     *   (timeout / retry / abort); null uses the client default. Mirrors the
-     *   python reference
-     *   ``CrudWithAddresses.list_addresses(resource_id, *, request_options=None, **params)``.
+     *   (timeout / retry / abort); null uses the client default.
      * @return array<string,mixed>
      */
     public function listAddresses(string $resource_id, array $params = [], ?RequestOptions $requestOptions = null): array
