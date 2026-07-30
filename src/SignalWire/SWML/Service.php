@@ -1396,6 +1396,12 @@ class Service implements RequestHandlerLike
             return;
         }
 
+        // SECURITY (#90): refuse BEFORE binding when TLS is switched on but
+        // unusable. This path never consulted the TLS config at all — it
+        // unconditionally spawned the plaintext `php -S` below while getFullUrl()
+        // advertised https:// to callers.
+        $this->assertTlsUsableOrRefuse();
+
         $this->logger->info("Starting server on {$this->host}:{$this->port} ...");
         $this->logger->info("Basic-auth credentials — user: {$this->basicAuthUser}  password: [REDACTED]");
 
@@ -1414,6 +1420,20 @@ class Service implements RequestHandlerLike
             escapeshellarg($entry),
         );
         passthru($cmd);
+    }
+
+    /**
+     * Refuse to serve when TLS is enabled but unusable (#90).
+     *
+     * Delegates to {@see \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse()}
+     * so this path, AgentServer::serve() and WebService::start() refuse
+     * identically. A no-op when TLS was never requested.
+     *
+     * @throws \RuntimeException when ssl is enabled but the cert/key is unusable
+     */
+    private function assertTlsUsableOrRefuse(): void
+    {
+        \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse($this->security);
     }
 
     /**

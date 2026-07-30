@@ -473,6 +473,11 @@ class AgentServer
             return;
         }
 
+        // SECURITY (#90): refuse BEFORE binding when TLS is switched on but
+        // unusable, rather than falling through to the plaintext `php -S`
+        // below. See SecurityConfig::assertTlsUsableOrRefuse().
+        $this->assertTlsUsableOrRefuse();
+
         $this->logger->info("AgentServer starting on {$this->host}:{$this->port}");
 
         foreach ($this->getAgents() as $route) {
@@ -548,10 +553,29 @@ class AgentServer
     }
 
     /**
+     * Refuse to serve when TLS is enabled but unusable (#90).
+     *
+     * Delegates to {@see \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse()}
+     * so this path, WebService::start() and SWML\Service::serve() refuse
+     * identically. A no-op when TLS was never requested.
+     *
+     * @throws \RuntimeException when ssl is enabled but the cert/key is unusable
+     */
+    private function assertTlsUsableOrRefuse(): void
+    {
+        \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse();
+    }
+
+    /**
      * Resolve the SSL cert/key paths from the environment, mirroring
      * Python's ``SWML_SSL_ENABLED`` / ``SWML_SSL_CERT_PATH`` /
      * ``SWML_SSL_KEY_PATH`` contract. Returns ``[cert, key]`` when SSL is
-     * enabled AND both files exist; otherwise ``[null, null]`` (plaintext).
+     * enabled AND both files exist; otherwise ``[null, null]``.
+     *
+     * NOTE: a ``[null, null]`` return no longer means "serve plaintext" when
+     * the ssl switch is ON — serve() calls
+     * {@see self::assertTlsUsableOrRefuse()} first and throws, so the only way
+     * to reach the plaintext branch below is with TLS deliberately OFF (#90).
      *
      * @return array{0: string|null, 1: string|null}
      */

@@ -223,6 +223,13 @@ class WebService
             return;
         }
 
+        // SECURITY (#90): refuse BEFORE binding when TLS is switched on but
+        // unusable. getServerTlsOptions() returns [] for BOTH "TLS off" and
+        // "TLS on but misconfigured", so $useSsl below folded a broken TLS
+        // config into plaintext — and the startup line still logged https://
+        // while `php -S` served cleartext.
+        $this->assertTlsUsableOrRefuse();
+
         $port ??= $this->port;
         $useSsl = ($sslCert !== null && $sslKey !== null) || $this->security->getServerTlsOptions() !== [];
         $scheme = $useSsl ? 'https' : 'http';
@@ -247,6 +254,20 @@ class WebService
             );
             passthru($cmd);
         }
+    }
+
+    /**
+     * Refuse to serve when TLS is enabled but unusable (#90).
+     *
+     * Delegates to {@see \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse()}
+     * so this path, AgentServer::serve() and SWML\Service::serve() refuse
+     * identically. A no-op when TLS was never requested.
+     *
+     * @throws \RuntimeException when ssl is enabled but the cert/key is unusable
+     */
+    private function assertTlsUsableOrRefuse(): void
+    {
+        \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse($this->security);
     }
 
     /**

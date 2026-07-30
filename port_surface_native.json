@@ -105,6 +105,7 @@
     "asr_diarize",
     "asr_smart_format",
     "asr_speaker_affinity",
+    "assertTlsUsableOrRefuse",
     "assignDomainApplication",
     "assignPhoneRoute",
     "async",
