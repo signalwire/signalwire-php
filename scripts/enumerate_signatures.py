@@ -500,6 +500,26 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\Agent\\AgentBase", "addSkill"): {
         "params": "optional<dict<string,any>>",
     },
+    # The four phase-verb adders. Their `$config` was `mixed` until it started
+    # flowing into the VALIDATING Service::addVerb, at which point it was
+    # narrowed to a real `array` — but PHP reflection erases the generic, so the
+    # artifact recorded a bare `any` and TYPE-EROSION counted the reference's
+    # `dict<string,any>` as discarded. The concrete type is already on each
+    # method's `@param array<string,mixed> $config` PHPDoc (phpstan L9 reads it);
+    # re-establish it so the param keeps COMPARING against the reference's
+    # `config: dict[str, Any]` (core/agent_base.py:558/628/655).
+    ("SignalWire\\Agent\\AgentBase", "addPreAnswerVerb"): {
+        "config": "dict<string,any>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addPostAnswerVerb"): {
+        "config": "dict<string,any>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addPostAiVerb"): {
+        "config": "dict<string,any>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addAnswerVerb"): {
+        "config": "dict<string,any>",
+    },
     # --- Contexts.Context / Contexts.Step: bullet/filler/context/step lists. ---
     ("SignalWire\\Contexts\\Context", "addBullets"): {"bullets": "list<string>"},
     ("SignalWire\\Contexts\\Context", "addSystemBullets"): {"bullets": "list<string>"},

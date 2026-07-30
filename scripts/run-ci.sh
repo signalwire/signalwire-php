@@ -267,8 +267,8 @@ sched_gate SURFACE res=surface desc="surface parity suite (SIGNATURES/DRIFT/SURF
 # declared optional<dict<string,string>> and go still shipped a bare string, with no gate
 # red. RATCHET, not a hard gate: dynamic languages cannot always express a type, so this
 # banks the current count and fails only on REGRESSION. Drive the number DOWN; never up.
-sched_gate TYPE-EROSION res=surface desc="port did not erase a reference-declared param type (ratchet 103)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_type_erosion.py" --port php --repo "$PORT_ROOT" --max 103
+sched_gate TYPE-EROSION res=surface desc="port did not erase a reference-declared param type (ratchet 102)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_type_erosion.py" --port php --repo "$PORT_ROOT" --max 102
 
 # GEN (regen-from-specs family): the 5 GEN-FRESH rules. Cheap wave (php's per-gate
 # GEN-FRESH* were not deferred — preserved: no defer).
