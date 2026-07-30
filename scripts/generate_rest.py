@@ -1631,8 +1631,8 @@ def emit_type_class(psdk: Path, sub: str, raw_name: str, node: dict, ns_key: str
     lines.append(f" * {php_name} — generated wire type from the {ns_key!r} spec"
                  f" (components/schemas {raw_name!r}).")
     lines.append(" *")
-    lines.append(" * Pure data DTO: public typed properties carrying the snake wire key; no")
-    lines.append(" * methods (the reference records this as a method-less type definition).")
+    lines.append(" * Pure data DTO: public typed properties named for the snake_case wire keys")
+    lines.append(" * they carry. It declares no methods — the values ARE the interface.")
     lines.append(" */")
     lines.append(f"class {php_name}")
     lines.append("{")

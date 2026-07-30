@@ -14,8 +14,8 @@ namespace SignalWire\Relay\Generated;
 /**
  * CallingUserEventResult — generated RELAY protocol wire type (method 'calling.user_event', result).
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CallingUserEventResult
 {
