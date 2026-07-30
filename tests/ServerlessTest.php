@@ -70,7 +70,7 @@ class ServerlessTest extends TestCase
     {
         putenv('FUNCTION_TARGET=myHandler');
 
-        $this->assertSame('gcf', Adapter::detect());
+        $this->assertSame('google_cloud_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -81,7 +81,7 @@ class ServerlessTest extends TestCase
     {
         putenv('K_SERVICE=my-cloud-run-service');
 
-        $this->assertSame('gcf', Adapter::detect());
+        $this->assertSame('google_cloud_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -92,7 +92,7 @@ class ServerlessTest extends TestCase
     {
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
 
-        $this->assertSame('azure', Adapter::detect());
+        $this->assertSame('azure_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -160,7 +160,7 @@ class ServerlessTest extends TestCase
         putenv('FUNCTION_TARGET=myHandler');
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
 
-        $this->assertSame('gcf', Adapter::detect());
+        $this->assertSame('google_cloud_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -669,7 +669,13 @@ class ServerlessTest extends TestCase
         // string rather than statically-folded per-case comparisons.)
         $values = array_map(fn (ExecutionMode $m) => $m->value, ExecutionMode::cases());
         sort($values);
-        $this->assertSame(['azure', 'cgi', 'gcf', 'lambda', 'server'], $values);
+        // These are the SAME five tokens the Python reference's
+        // get_execution_mode() returns and handle_serverless_request(mode=…)
+        // dispatches on — the enum must not invent a shorter dialect.
+        $this->assertSame(
+            ['azure_function', 'cgi', 'google_cloud_function', 'lambda', 'server'],
+            $values,
+        );
     }
 
     // ==================================================================
@@ -693,8 +699,8 @@ class ServerlessTest extends TestCase
         putenv('AWS_LAMBDA_FUNCTION_NAME');
 
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
-        $this->assertSame(ExecutionMode::Azure, Adapter::detectMode());
-        $this->assertSame('azure', Adapter::detect());
+        $this->assertSame(ExecutionMode::AzureFunction, Adapter::detectMode());
+        $this->assertSame('azure_function', Adapter::detect());
         putenv('AZURE_FUNCTIONS_ENVIRONMENT');
 
         $_SERVER['GATEWAY_INTERFACE'] = 'CGI/1.1';
@@ -710,8 +716,8 @@ class ServerlessTest extends TestCase
     {
         $this->assertFalse(ExecutionMode::Server->isServerless());
         $this->assertTrue(ExecutionMode::Lambda->isServerless());
-        $this->assertTrue(ExecutionMode::Gcf->isServerless());
-        $this->assertTrue(ExecutionMode::Azure->isServerless());
+        $this->assertTrue(ExecutionMode::GoogleCloudFunction->isServerless());
+        $this->assertTrue(ExecutionMode::AzureFunction->isServerless());
         $this->assertTrue(ExecutionMode::Cgi->isServerless());
     }
 
@@ -722,7 +728,7 @@ class ServerlessTest extends TestCase
     public function testExecutionModeCoerceAcceptsEnumAndString(): void
     {
         // String arm (parity with the stringly-typed original).
-        $this->assertSame(ExecutionMode::Azure, ExecutionMode::coerce('azure'));
+        $this->assertSame(ExecutionMode::AzureFunction, ExecutionMode::coerce('azure_function'));
         $this->assertSame(ExecutionMode::Cgi, ExecutionMode::coerce('cgi'));
 
         // Enum arm (passthrough).
@@ -762,7 +768,7 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
-    // 34. serve($agent, ExecutionMode::Azure) dispatches to handleAzure path
+    // 34. serve($agent, ExecutionMode::AzureFunction) dispatches to handleAzure path
     //     (real behavior: handleRequest invoked, JSON response emitted)
     // ==================================================================
 
@@ -773,7 +779,7 @@ class ServerlessTest extends TestCase
         // serve() reads php://input for azure; with no body it parses to []
         // and still drives handleAzure -> agent->handleRequest.
         ob_start();
-        Adapter::serve($agent, ExecutionMode::Azure);
+        Adapter::serve($agent, ExecutionMode::AzureFunction);
         $output = ob_get_clean();
         $this->assertNotFalse($output);
 
@@ -787,7 +793,7 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
-    // 35. serve($agent, 'azure') — string arm reaches the same handler
+    // 35. serve($agent, 'azure_function') — string arm reaches the same handler
     // ==================================================================
 
     public function testServeWithStringAzureDispatchesToHandler(): void
@@ -795,7 +801,7 @@ class ServerlessTest extends TestCase
         $agent = $this->makeRecordingAgent();
 
         ob_start();
-        Adapter::serve($agent, 'azure');
+        Adapter::serve($agent, 'azure_function');
         $output = ob_get_clean();
         $this->assertNotFalse($output);
 

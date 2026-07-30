@@ -15,7 +15,7 @@ class Adapter
     /**
      * Detect the current runtime environment.
      *
-     * @return string One of 'lambda', 'gcf', 'azure', 'cgi', or 'server'.
+     * @return string One of 'lambda', 'google_cloud_function', 'azure_function', 'cgi', or 'server'.
      *                For a typed result, see {@see detectMode()}.
      */
     public static function detect(): string
@@ -38,11 +38,11 @@ class Adapter
         }
 
         if (getenv('FUNCTION_TARGET') !== false || getenv('K_SERVICE') !== false) {
-            return ExecutionMode::Gcf;
+            return ExecutionMode::GoogleCloudFunction;
         }
 
         if (getenv('AZURE_FUNCTIONS_ENVIRONMENT') !== false) {
-            return ExecutionMode::Azure;
+            return ExecutionMode::AzureFunction;
         }
 
         if (isset($_SERVER['GATEWAY_INTERFACE']) || getenv('GATEWAY_INTERFACE') !== false) {
@@ -240,7 +240,7 @@ class Adapter
      * @param RequestHandlerLike $agent An AgentBase or Service request handler.
      * @param ExecutionMode|string|null $mode Optional explicit mode override.
      *        Pass an {@see ExecutionMode} (typed) or its backing string
-     *        ('lambda'/'gcf'/'azure'/'cgi'/'server') to pin the
+     *        ('lambda'/'google_cloud_function'/'azure_function'/'cgi'/'server') to pin the
      *        dispatch instead of auto-detecting via {@see detectMode()}. An
      *        out-of-set string raises \ValueError. Defaults to null
      *        (auto-detect), preserving the original single-argument behaviour.
@@ -261,11 +261,11 @@ class Adapter
                 echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
                 break;
 
-            case ExecutionMode::Gcf:
+            case ExecutionMode::GoogleCloudFunction:
                 self::handleGcf($agent);
                 break;
 
-            case ExecutionMode::Azure:
+            case ExecutionMode::AzureFunction:
                 $input = file_get_contents('php://input') ?: '{}';
                 $request = self::decodeJsonObject($input);
                 $response = self::handleAzure($agent, $request);

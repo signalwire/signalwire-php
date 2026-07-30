@@ -2219,7 +2219,7 @@ class AgentBase extends Service implements AgentInterface
      *
      * @param array<string,mixed>|null $event   Serverless event (Lambda/Azure API-gateway payload).
      * @param object|null $context Serverless context object (Lambda/Cloud Functions).
-     * @param string|null $mode Override execution mode ('cgi'/'lambda'/'gcf'/'azure'/'server').
+     * @param string|null $mode Override execution mode ('cgi'/'lambda'/'google_cloud_function'/'azure_function'/'server').
      * @return array<string,mixed>|null Platform response array (Lambda/Azure), or null when
      *   the handler writes directly to the output stream (CGI/GCF) or starts the server.
      */
@@ -2240,10 +2240,10 @@ class AgentBase extends Service implements AgentInterface
                     $context ?? new \stdClass(),
                 );
 
-            case \SignalWire\Serverless\ExecutionMode::Azure:
+            case \SignalWire\Serverless\ExecutionMode::AzureFunction:
                 return \SignalWire\Serverless\Adapter::handleAzure($this, $event ?? []);
 
-            case \SignalWire\Serverless\ExecutionMode::Gcf:
+            case \SignalWire\Serverless\ExecutionMode::GoogleCloudFunction:
                 \SignalWire\Serverless\Adapter::handleGcf($this);
                 return null;
 

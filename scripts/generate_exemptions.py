@@ -1134,9 +1134,9 @@ ADDITIONS_RATIONALES: list[tuple[str, str]] = [
     # --- Serverless adapter ---
     (
         "signalwire.cli.simulation.mock_env.Adapter.",
-        "PHP-specific platform-mode-detection adapter (lambda / gcf / "
-        "azure / cgi); Python uses the broader simulation/mock_env "
-        "ServerlessSimulator class.",
+        "PHP-specific platform-mode-detection adapter (lambda / "
+        "google_cloud_function / azure_function / cgi); Python uses "
+        "the broader simulation/mock_env ServerlessSimulator class.",
     ),
 ]
 
