@@ -261,6 +261,17 @@ sched_gate TEST defer=1 desc="run-tests.sh --parallel (paratest -p $PARALLEL_PRO
 sched_gate SURFACE res=surface desc="surface parity suite (SIGNATURES/DRIFT/SURFACE-FRESH/SURFACE-DIFF/SEMVER-DIFF/GEN-TYPE-DEGENERACY/GEN-IDIOM)" \
     -- python3 "$PORTING_SDK_DIR/scripts/suites/surface.py" --port php --repo "$PORT_ROOT"
 
+# SIGNATURES-FRESH: the committed port_signatures.json must match a fresh regen.
+# SURFACE-FRESH guards port_surface.json; nothing guarded the SIGNATURES artifact,
+# and that one is DRIFT's INPUT — a stale blob makes the parity gate compare the
+# reference against a fiction, clean or dirty at random. Standalone sched_gate on
+# purpose (a _surface_commands.py table entry is read by only 8 of the 10 run-ci
+# scripts, so two ports would be silently skipped). Needs no res=surface mutex: it
+# regenerates into .sw-tmp/ and never touches the working-tree artifact.
+sched_gate SIGNATURES-FRESH res=surface desc="committed port_signatures.json matches a fresh regen" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/_signatures_fresh.py" \
+        --port php --repo "$PORT_ROOT" --porting-sdk "$PORTING_SDK_DIR"
+
 # TYPE-EROSION: a port may not erase a type the reference DECLARES. compare_param treats
 # `any` on EITHER side as matching anything, so a port emitting `any` silently satisfies
 # every reference declaration — an unlimited opt-out. ConciergeAgent.hours_of_operation is
