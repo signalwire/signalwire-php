@@ -505,6 +505,12 @@ class Client implements RelayClientLike
      * socket is closed; the run loop catches and triggers reconnect.
      *
      * @param array<string,mixed> $msg
+     *
+     * @internal WebSocket transport plumbing, not exported API. Action /
+     *           Call / Message reach it from other classes, so PHP forces
+     *           `public`; the reference keeps the identical machinery private
+     *           (`RelayClient._safe_send` / `._send_request` in
+     *           signalwire/relay/client.py).
      */
     public function send(array $msg): void
     {
@@ -550,6 +556,10 @@ class Client implements RelayClientLike
      * Best-effort: an ACK that fails because the socket dropped during
      * the request handling is not propagated as an exception (the run
      * loop will already trigger reconnect on the next read).
+     *
+     * @internal Protocol plumbing, not exported API. The reference keeps the
+     *           identical machinery private (`RelayClient._send_event_ack` in
+     *           signalwire/relay/client.py).
      */
     public function sendAck(string $id): void
     {
@@ -570,6 +580,11 @@ class Client implements RelayClientLike
 
     /**
      * Parse a raw JSON string from the server and route it.
+     *
+     * @internal Inbound-router plumbing, not exported API. The run loop and the
+     *           RELAY audit harness drive it from outside the class, so PHP
+     *           forces `public`; the reference dispatches inline inside its
+     *           private run loop (signalwire/relay/client.py).
      */
     public function handleMessage(string $raw): void
     {
@@ -630,6 +645,10 @@ class Client implements RelayClientLike
      * Route a signalwire.event payload to the appropriate handler.
      *
      * @param array<string,mixed> $outerParams
+     *
+     * @internal Event-router plumbing, not exported API. The reference keeps the
+     *           identical machinery private (`RelayClient._handle_event` in
+     *           signalwire/relay/client.py).
      */
     public function handleEvent(array $outerParams): void
     {

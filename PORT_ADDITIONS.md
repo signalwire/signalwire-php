@@ -204,23 +204,17 @@ signalwire.prefabs.info_gatherer.InfoGathererAgent.get_questions: PHP idiomatic 
 signalwire.prefabs.receptionist.ReceptionistAgent.get_departments: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.receptionist.ReceptionistAgent.get_greeting: PHP idiomatic accessor on the prefab class.
 signalwire.relay.call.AIAction.get_stop_method: PHP idiomatic accessor on the AIAction subclass.
-signalwire.relay.call.Action.execute_subcommand: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_call_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_events: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_node_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_payload: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_state: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_stop_method: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Action.handle_event: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.on_completed: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Action.resolve: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.stop: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Call.dispatch_event: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
 signalwire.relay.call.Call.resolve_all_actions: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
 signalwire.relay.call.CollectAction.get_collect_result: PHP idiomatic accessor on the CollectAction subclass.
 signalwire.relay.call.CollectAction.get_stop_method: PHP idiomatic accessor on the CollectAction subclass.
-signalwire.relay.call.CollectAction.handle_event: PHP idiomatic accessor on the CollectAction subclass.
-signalwire.relay.call.CollectAction.set_stop_method: PHP CollectAction is the handle for both calling.collect and calling.play_and_collect (Python uses two separate types); the setter lets startAction wire the right verb-specific stop sub-command.
 signalwire.relay.call.DetectAction.get_detect_result: PHP idiomatic accessor on the DetectAction subclass.
 signalwire.relay.call.DetectAction.get_stop_method: PHP idiomatic accessor on the DetectAction subclass.
 signalwire.relay.call.FaxAction.get_fax_type: PHP idiomatic accessor on the FaxAction subclass.
@@ -238,12 +232,8 @@ signalwire.relay.client.RelayClient.authenticate: PHP idiomatic accessor on Rela
 signalwire.relay.client.RelayClient.get_call: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.get_calls: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.get_messages: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.handle_event: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.handle_message: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.read_once: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.reconnect: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.send: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.send_ack: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.constants.Constants: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.relay.event.Event: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.relay.event.Event.__init__: PHP idiomatic getter on Event; Python's per-event-type subclasses expose the same data as direct attributes.
@@ -282,10 +272,7 @@ signalwire.relay.event.SendDigitsEvent.__init__: php_event_accessor: PHP constru
 signalwire.relay.event.StreamEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
 signalwire.relay.event.TapEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
 signalwire.relay.event.TranscribeEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
-signalwire.relay.message.Message.dispatch_event: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.handle_event: alias for dispatchEvent so the Client's event router (which symmetrically calls handleEvent on actions and messages) doesn't need a per-type branch.
 signalwire.relay.message.Message.on_completed: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.resolve: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.web_socket.WebSocket: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.__init__: Port-internal WebSocket transport adapter (phrity/websocket-backed); constructor accepts an optional CA-bundle path for wss:// peer verification. Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.close: Port-internal WebSocket transport adapter; Python uses the websockets library directly.

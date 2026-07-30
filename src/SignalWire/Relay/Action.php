@@ -187,6 +187,11 @@ class Action
 
     /**
      * Append an incoming event and update local state / payload.
+     *
+     * @internal Event-router plumbing, not exported API. Call::dispatchEvent
+     *           calls this from a different class, so PHP forces `public`;
+     *           the reference keeps the identical machinery private
+     *           (`Action._check_event` in signalwire/relay/call.py).
      */
     public function handleEvent(Event $event): void
     {
@@ -210,6 +215,11 @@ class Action
      * fired exactly once.
      *
      * @param mixed $result
+     *
+     * @internal Event-router plumbing, not exported API. Call::dispatchEvent
+     *           calls this from a different class, so PHP forces `public`;
+     *           the reference keeps the identical machinery private
+     *           (`Action._resolve` in signalwire/relay/call.py).
      */
     public function resolve($result = null): void
     {
@@ -256,6 +266,12 @@ class Action
      * the server knows which action instance to target.
      *
      * @param array<string,mixed> $extraParams
+     *
+     * @internal Subcommand plumbing, not exported API. The reference issues the
+     *           same RPC through the PRIVATE `Call._execute` (see
+     *           `StoppableAction.stop` / `CollectAction.start_input_timers` in
+     *           signalwire/relay/call.py); PHP has no package-private
+     *           visibility, so the cross-class call forces `public`.
      */
     public function executeSubcommand(string $method, array $extraParams = []): void
     {
@@ -437,6 +453,12 @@ class CollectAction extends Action
      * prefix {@see CollectAction::commandPrefix()} derives for
      * pause/resume/volume — so setting it re-routes those too, not just
      * `stop()`.
+     *
+     * @internal Dispatcher plumbing, not exported API. The reference expresses
+     *           the same choice as the private `_command_prefix` CLASS ATTRIBUTE
+     *           on CollectAction / StandaloneCollectAction; PHP resolves the two
+     *           verbs onto one handle class, so the value is set by Call at
+     *           construction — a cross-class write that forces `public`.
      */
     public function setStopMethod(string $method): void
     {
@@ -517,6 +539,9 @@ class CollectAction extends Action
     /**
      * Override: silently ignore intermediate play events that arrive
      * during a play_and_collect operation.
+     *
+     * @internal Event-router plumbing (see Action::handleEvent). The reference's
+     *           counterpart is the private `_check_event` override.
      */
     public function handleEvent(Event $event): void
     {

@@ -747,6 +747,17 @@ RE_PUBLIC_METHOD = re.compile(
     r"^\s*(?:abstract\s+)?public\s+(?:abstract\s+)?(?:static\s+)?function\s+(\w+)\s*\("
 )
 
+# ANY member declaration (function/const/property, at any visibility). Used only
+# to CLEAR a pending `@internal` docblock tag so it cannot leak past the member
+# it documents onto a later public method — e.g. a `/** @internal */` on a
+# `private function` must not silently suppress the next `public function`.
+RE_ANY_MEMBER = re.compile(
+    r"^\s*(?:final\s+|abstract\s+|readonly\s+|static\s+)*"
+    r"(?:public|protected|private)\s+"
+    r"(?:final\s+|abstract\s+|readonly\s+|static\s+)*"
+    r"(?:function\s+\w+|const\s+\w+|[\w\\|?]+\s+\$\w+|\$\w+)"
+)
+
 
 def _git_sha() -> str:
     try:
@@ -1332,6 +1343,23 @@ def _parse_file(
         # Public method
         m_method = RE_PUBLIC_METHOD.match(line)
         if m_method:
+            # A `@internal` docblock on the METHOD excludes just that method.
+            # PHP has no package-private visibility, so cross-class dispatch
+            # plumbing (Client::handleMessage -> Client::handleEvent ->
+            # Call::dispatchEvent -> Action::handleEvent -> Action::resolve)
+            # MUST be declared `public` even though the reference keeps the
+            # identical machinery private (`_handle_event`, `_dispatch_event`,
+            # `_resolve`, `_send_event_ack` in signalwire/relay/*.py). That is a
+            # genuine language limitation, so the divergence is folded HERE —
+            # the enumerator does not project it as exported API — rather than
+            # excused as an addition. Mirrors signature_dump.php's per-method
+            # `@internal` skip so both axes see the same public surface.
+            # NOTE: do NOT `continue` here — the brace-tracking block below must
+            # still run for this line, or an `@internal` method whose `{` sits on
+            # the declaration line desyncs brace depth and prematurely closes the
+            # class scope (dropping every later method in the file).
+            method_internal = internal_pending
+            internal_pending = False
             method_name = m_method.group(1)
             # Constructor naming
             if method_name == "__construct":
@@ -1348,7 +1376,11 @@ def _parse_file(
             # applied only for the declaring PHP class (see CLASS_METHOD_ALIASES).
             if cur_class is not None:
                 py_name = CLASS_METHOD_ALIASES.get((cur_class, py_name), py_name)
-            if cur_trait is not None:
+            if method_internal:
+                # `@internal` method — neither surface method nor a leaked
+                # free function (see the note above).
+                pass
+            elif cur_trait is not None:
                 # Trait body — collect the method for flattening onto the
                 # class(es) that `use` this trait; the trait itself never
                 # surfaces.
@@ -1361,6 +1393,10 @@ def _parse_file(
                 methods[cur_class].add(py_name)
             else:
                 free_fns.add(py_name)
+        elif internal_pending and RE_ANY_MEMBER.match(line):
+            # A non-public member consumed the `@internal` docblock; clear it so
+            # the tag cannot leak onto a later public method (see RE_ANY_MEMBER).
+            internal_pending = False
 
         # Track braces (very simple — sufficient because PHP files are
         # one-class-per-file in this SDK except Action.php and Adapter.php

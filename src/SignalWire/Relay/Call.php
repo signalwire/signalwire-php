@@ -126,6 +126,11 @@ class Call
     /**
      * Central event router invoked by the Client whenever a server event
      * targets this call.
+     *
+     * @internal Event-router plumbing, not exported API. Client::handleEvent
+     *           calls this from a different class, so PHP forces `public`; the
+     *           reference keeps the identical machinery private
+     *           (`Call._dispatch_event` in signalwire/relay/call.py).
      */
     public function dispatchEvent(Event $event): void
     {

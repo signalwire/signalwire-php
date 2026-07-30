@@ -21608,26 +21608,6 @@
               ],
               "returns": "string"
             },
-            "execute_subcommand": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "method",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "extra_params",
-                  "type": "any",
-                  "required": false,
-                  "default": []
-                }
-              ],
-              "returns": "void"
-            },
             "get_call_id": {
               "params": [
                 {
@@ -21682,20 +21662,6 @@
               ],
               "returns": "string"
             },
-            "handle_event": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "event",
-                  "type": "class:signalwire.relay.event.Event",
-                  "required": true
-                }
-              ],
-              "returns": "void"
-            },
             "is_done": {
               "params": [
                 {
@@ -21718,21 +21684,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "resolve": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "result",
-                  "type": "any",
-                  "required": false,
-                  "default": null
-                }
-              ],
-              "returns": "void"
             },
             "result": {
               "params": [
@@ -22163,20 +22114,6 @@
                 }
               ],
               "returns": "any"
-            },
-            "dispatch_event": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "event",
-                  "type": "class:signalwire.relay.event.Event",
-                  "required": true
-                }
-              ],
-              "returns": "void"
             },
             "echo": {
               "params": [
@@ -23003,20 +22940,6 @@
               ],
               "returns": "string"
             },
-            "handle_event": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "event",
-                  "type": "class:signalwire.relay.event.Event",
-                  "required": true
-                }
-              ],
-              "returns": "void"
-            },
             "pause": {
               "params": [
                 {
@@ -23037,20 +22960,6 @@
                 {
                   "name": "self",
                   "kind": "self"
-                }
-              ],
-              "returns": "void"
-            },
-            "set_stop_method": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "method",
-                  "type": "string",
-                  "required": true
                 }
               ],
               "returns": "void"
@@ -23667,34 +23576,6 @@
               ],
               "returns": "any"
             },
-            "handle_event": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "outer_params",
-                  "type": "any",
-                  "required": true
-                }
-              ],
-              "returns": "void"
-            },
-            "handle_message": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "raw",
-                  "type": "string",
-                  "required": true
-                }
-              ],
-              "returns": "void"
-            },
             "host": {
               "params": [
                 {
@@ -23871,34 +23752,6 @@
                 }
               ],
               "returns": "string"
-            },
-            "send": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "msg",
-                  "type": "any",
-                  "required": true
-                }
-              ],
-              "returns": "void"
-            },
-            "send_ack": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "id",
-                  "type": "string",
-                  "required": true
-                }
-              ],
-              "returns": "void"
             },
             "send_message": {
               "params": [
@@ -26757,20 +26610,6 @@
               ],
               "returns": "optional<string>"
             },
-            "dispatch_event": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "event",
-                  "type": "class:signalwire.relay.event.Event",
-                  "required": true
-                }
-              ],
-              "returns": "void"
-            },
             "from_number": {
               "params": [
                 {
@@ -26779,20 +26618,6 @@
                 }
               ],
               "returns": "optional<string>"
-            },
-            "handle_event": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "event",
-                  "type": "class:signalwire.relay.event.Event",
-                  "required": true
-                }
-              ],
-              "returns": "void"
             },
             "is_done": {
               "params": [
@@ -26866,21 +26691,6 @@
                 }
               ],
               "returns": "optional<string>"
-            },
-            "resolve": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "result",
-                  "type": "any",
-                  "required": false,
-                  "default": null
-                }
-              ],
-              "returns": "void"
             },
             "result": {
               "params": [

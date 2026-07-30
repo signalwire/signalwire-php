@@ -116,6 +116,11 @@ class Message
      * Accepts both ``state`` and ``message_state`` keys on the event
      * payload — production RELAY emits ``message_state`` while older
      * fixtures use ``state``.
+     *
+     * @internal Event-router plumbing, not exported API. Client::handleEvent
+     *           calls this from a different class, so PHP forces `public`; the
+     *           reference keeps the identical machinery private
+     *           (`Message._dispatch_event` in signalwire/relay/message.py).
      */
     public function dispatchEvent(Event $event): void
     {
@@ -154,6 +159,9 @@ class Message
      * Alias for ``dispatchEvent`` so the Client's event router (which
      * calls ``handleEvent`` for symmetry with Action) doesn't need a
      * special case. Both names route the same way.
+     *
+     * @internal Event-router plumbing, not exported API (see
+     *           Message::dispatchEvent).
      */
     public function handleEvent(Event $event): void
     {
@@ -340,6 +348,11 @@ class Message
      * exactly once.
      *
      * @param mixed $result
+     *
+     * @internal Event-router plumbing, not exported API. dispatchEvent (called
+     *           from Client) drives this, so PHP forces `public`; the reference
+     *           keeps the identical machinery private (`Message._resolve` in
+     *           signalwire/relay/message.py).
      */
     public function resolve($result = null): void
     {
