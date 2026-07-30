@@ -119,13 +119,11 @@ PSDK = resolve_porting_sdk()
 CLASS_MODULE_MAP: dict[str, str] = {
     # core/agent
     "AgentBase": "signalwire.core.agent_base",
-
     # prefab: Amazon Bedrock voice-to-voice agent. Lives under
     # src/SignalWire/Agents/ (PSR-4) and routes by name to the oracle module
     # so its methods surface under signalwire.agents.bedrock rather than the
     # path-derived signalwire.agents.bedrock_agent.
     "BedrockAgent": "signalwire.agents.bedrock",
-
     # core/swml
     "Service": "signalwire.core.swml_service",  # PHP `Service` -> Python `SWMLService`
     "Document": "signalwire.core.swml_builder",
@@ -143,7 +141,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "Schema": "signalwire.utils.schema_utils",
     "SchemaUtils": "signalwire.utils.schema_utils",
     "SchemaValidationError": "signalwire.utils.schema_utils",
-
     # core/swaig
     "FunctionResult": "signalwire.core.function_result",
     "SwaigFunction": "signalwire.core.swaig_function",  # PHP `SwaigFunction` -> Python `SWAIGFunction`
@@ -156,7 +153,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # reconciles them as OMISSIONS (host noted) + the TypeInference class as an
     # ADDITION (mirrors the SecurityUtils / UrlValidator host precedent).
     "TypeInference": "signalwire.core.agent.tools.type_inference",
-
     # core/auth. The two credential carriers are the argument types of
     # verify_basic_auth / verify_bearer_token; the reference houses them in the
     # same auth_handler module (griffe resolves them out of FastAPI's
@@ -165,40 +161,32 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "AuthHandler": "signalwire.core.auth_handler",
     "BasicCredentials": "signalwire.core.auth_handler",
     "BearerCredentials": "signalwire.core.auth_handler",
-
     # core/swml renderer (standalone renderer the Python reference records)
     "SwmlRenderer": "signalwire.core.swml_renderer",
-
     # core/contexts
     "Context": "signalwire.core.contexts",
     "ContextBuilder": "signalwire.core.contexts",
     "GatherInfo": "signalwire.core.contexts",
     "GatherQuestion": "signalwire.core.contexts",
     "Step": "signalwire.core.contexts",
-
     # core/datamap
     "DataMap": "signalwire.core.data_map",
-
     # core/config + security + POM builder + web (item I — config/security/web cluster)
     "ConfigLoader": "signalwire.core.config_loader",
     "SecurityConfig": "signalwire.core.security_config",
     "PomBuilder": "signalwire.core.pom_builder",
     "WebService": "signalwire.web.web_service",
-
     # core/security
     "SessionManager": "signalwire.core.security.session_manager",
     "WebhookValidator": "signalwire.core.security.webhook_validator",
     "WebhookMiddleware": "signalwire.core.security.webhook_middleware",
     "SecurityUtils": "signalwire.core.security.security_utils",
-
     # core/skills
     "SkillBase": "signalwire.core.skill_base",
     "SkillManager": "signalwire.core.skill_manager",
     "SkillRegistry": "signalwire.skills.registry",
-
     # logging
     "Logger": "signalwire.core.logging_config",
-
     # ai-chat: the AI-Chat front-door client + its typed response records and
     # error family. The Python reference houses ALL of them in the single module
     # signalwire.ai_chat.client (griffe records AIChatClient, the AIChatError base
@@ -221,13 +209,10 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "ConversationInfo": "signalwire.ai_chat.client",
     "ChatResponse": "signalwire.ai_chat.client",
     "ChatLog": "signalwire.ai_chat.client",
-
     # server
     "AgentServer": "signalwire.agent_server",
-
     # serverless
     "Adapter": "signalwire.cli.simulation.mock_env",  # platform mode-detection adapter
-
     # rest core
     "RestClient": "signalwire.rest.client",
     "HttpClient": "signalwire.rest._base",
@@ -246,7 +231,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # type ``class:signalwire.rest._request_options.RequestOptions`` on the
     # HttpClient/RestClient verbs (via _translate_php_class_ref).
     "RequestOptions": "signalwire.rest._request_options",
-
     # ---------------------------------------------------------------
     # Generated REST resource layer (adopted from scripts/generate_rest.py).
     # The 47 resource classes live under
@@ -318,7 +302,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "VideoConferences": "signalwire.rest.namespaces.video_resources_generated",
     "VideoConferenceTokens": "signalwire.rest.namespaces.video_resources_generated",
     "VideoStreams": "signalwire.rest.namespaces.video_resources_generated",
-
     # Generated namespace CONTAINER classes → the oracle's
     # `_client_tree_generated` module (mirrors Python's client assembly).
     "FabricNamespace": "signalwire.rest.namespaces._client_tree_generated",
@@ -327,16 +310,13 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "RegistryNamespace": "signalwire.rest.namespaces._client_tree_generated",
     "ProjectNamespace": "signalwire.rest.namespaces._client_tree_generated",
     "DatasphereNamespace": "signalwire.rest.namespaces._client_tree_generated",
-
     # POM (Prompt Object Model) — typed standalone classes
     "PromptObjectModel": "signalwire.pom.pom",
     "Section": "signalwire.pom.pom",
-
     # Pagination helper
     "PaginatedIterator": "signalwire.rest._pagination",
-
     # relay
-    "Client": "signalwire.relay.client",   # PHP `Relay\Client` -> Python `RelayClient`
+    "Client": "signalwire.relay.client",  # PHP `Relay\Client` -> Python `RelayClient`
     "RelayError": "signalwire.relay.client",  # RELAY-protocol error, oracle module signalwire.relay.client
     "Call": "signalwire.relay.call",
     "Message": "signalwire.relay.message",
@@ -383,14 +363,12 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "MessageReceiveEvent": "signalwire.relay.event",
     "MessageStateEvent": "signalwire.relay.event",
     # Constants/WebSocket are port-internal — fall through to native translation.
-
     # prefabs
     "ConciergeAgent": "signalwire.prefabs.concierge",
     "FAQBotAgent": "signalwire.prefabs.faq_bot",
     "InfoGathererAgent": "signalwire.prefabs.info_gatherer",
     "ReceptionistAgent": "signalwire.prefabs.receptionist",
     "SurveyAgent": "signalwire.prefabs.survey",
-
     # skills (PHP short name -> Python <Name>Skill canonical class)
     "ApiNinjasTrivia": "signalwire.skills.api_ninjas_trivia.skill",
     "ClaudeSkills": "signalwire.skills.claude_skills.skill",
@@ -410,7 +388,6 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "WeatherApi": "signalwire.skills.weather_api.skill",
     "WebSearch": "signalwire.skills.web_search.skill",
     "WikipediaSearch": "signalwire.skills.wikipedia_search.skill",
-
     # Top-level
     "SignalWire": "signalwire",
 }
@@ -435,18 +412,24 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
     # functions in signalwire.core.security.webhook_validator; PHP hosts both on
     # the WebhookValidator final class (PSR-4 + IDE discoverability). Project to
     # the canonical module-level names (parallel to the signature enumerator).
-    ("WebhookValidator", "validate_webhook_signature"):
-        ("signalwire.core.security.webhook_validator", "validate_webhook_signature"),
-    ("WebhookValidator", "validate_request"):
-        ("signalwire.core.security.webhook_validator", "validate_request"),
+    ("WebhookValidator", "validate_webhook_signature"): (
+        "signalwire.core.security.webhook_validator",
+        "validate_webhook_signature",
+    ),
+    ("WebhookValidator", "validate_request"): (
+        "signalwire.core.security.webhook_validator",
+        "validate_request",
+    ),
     # Decomposed framework-free validation core — the SURFACE oracle records
     # signalwire.core.security.webhook_middleware.validate as a module-level
     # function (alongside make_webhook_validation_dependency). PHP hosts it as a
     # static method on the WebhookMiddleware class (whose object-shaped
     # __init__/process stay a PHP-idiom PORT_ADDITION); project `validate` to the
     # module-level function so it reconciles EQUAL instead of being an omission.
-    ("WebhookMiddleware", "validate"):
-        ("signalwire.core.security.webhook_middleware", "validate"),
+    ("WebhookMiddleware", "validate"): (
+        "signalwire.core.security.webhook_middleware",
+        "validate",
+    ),
     # Runtime schema-inference helpers — Python ships infer_schema /
     # create_typed_handler_wrapper as module-level free functions in
     # signalwire.core.agent.tools.type_inference; PHP hosts them as static
@@ -454,10 +437,14 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
     # module-level names so they reconcile EQUAL with the oracle (parallel to the
     # signature enumerator's FREE_FUNCTION_PROJECTIONS). EVERY public method of
     # TypeInference is projected, so the empty class shell is dropped.
-    ("TypeInference", "infer_schema"):
-        ("signalwire.core.agent.tools.type_inference", "infer_schema"),
-    ("TypeInference", "create_typed_handler_wrapper"):
-        ("signalwire.core.agent.tools.type_inference", "create_typed_handler_wrapper"),
+    ("TypeInference", "infer_schema"): (
+        "signalwire.core.agent.tools.type_inference",
+        "infer_schema",
+    ),
+    ("TypeInference", "create_typed_handler_wrapper"): (
+        "signalwire.core.agent.tools.type_inference",
+        "create_typed_handler_wrapper",
+    ),
     # RequestOptions envelope helpers (plan 4.2) — Python ships resolve /
     # status_is_retryable as module-level free functions in
     # signalwire.rest._request_options; PHP hosts them as static methods on the
@@ -465,10 +452,11 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
     # names (parallel to the signature enumerator's FREE_FUNCTION_PROJECTIONS).
     # NOT every RequestOptions method is projected (merge stays a surfaced class
     # method), so the RequestOptions class shell is kept.
-    ("RequestOptions", "resolve"):
-        ("signalwire.rest._request_options", "resolve"),
-    ("RequestOptions", "status_is_retryable"):
-        ("signalwire.rest._request_options", "status_is_retryable"),
+    ("RequestOptions", "resolve"): ("signalwire.rest._request_options", "resolve"),
+    ("RequestOptions", "status_is_retryable"): (
+        "signalwire.rest._request_options",
+        "status_is_retryable",
+    ),
     # Central logging helpers — Python ships all five as module-level free
     # functions in signalwire.core.logging_config (plus is_serverless_mode in
     # signalwire.utils); PHP hosts them as static methods on the LoggingConfig
@@ -477,18 +465,24 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
     # does — logging is a MODULE-LEVEL capability, so the host class is a
     # PSR-4 packaging artifact, not port-only surface. EVERY public method of
     # LoggingConfig is projected, so the empty class shell is dropped.
-    ("LoggingConfig", "configure_logging"):
-        ("signalwire.core.logging_config", "configure_logging"),
-    ("LoggingConfig", "get_logger"):
-        ("signalwire.core.logging_config", "get_logger"),
-    ("LoggingConfig", "reset_logging_configuration"):
-        ("signalwire.core.logging_config", "reset_logging_configuration"),
-    ("LoggingConfig", "strip_control_chars"):
-        ("signalwire.core.logging_config", "strip_control_chars"),
-    ("LoggingConfig", "get_execution_mode"):
-        ("signalwire.core.logging_config", "get_execution_mode"),
-    ("LoggingConfig", "is_serverless_mode"):
-        ("signalwire.utils", "is_serverless_mode"),
+    ("LoggingConfig", "configure_logging"): (
+        "signalwire.core.logging_config",
+        "configure_logging",
+    ),
+    ("LoggingConfig", "get_logger"): ("signalwire.core.logging_config", "get_logger"),
+    ("LoggingConfig", "reset_logging_configuration"): (
+        "signalwire.core.logging_config",
+        "reset_logging_configuration",
+    ),
+    ("LoggingConfig", "strip_control_chars"): (
+        "signalwire.core.logging_config",
+        "strip_control_chars",
+    ),
+    ("LoggingConfig", "get_execution_mode"): (
+        "signalwire.core.logging_config",
+        "get_execution_mode",
+    ),
+    ("LoggingConfig", "is_serverless_mode"): ("signalwire.utils", "is_serverless_mode"),
 }
 
 
@@ -505,16 +499,30 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ("signalwire.core.mixins.ai_config_mixin", "AIConfigMixin"): (
         "AgentBase",
         [
-            "add_function_include", "add_hint", "add_hints", "add_internal_filler",
-            "add_language", "add_mcp_server", "add_pattern_hint", "add_pronunciation",
-            "enable_debug_events", "enable_mcp_server",
+            "add_function_include",
+            "add_hint",
+            "add_hints",
+            "add_internal_filler",
+            "add_language",
+            "add_mcp_server",
+            "add_pattern_hint",
+            "add_pronunciation",
+            "enable_debug_events",
+            "enable_mcp_server",
             "get_language_params",
-            "set_function_includes", "set_global_data", "set_internal_fillers",
-            "set_language_params", "set_languages", "set_multilingual",
+            "set_function_includes",
+            "set_global_data",
+            "set_internal_fillers",
+            "set_language_params",
+            "set_languages",
+            "set_multilingual",
             "set_native_functions",
-            "set_param", "set_params",
-            "set_post_prompt_llm_params", "set_prompt_llm_params",
-            "set_pronunciations", "update_global_data",
+            "set_param",
+            "set_params",
+            "set_post_prompt_llm_params",
+            "set_prompt_llm_params",
+            "set_pronunciations",
+            "update_global_data",
         ],
     ),
     ("signalwire.core.mixins.auth_mixin", "AuthMixin"): (
@@ -522,15 +530,24 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
         ["get_basic_auth_credentials", "validate_basic_auth"],
     ),
     ("signalwire.core.mixins.mcp_server_mixin", "MCPServerMixin"): (
-        "AgentBase", [],
+        "AgentBase",
+        [],
     ),
     ("signalwire.core.mixins.prompt_mixin", "PromptMixin"): (
         "AgentBase",
         [
-            "contexts", "define_contexts", "get_post_prompt", "get_prompt",
-            "prompt_add_section", "prompt_add_subsection", "prompt_add_to_section",
-            "prompt_has_section", "reset_contexts", "set_post_prompt",
-            "set_prompt_pom", "set_prompt_text",
+            "contexts",
+            "define_contexts",
+            "get_post_prompt",
+            "get_prompt",
+            "prompt_add_section",
+            "prompt_add_subsection",
+            "prompt_add_to_section",
+            "prompt_has_section",
+            "reset_contexts",
+            "set_post_prompt",
+            "set_prompt_pom",
+            "set_prompt_text",
         ],
     ),
     # Python additionally extracted a ``PromptManager`` class that
@@ -547,10 +564,17 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
             # AgentBase, so `AgentBase::getAgent()` returns `$this` — the same
             # resolution cpp used. Folds via the accessor rename (get_agent->agent).
             "agent",
-            "define_contexts", "get_contexts", "get_post_prompt", "get_prompt",
+            "define_contexts",
+            "get_contexts",
+            "get_post_prompt",
+            "get_prompt",
             "get_raw_prompt",
-            "prompt_add_section", "prompt_add_subsection", "prompt_add_to_section",
-            "prompt_has_section", "set_post_prompt", "set_prompt_pom",
+            "prompt_add_section",
+            "prompt_add_subsection",
+            "prompt_add_to_section",
+            "prompt_has_section",
+            "set_post_prompt",
+            "set_prompt_pom",
             "set_prompt_text",
         ],
     ),
@@ -568,27 +592,45 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ),
     ("signalwire.core.mixins.tool_mixin", "ToolMixin"): (
         "SWMLService",
-        ["define_tool", "define_tools", "on_function_call",
-         "register_swaig_function", "tool"],
+        [
+            "define_tool",
+            "define_tools",
+            "on_function_call",
+            "register_swaig_function",
+            "tool",
+        ],
     ),
     ("signalwire.core.agent.tools.registry", "ToolRegistry"): (
         "SWMLService",
         # ``agent`` is the reference's back-reference to the owning agent
         # (registry.py:31 `self.agent = agent`); php flattens the registry onto
         # its Service, so `Service::getAgent()` returns `$this`.
-        ["__init__", "agent", "define_tool", "register_swaig_function",
-         "has_function", "get_function", "get_all_functions",
-         "remove_function"],
-    ),
-    ("signalwire.core.mixins.auth_mixin", "AuthMixin"): (
-        "SWMLService",
-        ["validate_basic_auth", "get_basic_auth_credentials"],
+        [
+            "__init__",
+            "agent",
+            "define_tool",
+            "register_swaig_function",
+            "has_function",
+            "get_function",
+            "get_all_functions",
+            "remove_function",
+        ],
     ),
     ("signalwire.core.mixins.web_mixin", "WebMixin"): (
         "SWMLService",
-        ["as_router", "enable_debug_routes", "get_app", "manual_set_proxy_url",
-         "on_request", "on_swml_request", "register_routing_callback", "run",
-         "serve", "set_dynamic_config_callback", "setup_graceful_shutdown"],
+        [
+            "as_router",
+            "enable_debug_routes",
+            "get_app",
+            "manual_set_proxy_url",
+            "on_request",
+            "on_swml_request",
+            "register_routing_callback",
+            "run",
+            "serve",
+            "set_dynamic_config_callback",
+            "setup_graceful_shutdown",
+        ],
     ),
 }
 
@@ -648,9 +690,7 @@ CLASS_RENAME_MAP: dict[str, str] = {
 
 
 # Files to skip — vendor, examples, tests, generated
-SKIP_PATH_RE = re.compile(
-    r"(?:^|/)(?:vendor|tests|examples|build|bin|cli)(?:/|$)"
-)
+SKIP_PATH_RE = re.compile(r"(?:^|/)(?:vendor|tests|examples|build|bin|cli)(?:/|$)")
 
 
 # Recognise namespace and class declarations
@@ -662,9 +702,7 @@ RE_NAMESPACE = re.compile(r"^\s*namespace\s+([\\\w]+)\s*;")
 # `__module__` free functions. The enum's auto-generated cases/from/cases()/
 # tryFrom() are not `public function` declarations, so they're naturally
 # excluded — only hand-written public methods on the enum are captured.
-RE_CLASS = re.compile(
-    r"^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+([A-Za-z_]\w*)"
-)
+RE_CLASS = re.compile(r"^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+([A-Za-z_]\w*)")
 # Capture the immediate parent of a `class Foo extends \Ns\Bar` declaration
 # (last path segment). Used by the REST implicit-base projection: a generated
 # resource subclass inherits create/update from its hand base, which the
@@ -681,9 +719,7 @@ RE_CLASS_EXTENDS = re.compile(
 # the public surface is decided separately via its `@internal` marker (see
 # _parse_file). A method declaration in an interface body has no `{ ... }`, so
 # it does not perturb brace tracking.
-RE_INTERFACE = re.compile(
-    r"^\s*interface\s+([A-Za-z_]\w*)"
-)
+RE_INTERFACE = re.compile(r"^\s*interface\s+([A-Za-z_]\w*)")
 # Traits are class-like scopes but are NOT independent surface — they are mixed
 # INTO a using class (e.g. the generated ResourceTree is composed into
 # RestClient), and the using class re-exposes their methods. So a trait's own
@@ -692,9 +728,7 @@ RE_INTERFACE = re.compile(
 # an @internal interface. This mirrors enumerate_signatures.py skipping
 # `kind: trait` and the Python reference keeping `_GeneratedResourceTree` off
 # the surface.
-RE_TRAIT = re.compile(
-    r"^\s*trait\s+([A-Za-z_]\w*)"
-)
+RE_TRAIT = re.compile(r"^\s*trait\s+([A-Za-z_]\w*)")
 # In-class trait composition (`use ResourceTree;`) — a bare, single-segment
 # capitalised name (no leading backslash / namespace path, which would be a
 # top-of-file import, not a trait mix-in). A class that composes a trait
@@ -702,9 +736,7 @@ RE_TRAIT = re.compile(
 # the using class (see build_surface). This is what makes the generated
 # ResourceTree accessors (calling/fabric/video/...) part of RestClient's
 # surface, matching the real callable API.
-RE_USE_TRAIT = re.compile(
-    r"^\s*use\s+([A-Z]\w*)\s*;"
-)
+RE_USE_TRAIT = re.compile(r"^\s*use\s+([A-Z]\w*)\s*;")
 RE_PUBLIC_METHOD = re.compile(
     # Matches `public function`, `public static function`, and
     # `abstract public function` (the abstract methods on an abstract base —
@@ -959,7 +991,7 @@ def _types_subdir(file_relative: Path) -> str | None:
     idx = rel.find(_TYPES_DIR_MARKER)
     if idx == -1:
         return None
-    tail = rel[idx + len(_TYPES_DIR_MARKER):]
+    tail = rel[idx + len(_TYPES_DIR_MARKER) :]
     sub = tail.split("/", 1)[0]
     return sub or None
 
@@ -1046,7 +1078,7 @@ def _swaig_payload_subdir(file_relative: Path) -> str | None:
     idx = rel.find(_SWAIG_PAYLOAD_DIR_MARKER)
     if idx == -1:
         return None
-    tail = rel[idx + len(_SWAIG_PAYLOAD_DIR_MARKER):]
+    tail = rel[idx + len(_SWAIG_PAYLOAD_DIR_MARKER) :]
     sub = tail.split("/", 1)[0]
     return sub or None
 
@@ -1062,7 +1094,7 @@ def _module_path_for_class(name: str, file_relative: Path) -> str:
     _lw = file_relative.as_posix()
     _lw_idx = _lw.find("SignalWire/Livewire/")
     if _lw_idx != -1:
-        tail = _lw[_lw_idx + len("SignalWire/Livewire/"):]
+        tail = _lw[_lw_idx + len("SignalWire/Livewire/") :]
         if tail.startswith("Plugins/"):
             return "signalwire.livewire.plugins"
         return "signalwire.livewire"
@@ -1200,7 +1232,7 @@ def _parse_file(
                 internal_pending = True
             end = line.find("*/")
             if end != -1:
-                line = line[end + 2:]
+                line = line[end + 2 :]
                 in_block_comment = False
             else:
                 continue
@@ -1218,7 +1250,7 @@ def _parse_file(
                 break
             if "@internal" in line[start:end]:
                 internal_pending = True
-            line = line[:start] + line[end + 2:]
+            line = line[:start] + line[end + 2 :]
         # Strip line comments (`//` and PHP's `#`), but ONLY when the marker is
         # NOT inside a quoted string — otherwise a regex/URL literal like
         # `'#^https?://#i'` truncates the line and drops the trailing `{`,
@@ -1507,7 +1539,8 @@ def _reference_composition_attrs() -> dict[tuple[str, str], set[str]]:
             if not isinstance(methods, dict):
                 continue
             comp = {
-                m for m, ms in methods.items()
+                m
+                for m, ms in methods.items()
                 if isinstance(ms, dict)
                 and [p for p in ms.get("params", []) if p.get("kind") != "self"] == []
                 and _is_comp(ms.get("returns"))
@@ -1806,8 +1839,7 @@ def build_surface() -> dict:
             # module-level Python free function reconciles EQUAL instead of being
             # an `impossible:` omission. Remove them from the host class's set.
             projected_here = {
-                m for m in meth_set
-                if (cls, m) in SURFACE_FREE_FUNCTION_PROJECTIONS
+                m for m in meth_set if (cls, m) in SURFACE_FREE_FUNCTION_PROJECTIONS
             }
             for m in projected_here:
                 target_mod, target_fn = SURFACE_FREE_FUNCTION_PROJECTIONS[(cls, m)]
@@ -1869,9 +1901,17 @@ def build_surface() -> dict:
     # `stop` onto each concrete action to reconcile the flattening in emit
     # (rule §2: idiom is reconciled in the enumerator, never by omission).
     _RELAY_CONCRETE_ACTIONS = {
-        "PlayAction", "RecordAction", "CollectAction", "StandaloneCollectAction",
-        "DetectAction", "FaxAction", "TapAction", "StreamAction", "PayAction",
-        "TranscribeAction", "AIAction",
+        "PlayAction",
+        "RecordAction",
+        "CollectAction",
+        "StandaloneCollectAction",
+        "DetectAction",
+        "FaxAction",
+        "TapAction",
+        "StreamAction",
+        "PayAction",
+        "TranscribeAction",
+        "AIAction",
     }
     for cls in _RELAY_CONCRETE_ACTIONS:
         module_path = CLASS_MODULE_MAP.get(cls)
@@ -1906,8 +1946,14 @@ def build_surface() -> dict:
             # so there is nothing to emit — they are recorded as the only two
             # AI-Chat surface omissions (impossible:, RelayClient precedent) in
             # PORT_OMISSIONS.md rather than fabricated here. Everything else folds.
-            "__init__", "chat", "close",
-            "create_conversation", "delete", "end", "log", "summarize",
+            "__init__",
+            "chat",
+            "close",
+            "create_conversation",
+            "delete",
+            "end",
+            "log",
+            "summarize",
             # ``url`` is a real ``public readonly string $url`` on the php class
             # (AIChatClient.php:75) — the reference's ``self.url`` attribute
             # (ai_chat/client.py:152). It was invisible only because this dict
@@ -2039,8 +2085,12 @@ def build_surface() -> dict:
     # ``define_tools`` has NO ToolRegistry twin (reference ToolRegistry lacks it) so it
     # is NOT stripped — it stays a genuine SWMLService PORT_ADDITION.
     _SWMLSERVICE_TOOL_REGISTRY_RELOCATED = {
-        "define_tool", "register_swaig_function", "has_function",
-        "get_function", "get_all_functions", "remove_function",
+        "define_tool",
+        "register_swaig_function",
+        "has_function",
+        "get_function",
+        "get_all_functions",
+        "remove_function",
         # ``getAgent()`` exists ONLY to satisfy the reference's
         # ``ToolRegistry.agent`` / ``PromptManager.agent`` back-reference: php
         # flattens both collaborators onto AgentBase / Service, so the
@@ -2061,7 +2111,8 @@ def build_surface() -> dict:
     _swml_entry = modules.get(_swml_mod)
     if _swml_entry is not None and "SWMLService" in _swml_entry["classes"]:
         _kept = [
-            m for m in _swml_entry["classes"]["SWMLService"]
+            m
+            for m in _swml_entry["classes"]["SWMLService"]
             if m not in _SWMLSERVICE_TOOL_REGISTRY_RELOCATED
         ]
         _swml_entry["classes"]["SWMLService"] = sorted(set(_kept))
@@ -2116,7 +2167,8 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default=str(REPO_ROOT / "port_surface.json"))
     parser.add_argument(
-        "--native-output", default=str(_NATIVE_PATH),
+        "--native-output",
+        default=str(_NATIVE_PATH),
         help="Where to write the native-name sidecar DOC-AUDIT reads.",
     )
     parser.add_argument(
@@ -2134,16 +2186,12 @@ def main(argv: list[str]) -> int:
     # source walk, so emitting it here keeps the two consistent by construction and
     # makes it impossible to fold an accessor without refreshing what DOC-AUDIT
     # resolves against.
-    native_rendered = (
-        json.dumps(build_native_names(), indent=2, sort_keys=False) + "\n"
-    )
+    native_rendered = json.dumps(build_native_names(), indent=2, sort_keys=False) + "\n"
     native_path = Path(args.native_output)
 
     if args.check:
         if not native_path.exists():
-            print(
-                f"enumerate_surface: {native_path} does not exist", file=sys.stderr
-            )
+            print(f"enumerate_surface: {native_path} does not exist", file=sys.stderr)
             return 1
         if native_path.read_text(encoding="utf-8") != native_rendered:
             print(
@@ -2157,9 +2205,7 @@ def main(argv: list[str]) -> int:
 
     if args.check:
         if not out_path.exists():
-            print(
-                f"enumerate_surface: {out_path} does not exist", file=sys.stderr
-            )
+            print(f"enumerate_surface: {out_path} does not exist", file=sys.stderr)
             return 1
         on_disk = out_path.read_text(encoding="utf-8")
         if on_disk != rendered:
@@ -2174,8 +2220,7 @@ def main(argv: list[str]) -> int:
     out_path.write_text(rendered, encoding="utf-8")
     n_classes = sum(len(m["classes"]) for m in surface["modules"].values())
     n_methods = sum(
-        sum(len(v) for v in m["classes"].values())
-        for m in surface["modules"].values()
+        sum(len(v) for v in m["classes"].values()) for m in surface["modules"].values()
     )
     print(
         f"enumerate_surface: wrote {out_path} "

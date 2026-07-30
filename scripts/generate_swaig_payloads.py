@@ -55,6 +55,7 @@ Usage:
     python3 scripts/generate_swaig_payloads.py --check    # GEN-FRESH: fail if stale
     python3 scripts/generate_swaig_payloads.py --out DIR  # scratch: emit into DIR
 """
+
 from __future__ import annotations
 
 import argparse
@@ -71,9 +72,12 @@ from pathlib import Path
 # and generate_relay_protocol.py.
 # ---------------------------------------------------------------------------
 
+
 def _load_rest_generator():
     here = Path(__file__).resolve().parent
-    spec = importlib.util.spec_from_file_location("generate_rest", here / "generate_rest.py")
+    spec = importlib.util.spec_from_file_location(
+        "generate_rest", here / "generate_rest.py"
+    )
     if spec is None or spec.loader is None:  # pragma: no cover
         raise SystemExit("generate_swaig_payloads.py: cannot load generate_rest.py")
     mod = importlib.util.module_from_spec(spec)
@@ -117,8 +121,14 @@ namespace SignalWire\\SWAIG\\Generated\\{sub};
 """
 
 
-def _emit_class(php_name: str, properties: dict, schemas: dict, spec: str, sub: str,
-                source_desc: str) -> str:
+def _emit_class(
+    php_name: str,
+    properties: dict,
+    schemas: dict,
+    spec: str,
+    sub: str,
+    source_desc: str,
+) -> str:
     """Emit one method-less PHP data class for a SWAIG payload object schema. Property
     typing reuses generate_rest.php_property_type (pure idiom — the surface records
     only the class name; types keep the DTO PHPStan-L9-clean). Property types never
@@ -128,8 +138,12 @@ def _emit_class(php_name: str, properties: dict, schemas: dict, spec: str, sub: 
     lines.append("/**")
     lines.append(f" * {php_name} — generated SWAIG payload wire type ({source_desc}).")
     lines.append(" *")
-    lines.append(" * Pure data DTO: public typed properties named for the snake_case wire keys")
-    lines.append(" * they carry. It declares no methods — the values ARE the interface.")
+    lines.append(
+        " * Pure data DTO: public typed properties named for the snake_case wire keys"
+    )
+    lines.append(
+        " * they carry. It declares no methods — the values ARE the interface."
+    )
     lines.append(" */")
     lines.append(f"class {php_name}")
     lines.append("{")
@@ -140,7 +154,9 @@ def _emit_class(php_name: str, properties: dict, schemas: dict, spec: str, sub: 
         while prop in used:
             prop += "_"
         used.add(prop)
-        php_type, doc = GR.php_property_type(psc if isinstance(psc, dict) else {}, schemas)
+        php_type, doc = GR.php_property_type(
+            psc if isinstance(psc, dict) else {}, schemas
+        )
         if doc is not None:
             body.append(f"    /** @var {doc} */")
         elif prop != wire_key:
@@ -152,13 +168,19 @@ def _emit_class(php_name: str, properties: dict, schemas: dict, spec: str, sub: 
     lines.extend(body)
     lines.append("}")
     desc = f"Generated SWAIG payload wire type from porting-sdk/swaig-specs/{spec}."
-    return SWAIG_HEADER.format(spec=spec, desc=desc, sub=sub) + "\n" + "\n".join(lines) + "\n"
+    return (
+        SWAIG_HEADER.format(spec=spec, desc=desc, sub=sub)
+        + "\n"
+        + "\n".join(lines)
+        + "\n"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Per-spec builders. Each returns a dict {relative_path: source} where the path is
 # ``<Sub>/<Class>.php`` (the PSR-4 subdir routes the enumerators to the oracle module).
 # ---------------------------------------------------------------------------
+
 
 def _build_swaig_request(psdk: Path) -> dict[str, str]:
     """swaig-request.yaml -> SwaigRequest (+ lifted SwaigArgument). Mirrors python's
@@ -177,12 +199,20 @@ def _build_swaig_request(psdk: Path) -> dict[str, str]:
     arg = props.get("argument")
     if isinstance(arg, dict) and arg.get("properties"):
         outs[f"{sub}/SwaigArgument.php"] = _emit_class(
-            "SwaigArgument", arg["properties"], {}, spec_file, sub,
+            "SwaigArgument",
+            arg["properties"],
+            {},
+            spec_file,
+            sub,
             "inline swaig-request `argument` object",
         )
 
     outs[f"{sub}/SwaigRequest.php"] = _emit_class(
-        "SwaigRequest", props, {}, spec_file, sub,
+        "SwaigRequest",
+        props,
+        {},
+        spec_file,
+        sub,
         "swaig-request `SwaigRequest` schema",
     )
     return outs
@@ -213,7 +243,11 @@ def _build_post_prompt(psdk: Path) -> dict[str, str]:
             continue
         emitted.add(php_name)
         outs[f"{sub}/{php_name}.php"] = _emit_class(
-            php_name, node.get("properties") or {}, schemas, spec_file, sub,
+            php_name,
+            node.get("properties") or {},
+            schemas,
+            spec_file,
+            sub,
             f"post-prompt components/schemas {raw_name!r}",
         )
     return outs
@@ -236,7 +270,11 @@ def _build_swaig_actions(psdk: Path) -> dict[str, str]:
     actions = spec["components"]["schemas"]["SwaigAction"]["properties"]
 
     def _is_obj(s: object) -> bool:
-        return isinstance(s, dict) and s.get("type") == "object" and bool(s.get("properties"))
+        return (
+            isinstance(s, dict)
+            and s.get("type") == "object"
+            and bool(s.get("properties"))
+        )
 
     outs: dict[str, str] = {}
     emitted: set[str] = set()
@@ -253,13 +291,19 @@ def _build_swaig_actions(psdk: Path) -> dict[str, str]:
             if not _is_obj(b):
                 continue
             obj_i += 1
-            action_name = _pascal_verb(verb) + "Action" + ("" if obj_i == 1 else str(obj_i))
+            action_name = (
+                _pascal_verb(verb) + "Action" + ("" if obj_i == 1 else str(obj_i))
+            )
             php_name = GR.type_name(action_name)
             if php_name in emitted:
                 continue
             emitted.add(php_name)
             outs[f"{sub}/{php_name}.php"] = _emit_class(
-                php_name, b.get("properties") or {}, {}, spec_file, sub,
+                php_name,
+                b.get("properties") or {},
+                {},
+                spec_file,
+                sub,
                 f"swaig-response action {verb!r} value object",
             )
     return outs
@@ -290,9 +334,12 @@ def build_outputs(psdk: Path) -> dict[str, str]:
 # Driver.
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="GEN-FRESH: exit non-zero if stale")
+    ap.add_argument(
+        "--check", action="store_true", help="GEN-FRESH: exit non-zero if stale"
+    )
     ap.add_argument("--out", default="", help="scratch: emit into this dir")
     args = ap.parse_args(argv)
 
@@ -317,11 +364,15 @@ def main(argv: list[str]) -> int:
                 if rel not in expected:
                     stale.append(f"{p} (leftover — not in generator output)")
         if stale:
-            sys.stderr.write("GEN-FRESH FAIL: %d generated SWAIG-payload file(s) stale:\n" % len(stale))
+            sys.stderr.write(
+                f"GEN-FRESH FAIL: {len(stale)} generated SWAIG-payload file(s) stale:\\n"
+            )
             for s in stale:
-                sys.stderr.write("  - %s\n" % s)
+                sys.stderr.write(f"  - {s}\n")
             return 1
-        print("GEN-FRESH: generated SWAIG-payload files match porting-sdk/swaig-specs/*.yaml.")
+        print(
+            "GEN-FRESH: generated SWAIG-payload files match porting-sdk/swaig-specs/*.yaml."
+        )
         return 0
 
     out_dir.mkdir(parents=True, exist_ok=True)

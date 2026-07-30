@@ -38,6 +38,7 @@ Usage:
     python3 scripts/generate_rest.py --check         # GEN-FRESH: fail if stale
     python3 scripts/generate_rest.py --out DIR       # scratch: emit flat into DIR
 """
+
 from __future__ import annotations
 
 import argparse
@@ -78,8 +79,20 @@ except ImportError:  # pragma: no cover
 # fails LOUD if a scanned namespace is missing from the order table, so a new
 # resource spec dir is picked up automatically and only needs an order placement.
 _NS_ORDER = (
-    "relay-rest", "fabric", "calling", "video", "datasphere",
-    "logs", "message", "messages", "voice", "fax", "project", "projects", "chat", "pubsub",
+    "relay-rest",
+    "fabric",
+    "calling",
+    "video",
+    "datasphere",
+    "logs",
+    "message",
+    "messages",
+    "voice",
+    "fax",
+    "project",
+    "projects",
+    "chat",
+    "pubsub",
     "swml-webhooks",
 )
 
@@ -88,7 +101,7 @@ _NS_ORDER = (
 _TYPE_SUB_OVERRIDE = {"pubsub": "PubSub"}
 
 
-def _spec_docs(psdk: Path) -> "dict[str, dict]":
+def _spec_docs(psdk: Path) -> dict[str, dict]:
     """Scan rest-apis/ once: {spec_dir: parsed openapi doc} for every dir with an
     openapi.yaml. Cached on the function for the process lifetime."""
     cache = getattr(_spec_docs, "_cache", None)
@@ -103,7 +116,7 @@ def _spec_docs(psdk: Path) -> "dict[str, dict]":
 
 
 def _has_resource(doc: dict) -> bool:
-    for _path, item in (doc.get("paths") or {}).items():
+    for item in (doc.get("paths") or {}).values():
         if not isinstance(item, dict):
             continue
         r = item.get("x-sdk-resource")
@@ -121,14 +134,14 @@ def _order_key(ns: str) -> int:
     return _NS_ORDER.index(ns)
 
 
-def discover_spec_dirs(psdk: Path) -> "list[str]":
+def discover_spec_dirs(psdk: Path) -> list[str]:
     """RESOURCE namespaces (former SPEC_DIRS): spec dirs carrying x-sdk-resource
     markup, in the curated order."""
     dirs = [ns for ns, doc in _spec_docs(psdk).items() if _has_resource(doc)]
     return sorted(dirs, key=_order_key)
 
 
-def discover_type_ns(psdk: Path) -> "list[tuple[str, str, str]]":
+def discover_type_ns(psdk: Path) -> list[tuple[str, str, str]]:
     """TYPE namespaces (former TYPE_NS): RESOURCE namespaces PLUS types-only specs
     (components.schemas but no servers block). Returns (spec_dir, PascalSub, key)
     in the curated order — Sub via the mechanical PascalCase (override table for
@@ -140,28 +153,93 @@ def discover_type_ns(psdk: Path) -> "list[tuple[str, str, str]]":
             continue
         is_types_only = not doc.get("servers")
         if _has_resource(doc) or is_types_only:
-            sub = _TYPE_SUB_OVERRIDE.get(ns) or snake_to_camel(ns)[:1].upper() + snake_to_camel(ns)[1:]
+            sub = (
+                _TYPE_SUB_OVERRIDE.get(ns)
+                or snake_to_camel(ns)[:1].upper() + snake_to_camel(ns)[1:]
+            )
             key = ns.replace("-", "_")
             out.append((ns, sub, key))
     return sorted(out, key=lambda t: _order_key(t[0]))
 
+
 PHP_KEYWORDS = {
-    "abstract", "and", "array", "as", "break", "callable", "case", "catch",
-    "class", "clone", "const", "continue", "declare", "default", "do", "echo",
-    "else", "elseif", "empty", "enddeclare", "endfor", "endforeach", "endif",
-    "endswitch", "endwhile", "enum", "eval", "exit", "extends", "final",
-    "finally", "fn", "for", "foreach", "function", "global", "goto", "if",
-    "implements", "include", "include_once", "instanceof", "insteadof",
-    "interface", "isset", "list", "match", "namespace", "new", "or", "print",
-    "private", "protected", "public", "readonly", "require", "require_once",
-    "return", "static", "switch", "throw", "trait", "try", "unset", "use",
-    "var", "while", "xor", "yield", "from",
+    "abstract",
+    "and",
+    "array",
+    "as",
+    "break",
+    "callable",
+    "case",
+    "catch",
+    "class",
+    "clone",
+    "const",
+    "continue",
+    "declare",
+    "default",
+    "do",
+    "echo",
+    "else",
+    "elseif",
+    "empty",
+    "enddeclare",
+    "endfor",
+    "endforeach",
+    "endif",
+    "endswitch",
+    "endwhile",
+    "enum",
+    "eval",
+    "exit",
+    "extends",
+    "final",
+    "finally",
+    "fn",
+    "for",
+    "foreach",
+    "function",
+    "global",
+    "goto",
+    "if",
+    "implements",
+    "include",
+    "include_once",
+    "instanceof",
+    "insteadof",
+    "interface",
+    "isset",
+    "list",
+    "match",
+    "namespace",
+    "new",
+    "or",
+    "print",
+    "private",
+    "protected",
+    "public",
+    "readonly",
+    "require",
+    "require_once",
+    "return",
+    "static",
+    "switch",
+    "throw",
+    "trait",
+    "try",
+    "unset",
+    "use",
+    "var",
+    "while",
+    "xor",
+    "yield",
+    "from",
 }
 
 
 # ---------------------------------------------------------------------------
 # Resolution.
 # ---------------------------------------------------------------------------
+
 
 def resolve_porting_sdk() -> Path:
     env = os.environ.get("PORTING_SDK")
@@ -172,7 +250,9 @@ def resolve_porting_sdk() -> Path:
         cand = parent.parent / "porting-sdk"
         if (cand / "rest-apis").is_dir():
             return cand.resolve()
-    raise SystemExit("generate_rest.py: porting-sdk not found (set $PORTING_SDK or clone adjacent)")
+    raise SystemExit(
+        "generate_rest.py: porting-sdk not found (set $PORTING_SDK or clone adjacent)"
+    )
 
 
 def repo_root() -> Path:
@@ -192,25 +272,32 @@ def repo_root() -> Path:
 # (field, scope-or-None): scope=None matches in every schema; scope="Name" only
 # inside the SPEC schema of that name (the $defs / components.schemas key — NOT
 # the language-idiomatic PHP class name), so the scope value is identical cross-port.
-_overlay_cache: "dict[str, set[tuple[str, str | None]]] | None" = None
+_overlay_cache: dict[str, set[tuple[str, str | None]]] | None = None
 
 
-def _load_overlay(psdk: Path) -> "dict[str, set[tuple[str, str | None]]]":
+def _load_overlay(psdk: Path) -> dict[str, set[tuple[str, str | None]]]:
     global _overlay_cache
     if _overlay_cache is None:
-        def rules(key: str, data: dict) -> "set[tuple[str, str | None]]":
+
+        def rules(key: str, data: dict) -> set[tuple[str, str | None]]:
             out: set[tuple[str, str | None]] = set()
             for entry in data.get(key) or []:
                 if isinstance(entry, dict) and entry.get("field"):
                     out.add((entry["field"], entry.get("scope")))
             return out
+
         path = psdk / "rest-apis" / "x-sdk-overlay.yaml"
         data = yaml.safe_load(path.read_text()) or {} if path.is_file() else {}
-        _overlay_cache = {"hidden": rules("hidden", data), "deprecated": rules("deprecated", data)}
+        _overlay_cache = {
+            "hidden": rules("hidden", data),
+            "deprecated": rules("deprecated", data),
+        }
     return _overlay_cache
 
 
-def _overlay_match(rules: "set[tuple[str, str | None]]", field: str, schema_name: str | None) -> bool:
+def _overlay_match(
+    rules: set[tuple[str, str | None]], field: str, schema_name: str | None
+) -> bool:
     # A rule matches when its field equals `field` AND (it is unscoped OR its scope
     # equals the containing SPEC schema name). `schema_name` is the schema's name as
     # it appears in the spec (the $defs / components.schemas key), NOT the PHP class
@@ -233,12 +320,13 @@ def overlay_deprecated(psdk: Path, field: str, schema_name: str | None = None) -
 # Base loading (x-sdk-bases; §2).
 # ---------------------------------------------------------------------------
 
+
 def load_bases(psdk: Path) -> dict[str, list[str]]:
     raw = yaml.safe_load((psdk / "rest-apis" / "x-sdk-bases.yaml").read_text())
     bases = dict(raw.get("x-sdk-bases") or {})
     fab = psdk / "rest-apis" / "fabric" / "x-sdk-bases.yaml"
     if fab.is_file():
-        bases.update((yaml.safe_load(fab.read_text()).get("x-sdk-bases") or {}))
+        bases.update(yaml.safe_load(fab.read_text()).get("x-sdk-bases") or {})
 
     def resolve(name: str, seen: set[str]) -> list[str]:
         if name in seen:
@@ -260,24 +348,35 @@ def load_bases(psdk: Path) -> dict[str, list[str]]:
 # Spec model.
 # ---------------------------------------------------------------------------
 
+
 class Spec:
     def __init__(self, name: str, doc: dict):
         self.name = name
         self.doc = doc
         self.server_path = _url_path(doc["servers"][0]["url"])
         if self.server_path != "/" and self.server_path.endswith("/"):
-            raise SystemExit(f"{name}: servers[0].url path {self.server_path!r} has a trailing slash")
+            raise SystemExit(
+                f"{name}: servers[0].url path {self.server_path!r} has a trailing slash"
+            )
         self.namespace_attr = (doc.get("x-sdk-namespace") or {}).get("attr") or ""
         self.ops: dict[str, tuple[str, str, bool]] = {}
-        self.op_body: dict[str, dict] = {}  # operationId -> requestBody JSON schema (or {})
+        self.op_body: dict[
+            str, dict
+        ] = {}  # operationId -> requestBody JSON schema (or {})
         for path, item in (doc.get("paths") or {}).items():
             for verb in ("get", "post", "put", "patch", "delete"):
                 o = item.get(verb)
                 if o and o.get("operationId"):
-                    self.ops[o["operationId"]] = (verb, path, bool(o.get("requestBody")))
+                    self.ops[o["operationId"]] = (
+                        verb,
+                        path,
+                        bool(o.get("requestBody")),
+                    )
                     body = o.get("requestBody") or {}
                     content = body.get("content") or {}
-                    media = content.get("application/json") or (next(iter(content.values())) if content else {})
+                    media = content.get("application/json") or (
+                        next(iter(content.values())) if content else {}
+                    )
                     self.op_body[o["operationId"]] = (media or {}).get("schema") or {}
         self.schemas = ((doc.get("components") or {}).get("schemas")) or {}
 
@@ -298,12 +397,15 @@ def _url_path(url: str) -> str:
 
 
 def load_spec(psdk: Path, ns: str) -> Spec:
-    return Spec(ns, yaml.safe_load((psdk / "rest-apis" / ns / "openapi.yaml").read_text()))
+    return Spec(
+        ns, yaml.safe_load((psdk / "rest-apis" / ns / "openapi.yaml").read_text())
+    )
 
 
 # ---------------------------------------------------------------------------
 # Path composition (§4).
 # ---------------------------------------------------------------------------
+
 
 def join_path(a: str, b: str) -> str:
     if not b:
@@ -330,7 +432,7 @@ def relative_tail(spec: Spec, anchor: str, markup: dict, op_path: str):
     full = join_path(spec.server_path, coll)
     absp = join_path(spec.server_path, op_path)
     if coll and absp.startswith(full + "/"):
-        return ([s for s in absp[len(full) + 1:].split("/") if s], False)
+        return ([s for s in absp[len(full) + 1 :].split("/") if s], False)
     if coll and absp == full:
         return ([], False)
     return ([s for s in absp.lstrip("/").split("/") if s], True)
@@ -339,6 +441,7 @@ def relative_tail(spec: Spec, anchor: str, markup: dict, op_path: str):
 # ---------------------------------------------------------------------------
 # Naming.
 # ---------------------------------------------------------------------------
+
 
 def snake_to_camel(snake: str) -> str:
     parts = [p for p in snake.replace("-", "_").replace(".", "_").split("_") if p]
@@ -353,11 +456,20 @@ def escape_param(field: str) -> str:
 
 
 PARAM_ARG_NAME = {
-    "id": "id", "queue_id": "queueId", "NumberGroupId": "groupId",
-    "documentId": "documentId", "chunkId": "chunkId", "mfa_request_id": "requestId",
-    "e164_number": "e164", "fabric_subscriber_id": "subscriberId",
-    "ai_agent_id": "id", "cxml_webhook_id": "id", "swml_webhook_id": "id",
-    "token_id": "tokenId", "room_id": "roomId", "resource_id": "resourceId",
+    "id": "id",
+    "queue_id": "queueId",
+    "NumberGroupId": "groupId",
+    "documentId": "documentId",
+    "chunkId": "chunkId",
+    "mfa_request_id": "requestId",
+    "e164_number": "e164",
+    "fabric_subscriber_id": "subscriberId",
+    "ai_agent_id": "id",
+    "cxml_webhook_id": "id",
+    "swml_webhook_id": "id",
+    "token_id": "tokenId",
+    "room_id": "roomId",
+    "resource_id": "resourceId",
     "sip_endpoint_id": "sipEndpointId",
 }
 
@@ -404,6 +516,7 @@ def http_receiver(base: str) -> str:
 # Command-dispatch (§6).
 # ---------------------------------------------------------------------------
 
+
 def command_method_name(cmd: str) -> str:
     # strip leading domain prefix, dots -> underscores, then camelCase.
     s = cmd
@@ -414,17 +527,21 @@ def command_method_name(cmd: str) -> str:
 
 
 def command_py_name(cmd: str) -> str:
-    s = cmd[len("calling."):] if cmd.startswith("calling.") else cmd
+    s = cmd[len("calling.") :] if cmd.startswith("calling.") else cmd
     return s.replace(".", "_")
 
 
 def discriminator_mapping(spec: Spec, schema_name: str) -> list[str]:
     sch = spec.schemas.get(schema_name)
     if sch is None:
-        raise SystemExit(f"command-dispatch request {schema_name!r} not in components.schemas")
+        raise SystemExit(
+            f"command-dispatch request {schema_name!r} not in components.schemas"
+        )
     mapping = (sch.get("discriminator") or {}).get("mapping")
     if not mapping:
-        raise SystemExit(f"command-dispatch request {schema_name!r} has no discriminator.mapping")
+        raise SystemExit(
+            f"command-dispatch request {schema_name!r} has no discriminator.mapping"
+        )
     return list(mapping.keys())
 
 
@@ -476,7 +593,12 @@ def resolve_schema(spec: Spec, schema: dict | None, seen=None) -> dict:
         return resolve_schema(spec, spec.schemas.get(leaf), seen)
     # allOf: [<single member>] — a ref decorated with description/examples.
     allof = schema.get("allOf")
-    if allof and len(allof) == 1 and not schema.get("properties") and not schema.get("type"):
+    if (
+        allof
+        and len(allof) == 1
+        and not schema.get("properties")
+        and not schema.get("type")
+    ):
         return resolve_schema(spec, allof[0], seen)
     return schema
 
@@ -494,7 +616,12 @@ def _is_named_ref(schema: dict) -> bool:
     if schema.get("$ref"):
         return True
     allof = schema.get("allOf")
-    if allof and len(allof) == 1 and not schema.get("properties") and not schema.get("type"):
+    if (
+        allof
+        and len(allof) == 1
+        and not schema.get("properties")
+        and not schema.get("type")
+    ):
         return _is_named_ref(allof[0])
     return False
 
@@ -508,19 +635,26 @@ def _json_type(schema: dict) -> str | None:
     return t
 
 
-_SCALAR_PHP = {"string": "string", "integer": "int", "number": "float", "boolean": "bool"}
-_SCALAR_CANON = {"string": "string", "integer": "int", "number": "float", "boolean": "bool"}
+_SCALAR_PHP = {
+    "string": "string",
+    "integer": "int",
+    "number": "float",
+    "boolean": "bool",
+}
+_SCALAR_CANON = {
+    "string": "string",
+    "integer": "int",
+    "number": "float",
+    "boolean": "bool",
+}
 
 
 def php_param_type(spec: Spec, schema: dict, required: bool) -> str:
     """The PHP native type for a body field. Optionals are nullable ``?T``."""
     resolved = resolve_schema(spec, schema)
     jt = _json_type(resolved)
-    if jt in _SCALAR_PHP:
-        base = _SCALAR_PHP[jt]
-    else:
-        # array / object / $ref-to-object / oneOf / anyOf / unknown → array
-        base = "array"
+    # array / object / $ref-to-object / oneOf / anyOf / unknown → array
+    base = _SCALAR_PHP.get(jt, "array")
     return base if required else "?" + base
 
 
@@ -532,10 +666,7 @@ def php_doc_type(spec: Spec, schema: dict, required: bool) -> str | None:
     jt = _json_type(resolved)
     if jt in _SCALAR_PHP:
         return None
-    if jt == "array":
-        base = "list<mixed>"
-    else:
-        base = "array<string,mixed>"
+    base = "list<mixed>" if jt == "array" else "array<string,mixed>"
     return base + "|null" if not required else base
 
 
@@ -578,7 +709,9 @@ def object_body_fields(spec: Spec, body_schema: dict) -> list[tuple[str, dict, b
     return [(name, psc, name in required) for name, psc in props.items()]
 
 
-def command_param_fields(spec: Spec, command_schema: dict) -> tuple[list[tuple[str, dict, bool]], bool]:
+def command_param_fields(
+    spec: Spec, command_schema: dict
+) -> tuple[list[tuple[str, dict, bool]], bool]:
     """§6 union-flatten: return ([(wire_name, schema, required)], has_id).
 
     The command schema's ``params`` sub-schema may itself be an anyOf/oneOf of
@@ -624,7 +757,9 @@ def is_object_body(spec: Spec, body_schema: dict) -> bool:
     return _json_type(resolved) == "object"
 
 
-def ordered_fields(fields: list[tuple[str, dict, bool]]) -> list[tuple[str, dict, bool]]:
+def ordered_fields(
+    fields: list[tuple[str, dict, bool]],
+) -> list[tuple[str, dict, bool]]:
     """Required-first, then optional; stable within each group (spec order)."""
     req = [f for f in fields if f[2]]
     opt = [f for f in fields if not f[2]]
@@ -645,7 +780,9 @@ def _register_sidecar(cls: str, php_method: str, records: list[dict]) -> None:
 # Python reference generator) forwarded to the HTTP layer and NEVER folded into
 # the wire body. The single PHP realization is a nullable trailing param; the
 # oracle records it as the LAST keyword param (after ``extras``/``extra``).
-_REQUEST_OPTIONS_PHP_PARAM = "?\\SignalWire\\REST\\RequestOptions $requestOptions = null"
+_REQUEST_OPTIONS_PHP_PARAM = (
+    "?\\SignalWire\\REST\\RequestOptions $requestOptions = null"
+)
 _REQUEST_OPTIONS_DOC = (
     "     * @param \\SignalWire\\REST\\RequestOptions|null $requestOptions "
     "Per-call transport override (timeout / retry / abort); null uses the "
@@ -657,15 +794,21 @@ def _request_options_record() -> dict:
     """The sidecar record for the trailing ``request_options`` keyword param —
     a fresh dict per call (records are mutated/serialized independently)."""
     return {
-        "name": "request_options", "kind": "keyword",
+        "name": "request_options",
+        "kind": "keyword",
         "type": "optional<class:signalwire.rest._request_options.RequestOptions>",
-        "required": False, "default": None,
+        "required": False,
+        "default": None,
     }
 
 
-def body_params(spec: Spec, cls: str, php_method: str,
-                fields: list[tuple[str, dict, bool]],
-                leading: list[dict]) -> tuple[list[str], list[str], list[dict], list[str]]:
+def body_params(
+    spec: Spec,
+    cls: str,
+    php_method: str,
+    fields: list[tuple[str, dict, bool]],
+    leading: list[dict],
+) -> tuple[list[str], list[str], list[dict], list[str]]:
     """Build named PHP params + body-assembly PHP + sidecar records + PHPDoc
     ``@param`` lines for a set of body fields. ``leading`` is the already-built
     sidecar records for positional id/call_id args (their PHP params are built
@@ -690,7 +833,12 @@ def body_params(spec: Spec, cls: str, php_method: str,
         dt = php_doc_type(spec, schema, required)
         if dt:
             doc.append(f"     * @param {dt} ${ident}")
-        rec: dict = {"name": wire_name, "kind": "keyword", "type": ct, "required": required}
+        rec: dict = {
+            "name": wire_name,
+            "kind": "keyword",
+            "type": ct,
+            "required": required,
+        }
         if required:
             php_params.append(f"{pt} ${ident}")
             build.append(f"        $__body[{php_str(wire_name)}] = ${ident};")
@@ -712,10 +860,15 @@ def body_params(spec: Spec, cls: str, php_method: str,
     # the ``extras`` door.
     php_params.append("array $extras = []")
     doc.append("     * @param array<string,mixed> $extras Forward-compat body fields.")
-    records.append({
-        "name": "extras", "kind": "keyword",
-        "type": "optional<dict<string,any>>", "required": False, "default": None,
-    })
+    records.append(
+        {
+            "name": "extras",
+            "kind": "keyword",
+            "type": "optional<dict<string,any>>",
+            "required": False,
+            "default": None,
+        }
+    )
     # ``request_options`` is the last recorded keyword (the reference's oracle
     # drops the bare **kwargs, leaving request_options as its last recorded param).
     records.append(_request_options_record())
@@ -792,8 +945,9 @@ def abs_php_path(full: str, id_args: list[str]) -> str:
     return " . ".join(out) if out else "''"
 
 
-def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
-                method_snake: str, op_id: str) -> str:
+def emit_method(
+    spec: Spec, anchor: str, markup: dict, base: str, method_snake: str, op_id: str
+) -> str:
     if op_id not in spec.ops:
         raise SystemExit(f"{markup['name']}.{method_snake}: op {op_id!r} not in spec")
     verb, op_path, has_body = spec.ops[op_id]
@@ -803,8 +957,10 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
     cls = markup["name"]
 
     # Leading positional id args (path params) — positional in the sidecar.
-    id_records = [{"name": a, "kind": "positional", "type": "string", "required": True}
-                  for a in id_args]
+    id_records = [
+        {"name": a, "kind": "positional", "type": "string", "required": True}
+        for a in id_args
+    ]
     id_params = ["string $" + a for a in id_args]
     write_verb = verb in ("post", "put", "patch")
     doc = ["    /**"]
@@ -820,18 +976,30 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
         if is_object_body(spec, body_schema):
             # §5.1 object body → one named PHP param per spec field + extras.
             fields = object_body_fields(spec, body_schema)
-            field_php, build, _, field_doc = body_params(spec, cls, name, fields, id_records)
+            field_php, build, _, field_doc = body_params(
+                spec, cls, name, fields, id_records
+            )
             params = id_params + field_php
             body_ml = build
             body_arg = "$__body"  # the collision-free request-body dict local (see body_params)
             doc.extend(field_doc)
         else:
             # §5.2 union body → a single positional ``body`` param.
-            params = id_params + ["array $body"]
-            _register_sidecar(cls, name, id_records + [
-                {"name": "body", "kind": "positional", "type": "dict<string,any>", "required": True},
-                _request_options_record(),
-            ])
+            params = [*id_params, "array $body"]
+            _register_sidecar(
+                cls,
+                name,
+                [
+                    *id_records,
+                    {
+                        "name": "body",
+                        "kind": "positional",
+                        "type": "dict<string,any>",
+                        "required": True,
+                    },
+                    _request_options_record(),
+                ],
+            )
             body_arg = "$body"
             doc.append("     * @param array<string,mixed> $body JSON request body.")
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
@@ -848,7 +1016,7 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
     elif write_verb:
         # write verb, no body → empty body.
         params = id_params
-        _register_sidecar(cls, name, id_records + [_request_options_record()])
+        _register_sidecar(cls, name, [*id_records, _request_options_record()])
         verb_fn = {"post": "post", "put": "put", "patch": "patch"}[verb]
         call_line = (
             f"        return $this->{recv}->{verb_fn}"
@@ -862,19 +1030,21 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
         # keyword. So the sidecar records ONLY [...id..., request_options] — no
         # var_keyword record — matching the oracle exactly. The PHP ``array
         # $params`` runtime param stays; it realizes the query-door.
-        params = id_params + ["array $params = []"]
-        _register_sidecar(cls, name, id_records + [
-            _request_options_record(),
-        ])
+        params = [*id_params, "array $params = []"]
+        _register_sidecar(cls, name, [*id_records, _request_options_record()])
         doc.append("     * @param array<string,mixed> $params Query-string parameters.")
-        call_line = f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
+        call_line = (
+            f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
+        )
     else:  # delete
         params = id_params
-        _register_sidecar(cls, name, id_records + [_request_options_record()])
-        call_line = f"        return $this->{recv}->delete({path_expr}, $requestOptions);"
+        _register_sidecar(cls, name, [*id_records, _request_options_record()])
+        call_line = (
+            f"        return $this->{recv}->delete({path_expr}, $requestOptions);"
+        )
 
     # Trailing per-call transport override (keyword idiom: nullable last param).
-    params = params + [_REQUEST_OPTIONS_PHP_PARAM]
+    params = [*params, _REQUEST_OPTIONS_PHP_PARAM]
     doc.append(_REQUEST_OPTIONS_DOC)
 
     sig = ", ".join(params)
@@ -888,8 +1058,14 @@ def emit_method(spec: Spec, anchor: str, markup: dict, base: str,
     return lines
 
 
-def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
-                    update_schema_fields: set[str], field_schemas: dict[str, dict]) -> str:
+def emit_set_method(
+    spec: Spec,
+    markup: dict,
+    sm_name: str,
+    sm: dict,
+    update_schema_fields: set[str],
+    field_schemas: dict[str, dict],
+) -> str:
     handler = sm.get("handler")
     if not handler:
         raise SystemExit(f"{markup['name']}.{sm_name}: set_method missing handler")
@@ -899,7 +1075,12 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
     # resource_id is a leading positional string (matches the oracle).
     params = ["string $resourceId"]
     records: list[dict] = [
-        {"name": "resource_id", "kind": "positional", "type": "string", "required": True},
+        {
+            "name": "resource_id",
+            "kind": "positional",
+            "type": "string",
+            "required": True,
+        },
     ]
     required_lines = []
     optional_lines = []
@@ -907,7 +1088,9 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
     for arg_name, arg in args.items():
         field = arg.get("field")
         if not field:
-            raise SystemExit(f"{markup['name']}.{sm_name}: arg {arg_name!r} missing field")
+            raise SystemExit(
+                f"{markup['name']}.{sm_name}: arg {arg_name!r} missing field"
+            )
         if field not in update_schema_fields:
             raise SystemExit(
                 f"{markup['name']}.{sm_name}: arg field {field!r} not in update request schema"
@@ -921,7 +1104,12 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
         if dt:
             arg_doc.append(f"     * @param {dt} ${ident}")
         # set_method args are POSITIONAL in the oracle (they wrap update()).
-        rec: dict = {"name": arg_name, "kind": "positional", "type": ct, "required": required}
+        rec: dict = {
+            "name": arg_name,
+            "kind": "positional",
+            "type": ct,
+            "required": required,
+        }
         if required:
             params.append(f"{pt} ${ident}")
             required_lines.append(f"            {php_str(field)} => ${ident},")
@@ -959,7 +1147,9 @@ def emit_set_method(spec: Spec, markup: dict, sm_name: str, sm: dict,
         body.append(f"        if (${ident} !== null) {{")
         body.append(f"            $body[{php_str(field)}] = ${ident};")
         body.append("        }")
-    body.append("        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);")
+    body.append(
+        "        return $this->update($resourceId, array_merge($body, $extra), $requestOptions);"
+    )
     body.append("    }")
     return "\n".join(body) + "\n"
 
@@ -1028,10 +1218,7 @@ def update_field_schemas(spec: Spec, anchor: str, markup: dict) -> dict[str, dic
         for media in content.values():
             sch = media.get("schema")
             if sch:
-                out: dict[str, dict] = {}
-                for name, psc, _ in object_body_fields(spec, sch):
-                    out[name] = psc
-                return out
+                return {name: psc for name, psc, _ in object_body_fields(spec, sch)}
     return {}
 
 
@@ -1049,15 +1236,19 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         base = join_path(spec.server_path, anchor.lstrip("/"))
 
     lines = []
-    lines.append(f"/**\n * {name} — command-dispatch resource ({spec.name} spec).\n *\n"
-                 f" * Each method POSTs {{command, params, id?}} to {base}.\n */")
+    lines.append(
+        f"/**\n * {name} — command-dispatch resource ({spec.name} spec).\n *\n"
+        f" * Each method POSTs {{command, params, id?}} to {base}.\n */"
+    )
     lines.append(f"class {name}")
     lines.append("{")
     lines.append("    private \\SignalWire\\REST\\HttpClient $http;")
     lines.append("")
     lines.append(f"    private const BASE_PATH = {php_str(base)};")
     lines.append("")
-    lines.append("    public function __construct(\\SignalWire\\REST\\HttpClient $http)")
+    lines.append(
+        "    public function __construct(\\SignalWire\\REST\\HttpClient $http)"
+    )
     lines.append("    {")
     lines.append("        $this->http = $http;")
     lines.append("    }")
@@ -1071,9 +1262,11 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
     lines.append("     * @param array<string,mixed> $params")
     lines.append("     * @return array<string,mixed>")
     lines.append("     */")
-    lines.append("    private function execute("
-                 "string $command, ?string $callId, array $params = [], "
-                 "?\\SignalWire\\REST\\RequestOptions $requestOptions = null): array")
+    lines.append(
+        "    private function execute("
+        "string $command, ?string $callId, array $params = [], "
+        "?\\SignalWire\\REST\\RequestOptions $requestOptions = null): array"
+    )
     lines.append("    {")
     lines.append("        $body = ['command' => $command, 'params' => $params];")
     lines.append("        if ($callId !== null) {")
@@ -1084,7 +1277,9 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         "requestOptions: $requestOptions);"
     )
     lines.append("    }")
-    mapping = (spec.schemas.get(request).get("discriminator") or {}).get("mapping") or {}
+    mapping = (spec.schemas.get(request).get("discriminator") or {}).get(
+        "mapping"
+    ) or {}
     for cmd in commands:
         mname = command_method_name(cmd)
         cmd_schema_ref = mapping.get(cmd) or {}
@@ -1095,8 +1290,14 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         # Leading positional call_id (when the command schema has an ``id``).
         records: list[dict] = []
         if with_id:
-            records.append({"name": "call_id", "kind": "positional",
-                            "type": "string", "required": True})
+            records.append(
+                {
+                    "name": "call_id",
+                    "kind": "positional",
+                    "type": "string",
+                    "required": True,
+                }
+            )
         # command params → keyword named params.
         field_php: list[str] = []
         field_doc: list[str] = []
@@ -1108,7 +1309,12 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
             dt = php_doc_type(spec, schema, required)
             if dt:
                 field_doc.append(f"     * @param {dt} ${ident}")
-            rec: dict = {"name": wire_name, "kind": "keyword", "type": ct, "required": required}
+            rec: dict = {
+                "name": wire_name,
+                "kind": "keyword",
+                "type": ct,
+                "required": required,
+            }
             if required:
                 field_php.append(f"{pt} ${ident}")
                 build.append(f"        $params[{php_str(wire_name)}] = ${ident};")
@@ -1121,9 +1327,18 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
             records.append(rec)
         # trailing forward-compat door.
         field_php.append("array $extras = []")
-        field_doc.append("     * @param array<string,mixed> $extras Forward-compat command params.")
-        records.append({"name": "extras", "kind": "keyword",
-                        "type": "optional<dict<string,any>>", "required": False, "default": None})
+        field_doc.append(
+            "     * @param array<string,mixed> $extras Forward-compat command params."
+        )
+        records.append(
+            {
+                "name": "extras",
+                "kind": "keyword",
+                "type": "optional<dict<string,any>>",
+                "required": False,
+                "default": None,
+            }
+        )
         build.append("        $params = array_merge($params, $extras);")
         # trailing per-call transport override (forwarded through execute()).
         field_php.append(_REQUEST_OPTIONS_PHP_PARAM)
@@ -1142,10 +1357,19 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         lines.append(f"    public function {mname}({sig}): array")
         lines.append("    {")
         lines.extend(build)
-        lines.append(f"        return $this->execute({php_str(cmd)}, {call_arg}, $params, $requestOptions);")
+        lines.append(
+            f"        return $this->execute({php_str(cmd)}, {call_arg}, $params, $requestOptions);"
+        )
         lines.append("    }")
     lines.append("}")
-    return GEN_HEADER.format(desc=f"Generated command-dispatch resource for the {spec.name!r} namespace.") + "\n" + "\n".join(lines) + "\n"
+    return (
+        GEN_HEADER.format(
+            desc=f"Generated command-dispatch resource for the {spec.name!r} namespace."
+        )
+        + "\n"
+        + "\n".join(lines)
+        + "\n"
+    )
 
 
 def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
@@ -1162,18 +1386,26 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
         if not upd:
             raise SystemExit(f"{name}: {base} requires update_method")
         item = spec.doc["paths"][anchor]
-        spec_verb = "PUT" if item.get("put") else ("PATCH" if item.get("patch") else None)
+        spec_verb = (
+            "PUT" if item.get("put") else ("PATCH" if item.get("patch") else None)
+        )
         if spec_verb and upd != spec_verb:
-            raise SystemExit(f"{name}: update_method {upd} != spec update verb {spec_verb}")
+            raise SystemExit(
+                f"{name}: update_method {upd} != spec update verb {spec_verb}"
+            )
 
     extends = EXTENDS[base]
     # FabricResource picks its concrete PHP parent by the update verb:
     # PATCH -> FabricResource, PUT -> FabricResourcePUT (both extend
     # CrudWithAddresses, mirroring Python's _base).
     if base == "FabricResource":
-        extends = "FabricResourcePUT" if markup.get("update_method") == "PUT" else "FabricResource"
+        extends = (
+            "FabricResourcePUT"
+            if markup.get("update_method") == "PUT"
+            else "FabricResource"
+        )
     bp = base_path(spec, anchor, markup)
-    recv = http_receiver(base)
+    http_receiver(base)
 
     lines = []
     lines.append(f"/**\n * {name} REST resource ({spec.name} API).\n */")
@@ -1190,12 +1422,18 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
     #   * ReadResource / BaseResource take (http, basePath).
     if base == "CrudResource":
         upd = markup.get("update_method", "PATCH")
-        lines.append("    public function __construct(\\SignalWire\\REST\\HttpClient $http)")
+        lines.append(
+            "    public function __construct(\\SignalWire\\REST\\HttpClient $http)"
+        )
         lines.append("    {")
-        lines.append(f"        parent::__construct($http, {php_str(bp)}, {php_str(upd)});")
+        lines.append(
+            f"        parent::__construct($http, {php_str(bp)}, {php_str(upd)});"
+        )
         lines.append("    }")
     else:
-        lines.append("    public function __construct(\\SignalWire\\REST\\HttpClient $http)")
+        lines.append(
+            "    public function __construct(\\SignalWire\\REST\\HttpClient $http)"
+        )
         lines.append("    {")
         lines.append(f"        parent::__construct($http, {php_str(bp)});")
         lines.append("    }")
@@ -1220,7 +1458,7 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
         # base does NOT provide, so they are emitted.
         if method_snake in provided:
             if method_snake == "list_addresses":
-                verb, op_path, _ = spec.ops[op_id]
+                _verb, op_path, _ = spec.ops[op_id]
                 _, sibling = relative_tail(spec, anchor, markup, op_path)
                 if not sibling:
                     continue
@@ -1228,7 +1466,9 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
             else:
                 continue
         lines.append("")
-        lines.append(emit_method(spec, anchor, markup, base, method_snake, op_id).rstrip("\n"))
+        lines.append(
+            emit_method(spec, anchor, markup, base, method_snake, op_id).rstrip("\n")
+        )
 
     # set_methods (§7): require a CRUD base.
     set_methods = markup.get("set_methods") or {}
@@ -1239,10 +1479,21 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
         upd_field_schemas = update_field_schemas(spec, anchor, markup)
         for sm_name, sm in set_methods.items():
             lines.append("")
-            lines.append(emit_set_method(spec, markup, sm_name, sm, upd_fields, upd_field_schemas).rstrip("\n"))
+            lines.append(
+                emit_set_method(
+                    spec, markup, sm_name, sm, upd_fields, upd_field_schemas
+                ).rstrip("\n")
+            )
 
     lines.append("}")
-    return GEN_HEADER.format(desc=f"Generated REST resource for the {spec.name!r} namespace.") + "\n" + "\n".join(lines) + "\n"
+    return (
+        GEN_HEADER.format(
+            desc=f"Generated REST resource for the {spec.name!r} namespace."
+        )
+        + "\n"
+        + "\n".join(lines)
+        + "\n"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1269,10 +1520,15 @@ CONTAINERS = {
 # snake_case accessor; the PHP method name is snake_to_camel of it (a no-op for
 # the single-word overrides here).
 ATTR_OVERRIDE = {
-    "GenericResources": "resources", "FabricAddresses": "addresses",
-    "FabricTokens": "tokens", "DatasphereDocuments": "documents",
-    "ProjectTokens": "tokens", "PubSub": "pubsub",
-    "MessageLogs": "messages", "VoiceLogs": "voice", "FaxLogs": "fax",
+    "GenericResources": "resources",
+    "FabricAddresses": "addresses",
+    "FabricTokens": "tokens",
+    "DatasphereDocuments": "documents",
+    "ProjectTokens": "tokens",
+    "PubSub": "pubsub",
+    "MessageLogs": "messages",
+    "VoiceLogs": "voice",
+    "FaxLogs": "fax",
     "ConferenceLogs": "conferences",
 }
 
@@ -1287,7 +1543,7 @@ def container_accessor(markup: dict, name: str, container: str) -> str:
         return snake_to_camel(ATTR_OVERRIDE[name])
     # strip container-name prefix from the class name (VideoRooms -> rooms).
     lead = container[:1].upper() + container[1:]
-    stem = name[len(lead):] if name.startswith(lead) else name
+    stem = name[len(lead) :] if name.startswith(lead) else name
     # camelCase the pascal stem
     return stem[:1].lower() + stem[1:] if stem else name[:1].lower() + name[1:]
 
@@ -1307,8 +1563,7 @@ def _docblock(doc_lines: list[str]) -> str:
     php-cs-fixer-clean (a trailing ` * ` would be re-stripped by FMT, breaking
     the GEN-FRESH/FMT mutual-exclusivity — AGENT_RULES §5)."""
     out = ["/**"]
-    for ln in doc_lines:
-        out.append(f" * {ln}" if ln else " *")
+    out.extend(f" * {ln}" if ln else " *" for ln in doc_lines)
     out.append(" */")
     return "\n".join(out)
 
@@ -1320,7 +1575,9 @@ def emit_container(container: str, members: list[tuple[str, str]]) -> str:
     # @property-read docblocks so property-style access ($ns->rooms) is
     # discoverable by IDEs / PHPStan — the container class then reads exactly
     # like the python reference's attribute tree (client.fabric.ai_agents).
-    doc = [f"{cls} — generated container grouping the {container} namespace resources (§8)."]
+    doc = [
+        f"{cls} — generated container grouping the {container} namespace resources (§8)."
+    ]
     doc.append("")
     for accessor, class_name in members:
         doc.append(f"@property-read {class_name} ${accessor}")
@@ -1331,7 +1588,9 @@ def emit_container(container: str, members: list[tuple[str, str]]) -> str:
     for accessor, class_name in members:
         lines.append(f"    private ?{class_name} ${accessor} = null;")
     lines.append("")
-    lines.append("    public function __construct(\\SignalWire\\REST\\HttpClient $http)")
+    lines.append(
+        "    public function __construct(\\SignalWire\\REST\\HttpClient $http)"
+    )
     lines.append("    {")
     lines.append("        $this->http = $http;")
     lines.append("    }")
@@ -1351,7 +1610,14 @@ def emit_container(container: str, members: list[tuple[str, str]]) -> str:
     # backing fields (inaccessible from outside); a genuine unknown name throws.
     lines += _magic_get_lines()
     lines.append("}")
-    return GEN_HEADER.format(desc=f"Generated REST client container for the {container} namespace (§8).") + "\n" + "\n".join(lines) + "\n"
+    return (
+        GEN_HEADER.format(
+            desc=f"Generated REST client container for the {container} namespace (§8)."
+        )
+        + "\n"
+        + "\n".join(lines)
+        + "\n"
+    )
 
 
 def _magic_get_lines() -> list[str]:
@@ -1389,10 +1655,10 @@ def emit_resource_tree(placed) -> str:
     lazy accessor per FLAT resource + per CONTAINER. Mirrors Go's
     _GeneratedResourceTree (kept off the enumerated surface via the underscore
     module + adapter — see report)."""
-    flats = []           # (accessor, class)
+    flats = []  # (accessor, class)
     containers_seen = []  # ordered container attrs
     seen_c = set()
-    for spec, anchor, markup, container in placed:
+    for _spec, _anchor, markup, container in placed:
         name = markup["name"]
         if not container:
             flats.append((flat_accessor(name), name))
@@ -1402,10 +1668,12 @@ def emit_resource_tree(placed) -> str:
                 containers_seen.append(container)
 
     lines = []
-    tree_doc = ["ResourceTree — lazy accessors for every flat REST resource",
-                "plus the namespace containers. RestClient composes this via",
-                "`use ResourceTree;`.",
-                ""]
+    tree_doc = [
+        "ResourceTree — lazy accessors for every flat REST resource",
+        "plus the namespace containers. RestClient composes this via",
+        "`use ResourceTree;`.",
+        "",
+    ]
     # @property-read for every flat resource + container so property-style
     # access ($client->phoneNumbers, $client->fabric) is IDE/PHPStan-visible on
     # the composing RestClient — mirrors the python reference's attribute tree.
@@ -1424,13 +1692,17 @@ def emit_resource_tree(placed) -> str:
         clsname, acc = CONTAINERS[c]
         lines.append(f"    private ?{clsname} ${acc} = null;")
     lines.append("")
-    lines.append("    abstract protected function generatedHttpClient(): \\SignalWire\\REST\\HttpClient;")
+    lines.append(
+        "    abstract protected function generatedHttpClient(): \\SignalWire\\REST\\HttpClient;"
+    )
     for accessor, cls in flats:
         lines.append("")
         lines.append(f"    public function {accessor}(): {cls}")
         lines.append("    {")
         lines.append(f"        if ($this->{accessor} === null) {{")
-        lines.append(f"            $this->{accessor} = new {cls}($this->generatedHttpClient());")
+        lines.append(
+            f"            $this->{accessor} = new {cls}($this->generatedHttpClient());"
+        )
         lines.append("        }")
         lines.append(f"        return $this->{accessor};")
         lines.append("    }")
@@ -1440,7 +1712,9 @@ def emit_resource_tree(placed) -> str:
         lines.append(f"    public function {acc}(): {clsname}")
         lines.append("    {")
         lines.append(f"        if ($this->{acc} === null) {{")
-        lines.append(f"            $this->{acc} = new {clsname}($this->generatedHttpClient());")
+        lines.append(
+            f"            $this->{acc} = new {clsname}($this->generatedHttpClient());"
+        )
         lines.append("        }")
         lines.append(f"        return $this->{acc};")
         lines.append("    }")
@@ -1449,7 +1723,14 @@ def emit_resource_tree(placed) -> str:
     # idiom (client.fabric.ai_agents) works verbatim in PHP.
     lines += _magic_get_lines()
     lines.append("}")
-    return GEN_HEADER.format(desc="Generated REST resource tree trait the hand RestClient composes (§8).") + "\n" + "\n".join(lines) + "\n"
+    return (
+        GEN_HEADER.format(
+            desc="Generated REST resource tree trait the hand RestClient composes (§8)."
+        )
+        + "\n"
+        + "\n".join(lines)
+        + "\n"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1542,7 +1823,11 @@ def is_object_schema(node: dict) -> bool:
         return False
     props = node.get("properties")
     t = _schema_type(node)
-    return (t == "object" or (t is None and props)) and isinstance(props, dict) and len(props) > 0
+    return (
+        (t == "object" or (t is None and props))
+        and isinstance(props, dict)
+        and len(props) > 0
+    )
 
 
 def _resolve_type_ref(schema: dict, schemas: dict, seen: set | None = None) -> dict:
@@ -1564,12 +1849,19 @@ def _resolve_type_ref(schema: dict, schemas: dict, seen: set | None = None) -> d
         seen.add(leaf)
         return _resolve_type_ref(schemas.get(leaf) or {}, schemas, seen)
     allof = schema.get("allOf")
-    if allof and len(allof) == 1 and not schema.get("properties") and not schema.get("type"):
+    if (
+        allof
+        and len(allof) == 1
+        and not schema.get("properties")
+        and not schema.get("type")
+    ):
         return _resolve_type_ref(allof[0], schemas, seen)
     return schema
 
 
-def php_property_type(schema: dict, schemas: dict | None = None) -> tuple[str, str | None]:
+def php_property_type(
+    schema: dict, schemas: dict | None = None
+) -> tuple[str, str | None]:
     """The PHP property type for an object field + an optional PHPDoc @var type.
 
     Every property is nullable (a wire DTO field may be absent) with a ``= null``
@@ -1586,12 +1878,19 @@ def php_property_type(schema: dict, schemas: dict | None = None) -> tuple[str, s
     # newtype (uuid/jwt) or an enum recovers its wire scalar; an object / union /
     # array target keeps its structured form below.
     if schema.get("$ref") or (
-        schema.get("allOf") and len(schema["allOf"]) == 1
-        and not schema.get("properties") and not schema.get("type")
+        schema.get("allOf")
+        and len(schema["allOf"]) == 1
+        and not schema.get("properties")
+        and not schema.get("type")
     ):
         schema = _resolve_type_ref(schema, schemas)
     # A multi-member allOf / oneOf / anyOf / inline object → an open structured value.
-    if schema.get("allOf") or schema.get("oneOf") or schema.get("anyOf") or schema.get("$ref"):
+    if (
+        schema.get("allOf")
+        or schema.get("oneOf")
+        or schema.get("anyOf")
+        or schema.get("$ref")
+    ):
         return "?array", "array<string,mixed>|null"
     # A resolved enum newtype carries its base scalar via `type:`.
     t = _schema_type(schema)
@@ -1623,16 +1922,24 @@ def php_property_name(wire_key: str) -> str:
     return s
 
 
-def emit_type_class(psdk: Path, sub: str, raw_name: str, node: dict, ns_key: str, schemas: dict) -> str:
+def emit_type_class(
+    psdk: Path, sub: str, raw_name: str, node: dict, ns_key: str, schemas: dict
+) -> str:
     """Emit one PHP data class for an object schema."""
     php_name = type_name(raw_name)
     lines: list[str] = []
     lines.append("/**")
-    lines.append(f" * {php_name} — generated wire type from the {ns_key!r} spec"
-                 f" (components/schemas {raw_name!r}).")
+    lines.append(
+        f" * {php_name} — generated wire type from the {ns_key!r} spec"
+        f" (components/schemas {raw_name!r})."
+    )
     lines.append(" *")
-    lines.append(" * Pure data DTO: public typed properties named for the snake_case wire keys")
-    lines.append(" * they carry. It declares no methods — the values ARE the interface.")
+    lines.append(
+        " * Pure data DTO: public typed properties named for the snake_case wire keys"
+    )
+    lines.append(
+        " * they carry. It declares no methods — the values ARE the interface."
+    )
     lines.append(" */")
     lines.append(f"class {php_name}")
     lines.append("{")
@@ -1689,7 +1996,9 @@ def _enum_case_name(value: str) -> str:
     return name
 
 
-def emit_type_enum(sub: str, enum_name: str, values: list[str], ns_key: str, raw_name: str) -> str:
+def emit_type_enum(
+    sub: str, enum_name: str, values: list[str], ns_key: str, raw_name: str
+) -> str:
     """Emit a PHP 8.1 backed enum (backing = wire string) for an x-sdk-enum public
     enum (only PhoneCallHandler today). Surfaced as a class by the reference."""
     lines: list[str] = []
@@ -1736,7 +2045,8 @@ def emit_types(psdk: Path, outs: dict[str, str]) -> None:
                 fn = f"Types/{sub}/{enum_name}.php"
                 if fn not in outs:
                     outs[fn] = emit_type_enum(
-                        sub, enum_name, list(node.get("enum") or []), ns_key, raw_name)
+                        sub, enum_name, list(node.get("enum") or []), ns_key, raw_name
+                    )
             # Object schema → a data class. (Non-object, non-x-sdk-enum schemas —
             # scalar/array/union aliases and plain inline enums — are NOT surfaced
             # by the reference, so emit nothing for them.)
@@ -1747,12 +2057,15 @@ def emit_types(psdk: Path, outs: dict[str, str]) -> None:
                 # one spec's components.schemas; this guards against an x-sdk-enum
                 # sharing a leaf with an object, which does not occur today).
                 if fn not in outs:
-                    outs[fn] = emit_type_class(psdk, sub, raw_name, node, ns_key, schemas)
+                    outs[fn] = emit_type_class(
+                        psdk, sub, raw_name, node, ns_key, schemas
+                    )
 
 
 # ---------------------------------------------------------------------------
 # Driver.
 # ---------------------------------------------------------------------------
+
 
 def build_outputs(psdk: Path) -> dict[str, str]:
     load_bases(psdk)  # validate x-sdk-bases (fail loud); not otherwise needed
@@ -1767,7 +2080,7 @@ def build_outputs(psdk: Path) -> dict[str, str]:
     # containers
     by_container: dict[str, list[tuple[str, str]]] = {}
     order: list[str] = []
-    for spec, anchor, markup, container in placed:
+    for _spec, _anchor, markup, container in placed:
         if not container:
             continue
         if container not in by_container:
@@ -1777,7 +2090,9 @@ def build_outputs(psdk: Path) -> dict[str, str]:
         by_container[container].append((acc, markup["name"]))
     for container in order:
         if container not in CONTAINERS:
-            raise SystemExit(f"container attr {container!r} has no PHP container class (add to CONTAINERS)")
+            raise SystemExit(
+                f"container attr {container!r} has no PHP container class (add to CONTAINERS)"
+            )
         cls, _ = CONTAINERS[container]
         outs[cls + ".php"] = emit_container(container, by_container[container])
     outs["ResourceTree.php"] = emit_resource_tree(placed)
@@ -1791,25 +2106,32 @@ def build_outputs(psdk: Path) -> dict[str, str]:
     # keyword-only kind, array element types, or the open ``extras`` dict).
     # Keyed "<ClassName>::<phpMethod>". Deterministic ordering for GEN-FRESH.
     sidecar: dict[str, list[dict]] = {}
-    for (cls, php_method) in sorted(_SIDECAR.keys()):
+    for cls, php_method in sorted(_SIDECAR.keys()):
         sidecar[f"{cls}::{php_method}"] = _SIDECAR[(cls, php_method)]
     import json as _json
-    outs["rest_signatures.json"] = _json.dumps(
-        {
-            "_comment": "Code generated by scripts/generate_rest.py; DO NOT EDIT. "
-                        "Canonical typed-param records for generated REST operation/"
-                        "command/set methods; consumed by scripts/enumerate_signatures.py "
-                        "to unfold the reflected PHP params onto the Python oracle shape.",
-            "methods": sidecar,
-        },
-        indent=2, sort_keys=False,
-    ) + "\n"
+
+    outs["rest_signatures.json"] = (
+        _json.dumps(
+            {
+                "_comment": "Code generated by scripts/generate_rest.py; DO NOT EDIT. "
+                "Canonical typed-param records for generated REST operation/"
+                "command/set methods; consumed by scripts/enumerate_signatures.py "
+                "to unfold the reflected PHP params onto the Python oracle shape.",
+                "methods": sidecar,
+            },
+            indent=2,
+            sort_keys=False,
+        )
+        + "\n"
+    )
     return outs
 
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="GEN-FRESH: exit non-zero if stale")
+    ap.add_argument(
+        "--check", action="store_true", help="GEN-FRESH: exit non-zero if stale"
+    )
     ap.add_argument("--out", default="", help="scratch: emit flat into this dir")
     args = ap.parse_args(argv)
 
@@ -1819,7 +2141,9 @@ def main(argv: list[str]) -> int:
     if args.out:
         out_dir = Path(args.out)
     else:
-        out_dir = repo_root() / "src" / "SignalWire" / "REST" / "Namespaces" / "Generated"
+        out_dir = (
+            repo_root() / "src" / "SignalWire" / "REST" / "Namespaces" / "Generated"
+        )
 
     if args.check:
         stale = []
@@ -1836,9 +2160,11 @@ def main(argv: list[str]) -> int:
             if rel not in expected:
                 stale.append(f"{p} (leftover — not in generator output)")
         if stale:
-            sys.stderr.write("GEN-FRESH FAIL: %d generated REST file(s) stale:\n" % len(stale))
+            sys.stderr.write(
+                f"GEN-FRESH FAIL: {len(stale)} generated REST file(s) stale:\n"
+            )
             for s in stale:
-                sys.stderr.write("  - %s\n" % s)
+                sys.stderr.write(f"  - {s}\n")
             return 1
         print("GEN-FRESH: generated REST files match the canonical specs.")
         return 0

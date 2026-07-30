@@ -195,6 +195,26 @@ test_gate() {
     PARATEST_PROCS="$PARALLEL_PROCS" bash scripts/run-tests.sh --parallel
 }
 
+# REPO-LINT — ruff check over this repo's hand-written Python (scripts/*.py).
+repo_lint_gate() {
+    sw_ruff check scripts/
+}
+
+# REPO-FMT — ruff format over this repo's hand-written Python (scripts/*.py).
+# LOCAL applies in place; CI runs --check (read-only), same contract as the PHP
+# FMT gate above.
+repo_fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        sw_ruff format --check scripts/
+    else
+        sw_ruff format scripts/ >/dev/null || return 1
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (REPO-FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        sw_ruff format --check scripts/
+    fi
+}
+
 # ---- Part 5: the per-gate --fn helpers are now DEAD — reproduced in the suites -
 # surface_fresh_gate (SURFACE-FRESH), surface_diff_gate (SURFACE-DIFF),
 # rest_coverage_gate (REST-COVERAGE), spec_parity_gate (SPEC-PARITY), and
@@ -347,6 +367,23 @@ sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
 
 sched_gate LINT defer=1 desc="run-lint.sh (phpstan level 9, zero findings)" \
     -- bash scripts/run-lint.sh
+
+# REPO-LINT / REPO-FMT — the 8 hand-written Python programs under scripts/ held to
+# the reference implementation's own ruff ruleset (ruff.toml mirrors
+# signalwire-python/pyproject.toml). Wired 2026-07-30 once the burn reached ZERO
+# (54 -> 0): burn to zero BEFORE wire, so the gate never lands red.
+#
+# This code was linted and format-checked by NOTHING until now. phpstan.neon lists
+# `scripts` in its paths, but phpstan only reads *.php, so 8586 lines of Python
+# were silently uncovered — including the two enumerators that PRODUCE the
+# port_surface.json / port_signatures.json the SURFACE and DRIFT gates compare
+# against. Cheap static checks, no build and no mock, so they belong in the
+# per-PR wave next to FMT/LINT.
+sched_gate REPO-LINT defer=1 desc="ruff check, zero findings, over scripts/*.py" \
+    --fn repo_lint_gate
+
+sched_gate REPO-FMT defer=1 desc="ruff format over scripts/*.py (local: apply; CI: --check)" \
+    --fn repo_fmt_gate
 
 # PUBLIC-JARGON stays standalone (public phpDoc analysis, not a suite family).
 sched_gate PUBLIC-JARGON res=dayone desc="no internal porting jargon in public phpDoc doc-comments" \

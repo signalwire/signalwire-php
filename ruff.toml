@@ -1,0 +1,66 @@
+# ruff config for signalwire-php's hand-written Python (the REPO-LINT/REPO-FMT gates).
+#
+# This repo ships 8 Python programs under scripts/ — the surface/signature
+# enumerators and the REST/RELAY/SWML/SWAIG code generators. They are
+# load-bearing: enumerate_signatures.py and enumerate_surface.py PRODUCE the
+# port_signatures.json / port_surface.json that the DRIFT and SURFACE gates
+# compare against, and the generate_*.py scripts emit the committed generated
+# trees that GEN-FRESH byte-checks.
+#
+# Until 2026-07-30 none of it was linted or format-checked by anything. phpstan
+# is configured with `scripts` in its paths, but phpstan only reads *.php, so
+# the Python was silently uncovered. This config closes that hole at the same
+# bar the rest of the repo meets.
+#
+# Rule selection MIRRORS the reference implementation's
+# (signalwire-python/pyproject.toml [tool.ruff.lint]) so the fleet is
+# consistent — deliberately not a bespoke set.
+
+target-version = "py310"
+line-length = 88
+
+[format]
+# Pin STABLE formatting explicitly, matching the reference. Without this, CI's
+# `ruff format --check` can resolve preview-mode formatting while a local stable
+# run leaves the file unchanged — a local != CI split with no visible cause.
+preview = false
+
+[lint]
+# E4/E7/E9 + F are the ruff defaults (E501 line-length intentionally excluded —
+# formatting is owned by `ruff format`, not the linter). B = flake8-bugbear
+# (likely-bug patterns), S = flake8-bandit (security smells). Identical to the
+# reference's selection.
+select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "RUF", "UP"]
+
+[lint.per-file-ignores]
+# Every entry below names SPECIFIC rules for a SPECIFIC file, states why the
+# construct is correct there, and leaves the rule ON everywhere else. None of
+# them is a directory carve-out or a lowered bar.
+#
+# S603 (subprocess call) / S607 (partial executable path): these four scripts
+# shell out to `php`, `git` or `sys.executable` with FIXED, list-form argument
+# vectors under the default shell=False — so there is no shell to interpolate
+# into and no untrusted input reaches the command line. The only non-literal
+# arguments are paths the script itself derived from its own location
+# (HERE / PORT_ROOT / repo_root()). Resolving `php` and `git` via PATH is the
+# normal idiom for a developer-run generator, and both are prerequisites of
+# running this repo at all. Same rationale, and the same per-file scoping, as
+# the reference implementation grants signalwire/cli/dokku.py and its
+# subprocess-using tests (signalwire-python/pyproject.toml:216-225).
+
+# E402 (import not at top): this file MUST run `sys.path.insert(0, str(HERE))`
+# before `from enumerate_surface import ...`, because the sibling module is
+# imported by path rather than as an installed package. The ordering is
+# structurally forced, exactly as it is in the reference's tests/conftest.py.
+"scripts/enumerate_signatures.py" = ["S603", "S607", "E402"]
+
+"scripts/enumerate_surface.py" = ["S603", "S607"]
+
+"scripts/generate_exemptions.py" = ["S603"]
+
+# RUF002/RUF003 (ambiguous unicode in docstring/comment): this generator's
+# docs describe its join as a CROSS PRODUCT — "registry routes × spec
+# operationIds" — where `×` is the mathematical operator being named, not a
+# mistyped letter x. Rewriting it to `x` would make the sentence read as a
+# variable name and lose the meaning.
+"scripts/generate_rest_tests.py" = ["S603", "S607", "RUF002", "RUF003"]
