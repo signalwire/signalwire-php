@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Create an AI agent, assign a phone number, and place a test call.
  *
@@ -48,18 +50,22 @@ foreach (($agents['data'] ?? []) as $a) {
 
 // 3. Search for a phone number
 echo "\nSearching for available phone numbers...\n";
-$available = safe('Search numbers', fn() =>
+$available = safe(
+    'Search numbers',
+    fn () =>
     $client->phoneNumbers()->search(['areacode' => '512', 'max_results' => 3])
 );
 if ($available) {
     foreach (($available['data'] ?? []) as $num) {
-        echo "  - " . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
+        echo '  - ' . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
     }
 }
 
 // 4. Place a test call (requires valid numbers)
 echo "\nPlacing a test call...\n";
-safe('Dial', fn() =>
+safe(
+    'Dial',
+    fn () =>
     $client->calling()->dial(
         from_: '+15559876543',
         to:    '+15551234567',

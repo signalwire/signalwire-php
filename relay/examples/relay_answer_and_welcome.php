@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Answer an inbound call and say "Welcome to SignalWire!"
  *
@@ -20,7 +22,7 @@ $client = new Client([
 ]);
 
 $client->onCall(function ($call) {
-    echo "Incoming call: " . $call->callId . "\n";
+    echo 'Incoming call: ' . $call->callId . "\n";
     $call->answer();
 
     $action = $call->play(
@@ -29,7 +31,7 @@ $client->onCall(function ($call) {
     $action->wait();
 
     $call->hangup();
-    echo "Call ended: " . $call->callId . "\n";
+    echo 'Call ended: ' . $call->callId . "\n";
 });
 
 $client->connect();  // opens the WebSocket and authenticates (throws on failure)

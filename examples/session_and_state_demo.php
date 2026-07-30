@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Session and State Demo
  *
@@ -99,8 +101,12 @@ $agent->defineTool(
     ],
     handler: function (array $args, array $raw): FunctionResult {
         $prefs = [];
-        if (!empty($args['email_notifications'])) $prefs[] = 'email';
-        if (!empty($args['sms_notifications']))   $prefs[] = 'SMS';
+        if (!empty($args['email_notifications'])) {
+            $prefs[] = 'email';
+        }
+        if (!empty($args['sms_notifications'])) {
+            $prefs[] = 'SMS';
+        }
         $prefStr = !empty($prefs) ? implode(' and ', $prefs) : 'none';
         return new FunctionResult(
             "Preferences updated: {$prefStr} notifications enabled."

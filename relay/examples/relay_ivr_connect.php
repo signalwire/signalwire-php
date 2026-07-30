@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: IVR menu with DTMF collection, playback, and call connect.
  *
@@ -34,7 +36,7 @@ function tts(string $text): array
 }
 
 $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
-    echo "Incoming call: " . $call->callId . "\n";
+    echo 'Incoming call: ' . $call->callId . "\n";
     $call->answer();
 
     // Play greeting and collect a single digit
@@ -99,7 +101,7 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
         while ($call->state !== 'ended') {
             $client->readOnce();
         }
-        echo "Connected call ended: " . $call->callId . "\n";
+        echo 'Connected call ended: ' . $call->callId . "\n";
         return;
     } else {
         // No input or invalid
@@ -110,7 +112,7 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
     }
 
     $call->hangup();
-    echo "Call ended: " . $call->callId . "\n";
+    echo 'Call ended: ' . $call->callId . "\n";
 });
 
 $client->connect();  // opens the WebSocket and authenticates (throws on failure)

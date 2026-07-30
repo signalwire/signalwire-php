@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Conference infrastructure, cXML resources, generic routing, and tokens.
  *
@@ -41,7 +43,7 @@ echo "\nListing conference room addresses...\n";
 safe('List addresses', function () use ($client, $roomId) {
     $addrs = $client->fabric()->conferenceRooms()->listAddresses($roomId);
     foreach (($addrs['data'] ?? []) as $a) {
-        echo "  - " . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
+        echo '  - ' . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
     }
 });
 
@@ -74,10 +76,10 @@ echo "  Created relay application: {$relayId}\n";
 
 // 6. List all fabric resources
 echo "\nListing all fabric resources...\n";
-$resources = safe('List resources', fn() => $client->fabric()->resources()->list());
+$resources = safe('List resources', fn () => $client->fabric()->resources()->list());
 if ($resources) {
     foreach (array_slice($resources['data'] ?? [], 0, 5) as $r) {
-        echo "  - " . ($r['type'] ?? 'unknown') . ": "
+        echo '  - ' . ($r['type'] ?? 'unknown') . ': '
             . ($r['display_name'] ?? $r['id'] ?? 'unknown') . "\n";
     }
 }
@@ -86,23 +88,27 @@ if ($resources) {
 if ($resources && !empty($resources['data'])) {
     $first = $resources['data'][0];
     if (!empty($first['id'])) {
-        $detail = safe('Get resource', fn() => $client->fabric()->resources()->get($first['id']));
+        $detail = safe('Get resource', fn () => $client->fabric()->resources()->get($first['id']));
         if ($detail) {
-            echo "  Resource detail: " . ($detail['display_name'] ?? 'N/A')
-                . " (" . ($detail['type'] ?? 'N/A') . ")\n";
+            echo '  Resource detail: ' . ($detail['display_name'] ?? 'N/A')
+                . ' (' . ($detail['type'] ?? 'N/A') . ")\n";
         }
     }
 }
 
 // 8. Assign a phone route (demo)
 echo "\nAssigning phone route (demo)...\n";
-safe('Phone route', fn() =>
+safe(
+    'Phone route',
+    fn () =>
     $client->fabric()->resources()->assignPhoneRoute($relayId, phoneRouteId: 'route-1', handler: 'relay_application')
 );
 
 // 9. Assign a domain application (demo)
 echo "\nAssigning domain application (demo)...\n";
-safe('Domain app', fn() =>
+safe(
+    'Domain app',
+    fn () =>
     $client->fabric()->resources()->assignDomainApplication($relayId, domainApplicationId: 'app-1')
 );
 
@@ -111,17 +117,23 @@ echo "\nGenerating tokens...\n";
 safe('Guest token', function () use ($client, $relayId) {
     $guest = $client->fabric()->tokens()->createGuestToken(allowedAddresses: [$relayId]);
     $t = $guest['token'] ?? '';
-    if ($t) echo "  Guest token: " . substr($t, 0, 40) . "...\n";
+    if ($t) {
+        echo '  Guest token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 safe('Invite token', function () use ($client, $relayId) {
     $invite = $client->fabric()->tokens()->createInviteToken(addressId: $relayId);
     $t = $invite['token'] ?? '';
-    if ($t) echo "  Invite token: " . substr($t, 0, 40) . "...\n";
+    if ($t) {
+        echo '  Invite token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 safe('Embed token', function () use ($client) {
     $embed = $client->fabric()->tokens()->createEmbedToken(token: 'guest-token-value');
     $t = $embed['token'] ?? '';
-    if ($t) echo "  Embed token: " . substr($t, 0, 40) . "...\n";
+    if ($t) {
+        echo '  Embed token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 
 // 11. Clean up

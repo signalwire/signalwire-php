@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * DataSphere Serverless Environment Demo
  *
@@ -71,10 +73,14 @@ try {
     echo "Added DataSphere Serverless skill\n";
     echo "  Document ID: {$documentId}\n";
     echo "  Count: {$count}, Distance: {$distance}\n";
-    if ($tags) echo "  Tags: " . implode(', ', $tags) . "\n";
-    if ($language) echo "  Language: {$language}\n";
+    if ($tags) {
+        echo '  Tags: ' . implode(', ', $tags) . "\n";
+    }
+    if ($language) {
+        echo "  Language: {$language}\n";
+    }
 } catch (\Exception $e) {
-    echo "Failed: " . $e->getMessage() . "\n";
+    echo 'Failed: ' . $e->getMessage() . "\n";
     exit(1);
 }
 

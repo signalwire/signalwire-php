@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Dial a number and play "Welcome to SignalWire" using the RELAY client.
  *
@@ -37,7 +39,7 @@ try {
         ['dial_timeout' => 30],
     );
 } catch (\Exception $e) {
-    echo "Dial failed: " . $e->getMessage() . "\n";
+    echo 'Dial failed: ' . $e->getMessage() . "\n";
     $client->disconnect();
     exit(1);
 }

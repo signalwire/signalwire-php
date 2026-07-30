@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Full phone number inventory lifecycle.
  *
@@ -32,12 +34,14 @@ function safe(string $label, callable $fn): mixed
 
 // 1. Search for available phone numbers
 echo "Searching available numbers...\n";
-$available = safe('Search', fn() =>
+$available = safe(
+    'Search',
+    fn () =>
     $client->phoneNumbers()->search(['areacode' => '512', 'max_results' => 3])
 );
 if ($available) {
     foreach (($available['data'] ?? []) as $num) {
-        echo "  - " . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
+        echo '  - ' . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
     }
 }
 
@@ -52,27 +56,29 @@ $numId = $number ? ($number['id'] ?? null) : null;
 
 // 3. List and get owned numbers
 echo "\nListing owned numbers...\n";
-$owned = safe('List', fn() => $client->phoneNumbers()->list());
+$owned = safe('List', fn () => $client->phoneNumbers()->list());
 if ($owned) {
     foreach (array_slice($owned['data'] ?? [], 0, 5) as $n) {
-        echo "  - " . ($n['number'] ?? 'unknown') . " ({$n['id']})\n";
+        echo '  - ' . ($n['number'] ?? 'unknown') . " ({$n['id']})\n";
     }
 }
 if ($numId) {
-    $detail = safe('Get', fn() => $client->phoneNumbers()->get($numId));
-    if ($detail) echo "  Detail: " . ($detail['number'] ?? 'N/A') . "\n";
+    $detail = safe('Get', fn () => $client->phoneNumbers()->get($numId));
+    if ($detail) {
+        echo '  Detail: ' . ($detail['number'] ?? 'N/A') . "\n";
+    }
 }
 
 // 4. Update a number
 if ($numId) {
     echo "\nUpdating number {$numId}...\n";
-    safe('Update', fn() => $client->phoneNumbers()->update($numId, ['name' => 'Main Line']));
+    safe('Update', fn () => $client->phoneNumbers()->update($numId, ['name' => 'Main Line']));
 }
 
 // 5. Create a number group
 echo "\nCreating number group...\n";
 $groupId = null;
-$group = safe('Create group', fn() => $client->numberGroups()->create(['name' => 'Sales Pool']));
+$group = safe('Create group', fn () => $client->numberGroups()->create(['name' => 'Sales Pool']));
 $groupId = $group ? ($group['id'] ?? null) : null;
 
 // 6. Add a membership
@@ -81,11 +87,13 @@ if ($groupId && $numId) {
     safe('Add membership', function () use ($client, $groupId, $numId) {
         $membership = $client->numberGroups()->addMembership($groupId, $numId);
         $memId = $membership['id'] ?? null;
-        if ($memId) echo "  Membership: {$memId}\n";
+        if ($memId) {
+            echo "  Membership: {$memId}\n";
+        }
 
         $memberships = $client->numberGroups()->listMemberships($groupId);
         foreach (($memberships['data'] ?? []) as $m) {
-            echo "  - Member: " . ($m['id'] ?? 'unknown') . "\n";
+            echo '  - Member: ' . ($m['id'] ?? 'unknown') . "\n";
         }
     });
 }
@@ -94,7 +102,7 @@ if ($groupId && $numId) {
 echo "\nLooking up carrier info...\n";
 safe('Lookup', function () use ($client) {
     $info = $client->lookup()->phoneNumber('+15125551234');
-    echo "  Carrier: " . (($info['carrier'] ?? [])['name'] ?? 'unknown') . "\n";
+    echo '  Carrier: ' . (($info['carrier'] ?? [])['name'] ?? 'unknown') . "\n";
 });
 
 // 8. Create a verified caller
@@ -114,7 +122,7 @@ safe('Verified caller', function () use ($client, &$callerId) {
 echo "\nGetting SIP profile...\n";
 safe('SIP profile', function () use ($client) {
     $profile = $client->sipProfile()->get();
-    echo "  SIP profile: " . (is_array($profile) ? 'OK' : $profile) . "\n";
+    echo '  SIP profile: ' . (is_array($profile) ? 'OK' : $profile) . "\n";
     $client->sipProfile()->update(defaultCodecs: ['PCMU', 'PCMA']);
     echo "  Updated SIP codecs\n";
 });
@@ -124,7 +132,7 @@ echo "\nListing short codes...\n";
 safe('Short codes', function () use ($client) {
     $codes = $client->shortCodes()->list();
     foreach (($codes['data'] ?? []) as $sc) {
-        echo "  - " . ($sc['short_code'] ?? 'unknown') . "\n";
+        echo '  - ' . ($sc['short_code'] ?? 'unknown') . "\n";
     }
 });
 
@@ -149,7 +157,15 @@ safe('Address', function () use ($client, &$addrId) {
 
 // 12. Clean up
 echo "\nCleaning up...\n";
-if ($addrId)    safe('Delete address',         fn() => $client->addresses()->delete($addrId));
-if ($callerId)  safe('Delete verified caller', fn() => $client->verifiedCallers()->delete($callerId));
-if ($groupId)   safe('Delete number group',    fn() => $client->numberGroups()->delete($groupId));
-if ($numId)     safe('Release number',         fn() => $client->phoneNumbers()->delete($numId));
+if ($addrId) {
+    safe('Delete address', fn () => $client->addresses()->delete($addrId));
+}
+if ($callerId) {
+    safe('Delete verified caller', fn () => $client->verifiedCallers()->delete($callerId));
+}
+if ($groupId) {
+    safe('Delete number group', fn () => $client->numberGroups()->delete($groupId));
+}
+if ($numId) {
+    safe('Release number', fn () => $client->phoneNumbers()->delete($numId));
+}

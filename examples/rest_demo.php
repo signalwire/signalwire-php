@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * REST Client Demo
  *
@@ -34,10 +36,10 @@ function safe(string $label, callable $fn): mixed
 
 // 1. List phone numbers
 echo "Listing phone numbers...\n";
-$numbers = safe('List numbers', fn() => $client->phoneNumbers->list());
+$numbers = safe('List numbers', fn () => $client->phoneNumbers->list());
 if ($numbers) {
     foreach (array_slice($numbers['data'] ?? [], 0, 5) as $n) {
-        echo "    - " . ($n['number'] ?? 'unknown') . "\n";
+        echo '    - ' . ($n['number'] ?? 'unknown') . "\n";
     }
 }
 
@@ -46,7 +48,7 @@ echo "\nSearching available numbers...\n";
 safe('Search 512', function () use ($client) {
     $avail = $client->phoneNumbers->search(['areacode' => '512', 'max_results' => 3]);
     foreach (($avail['data'] ?? []) as $n) {
-        echo "    - " . ($n['e164'] ?? $n['number'] ?? 'unknown') . "\n";
+        echo '    - ' . ($n['e164'] ?? $n['number'] ?? 'unknown') . "\n";
     }
 });
 

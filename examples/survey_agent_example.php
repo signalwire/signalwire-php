@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Survey Agent Example
  *
@@ -84,11 +86,11 @@ $agent->defineTool(
         $feedback = strtolower($args['feedback'] ?? '');
 
         $positive = array_sum(array_map(
-            fn($w) => str_contains($feedback, $w) ? 1 : 0,
+            fn ($w) => str_contains($feedback, $w) ? 1 : 0,
             ['great', 'good', 'excellent', 'love', 'like', 'helpful']
         ));
         $negative = array_sum(array_map(
-            fn($w) => str_contains($feedback, $w) ? 1 : 0,
+            fn ($w) => str_contains($feedback, $w) ? 1 : 0,
             ['bad', 'poor', 'terrible', 'hate', 'dislike', 'difficult']
         ));
 
@@ -100,7 +102,7 @@ $agent->defineTool(
 
 $agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
-        echo "Survey completed: " . json_encode($summary, JSON_PRETTY_PRINT) . "\n";
+        echo 'Survey completed: ' . json_encode($summary, JSON_PRETTY_PRINT) . "\n";
     }
 });
 

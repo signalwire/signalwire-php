@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Provision a SIP-enabled user on Fabric.
  *
@@ -43,7 +45,8 @@ echo "  Created subscriber: {$subId}\n";
 
 // 2. Add a SIP endpoint
 echo "\nCreating SIP endpoint on subscriber...\n";
-$endpoint = $client->fabric()->subscribers()->createSipEndpoint($subId,
+$endpoint = $client->fabric()->subscribers()->createSipEndpoint(
+    $subId,
     username: 'alice_sip',
     password: 'SecurePass123!',
 );
@@ -60,7 +63,7 @@ foreach (($endpoints['data'] ?? []) as $ep) {
 // 4. Get specific endpoint details
 echo "\nGetting SIP endpoint {$epId}...\n";
 $epDetail = $client->fabric()->subscribers()->getSipEndpoint($subId, $epId);
-echo "  Username: " . ($epDetail['username'] ?? 'N/A') . "\n";
+echo '  Username: ' . ($epDetail['username'] ?? 'N/A') . "\n";
 
 // 5. Create a standalone SIP gateway
 echo "\nCreating SIP gateway...\n";
@@ -79,13 +82,13 @@ echo "\nListing fabric addresses...\n";
 safe('List addresses', function () use ($client) {
     $addresses = $client->fabric()->addresses()->list();
     foreach (array_slice($addresses['data'] ?? [], 0, 5) as $addr) {
-        echo "  - " . ($addr['display_name'] ?? $addr['id'] ?? 'unknown') . "\n";
+        echo '  - ' . ($addr['display_name'] ?? $addr['id'] ?? 'unknown') . "\n";
     }
 
     // 7. Get a specific address
     if (!empty($addresses['data']) && !empty($addresses['data'][0]['id'])) {
         $addrDetail = $client->fabric()->addresses()->get($addresses['data'][0]['id']);
-        echo "  Address detail: " . ($addrDetail['display_name'] ?? 'N/A') . "\n";
+        echo '  Address detail: ' . ($addrDetail['display_name'] ?? 'N/A') . "\n";
     }
 });
 
@@ -96,7 +99,9 @@ safe('Subscriber token', function () use ($client, $innerSubId) {
         reference: $innerSubId,
     );
     $t = $token['token'] ?? '';
-    if ($t) echo "  Token: " . substr($t, 0, 40) . "...\n";
+    if ($t) {
+        echo '  Token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 
 // 9. Clean up

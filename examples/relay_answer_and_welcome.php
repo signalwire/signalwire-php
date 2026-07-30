@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * RELAY Client Demo
  *
@@ -23,7 +25,7 @@ $client = new Client([
 ]);
 
 $client->onCall(function ($call) {
-    echo "Incoming call from RELAY: " . $call->callId . "\n";
+    echo 'Incoming call from RELAY: ' . $call->callId . "\n";
     $call->answer();
 
     // Play a welcome message
@@ -45,7 +47,7 @@ $client->onCall(function ($call) {
     $bye->wait();
 
     $call->hangup();
-    echo "Call ended: " . $call->callId . "\n";
+    echo 'Call ended: ' . $call->callId . "\n";
 });
 
 $client->connect();  // opens the WebSocket and authenticates (throws on failure)

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Upload a document to Datasphere and run a semantic search.
  *
@@ -36,7 +38,7 @@ for ($i = 1; $i <= 30; $i++) {
     echo "  Poll {$i}: status={$status}\n";
 
     if ($status === 'completed') {
-        echo "  Vectorized! Chunks: " . ($docStatus['number_of_chunks'] ?? 0) . "\n";
+        echo '  Vectorized! Chunks: ' . ($docStatus['number_of_chunks'] ?? 0) . "\n";
         break;
     }
     if ($status === 'error' || $status === 'failed') {

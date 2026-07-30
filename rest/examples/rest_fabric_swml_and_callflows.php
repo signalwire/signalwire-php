@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Deploy a voice application end-to-end with SWML and call flows.
  *
@@ -60,7 +62,9 @@ echo "  Created call flow: {$flowId}\n";
 echo "\nDeploying call flow version...\n";
 // Deploying snapshots the current call-flow definition as a new version; the
 // deploy request itself carries no body fields (the version is server-assigned).
-safe('Deploy version', fn() =>
+safe(
+    'Deploy version',
+    fn () =>
     $client->fabric()->callFlows()->deployVersion($flowId, [])
 );
 
@@ -69,7 +73,7 @@ echo "\nListing call flow versions...\n";
 safe('List versions', function () use ($client, $flowId) {
     $versions = $client->fabric()->callFlows()->listVersions($flowId);
     foreach (($versions['data'] ?? []) as $v) {
-        echo "  - Version: " . ($v['label'] ?? $v['id'] ?? 'unknown') . "\n";
+        echo '  - Version: ' . ($v['label'] ?? $v['id'] ?? 'unknown') . "\n";
     }
 });
 
@@ -78,7 +82,7 @@ echo "\nListing call flow addresses...\n";
 safe('List addresses', function () use ($client, $flowId) {
     $addrs = $client->fabric()->callFlows()->listAddresses($flowId);
     foreach (($addrs['data'] ?? []) as $a) {
-        echo "  - " . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
+        echo '  - ' . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
     }
 });
 

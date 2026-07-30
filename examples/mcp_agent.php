@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * MCP Integration -- Client and Server
  *
@@ -47,7 +49,8 @@ $agent->addMcpServer(
 $agent->promptAddSection('Role', 'You are a helpful customer support agent. '
     . 'You have access to the customer\'s profile via global_data.');
 
-$agent->promptAddSection('Customer Context',
+$agent->promptAddSection(
+    'Customer Context',
     "Customer name: \${global_data.customer_name}\n"
     . "Account status: \${global_data.account_status}\n"
     . 'If customer data is not available, ask the caller for their name.',
