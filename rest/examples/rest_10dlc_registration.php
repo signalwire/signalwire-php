@@ -96,6 +96,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // 1. Register a brand
 echo "Registering 10DLC brand...\n";
 $brand = safe('Brand', fn () => $client->registry()->brands()->create([
@@ -117,7 +134,7 @@ if ($brands) {
         echo '  - ' . field($b, 'id') . ': ' . field($b, 'name', 'unnamed') . "\n";
     }
     if (!$brandId && !empty($brands['data'])) {
-        $brandId = $brands['data'][0]['id'];
+        $brandId = firstRow($brands)['id'];
     }
 }
 
@@ -202,7 +219,7 @@ if ($campaignId) {
     $numbers = safe('List numbers', fn () => $client->registry()->campaigns()->listNumbers($campaignId));
     if ($numbers) {
         foreach (dataRows($numbers) as $n) {
-            echo '  - ' . ($n['phone_number'] ?? $n['id'] ?? 'unknown') . "\n";
+            echo '  - ' . fieldAny($n, 'phone_number', 'id', 'unknown') . "\n";
         }
     }
 

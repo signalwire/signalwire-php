@@ -93,6 +93,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // --- Video Rooms ---
 
 // 1. Create a video room
@@ -142,7 +159,7 @@ if ($sessions) {
 
 // 5. Get session details
 if ($sessions && !empty($sessions['data'])) {
-    $first = $sessions['data'][0];
+    $first = firstRow($sessions);
     if (!empty($first['id'])) {
         $sid = $first['id'];
         safe('Session detail', function () use ($client, $sid) {
@@ -175,13 +192,13 @@ if ($roomRecs && !empty($roomRecs['data'])) {
         echo '  - Recording ' . field($rr, 'id') . ': ' . field($rr, 'duration', 'N/A') . "s\n";
     }
 
-    if (!empty($roomRecs['data'][0]['id'])) {
+    if (!empty(firstRow($roomRecs)['id'])) {
         safe('Get recording', function () use ($client, $roomRecs) {
-            $recDetail = $client->video()->roomRecordings()->get($roomRecs['data'][0]['id']);
+            $recDetail = $client->video()->roomRecordings()->get(firstRow($roomRecs)['id']);
             echo '  Recording detail: ' . field($recDetail, 'duration', 'N/A') . "s\n";
         });
         safe('Recording events', function () use ($client, $roomRecs) {
-            $recEvents = $client->video()->roomRecordings()->listEvents($roomRecs['data'][0]['id']);
+            $recEvents = $client->video()->roomRecordings()->listEvents(firstRow($roomRecs)['id']);
             echo '  Recording events: ' . count(dataRows($recEvents)) . "\n";
         });
     }

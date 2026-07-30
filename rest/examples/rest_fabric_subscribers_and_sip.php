@@ -93,6 +93,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // 1. Create a subscriber
 echo "Creating subscriber...\n";
 $subscriber = $client->fabric()->subscribers()->create([
@@ -143,12 +160,12 @@ echo "\nListing fabric addresses...\n";
 safe('List addresses', function () use ($client) {
     $addresses = $client->fabric()->addresses()->list();
     foreach (array_slice(dataRows($addresses), 0, 5) as $addr) {
-        echo '  - ' . ($addr['display_name'] ?? $addr['id'] ?? 'unknown') . "\n";
+        echo '  - ' . fieldAny($addr, 'display_name', 'id', 'unknown') . "\n";
     }
 
     // 7. Get a specific address
-    if (!empty($addresses['data']) && !empty($addresses['data'][0]['id'])) {
-        $addrDetail = $client->fabric()->addresses()->get($addresses['data'][0]['id']);
+    if (!empty($addresses['data']) && !empty(firstRow($addresses)['id'])) {
+        $addrDetail = $client->fabric()->addresses()->get(firstRow($addresses)['id']);
         echo '  Address detail: ' . field($addrDetail, 'display_name', 'N/A') . "\n";
     }
 });

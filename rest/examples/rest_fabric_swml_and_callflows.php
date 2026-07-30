@@ -93,6 +93,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // 1. Create a SWML script
 echo "Creating SWML script...\n";
 $swml = $client->fabric()->swmlScripts()->create([
@@ -134,7 +151,7 @@ echo "\nListing call flow versions...\n";
 safe('List versions', function () use ($client, $flowId) {
     $versions = $client->fabric()->callFlows()->listVersions($flowId);
     foreach (dataRows($versions) as $v) {
-        echo '  - Version: ' . ($v['label'] ?? $v['id'] ?? 'unknown') . "\n";
+        echo '  - Version: ' . fieldAny($v, 'label', 'id', 'unknown') . "\n";
     }
 });
 
@@ -143,7 +160,7 @@ echo "\nListing call flow addresses...\n";
 safe('List addresses', function () use ($client, $flowId) {
     $addrs = $client->fabric()->callFlows()->listAddresses($flowId);
     foreach (dataRows($addrs) as $a) {
-        echo '  - ' . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
+        echo '  - ' . fieldAny($a, 'display_name', 'id', 'unknown') . "\n";
     }
 });
 

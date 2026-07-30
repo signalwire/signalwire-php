@@ -93,6 +93,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // 1. Create a conference room
 echo "Creating conference room...\n";
 $room = $client->fabric()->conferenceRooms()->create(['name' => 'team-standup']);
@@ -104,7 +121,7 @@ echo "\nListing conference room addresses...\n";
 safe('List addresses', function () use ($client, $roomId) {
     $addrs = $client->fabric()->conferenceRooms()->listAddresses($roomId);
     foreach (dataRows($addrs) as $a) {
-        echo '  - ' . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
+        echo '  - ' . fieldAny($a, 'display_name', 'id', 'unknown') . "\n";
     }
 });
 
@@ -141,13 +158,13 @@ $resources = safe('List resources', fn () => $client->fabric()->resources()->lis
 if ($resources) {
     foreach (array_slice(dataRows($resources), 0, 5) as $r) {
         echo '  - ' . field($r, 'type', 'unknown') . ': '
-            . ($r['display_name'] ?? $r['id'] ?? 'unknown') . "\n";
+            . fieldAny($r, 'display_name', 'id', 'unknown') . "\n";
     }
 }
 
 // 7. Get a specific resource
 if ($resources && !empty($resources['data'])) {
-    $first = $resources['data'][0];
+    $first = firstRow($resources);
     if (!empty($first['id'])) {
         $detail = safe('Get resource', fn () => $client->fabric()->resources()->get($first['id']));
         if ($detail) {

@@ -93,6 +93,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // --- Queues ---
 
 // 1. Create a queue
@@ -110,7 +127,7 @@ echo "\nListing queues...\n";
 $queues = safe('List queues', fn () => $client->queues()->list());
 if ($queues) {
     foreach (dataRows($queues) as $q) {
-        echo '  - ' . field($q, 'id') . ': ' . ($q['friendly_name'] ?? $q['name'] ?? 'unnamed') . "\n";
+        echo '  - ' . field($q, 'id') . ': ' . fieldAny($q, 'friendly_name', 'name', 'unnamed') . "\n";
     }
 }
 
@@ -134,7 +151,7 @@ if ($queueId) {
     safe('List members', function () use ($client, $queueId) {
         $members = $client->queues()->listMembers($queueId);
         foreach (dataRows($members) as $m) {
-            echo '  - Member: ' . ($m['call_id'] ?? $m['id'] ?? 'unknown') . "\n";
+            echo '  - Member: ' . fieldAny($m, 'call_id', 'id', 'unknown') . "\n";
         }
     });
     safe('Next member', function () use ($client, $queueId) {
@@ -156,7 +173,7 @@ if ($recordings) {
 
 // 6. Get recording details
 if ($recordings && !empty($recordings['data'])) {
-    $firstRec = $recordings['data'][0];
+    $firstRec = firstRow($recordings);
     if (!empty($firstRec['id'])) {
         $recDetail = safe('Get recording', fn () => $client->recordings()->get($firstRec['id']));
         if ($recDetail) {
@@ -193,7 +210,7 @@ safe('MFA call', function () use ($client) {
         message:     'Your verification code is {{code}}',
         tokenLength: 6,
     );
-    echo '  MFA call sent: ' . ($voiceResult['id'] ?? $voiceResult['request_id'] ?? 'unknown') . "\n";
+    echo '  MFA call sent: ' . fieldAny($voiceResult, 'id', 'request_id', 'unknown') . "\n";
 });
 
 // 9. Verify MFA token

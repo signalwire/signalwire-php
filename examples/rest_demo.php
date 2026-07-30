@@ -95,6 +95,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // 1. List phone numbers
 echo "Listing phone numbers...\n";
 $numbers = safe('List numbers', fn () => $client->phoneNumbers->list());
@@ -109,7 +126,7 @@ echo "\nSearching available numbers...\n";
 safe('Search 512', function () use ($client) {
     $avail = $client->phoneNumbers->search(['areacode' => '512', 'max_results' => 3]);
     foreach (dataRows($avail) as $n) {
-        echo '    - ' . ($n['e164'] ?? $n['number'] ?? 'unknown') . "\n";
+        echo '    - ' . fieldAny($n, 'e164', 'number', 'unknown') . "\n";
     }
 });
 

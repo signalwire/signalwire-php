@@ -93,6 +93,23 @@ function dataRows(mixed $response): array
     return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return firstRow($response);
+}
+
 // 1. Create an AI agent
 echo "Creating AI agent...\n";
 $agent = $client->fabric()->aiAgents()->create([
@@ -118,7 +135,7 @@ $available = safe(
 );
 if ($available) {
     foreach (dataRows($available) as $num) {
-        echo '  - ' . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
+        echo '  - ' . fieldAny($num, 'e164', 'number', 'unknown') . "\n";
     }
 }
 
