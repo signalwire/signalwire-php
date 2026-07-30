@@ -71,6 +71,16 @@ if (php_sapi_name() === 'cli' && !getenv('LAMBDA_TASK_ROOT')) {
     echo "Available at: http://localhost:3000/\n";
     $agent->run();
 } else {
-    // In Lambda, return the handler
-    return $agent->handleServerlessRequest($_SERVER, file_get_contents('php://input'));
+    // In Lambda, hand off to the serverless adapter.
+    //
+    // handleServerlessRequest() is ($event, $context, $mode) — $event is the API
+    // GATEWAY payload (httpMethod / path / headers / body / isBase64Encoded),
+    // NOT $_SERVER, and $context is Lambda's context OBJECT, not a request body.
+    // Passing $_SERVER as the event meant httpMethod, path and body were all
+    // absent, so every invocation degraded to "GET /" with no body and the
+    // webhook payload was never read at all.
+    //
+    // Passing null for both lets the adapter decode the real event from the
+    // runtime's stdin and supply the context itself.
+    return $agent->handleServerlessRequest();
 }
