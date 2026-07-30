@@ -162,7 +162,8 @@ function sd_redact_url(string $url): string
  */
 function sd_swaig_functions(array $doc): array
 {
-    $main = $doc['sections']['main'] ?? null;
+    $sections = $doc['sections'] ?? null;
+    $main = is_array($sections) ? ($sections['main'] ?? null) : null;
     if (!is_array($main)) {
         return [];
     }
@@ -170,7 +171,8 @@ function sd_swaig_functions(array $doc): array
         if (!is_array($section) || !isset($section['ai']) || !is_array($section['ai'])) {
             continue;
         }
-        $functions = $section['ai']['SWAIG']['functions'] ?? null;
+        $swaig = $section['ai']['SWAIG'] ?? null;
+        $functions = is_array($swaig) ? ($swaig['functions'] ?? null) : null;
         if (is_array($functions)) {
             return array_values($functions);
         }
