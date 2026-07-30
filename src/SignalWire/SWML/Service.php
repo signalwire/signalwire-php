@@ -13,13 +13,53 @@ use SignalWire\Utils\SchemaUtils;
  * SWML service — builds and serves an SWML document over HTTP.
  *
  * Every SWML schema verb is auto-vivified through {@see __call()} and
- * dispatched as
- * `$service->verb([$section], [$config])` — the first argument may be the
- * target section name OR the verb config array (see __call). Because that
- * receiver arity is genuinely polymorphic, the verbs are documented on
- * __call rather than as fixed-signature `@method` tags. (SWMLBuilder, whose
- * verb signature is the simpler `verb(array $config = [])`, DOES carry
- * per-verb @method tags.)
+ * dispatched as `$service->verb([$section], [$config])` — the first argument
+ * may be the target section name OR the verb config array (see __call).
+ *
+ * That polymorphic first argument is expressed below as
+ * `string|array<string, mixed> $sectionOrConfig`, so the `@method` tags carry
+ * the real receiver arity and IDEs and PHPStan can both see the verbs. (They
+ * were previously documented only in __call's docblock, which meant every
+ * `$service->answer()` in the examples read as a call to an undefined method
+ * once examples/ came under the analyser.) The reserved-word verbs
+ * `goto`/`return`/`switch`/`unset` dispatch identically but are omitted — they
+ * are not callable as bare `->verb()` syntax in PHP.
+ *
+ * @method static ai(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `ai` verb.
+ * @method static ai_sidecar(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `ai_sidecar` verb.
+ * @method static amazon_bedrock(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `amazon_bedrock` verb.
+ * @method static answer(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `answer` verb.
+ * @method static cond(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `cond` verb.
+ * @method static connect(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `connect` verb.
+ * @method static denoise(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `denoise` verb.
+ * @method static detect_machine(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `detect_machine` verb.
+ * @method static enter_queue(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `enter_queue` verb.
+ * @method static execute(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `execute` verb.
+ * @method static hangup(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `hangup` verb.
+ * @method static join_conference(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `join_conference` verb.
+ * @method static join_room(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `join_room` verb.
+ * @method static label(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `label` verb.
+ * @method static live_transcribe(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `live_transcribe` verb.
+ * @method static live_translate(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `live_translate` verb.
+ * @method static pay(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `pay` verb.
+ * @method static play(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `play` verb.
+ * @method static prompt(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `prompt` verb.
+ * @method static receive_fax(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `receive_fax` verb.
+ * @method static record(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `record` verb.
+ * @method static record_call(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `record_call` verb.
+ * @method static request(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `request` verb.
+ * @method static send_digits(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `send_digits` verb.
+ * @method static send_fax(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `send_fax` verb.
+ * @method static send_sms(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `send_sms` verb.
+ * @method static set(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `set` verb.
+ * @method static sip_refer(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `sip_refer` verb.
+ * @method static sleep(int|string $sectionOrDuration, int $duration = 0) Auto-vivified SWML `sleep` verb (integer milliseconds).
+ * @method static stop_denoise(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `stop_denoise` verb.
+ * @method static stop_record_call(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `stop_record_call` verb.
+ * @method static stop_tap(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `stop_tap` verb.
+ * @method static tap(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `tap` verb.
+ * @method static transfer(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `transfer` verb.
+ * @method static user_event(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `user_event` verb.
  */
 class Service implements RequestHandlerLike
 {
