@@ -180,7 +180,7 @@ if ($groupId && $numId) {
 echo "\nLooking up carrier info...\n";
 safe('Lookup', function () use ($client) {
     $info = $client->lookup()->phoneNumber('+15125551234');
-    echo '  Carrier: ' . (($info['carrier'] ?? [])['name'] ?? 'unknown') . "\n";
+    echo '  Carrier: ' . field($info['carrier'] ?? null, 'name', 'unknown') . "\n";
 });
 
 // 8. Create a verified caller
@@ -200,7 +200,7 @@ safe('Verified caller', function () use ($client, &$callerId) {
 echo "\nGetting SIP profile...\n";
 safe('SIP profile', function () use ($client) {
     $profile = $client->sipProfile()->get();
-    echo '  SIP profile: ' . (is_array($profile) ? 'OK' : $profile) . "\n";
+    echo "  SIP profile: OK\n";
     $client->sipProfile()->update(defaultCodecs: ['PCMU', 'PCMA']);
     echo "  Updated SIP codecs\n";
 });

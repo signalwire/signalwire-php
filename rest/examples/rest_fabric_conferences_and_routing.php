@@ -164,9 +164,9 @@ if ($resources) {
 
 // 7. Get a specific resource
 if ($resources && !empty($resources['data'])) {
-    $first = firstRow($resources);
-    if (!empty($first['id'])) {
-        $detail = safe('Get resource', fn () => $client->fabric()->resources()->get($first['id']));
+    $firstId = field(firstRow($resources), 'id');
+    if ($firstId !== '') {
+        $detail = safe('Get resource', fn () => $client->fabric()->resources()->get($firstId));
         if ($detail) {
             echo '  Resource detail: ' . field($detail, 'display_name', 'N/A')
                 . ' (' . field($detail, 'type', 'N/A') . ")\n";
