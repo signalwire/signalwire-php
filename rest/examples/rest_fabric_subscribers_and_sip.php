@@ -117,8 +117,8 @@ $subscriber = $client->fabric()->subscribers()->create([
     'first_name' => 'Alice',
     'last_name'  => 'Johnson',
 ]);
-$subId      = $subscriber['id'] ?? 'demo-subscriber-id';
-$innerSubId = ($subscriber['subscriber'] ?? [])['id'] ?? $subId;
+$subId      = field($subscriber, 'id', 'demo-subscriber-id');
+$innerSubId = field($subscriber['subscriber'] ?? null, 'id', $subId);
 echo "  Created subscriber: {$subId}\n";
 
 // 2. Add a SIP endpoint
@@ -164,8 +164,9 @@ safe('List addresses', function () use ($client) {
     }
 
     // 7. Get a specific address
-    if (!empty($addresses['data']) && !empty(firstRow($addresses)['id'])) {
-        $addrDetail = $client->fabric()->addresses()->get(firstRow($addresses)['id']);
+    $firstAddrId = field(firstRow($addresses), 'id');
+    if ($firstAddrId !== '') {
+        $addrDetail = $client->fabric()->addresses()->get($firstAddrId);
         echo '  Address detail: ' . field($addrDetail, 'display_name', 'N/A') . "\n";
     }
 });

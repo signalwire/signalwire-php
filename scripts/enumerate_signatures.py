@@ -14,7 +14,19 @@ Phase 4-PHP of the cross-language signature audit. Pipeline:
 Usage:
     python3 scripts/enumerate_signatures.py
     python3 scripts/enumerate_signatures.py --raw raw.json
-    python3 scripts/enumerate_signatures.py --strict
+    python3 scripts/enumerate_signatures.py --allow-translation-failures
+
+A translation failure is FATAL by default. This script produces
+``port_signatures.json`` — the surface the DRIFT gate compares the port against
+— so a swallowed failure silently SHRINKS that surface and DRIFT then reports
+clean against a file that is missing whatever failed to translate. That is a
+gate passing because its input got smaller, which is the direction nothing else
+checks. Until 2026-07-30 failures printed to stderr and the script still wrote
+the truncated file and exited 0 (the fail-loud behaviour was behind an
+undocumented, never-passed ``--strict``).
+
+``--allow-translation-failures`` restores the old lenient behaviour for local
+debugging; no gate passes it.
 """
 
 from __future__ import annotations
@@ -1820,7 +1832,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=PORT_ROOT / "port_signatures.json")
-    parser.add_argument("--strict", action="store_true")
+    parser.add_argument(
+        "--allow-translation-failures",
+        action="store_true",
+        help="write the oracle and exit 0 even when symbols failed to translate "
+        "(local debugging only — a gate must never pass this)",
+    )
     args = parser.parse_args()
 
     aliases = load_aliases()
@@ -1837,7 +1854,15 @@ def main() -> int:
             print(f"  - {f}", file=sys.stderr)
         if len(failures) > 30:
             print(f"  ... ({len(failures) - 30} more)", file=sys.stderr)
-        if args.strict:
+        if not args.allow_translation_failures:
+            print(
+                "enumerate_signatures: refusing to write a TRUNCATED oracle. "
+                "port_signatures.json is what DRIFT compares against, so writing "
+                "it without these symbols would make DRIFT pass on a smaller "
+                "surface. Fix the translation, or pass "
+                "--allow-translation-failures to override locally.",
+                file=sys.stderr,
+            )
             return 1
 
     args.out.write_text(json.dumps(canonical, indent=2, sort_keys=False) + "\n", encoding="utf-8")

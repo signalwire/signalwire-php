@@ -160,8 +160,8 @@ if ($sessions) {
 // 5. Get session details
 if ($sessions && !empty($sessions['data'])) {
     $first = firstRow($sessions);
-    if (!empty($first['id'])) {
-        $sid = $first['id'];
+    $sid = field($first, 'id');
+    if ($sid !== '') {
         safe('Session detail', function () use ($client, $sid) {
             $detail = $client->video()->roomSessions()->get($sid);
             echo '  Session: ' . field($detail, 'name', 'N/A')
@@ -192,13 +192,14 @@ if ($roomRecs && !empty($roomRecs['data'])) {
         echo '  - Recording ' . field($rr, 'id') . ': ' . field($rr, 'duration', 'N/A') . "s\n";
     }
 
-    if (!empty(firstRow($roomRecs)['id'])) {
-        safe('Get recording', function () use ($client, $roomRecs) {
-            $recDetail = $client->video()->roomRecordings()->get(firstRow($roomRecs)['id']);
+    $firstRecId = field(firstRow($roomRecs), 'id');
+    if ($firstRecId !== '') {
+        safe('Get recording', function () use ($client, $firstRecId) {
+            $recDetail = $client->video()->roomRecordings()->get($firstRecId);
             echo '  Recording detail: ' . field($recDetail, 'duration', 'N/A') . "s\n";
         });
-        safe('Recording events', function () use ($client, $roomRecs) {
-            $recEvents = $client->video()->roomRecordings()->listEvents(firstRow($roomRecs)['id']);
+        safe('Recording events', function () use ($client, $firstRecId) {
+            $recEvents = $client->video()->roomRecordings()->listEvents($firstRecId);
             echo '  Recording events: ' . count(dataRows($recEvents)) . "\n";
         });
     }

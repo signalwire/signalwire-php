@@ -133,8 +133,8 @@ if ($brands) {
     foreach (dataRows($brands) as $b) {
         echo '  - ' . field($b, 'id') . ': ' . field($b, 'name', 'unnamed') . "\n";
     }
-    if (!$brandId && !empty($brands['data'])) {
-        $brandId = firstRow($brands)['id'];
+    if ($brandId === '') {
+        $brandId = field(firstRow($brands), 'id');
     }
 }
 
@@ -148,7 +148,7 @@ if ($brandId) {
 }
 
 // 4. Create a campaign under the brand
-$campaignId = null;
+$campaignId = '';
 if ($brandId) {
     echo "\nCreating campaign...\n";
     $campaign = safe('Campaign', fn () => $client->registry()->brands()->createCampaign(
@@ -174,7 +174,9 @@ if ($brandId) {
     if ($campaigns) {
         foreach (dataRows($campaigns) as $c) {
             echo '  - ' . field($c, 'id') . ': ' . field($c, 'name', 'unknown') . "\n";
-            $campaignId ??= $c['id'];
+            if ($campaignId === '') {
+                $campaignId = field($c, 'id');
+            }
         }
     }
 }
@@ -237,7 +239,8 @@ if ($campaignId) {
     $nums = safe('Get numbers', fn () => $client->registry()->campaigns()->listNumbers($campaignId));
     if ($nums) {
         foreach (dataRows($nums) as $n) {
-            safe('Unassign ' . field($n, 'id'), fn () => $client->registry()->numbers()->delete($n['id']));
+            $numberId = field($n, 'id');
+            safe('Unassign ' . $numberId, fn () => $client->registry()->numbers()->delete($numberId));
         }
     }
 }

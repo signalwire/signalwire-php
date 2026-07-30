@@ -1395,10 +1395,18 @@ def _inject_extends(modules: dict, files: list[Path]) -> None:
         rel_str = str(path.relative_to(REPO_ROOT))
         if _GENERATED_NS_MARKER not in rel_str.replace("\\", "/"):
             continue
+        # NOT swallowed: this function injects the inherited create/update onto
+        # each generated REST subclass. Skipping an unreadable file would drop
+        # that class's inherited members from port_surface.json, and SURFACE-DIFF
+        # would then report them as omissions the PORT is missing — blaming the
+        # source for a read error here. Fail loud instead.
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
+        except OSError as exc:
+            raise SystemExit(
+                f"enumerate_surface: cannot read generated REST source {rel_str}: {exc}. "
+                "Refusing to emit a surface that silently omits its inherited members."
+            ) from exc
         for line in text.splitlines():
             m = RE_CLASS_EXTENDS.match(line)
             if not m:

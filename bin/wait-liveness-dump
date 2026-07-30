@@ -99,7 +99,7 @@ const CID = 'ctl-live-1';
  *
  * @return list<array{id: string, verb: string, kwargs: array<string,mixed>, delay_ms: int, terminal: array{event_type: string, state: string}}>
  */
-function corpus(): array
+function waitLivenessCorpus(): array
 {
     return [
         [
@@ -272,7 +272,7 @@ function main($realStdout): int
     $out = [];
     // A fresh client/session per case so a scoped scenario/journal never crosses
     // between cases (mirrors the per-test client isolation in ActionsMockTest).
-    foreach (corpus() as $kase) {
+    foreach (waitLivenessCorpus() as $kase) {
         [$client, $mock] = MockTest::scopedClient();
         try {
             $out[$kase['id']] = runCase($client, $mock, $kase);

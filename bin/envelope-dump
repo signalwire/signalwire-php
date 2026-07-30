@@ -110,7 +110,7 @@ function errors_body(string $code, string $message): array
 }
 
 /** @return list<array{id: string, endpoint: string, call: array{method: string, path: string, body?: array<string,mixed>}, scenario?: array<string,mixed>, scenario_repeat?: int, request_options?: array<string,mixed>, transport: bool}> */
-function corpus(): array
+function envelopeCorpus(): array
 {
     return [
         ec_case('envelope_200_success', null),
@@ -293,7 +293,7 @@ $mockUrl = $harness->url();
 
 $out = [];
 
-foreach (corpus() as $case) {
+foreach (envelopeCorpus() as $case) {
     $cid = $case['id'];
     $call = $case['call'];
     $path = $call['path'];

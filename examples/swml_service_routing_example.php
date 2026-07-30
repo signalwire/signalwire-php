@@ -36,7 +36,11 @@ $service->registerRoutingCallback(function (?array $requestData) use ($service) 
     $service->resetDocument();
     $service->answer();
 
-    $name = $requestData['customer_name'] ?? null;
+    $name = is_string($requestData['customer_name'] ?? null)
+
+        ? $requestData['customer_name']
+
+        : '';
     if ($name) {
         $service->addVerb('play', ['url' => "say:Hello {$name}, welcome to customer service."]);
     } else {
@@ -57,7 +61,11 @@ $service->registerRoutingCallback(function (?array $requestData) use ($service) 
     $service->resetDocument();
     $service->answer();
 
-    $product = $requestData['product_id'] ?? null;
+    $product = is_string($requestData['product_id'] ?? null)
+
+        ? $requestData['product_id']
+
+        : '';
     if ($product) {
         $service->addVerb('play', ['url' => "say:Thank you for your interest in product {$product}."]);
     } else {

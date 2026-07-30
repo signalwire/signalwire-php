@@ -155,8 +155,8 @@ if ($queueId) {
         }
     });
     safe('Next member', function () use ($client, $queueId) {
-        $next = $client->queues()->getNextMember($queueId);
-        echo '  Next member: ' . (is_array($next) ? 'found' : $next) . "\n";
+        $client->queues()->getNextMember($queueId);
+        echo "  Next member: found\n";
     });
 }
 
@@ -173,9 +173,9 @@ if ($recordings) {
 
 // 6. Get recording details
 if ($recordings && !empty($recordings['data'])) {
-    $firstRec = firstRow($recordings);
-    if (!empty($firstRec['id'])) {
-        $recDetail = safe('Get recording', fn () => $client->recordings()->get($firstRec['id']));
+    $firstRecId = field(firstRow($recordings), 'id');
+    if ($firstRecId !== '') {
+        $recDetail = safe('Get recording', fn () => $client->recordings()->get($firstRecId));
         if ($recDetail) {
             echo '  Recording: ' . field($recDetail, 'duration', 'N/A')
                 . 's, ' . field($recDetail, 'format', 'N/A') . "\n";
@@ -195,8 +195,8 @@ safe('MFA SMS', function () use ($client, &$requestId) {
         message:     'Your code is {{code}}',
         tokenLength: 6,
     );
-    $requestId = $smsResult['id'] ?? $smsResult['request_id'] ?? null;
-    if ($requestId) {
+    $requestId = fieldAny($smsResult, 'id', 'request_id');
+    if ($requestId !== '') {
         echo "  MFA SMS sent: {$requestId}\n";
     }
 });
@@ -217,8 +217,8 @@ safe('MFA call', function () use ($client) {
 if ($requestId) {
     echo "\nVerifying MFA token...\n";
     safe('Verify', function () use ($client, $requestId) {
-        $verify = $client->mfa()->verify($requestId, '123456');
-        echo '  Verification result: ' . (is_array($verify) ? 'response received' : $verify) . "\n";
+        $client->mfa()->verify($requestId, '123456');
+        echo "  Verification result: response received\n";
     });
 }
 

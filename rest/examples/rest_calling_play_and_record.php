@@ -120,7 +120,7 @@ $call = safe('Dial', fn () => $client->calling()->dial(
     to:    '+15551234567',
     url:   'https://example.com/call-handler',
 ));
-$callId = ($call && isset($call['id'])) ? $call['id'] : 'demo-call-id';
+$callId = field($call, 'id', 'demo-call-id');
 echo "  Call initiated: {$callId}\n";
 
 // 2. Play TTS audio

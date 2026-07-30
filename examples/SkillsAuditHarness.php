@@ -54,10 +54,15 @@ if ($skillName === '') {
     fwrite(STDERR, "SkillsAuditHarness: SKILL_NAME required.\n");
     exit(1);
 }
-$args = $argsRaw === '' ? [] : json_decode($argsRaw, true);
-if (!is_array($args)) {
+$decodedArgs = $argsRaw === '' ? [] : json_decode($argsRaw, true);
+if (!is_array($decodedArgs)) {
     fwrite(STDERR, "SkillsAuditHarness: SKILL_HANDLER_ARGS is not a JSON object.\n");
     exit(1);
+}
+/** @var array<string,mixed> $args */
+$args = [];
+foreach ($decodedArgs as $argKey => $argValue) {
+    $args[(string) $argKey] = $argValue;
 }
 
 // Per-skill setup parameters (mirroring what a deployed agent would
@@ -126,8 +131,7 @@ $result = match ($skillName) {
     'datasphere'        => dispatchHandler($agent, 'search_knowledge', $args),
     'spider'            => dispatchHandler($agent, 'scrape_url', $args),
     'api_ninjas_trivia' => executeDataMap($agent, 'get_trivia', ensureCategory($args)),
-    'weather_api'       => executeDataMap($agent, 'get_weather', $args),
-    default             => null,
+    default             => executeDataMap($agent, 'get_weather', $args),
 };
 
 if ($result === null) {
@@ -147,6 +151,7 @@ exit(0);
  * handler issues a real HTTP request to the configured upstream (the
  * audit fixture).
  */
+/** @param array<string,mixed> $args */
 function dispatchHandler(AgentBase $agent, string $toolName, array $args): mixed
 {
     $rawData = ['call_id' => 'audit-call', 'global_data' => []];
@@ -166,6 +171,7 @@ function dispatchHandler(AgentBase $agent, string $toolName, array $args): mixed
  * the SignalWire platform does in production. The audit verifies
  * the URL shape and that the SDK parses the response.
  */
+/** @param array<string,mixed> $args */
 function executeDataMap(AgentBase $agent, string $toolName, array $args): mixed
 {
     $tools = $agent->getTools();
@@ -173,13 +179,23 @@ function executeDataMap(AgentBase $agent, string $toolName, array $args): mixed
         return ['error' => "tool '{$toolName}' not registered"];
     }
     $def = $tools[$toolName];
-    $webhook = $def['data_map']['webhooks'][0] ?? null;
-    if (!is_array($webhook) || empty($webhook['url'])) {
+    $dataMap = $def['data_map'] ?? null;
+    $webhooks = is_array($dataMap) ? ($dataMap['webhooks'] ?? null) : null;
+    $webhook = is_array($webhooks) ? ($webhooks[0] ?? null) : null;
+    if (!is_array($webhook) || !is_string($webhook['url'] ?? null) || $webhook['url'] === '') {
         return ['error' => "tool '{$toolName}' has no DataMap webhook"];
     }
-    $template = (string) $webhook['url'];
-    $method = strtoupper((string) ($webhook['method'] ?? 'GET'));
-    $extraHeaders = is_array($webhook['headers'] ?? null) ? $webhook['headers'] : [];
+    $template = $webhook['url'];
+    $rawMethod = $webhook['method'] ?? 'GET';
+    $method = strtoupper(is_string($rawMethod) ? $rawMethod : 'GET');
+
+    // HttpHelper takes array<string,string>; the config is array<string,mixed>.
+    $extraHeaders = [];
+    foreach (is_array($webhook['headers'] ?? null) ? $webhook['headers'] : [] as $hk => $hv) {
+        if (is_string($hv)) {
+            $extraHeaders[(string) $hk] = $hv;
+        }
+    }
 
     $url = expandTemplate($template, $args);
 
@@ -191,9 +207,9 @@ function executeDataMap(AgentBase $agent, string $toolName, array $args): mixed
     $fixtureUrl = (string) getenv('SKILL_FIXTURE_URL');
     if ($fixtureUrl !== '') {
         $parts = parse_url($url);
-        if (is_array($parts) && !empty($parts['path'])) {
-            $path = $parts['path'] ?? '';
-            $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+        $path = is_array($parts) ? ($parts['path'] ?? '') : '';
+        if ($path !== '') {
+            $query = is_array($parts) && isset($parts['query']) ? '?' . $parts['query'] : '';
             $url = rtrim($fixtureUrl, '/') . $path . $query;
         }
     }
@@ -230,6 +246,7 @@ function executeDataMap(AgentBase $agent, string $toolName, array $args): mixed
  * Matches the audit's contract: only %{args.X} is substituted, ${...}
  * SWML refs are left for the audit fixture to ignore.
  */
+/** @param array<string,mixed> $args */
 function expandTemplate(string $template, array $args): string
 {
     return (string) preg_replace_callback(
@@ -237,7 +254,8 @@ function expandTemplate(string $template, array $args): string
         function (array $m) use ($args): string {
             $key = $m[1];
             $value = $args[$key] ?? '';
-            return is_scalar($value) ? (string) $value : json_encode($value);
+
+            return is_scalar($value) ? (string) $value : (string) json_encode($value);
         },
         $template,
     );
@@ -248,9 +266,13 @@ function expandTemplate(string $template, array $args): string
  * doesn't pass one. Inject a default so the URL template expands
  * to a real path the fixture sees.
  */
+/**
+ * @param array<string,mixed> $args
+ * @return array<string,mixed>
+ */
 function ensureCategory(array $args): array
 {
-    if (!isset($args['category']) || (string) $args['category'] === '') {
+    if (!is_string($args['category'] ?? null) || $args['category'] === '') {
         $args['category'] = 'general';
     }
     return $args;

@@ -48,7 +48,7 @@ for ($i = 1; $i <= 30; $i++) {
     echo "  Poll {$i}: status={$status}\n";
 
     if ($status === 'completed') {
-        echo '  Vectorized! Chunks: ' . ($docStatus['number_of_chunks'] ?? 0) . "\n";
+        echo '  Vectorized! Chunks: ' . field($docStatus, 'number_of_chunks', '0') . "\n";
         break;
     }
     if ($status === 'error' || $status === 'failed') {
@@ -67,8 +67,7 @@ for ($i = 1; $i <= 30; $i++) {
 // 3. List chunks
 echo "\nListing chunks for document {$docId}...\n";
 $chunks = $client->datasphere()->documents()->listChunks($docId);
-$chunkList = $chunks['data'] ?? [];
-foreach (array_slice($chunkList, 0, 5) as $chunk) {
+foreach (array_slice(dataRows($chunks), 0, 5) as $chunk) {
     $content = field($chunk, 'content', '');
     if (strlen($content) > 80) {
         $content = substr($content, 0, 80) . '...';
@@ -82,7 +81,7 @@ $results = $client->datasphere()->documents()->search(
     queryString: 'lorem ipsum dolor sit amet',
     count:       3,
 );
-foreach (($results['chunks'] ?? []) as $chunk) {
+foreach (rows($results['chunks'] ?? null) as $chunk) {
     $text = field($chunk, 'text', '');
     if (strlen($text) > 100) {
         $text = substr($text, 0, 100) . '...';
