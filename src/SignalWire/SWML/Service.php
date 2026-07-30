@@ -12,8 +12,8 @@ use SignalWire\Utils\SchemaUtils;
 /**
  * SWML service — builds and serves an SWML document over HTTP.
  *
- * Every SWML schema verb is auto-vivified through {@see __call()} (the PHP
- * analog of Python's runtime `__getattr__` verb dispatch) and dispatched as
+ * Every SWML schema verb is auto-vivified through {@see __call()} and
+ * dispatched as
  * `$service->verb([$section], [$config])` — the first argument may be the
  * target section name OR the verb config array (see __call). Because that
  * receiver arity is genuinely polymorphic, the verbs are documented on
@@ -36,34 +36,27 @@ class Service implements RequestHandlerLike
 
     /**
      * Constructor-supplied schema path, forwarded to SchemaUtils when the
-     * helper is built. Null means "use the bundled schema.json". Mirrors
-     * Python SWMLService's ``schema_path`` param.
+     * helper is built. Null means "use the bundled schema.json".
      */
     protected ?string $schemaPath = null;
 
     /**
      * Whether SWML schema validation is enabled. Forwarded to SchemaUtils
-     * (which additionally honours SWML_SKIP_SCHEMA_VALIDATION). Mirrors
-     * Python SWMLService's ``self._schema_validation``.
+     * (which additionally honours SWML_SKIP_SCHEMA_VALIDATION).
      */
     protected bool $schemaValidation = true;
 
     /**
      * Unified security configuration (SSL/CORS/HSTS/basic-auth/limits), built
-     * from defaults + env + the optional config file. Mirrors Python
-     * SWMLService's ``self.security``.
+     * from defaults + env + the optional config file.
      */
     protected SecurityConfig $security;
 
     /**
      * Whether TLS serving is enabled. Mirrored off ``$this->security`` at
-     * construction, exactly as the reference does
-     * (``self.ssl_enabled = self.security.ssl_enabled``,
-     * core/swml_service.py:143). Public because it is a caller-observable
-     * VALUE the reference records on SWMLService itself: a caller reads it to
-     * know which scheme the service serves, and may set it before ``serve()``
-     * to flip TLS on (the reference's ``serve(ssl_enabled=…)`` assigns the
-     * same attribute).
+     * construction. Public because it is a caller-observable VALUE: a caller
+     * reads it to know which scheme the service serves, and may SET it before
+     * ``serve()`` to flip TLS on.
      */
     public bool $sslEnabled = false;
 
@@ -82,7 +75,7 @@ class Service implements RequestHandlerLike
     /**
      * The domain this service is served under. Mirrored off
      * ``$this->security``. Used as the host part of the public URL when TLS
-     * is enabled, mirroring the reference's ``_get_base_url``.
+     * is enabled.
      */
     public ?string $domain = null;
 
@@ -95,31 +88,29 @@ class Service implements RequestHandlerLike
     protected array $routingCallbacks = [];
 
     /**
-     * Registry of specialized verb handlers (e.g. the "ai" verb). Mirrors
-     * Python SWMLService's `self.verb_registry`. Consulted by add_verb /
-     * add_verb_to_section before falling back to schema validation.
+     * Registry of specialized verb handlers (e.g. the "ai" verb). Consulted
+     * by add_verb / add_verb_to_section before falling back to schema
+     * validation.
      */
     protected VerbHandlerRegistry $verbRegistry;
 
     /**
      * Manually-set proxy base URL for webhook URL generation. Lives on the
-     * base Service (mirrors SWMLService/WebMixin) so both a plain
-     * SWMLService and AgentBase share one field; getProxyUrlBase() reads it.
+     * base Service so both a plain SWMLService and AgentBase share one
+     * field; getProxyUrlBase() reads it.
      */
     protected ?string $manualProxyUrl = null;
 
     /**
-     * Whether the web server is running. Flipped off by stop(); mirrors
-     * Python SWMLService's `self._running`.
+     * Whether the web server is running. Flipped off by stop().
      */
     protected bool $running = false;
 
     /**
      * Whether X-Forwarded-Proto / X-Forwarded-Host may be honoured when
      * reconstructing the URL that webhook signatures are validated against.
-     * Lives on the base Service because reconstructPublicUrl() does — the
-     * constructor knob is AgentBase's `trustProxyForSignature`, mirroring the
-     * reference (AgentBase.__init__ -> web_mixin's `trust_proxy`). Defaults
+     * Lives on the base Service because reconstructPublicUrl() does; the
+     * constructor knob is AgentBase's `trustProxyForSignature`. Defaults
      * false: proxy headers are spoofable.
      */
     protected bool $trustProxyForSignature = false;
@@ -309,7 +300,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Validate provided basic-auth credentials against the configured ones
-     * using a constant-time comparison. Mirrors * AuthMixin.validate_basic_auth(username, password). */
+     * using a constant-time comparison. */
     public function validateBasicAuth(string $username, string $password): bool
     {
         return hash_equals($this->basicAuthUser, $username)
@@ -317,7 +308,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Get (user, password, source) where source is "provided",
-     * "environment", or "generated". Mirrors * AuthMixin.get_basic_auth_credentials(include_source=True).
+     * "environment", or "generated".
      *
      * @return array{string, string, string} [user, password, source]
      */
@@ -341,10 +332,9 @@ class Service implements RequestHandlerLike
     /**
      * Build the full URL for this service.
      *
-     * Honours the TLS-serving values ($sslEnabled / $domain), mirroring the
-     * reference's ``_get_base_url`` (core/swml_service.py:1516-1540): https
-     * when TLS is on, the domain as the host part when one is configured, and
-     * the port elided for the scheme's standard port (443/80).
+     * Honours the TLS-serving values ($sslEnabled / $domain): https when TLS
+     * is on, the domain as the host part when one is configured, and the port
+     * elided for the scheme's standard port (443/80).
      */
     public function getFullUrl(bool $includeAuth = false): string
     {
@@ -368,8 +358,7 @@ class Service implements RequestHandlerLike
     // ------------------------------------------------------------------
 
     /**
-     * Parameter ORDER + default mirror the reference
-     * (core/swml_service.py:918): (callback_fn, path="/sip").
+     * Register a routing callback at ``$path`` (default "/sip").
      *
      * @param callable(array<string,mixed>, array<string,mixed>): ?string $callback
      */
@@ -395,7 +384,6 @@ class Service implements RequestHandlerLike
      * Consults the verb-handler registry first (e.g. the "ai" verb), falling
      * back to schema-based validation for standard verbs. Raises
      * {@see \SignalWire\Utils\SchemaValidationError} on an invalid config.
-     * Mirrors Python's `SWMLService.add_verb()`.
      *
      * @param array<string, mixed>|int $config Verb config, or a direct integer
      *                                          for verbs like `sleep`.
@@ -410,8 +398,7 @@ class Service implements RequestHandlerLike
     /**
      * Add a new section to the document.
      *
-     * Mirrors Python's `SWMLService.add_section()`: returns true if created,
-     * false if the section already existed.
+     * Returns true if created, false if the section already existed.
      */
     public function addSection(string $sectionName): bool
     {
@@ -423,7 +410,7 @@ class Service implements RequestHandlerLike
      *
      * Consults the verb-handler registry first, falling back to schema
      * validation; raises {@see \SignalWire\Utils\SchemaValidationError} on an
-     * invalid config. Mirrors Python's `SWMLService.add_verb_to_section()`.
+     * invalid config.
      *
      * @param array<string, mixed>|int $config
      */
@@ -477,7 +464,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Reset the current document to an empty state.
-     * Mirrors Python's `SWMLService.reset_document()`.
      */
     public function resetDocument(): void
     {
@@ -486,7 +472,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Render the current SWML document as a JSON string.
-     * Mirrors Python's `SWMLService.render_document()`.
      */
     public function renderDocument(): string
     {
@@ -495,7 +480,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Register a custom verb handler.
-     * Mirrors Python's `SWMLService.register_verb_handler()`.
      */
     public function registerVerbHandler(SWMLVerbHandler $handler): void
     {
@@ -504,7 +488,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Whether full JSON Schema validation is enabled.
-     * Mirrors Python's `@property full_validation_enabled`.
      */
     public function fullValidationEnabled(): bool
     {
@@ -514,11 +497,10 @@ class Service implements RequestHandlerLike
     /**
      * Return this service as a mountable request handler.
      *
-     * Python returns a FastAPI `APIRouter`; PHP has no framework router, so the
-     * Service itself (which implements {@see RequestHandlerLike} via
-     * handleRequest) is the mountable unit. Mirrors Python's
-     * `SWMLService.as_router()` — callers mount the returned handler into their
-     * framework and dispatch through it.
+     * PHP has no framework router, so the Service itself — which implements
+     * {@see RequestHandlerLike} via handleRequest — IS the mountable unit.
+     * Callers mount the returned handler into their framework and dispatch
+     * through it.
      */
     public function asRouter(): RequestHandlerLike
     {
@@ -527,7 +509,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Manually override the proxy base URL used for webhook URL generation.
-     * Mirrors Python's `SWMLService.manual_set_proxy_url()`.
      */
     public function manualSetProxyUrl(string $url): static
     {
@@ -536,8 +517,7 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * Stop the web server.
-     * Mirrors Python's `SWMLService.stop()` — flips the running flag off.
+     * Stop the web server — flips the running flag off.
      */
     public function stop(): void
     {
@@ -556,13 +536,10 @@ class Service implements RequestHandlerLike
      *
      * @param array<string, mixed> $parameters JSON-Schema `properties` map for the tool argument,
      *   OR a COMPLETE JSON-Schema object ({type, properties[, required]}) which is passed through
-     *   as-is. Mirrors Python `SWAIGFunction._ensure_parameter_structure`.
+     *   as-is.
      * @param array<string, mixed> $extraFields Additional SWAIG-only fields (e.g.
      *   `meta_data_token`, `web_hook_auth_user`) merged at the TOP LEVEL of the generated
-     *   function definition — siblings of `argument`, NOT nested inside it. This is PHP's
-     *   positional expression of Python's `**swaig_fields` bag (mirrors the documented
-     *   `SWAIGFunction.__init__` `extraFields` idiom); Python renders these via
-     *   `function_def.update(self.extra_swaig_fields)`.
+     *   function definition — siblings of `argument`, NOT nested inside it.
      */
     public function defineTool(
         string $name,
@@ -591,8 +568,7 @@ class Service implements RequestHandlerLike
      * When $parameters is a bare `properties` map it is wrapped in
      * {type: object, properties: $parameters}. When it is ALREADY a complete
      * JSON-Schema object (has both `type` and `properties`) it is passed
-     * through unchanged — wrapping it would double-nest the schema. Mirrors
-     * Python `SWAIGFunction._ensure_parameter_structure`.
+     * through unchanged — wrapping it would double-nest the schema.
      *
      * @param array<string, mixed> $parameters
      * @return array<string, mixed>
@@ -653,15 +629,13 @@ class Service implements RequestHandlerLike
         return $this->tools;
     }
 
-    /** Whether a SWAIG function with the given name is registered.
-     * Mirrors ``ToolRegistry.has_function``. */
+    /** Whether a SWAIG function with the given name is registered. */
     public function hasFunction(string $name): bool
     {
         return isset($this->tools[$name]);
     }
 
     /** Get a registered SWAIG function by name, or null when absent.
-     * Mirrors ``ToolRegistry.get_function``.
      *
      * @return array<string, mixed>|null */
     public function getFunction(string $name): ?array
@@ -670,7 +644,6 @@ class Service implements RequestHandlerLike
     }
 
     /** Snapshot of all registered SWAIG functions keyed by name.
-     * Mirrors ``ToolRegistry.get_all_functions``.
      *
      * @return array<string, array<string, mixed>> */
     public function getAllFunctions(): array
@@ -678,8 +651,7 @@ class Service implements RequestHandlerLike
         return $this->tools;  // copy on read in PHP arrays
     }
 
-    /** Remove a registered SWAIG function. True on success, false if absent.
-     * Mirrors ``ToolRegistry.remove_function``. */
+    /** Remove a registered SWAIG function. True on success, false if absent. */
     public function removeFunction(string $name): bool
     {
         if (!isset($this->tools[$name])) {
@@ -847,8 +819,8 @@ class Service implements RequestHandlerLike
      * Extract the `__token` credential from a parsed query mapping.
      *
      * The reserved `__token` name is preferred (it cannot collide with a
-     * caller's own `token` parameter); a bare `token` is accepted as the alias
-     * the reference also honours.
+     * caller's own `token` parameter); a bare `token` is accepted as an
+     * alias.
      *
      * @param array<string, mixed> $query
      */
@@ -888,7 +860,7 @@ class Service implements RequestHandlerLike
     }
 
     // ------------------------------------------------------------------
-    // SWML customization hooks (Python WebMixin parity)
+    // SWML customization hooks
     // ------------------------------------------------------------------
 
     /**
@@ -898,10 +870,6 @@ class Service implements RequestHandlerLike
      *
      * Return null to use the default SWML rendering, or an array of
      * modifications to merge into the rendered document.
-     *
-     * Mirrors WebMixin.on_request(request_data, callback_path).
-     * The Python third `request` arg is FastAPI-specific and is not
-     * mirrored.
      *
      * @param array<string, mixed>|null $requestData
      * @return array<string, mixed>|null
@@ -916,8 +884,6 @@ class Service implements RequestHandlerLike
      * request data. The default implementation returns null (no
      * modification). Subclasses override to inspect the body or
      * callback path and return an associative array of overrides.
-     *
-     * Mirrors WebMixin.on_swml_request(request_data, callback_path).
      *
      * @param array<string, mixed>|null $requestData
      * @return array<string, mixed>|null
@@ -944,10 +910,11 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * This service, for the reference's `ToolRegistry.agent` back-reference.
-     * Python factors SWAIG registration into a `ToolRegistry` collaborator that
-     * holds a reference BACK to the agent; php flattens the registry onto the
-     * service itself, so the back-reference resolves to `$this`.
+     * This service itself.
+     *
+     * SWAIG registration is flattened ONTO the service rather than split into
+     * a registry collaborator that holds a reference back to it, so the
+     * back-reference an SDK consumer would follow resolves to `$this`.
      */
     public function getAgent(): self
     {
@@ -973,10 +940,8 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * SchemaUtils helper bound to this Service. Mirrors Python's
-     * self.schema_utils public instance attribute on SWMLService, built from
-     * the constructor's `schemaPath` / `schemaValidation`. Built lazily on
-     * first access.
+     * SchemaUtils helper bound to this Service, built from the constructor's
+     * `schemaPath` / `schemaValidation`. Built lazily on first access.
      */
     public function getSchemaUtils(): SchemaUtils
     {
@@ -1703,14 +1668,12 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * Split an ``Authorization`` header into its scheme and credential,
-     * mirroring FastAPI's ``get_authorization_scheme_param`` (partition on the
-     * FIRST space, strip the credential).
+     * Split an ``Authorization`` header into its scheme and credential:
+     * partition on the FIRST space, strip the credential.
      *
      * Returns ``null`` when the header is empty or its scheme token does not
      * case-insensitively equal ``$expectedScheme``. RFC 7235 makes the
-     * auth-scheme token case-insensitive and the reference compares
-     * ``scheme.lower() != "basic"``, so ``basic <cred>`` is legal.
+     * auth-scheme token case-insensitive, so ``basic <cred>`` is legal.
      */
     private static function schemeParam(string $authHeader, string $expectedScheme): ?string
     {

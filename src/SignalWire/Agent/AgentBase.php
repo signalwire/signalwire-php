@@ -46,9 +46,8 @@ class AgentBase extends Service implements AgentInterface
     /** @var list<string> */
     protected array $hints;
     /**
-     * Structured pattern hints. Each entry mirrors Python's
-     * ``AIConfigMixin.add_pattern_hint`` payload
-     * ``{hint, pattern, replace, ignore_case}`` and is merged into the
+     * Structured pattern hints. Each entry is a
+     * ``{hint, pattern, replace, ignore_case}`` payload, merged into the
      * rendered ``ai.hints`` array alongside the bare-string hints.
      *
      * @var list<array<string,mixed>>
@@ -102,8 +101,8 @@ class AgentBase extends Service implements AgentInterface
     // ── SIP routing ─────────────────────────────────────────────────────
     /**
      * SIP usernames registered to this agent (lowercased), the consultable
-     * set the SIP routing callback checks. Mirrors Python
-     * `AgentBase._sip_usernames` (a set). Keyed by lowercase username → true.
+     * set the SIP routing callback checks. A SET, keyed by lowercase
+     * username → true.
      *
      * @var array<string, bool>
      */
@@ -169,31 +168,28 @@ class AgentBase extends Service implements AgentInterface
     // ── Identity / construction-time state ──────────────────────────────
     /**
      * Unique ID for this agent — the constructor's `agentId`, or a generated
-     * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     * UUIDv4.
      */
     protected string $agentId = '';
 
     /**
      * Default webhook URL for all SWAIG functions, as supplied at
-     * construction. Mirrors Python AgentBase's `_default_webhook_url`.
+     * construction.
      */
     protected ?string $defaultWebhookUrl = null;
 
     /**
-     * Whether structured request logs are suppressed. Mirrors Python
-     * AgentBase's `_suppress_logs`.
+     * Whether structured request logs are suppressed.
      */
     protected bool $suppressLogs = false;
 
     /**
-     * Post-prompt override flag, as supplied at construction. Mirrors Python
-     * AgentBase's `enable_post_prompt_override` constructor parameter.
+     * Post-prompt override flag, as supplied at construction.
      */
     protected bool $enablePostPromptOverride = false;
 
     /**
-     * Check-for-input override flag, as supplied at construction. Mirrors
-     * Python AgentBase's `check_for_input_override` constructor parameter.
+     * Check-for-input override flag, as supplied at construction.
      */
     protected bool $checkForInputOverride = false;
 
@@ -407,14 +403,10 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * This agent's unique ID — the constructor's `agentId` or a generated
-     * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     * UUIDv4.
      *
      * PUBLIC, deliberately: the caller supplies `agentId` at construction, so
-     * the caller must be able to read it back. It was `protected`, which is the
-     * exact failure CONSTRUCTION-READBACK exists to catch — cpp made the same
-     * two members (`agent_id`, `token_expiry_secs`) protected purely to pass
-     * SURFACE-DIFF, and the consequence was that its callers could not read what
-     * Python callers can.
+     * the caller must be able to read it back.
      */
     public function getAgentId(): string
     {
@@ -422,11 +414,11 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * This agent, for the reference's `PromptManager.agent` / `ToolRegistry.agent`
-     * back-reference. Python factors prompt handling and tool registration into
-     * collaborator objects that hold a reference BACK to the agent; php flattens
-     * both onto the agent itself, so the back-reference resolves to `$this` (the
-     * same resolution cpp used when it merged the manager into the agent).
+     * This agent itself.
+     *
+     * Prompt handling and tool registration are flattened ONTO the agent rather
+     * than split into collaborator objects that hold a reference back to it, so
+     * the back-reference an SDK consumer would follow resolves to `$this`.
      */
     public function getAgent(): self
     {
@@ -435,7 +427,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * The construction-time default webhook URL for SWAIG functions, or null.
-     * Mirrors Python AgentBase's `_default_webhook_url`.
      */
     protected function getDefaultWebhookUrl(): ?string
     {
@@ -444,7 +435,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Whether structured request logs are suppressed.
-     * Mirrors Python AgentBase's `_suppress_logs`.
      */
     protected function getSuppressLogs(): bool
     {
@@ -454,7 +444,6 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Whether proxy headers are honoured when reconstructing the URL during
      * webhook signature validation.
-     * Mirrors Python AgentBase's `_trust_proxy_for_signature`.
      */
     protected function getTrustProxyForSignature(): bool
     {
@@ -462,10 +451,9 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Load the `service` section of the config file, mirroring Python's
-     * `AgentBase._load_service_config(config_file, service_name)`
-     * (agent_base.py:358-382): when no path is given the standard search
-     * paths are consulted for a service-named config first.
+     * Load the `service` section of the config file. When no path is given,
+     * the standard search paths are consulted for a service-named config
+     * first.
      *
      * @return array<string, mixed>
      */
@@ -487,8 +475,7 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Generate a RFC-4122 version-4 UUID, matching the reference's
-     * `str(uuid.uuid4())` agent-id default.
+     * Generate a RFC-4122 version-4 UUID — the agent-id default.
      */
     private static function generateUuidV4(): string
     {
@@ -662,9 +649,7 @@ class AgentBase extends Service implements AgentInterface
      * Returns the post-prompt text that was set via setPostPrompt, or the
      * empty string when none has been set.
      *
-     * Mirrors Python's PromptManager::get_post_prompt /
-     * PromptMixin::get_post_prompt — used by SWML rendering when a
-     * post-prompt is configured.
+     * Used by SWML rendering when a post-prompt is configured.
      */
     public function getPostPrompt(): string
     {
@@ -675,8 +660,6 @@ class AgentBase extends Service implements AgentInterface
      * Returns the raw prompt text whatever setPromptText stored, or the
      * empty string when no raw prompt has been set. Distinct from
      * getPrompt() which returns the POM array when usePom is true.
-     *
-     * Mirrors Python's PromptManager::get_raw_prompt.
      */
     public function getRawPrompt(): string
     {
@@ -688,9 +671,6 @@ class AgentBase extends Service implements AgentInterface
      * supports keys "title", "body", "bullets", "numbered",
      * "numbered_bullets", and "subsections". Switches the agent to POM
      * mode.
-     *
-     * Mirrors Python's PromptManager::set_prompt_pom — accepts a list of
-     * section dicts and stores them in pomSections.
      *
      * @param list<mixed> $pom List of POM section arrays; non-array entries are
      *                         defensively skipped by the loop below.
@@ -714,7 +694,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Coerce an externally-supplied section array into the internal
      * PomSection shape, validating each recognised key at runtime. Sections
-     * without a string title are skipped (Python's renderer requires one).
+     * without a string title are skipped — the renderer requires one.
      *
      * @param array<mixed, mixed> $section
      * @return PomSection|null
@@ -771,17 +751,15 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Return the agent's POM as a typed PromptObjectModel instance.
      *
-     * Mirrors ``agent.pom`` instance attribute (agent_base.py
-     * line 209). Returns ``null`` when ``use_pom`` is false (mirroring
-     * Python's ``self.pom = None``).  Otherwise returns a PromptObjectModel
-     * built from the agent's stored POM section dicts — sections added via
+     * Returns ``null`` when POM mode is off. Otherwise returns a
+     * PromptObjectModel built from the agent's stored POM sections — those added via
      * ``promptAddSection`` / ``setPromptPom`` show up as native ``Section``
      * objects so callers can use ``renderMarkdown`` / ``renderXml`` /
      * ``findSection`` etc directly.
      *
-     * The returned instance is freshly constructed each call; mutating it
-     * does not affect the agent's stored state (the same behavior is achieved
-     * via construction-from-dicts rather than shared references).
+     * The returned instance is freshly constructed each call — it is built
+     * FROM the stored sections rather than sharing them, so mutating it does
+     * not affect the agent's state.
      */
     public function getPom(): ?PromptObjectModel
     {
@@ -798,8 +776,6 @@ class AgentBase extends Service implements AgentInterface
      * Returns the contexts dictionary as a serialised array, or null when
      * no contexts have been defined yet.
      *
-     * Mirrors Python's PromptManager::get_contexts which returns the
-     * contexts dict or None.
      *
      * @return array<string, array<string,mixed>>|null
      */
@@ -817,9 +793,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Mint a per-call SWAIG-function token via the agent's SessionManager.
      *
-     * Mirrors state_mixin.StateMixin._create_tool_token —
-     * delegates to SessionManager::createToolToken and returns "" on
-     * any thrown error (Python catches all exceptions and returns "").
+     * Delegates to SessionManager::createToolToken, returning "" on any
+     * thrown error rather than propagating it.
      */
     public function createToolToken(string $toolName, string $callId): string
     {
@@ -835,8 +810,7 @@ class AgentBase extends Service implements AgentInterface
      * function is not registered, when the SessionManager rejects the
      * token, or on any underlying exception.
      *
-     * Mirrors state_mixin.StateMixin.validate_tool_token —
-     * rejects unknown function names up-front and swallows exceptions.
+     * Rejects unknown function names up-front and swallows exceptions.
      */
     public function validateToolToken(string $functionName, string $token, string $callId): bool
     {
@@ -879,10 +853,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Add a complex hint with pattern matching.
      *
-     * Mirrors Python's ``AIConfigMixin.add_pattern_hint``: attaches a
-     * STRUCTURED hint (not a bare string) that is merged into the rendered
-     * SWML ``ai.hints`` array. All three of hint/pattern/replace must be
-     * non-empty for the hint to be recorded (mirrors the reference).
+     * Attaches a STRUCTURED hint (not a bare string) that is merged into the
+     * rendered SWML ``ai.hints`` array. All three of hint/pattern/replace must
+     * be non-empty for the hint to be recorded.
      *
      * @param string $hint       The hint token to match.
      * @param string $pattern    Regular-expression pattern.
@@ -909,10 +882,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Add a language configuration to support multilingual conversations.
      *
-     * Mirrors Python's ``AIConfigMixin.add_language``: carries engine, model
-     * and fillers into the rendered SWML ``ai.languages`` entry, and parses
-     * the combined ``engine.voice:model`` voice string when engine/model are
-     * not given explicitly.
+     * Carries engine, model and fillers into the rendered SWML
+     * ``ai.languages`` entry, and parses the combined ``engine.voice:model``
+     * voice string when engine/model are not given explicitly.
      *
      * @param string                   $voice           TTS voice. Either a
      *     simple name, or the combined ``engine.voice:model`` format when
@@ -1060,7 +1032,6 @@ class AgentBase extends Service implements AgentInterface
      * mutually exclusive with setLanguages(); if both are set the server uses
      * `multilingual` and ignores `languages`.
      *
-     * Mirrors AIConfigMixin.set_multilingual(config).
      *
      * @param array<string,mixed> $config The multilingual config object
      *   (languages, allowed, start_language, min_switch_words, fillers, etc.).
@@ -1074,9 +1045,8 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Add a pronunciation rule (mirrors Python add_pronunciation(replace,
-     * with_text, ignore_case: bool = False)). Emits the SWML wire key
-     * `ignore_case` (bool, only when true), NOT `ignore`.
+     * Add a pronunciation rule. Emits the SWML wire key `ignore_case`
+     * (bool, only when true), NOT `ignore`.
      */
     public function addPronunciation(string $replace, string $with, bool $ignoreCase = false): self
     {
@@ -1126,10 +1096,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Merge $data into global_data. Despite the name this does NOT replace
      * the existing object: existing keys are preserved and incoming keys
-     * overwrite only on collision. This mirrors updateGlobalData() and the
-     * TypeScript reference (safeAssign) — skills and other callers each
-     * contribute keys, so a replacing setGlobalData would silently clobber
-     * their contributions.
+     * overwrite only on collision — the same merge updateGlobalData() performs.
+     * Skills and other callers each contribute keys, so a REPLACING setter
+     * would silently clobber their contributions.
      *
      * @param array<string,mixed> $data
      */
@@ -1158,11 +1127,10 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * The native functions advertised to the platform. The reference records
-     * ``AgentBase.native_functions`` (the attribute) and
-     * ``AIConfigMixin.set_native_functions`` (the setter) as TWO DISTINCT
-     * members — so the setter does not stand in for the reader. php had only the
-     * setter, with the field ``protected``, so a caller could pass
+     * The native functions advertised to the platform.
+     *
+     * The reader and the setter are two DISTINCT members: the setter does not
+     * stand in for the reader. Without this accessor a caller could pass
      * ``nativeFunctions`` at construction and never read it back.
      *
      * @return list<string>
@@ -1285,8 +1253,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Enable the debug-event webhook for this agent.
      *
-     * Mirrors Python's enable_debug_events(level: int = 1): the AI module POSTs
-     * real-time debug events to the agent's /debug_events endpoint. The level is
+     * The AI module POSTs real-time debug events to the agent's
+     * /debug_events endpoint. The level is
      * the wire verbosity (1 = high-level events; 2+ = high-volume: every LLM
      * request/response, conversation_add) and is emitted as the SWML AI param
      * `debug_webhook_level` (int), NOT `debug_events`.
@@ -1310,9 +1278,9 @@ class AgentBase extends Service implements AgentInterface
      * Replace the entire list of function includes.
      *
      * Each include must have a truthy ``url`` and an array ``functions``
-     * field; entries missing either are dropped (matching the TypeScript
-     * reference's filter), and each dropped entry is warned so a malformed
-     * include is caught at registration time rather than silently vanishing.
+     * field; entries missing either are dropped, and each dropped entry is
+     * warned so a malformed include is caught at registration time rather than
+     * silently vanishing.
      *
      * @param list<mixed> $includes List of include arrays ({url, functions, ...});
      *                              malformed / non-array entries are defensively dropped.
@@ -1348,8 +1316,6 @@ class AgentBase extends Service implements AgentInterface
      *
      * Tools are discovered via the MCP protocol at session start and registered
      * as SWAIG functions; resources are optionally fetched into global_data.
-     * Mirrors Python's ``AIConfigMixin.add_mcp_server`` (projected onto the
-     * ai_config_mixin path by the surface enumerator).
      *
      * @param array<string, string>|null $headers      Optional HTTP headers.
      * @param array<string, string>|null $resourceVars Variables for URI templates.
@@ -1378,9 +1344,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Expose this agent's tools as an MCP server endpoint at ``/mcp``.
-     *
-     * Mirrors Python's ``AIConfigMixin.enable_mcp_server`` (projected onto the
-     * ai_config_mixin path by the surface enumerator).
      *
      * @return $this
      */
@@ -1412,8 +1375,7 @@ class AgentBase extends Service implements AgentInterface
      * Enable debug routes for testing and development.
      *
      * Debug routes are registered by the request router; this method exists for
-     * API compatibility and returns ``$this`` for chaining. Mirrors Python's
-     * ``WebMixin.enable_debug_routes`` (projected onto the web_mixin path).
+     * API compatibility and returns ``$this`` for chaining.
      *
      * @return $this
      */
@@ -1426,8 +1388,7 @@ class AgentBase extends Service implements AgentInterface
      * Register signal handlers for graceful shutdown (e.g. Kubernetes SIGTERM).
      *
      * Uses PHP's pcntl signal handling when available; a no-op otherwise (the
-     * ext-pcntl extension is optional and absent under most SAPIs). Mirrors
-     * Python's ``WebMixin.setup_graceful_shutdown``.
+     * ext-pcntl extension is optional and absent under most SAPIs).
      */
     public function setupGracefulShutdown(): void
     {
@@ -1451,9 +1412,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Merge LLM parameters into the main prompt config.
      *
-     * Mirrors Python `AIConfigMixin.set_prompt_llm_params`
-     * (ai_config_mixin.py:669): `self._prompt_llm_params.update(params)` —
-     * successive calls MERGE, so distinct keys accumulate rather than the
+     * Successive calls MERGE, so distinct keys accumulate rather than the
      * latest call replacing the earlier ones.
      *
      * @param array<string,mixed> $params
@@ -1467,9 +1426,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Merge LLM parameters into the post-prompt config.
      *
-     * Mirrors Python `AIConfigMixin.set_post_prompt_llm_params`
-     * (ai_config_mixin.py:703): `self._post_prompt_llm_params.update(params)`
-     * — successive calls MERGE (see {@see setPromptLlmParams}).
+     * Successive calls MERGE (see {@see setPromptLlmParams}).
      *
      * @param array<string,mixed> $params
      */
@@ -1495,8 +1452,7 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string,mixed> $config the verb's configuration. Typed to
      *        match what the validating Service::addVerb accepts — renderSwml
      *        emits these through it, so a `mixed` here only deferred the type
-     *        error to render time. Mirrors the reference's `config: dict[str, Any]`
-     *        (core/agent_base.py:558).
+     *        error to render time.
      */
     public function addPreAnswerVerb(string $verb, array $config): self
     {
@@ -1513,8 +1469,7 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string,mixed> $config the verb's configuration. Typed to
      *        match what the validating Service::addVerb accepts — renderSwml
      *        emits these through it, so a `mixed` here only deferred the type
-     *        error to render time. Mirrors the reference's `config: dict[str, Any]`
-     *        (core/agent_base.py:558).
+     *        error to render time.
      */
     public function addPostAnswerVerb(string $verb, array $config): self
     {
@@ -1541,8 +1496,7 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string,mixed> $config the verb's configuration. Typed to
      *        match what the validating Service::addVerb accepts — renderSwml
      *        emits these through it, so a `mixed` here only deferred the type
-     *        error to render time. Mirrors the reference's `config: dict[str, Any]`
-     *        (core/agent_base.py:558).
+     *        error to render time.
      */
     public function addPostAiVerb(string $verb, array $config): self
     {
@@ -1651,10 +1605,8 @@ class AgentBase extends Service implements AgentInterface
      * Surfaces a load failure by THROWING — a skill that is not in the
      * registry, is missing required env vars, whose ``setup()`` returns false,
      * or is a duplicate that forbids multiple instances is a configuration
-     * error the caller must see, NOT a silent no-op. Mirrors the python
-     * reference ``SkillMixin.add_skill`` which raises
-     * ``ValueError(f"Failed to load skill '{name}': {error}")``; PHP's idiom for
-     * that value-domain error is ``\InvalidArgumentException``.
+     * error the caller must see, NOT a silent no-op. The idiom for that
+     * value-domain error is ``\InvalidArgumentException``.
      *
      * @param array<string, mixed>|null $params
      * @throws \InvalidArgumentException when the skill fails to load.
@@ -1795,10 +1747,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Lifecycle handler invoked when a post-prompt summary is received.
      *
-     * Mirrors Python `AgentBase.on_summary(summary, raw_data)` and the TS
-     * `AgentBase.onSummary(summary, rawData)` overridable hook: the default
-     * implementation is a no-op, and subclasses (e.g. the prefab agents)
-     * override it to log or persist the interaction summary. The base
+     * An overridable hook: the default implementation is a no-op, and
+     * subclasses (e.g. the prefab agents) override it to log or persist the
+     * interaction summary. The base
      * dispatcher ({@see handlePostPrompt}) calls this method with the parsed
      * summary and the full raw POST payload.
      *
@@ -1816,10 +1767,10 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Register a callback invoked when a post-prompt summary is received.
      *
-     * PHP-additive convenience (recorded in PORT_ADDITIONS.md): where the
-     * canonical contract is to override {@see onSummary}, this lets a caller
-     * install a summary handler without subclassing. Both the registered
-     * callback and the overridable {@see onSummary} method run.
+     * A convenience over subclassing: where the canonical contract is to
+     * override {@see onSummary}, this lets a caller install a summary handler
+     * without subclassing. Both the registered callback and the overridable
+     * {@see onSummary} method run.
      *
      * @param callable $callback fn(mixed $summary, array $rawData, array $headers): void
      */
@@ -1849,10 +1800,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Enable SIP-based routing for this agent.
      *
-     * Mirrors Python `AgentBase.enable_sip_routing(auto_map=True, path="/sip")`
-     * (agent_base.py:708). PHP's public method takes no args by idiom (the
-     * auto_map / path overrides go through AgentServer::setupSipRouting); it
-     * uses the reference defaults auto_map=true, path="/sip".
+     * Takes no arguments: it applies the defaults (auto-map on, path
+     * "/sip"). To override either, use AgentServer::setupSipRouting.
      *
      * Registers a routing callback at the SIP path that extracts the SIP
      * username from the request body and consults this agent's registered
@@ -1921,8 +1870,7 @@ class AgentBase extends Service implements AgentInterface
      * Automatically register common SIP usernames derived from this agent's
      * name and route.
      *
-     * Mirrors Python `AgentBase.auto_map_sip_usernames()`: registers a
-     * username from the cleaned agent name, one from the cleaned route (if
+     * Registers a username from the cleaned agent name, one from the cleaned route (if
      * different), and a vowel-stripped variant of the name when it is long
      * enough. Returns `$this` for chaining.
      */
@@ -1953,10 +1901,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Get this agent's name.
-     *
-     * Mirrors Python `AgentBase.get_name()`. Declared on AgentBase (in
-     * addition to the inherited {@see Service::getName}) so the surface
-     * enumerator records it on the agent_base module in the reference.
      */
     public function getName(): string
     {
@@ -1966,10 +1910,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Get the full URL for this agent's endpoint.
      *
-     * Mirrors Python `AgentBase.get_full_url(include_auth)`. Declared on
-     * AgentBase so the surface records it on the agent_base module; delegates
-     * to the parent {@see Service::getFullUrl} URL builder (which honours the
-     * manual/env proxy base, host, port, and route).
+     * Delegates to the parent {@see Service::getFullUrl} URL builder, which
+     * honours the manual/env proxy base, host, port, and route.
      *
      * @param bool $includeAuth Whether to embed basic-auth credentials.
      */
@@ -2002,8 +1944,7 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string, string>     $headers
      * @param string|null               $callId Optional call id. When present,
      *   secure SWAIG functions get a per-tool ``__token`` appended to their
-     *   ``web_hook_url`` (the wire manifestation of ``secure``), mirroring the
-     *   python reference ``AgentBase._render_swml(call_id=...)``. Omitted →
+     *   ``web_hook_url`` (the wire manifestation of ``secure``). Omitted →
      *   no per-tool token (the pre-render default; existing callers unaffected).
      * @return array<string, mixed>
      */
@@ -2267,10 +2208,9 @@ class AgentBase extends Service implements AgentInterface
      */
     /**
      * Handle a serverless-environment invocation (CGI, Lambda, Cloud
-     * Functions, Azure). Mirrors the reference
-     * `signalwire.core.mixins.serverless_mixin.ServerlessMixin.handle_serverless_request`:
-     * detect (or accept an override for) the execution mode and dispatch to the
-     * matching platform handler, returning a platform-appropriate response.
+     * Functions, Azure): detect (or accept an override for) the execution mode
+     * and dispatch to the matching platform handler, returning a
+     * platform-appropriate response.
      *
      * Delegates the per-platform request extraction + response shaping to
      * {@see \SignalWire\Serverless\Adapter}, which reads the event/request and
@@ -2384,8 +2324,8 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string, string> $headers
      * @param string|null            $callId When present, a SECURE tool gets a
      *   per-tool ``__token`` appended to its ``web_hook_url`` (the wire
-     *   manifestation of ``secure`` — mirrors python agent_base.py:1040/1096-1100:
-     *   ``if func.secure and call_id: url_params['__token'] = token``). An
+     *   manifestation of ``secure``: a token is appended only when the tool is
+     *   secure AND a call_id is in hand). An
      *   INSECURE tool (``secure=False``) never gets a token, and therefore gets
      *   NO per-tool ``web_hook_url`` at all — it falls back to the shared
      *   ``SWAIG.defaults.web_hook_url``. When $callId is null no token is minted
@@ -2474,8 +2414,8 @@ class AgentBase extends Service implements AgentInterface
      *
      * @param array<string, string> $headers
      * @param string|null            $token Optional per-tool SWAIG token. When
-     *   present it is appended as the reserved ``__token`` query parameter
-     *   (python uses ``__token`` to avoid collision with a caller's ``token``).
+     *   present it is appended as the reserved ``__token`` query parameter —
+     *   reserved so it cannot collide with a caller's own ``token``.
      */
     private function buildSwaigWebhookUrl(array $headers, ?string $token = null): string
     {
