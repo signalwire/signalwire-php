@@ -17,13 +17,31 @@
 
 declare(strict_types=1);
 
+// EVERY PHP directory in the repo. There is one house style — the one the
+// shipped library meets — and examples/ is shipping code too (owner ruling
+// 2026-07-29). Until 2026-07-30 examples/, relay/examples/ and rest/examples/
+// were formatted by NOTHING, and bin/ was covered only for the single named
+// `swaig-test` while its six sibling extensionless CLIs were skipped.
+//
+// bin/ holds EXTENSIONLESS `#!/usr/bin/env php` scripts, which `->name('*.php')`
+// cannot match, so each is named explicitly. ADD ANY NEW bin/ SCRIPT HERE —
+// scripts/check_bin_coverage.php is the gate that fails if one is missing.
 $finder = PhpCsFixer\Finder::create()
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
     ->in(__DIR__ . '/scripts')
     ->in(__DIR__ . '/bin')
+    ->in(__DIR__ . '/examples')
+    ->in(__DIR__ . '/relay/examples')
+    ->in(__DIR__ . '/rest/examples')
     ->name('*.php')
+    ->name('envelope-dump')
+    ->name('pagination-dump')
+    ->name('secret-scrub-dump')
+    ->name('secure-default-dump')
     ->name('swaig-test')
+    ->name('token-interop-mint')
+    ->name('wait-liveness-dump')
     ->ignoreDotFiles(true)
     ->ignoreVCS(true);
 
