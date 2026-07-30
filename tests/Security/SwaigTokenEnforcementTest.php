@@ -10,14 +10,15 @@ use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 use SignalWire\SWAIG\FunctionResult;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\InputStreamStub;
 
 /**
  * `secure=true` SWAIG tools REQUIRE a valid per-call `__token`, on EVERY
  * transport.
  *
  * The contract, identical for the direct HTTP dispatcher and for every
- * serverless envelope (lambda / azure / gcf / cgi), all of which funnel
- * through {@see \SignalWire\SWML\Service::handleRequest()}:
+ * serverless envelope (lambda / azure_function / google_cloud_function / cgi),
+ * all of which funnel through {@see \SignalWire\SWML\Service::handleRequest()}:
  *
  *   valid token   -> the handler RUNS
  *   forged token  -> the handler does NOT run; REFUSED
@@ -138,6 +139,86 @@ class SwaigTokenEnforcementTest extends TestCase
         $status  = $resp['statusCode'] ?? null;
         $this->assertIsInt($status);
         return [$status, is_array($decoded) ? $decoded : []];
+    }
+
+    /**
+     * Drive the AZURE FUNCTIONS envelope. The token rides the request `url`
+     * query; the call_id rides the POST body. Azure answers with `status`,
+     * not `statusCode`.
+     *
+     * @return array{int, array<string,mixed>}
+     */
+    private function viaAzure(AgentBase $a, string $function, ?string $callId, ?string $token): array
+    {
+        $query = $token === null ? '' : '?__token=' . rawurlencode($token);
+        $request = [
+            'method'  => 'POST',
+            'url'     => 'https://demo.azurewebsites.net/swaig' . $query,
+            'headers' => $this->auth(),
+            'body'    => $this->body($function, $callId),
+        ];
+
+        $resp = $a->handleServerlessRequest(event: $request, mode: 'azure_function');
+        $this->assertIsArray($resp);
+        $bodyStr = is_string($resp['body'] ?? null) ? $resp['body'] : '';
+        $decoded = json_decode($bodyStr, true);
+        $status  = $resp['status'] ?? null;
+        $this->assertIsInt($status);
+        return [$status, is_array($decoded) ? $decoded : []];
+    }
+
+    /**
+     * Drive the GOOGLE CLOUD FUNCTION or CGI envelope. Both read the request
+     * from `$_SERVER` plus `php://input` and WRITE the response to the output
+     * stream rather than returning it, so the body is captured from the
+     * buffer. CGI prefixes a `Status:`/header block terminated by a blank
+     * line; GCF echoes the body alone.
+     *
+     * The status is read back from the decoded FunctionResult path rather
+     * than the envelope, because GCF's status goes through
+     * `http_response_code()`, which is a no-op once output has started.
+     *
+     * @return array<string,mixed>
+     */
+    private function viaOutputStream(
+        AgentBase $a,
+        string $mode,
+        string $function,
+        ?string $callId,
+        ?string $token,
+    ): array {
+        $query = $token === null ? '' : '__token=' . rawurlencode($token);
+        $body  = $this->body($function, $callId);
+
+        $prevServer = $_SERVER;
+        $_SERVER['REQUEST_METHOD']     = 'POST';
+        $_SERVER['PATH_INFO']          = '/swaig';
+        $_SERVER['REQUEST_URI']        = '/swaig' . ($query === '' ? '' : '?' . $query);
+        $_SERVER['QUERY_STRING']       = $query;
+        $_SERVER['CONTENT_TYPE']       = 'application/json';
+        $_SERVER['CONTENT_LENGTH']     = (string) strlen($body);
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode(self::USER . ':' . self::PASS);
+
+        InputStreamStub::install($body);
+        ob_start();
+        try {
+            $a->handleServerlessRequest(event: null, mode: $mode);
+            $out = (string) ob_get_clean();
+        } catch (\Throwable $e) {
+            ob_end_clean();
+            InputStreamStub::uninstall();
+            $_SERVER = $prevServer;
+            throw $e;
+        }
+        InputStreamStub::uninstall();
+        $_SERVER = $prevServer;
+
+        // Strip the CGI header block when present; GCF emits the body alone.
+        $parts   = explode("\r\n\r\n", $out, 2);
+        $bodyStr = count($parts) === 2 ? $parts[1] : $out;
+        $decoded = json_decode($bodyStr, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     // ------------------------------------------------------------------
@@ -268,6 +349,82 @@ class SwaigTokenEnforcementTest extends TestCase
         yield 'forged token'  => ['c1', 'forged'];
         yield 'absent token'  => ['c1', null];
         yield 'absent call_id' => [null, 'forged'];
+    }
+
+    // ------------------------------------------------------------------
+    // EVERY serverless transport, not just lambda
+    //
+    // The four serverless envelopes reach handleRequest() by four DIFFERENT
+    // routes — lambda parses `queryStringParameters`, azure_function parses
+    // the `url` query, and google_cloud_function/cgi read `$_SERVER` +
+    // `php://input` — so a change to any one of them (a renamed mode token, a
+    // reshaped path, a dropped query string) can un-wire `__token`
+    // enforcement on that transport ALONE while the others stay green.
+    // Proving the contract on lambda alone therefore proved nothing about the
+    // other three. These cases close that hole.
+    // ------------------------------------------------------------------
+
+    /** @return iterable<string, array{string}> */
+    public static function outputStreamModes(): iterable
+    {
+        yield 'google_cloud_function' => ['google_cloud_function'];
+        yield 'cgi' => ['cgi'];
+    }
+
+    public function testAzureValidTokenRunsTheSecureHandler(): void
+    {
+        $a = $this->agent();
+        $token = $a->createToolToken('say_hello', 'c1');
+        [$status, $body] = $this->viaAzure($a, 'say_hello', 'c1', $token);
+
+        $this->assertSame(200, $status);
+        $this->assertSame('hello there', $body['response'] ?? null);
+    }
+
+    public function testAzureForgedTokenRefusesWithoutRunningTheHandler(): void
+    {
+        $a = $this->agent();
+        [$status, $body] = $this->viaAzure($a, 'say_hello', 'c1', 'forged.token.value');
+
+        $this->assertSame(200, $status);
+        $this->assertSame(self::REFUSAL, $body['response'] ?? null);
+    }
+
+    public function testAzureAbsentTokenRefusesFailClosed(): void
+    {
+        $a = $this->agent();
+        [$status, $body] = $this->viaAzure($a, 'say_hello', 'c1', null);
+
+        $this->assertSame(200, $status);
+        $this->assertSame(self::REFUSAL, $body['response'] ?? null, 'azure_function is not a weaker transport');
+    }
+
+    #[DataProvider('outputStreamModes')]
+    public function testOutputStreamValidTokenRunsTheSecureHandler(string $mode): void
+    {
+        $a = $this->agent();
+        $token = $a->createToolToken('say_hello', 'c1');
+        $body = $this->viaOutputStream($a, $mode, 'say_hello', 'c1', $token);
+
+        $this->assertSame('hello there', $body['response'] ?? null, "{$mode}: a VALID token must let the secure handler run");
+    }
+
+    #[DataProvider('outputStreamModes')]
+    public function testOutputStreamForgedTokenRefusesWithoutRunningTheHandler(string $mode): void
+    {
+        $a = $this->agent();
+        $body = $this->viaOutputStream($a, $mode, 'say_hello', 'c1', 'forged.token.value');
+
+        $this->assertSame(self::REFUSAL, $body['response'] ?? null, "{$mode}: a FORGED token must be refused");
+    }
+
+    #[DataProvider('outputStreamModes')]
+    public function testOutputStreamAbsentTokenRefusesFailClosed(string $mode): void
+    {
+        $a = $this->agent();
+        $body = $this->viaOutputStream($a, $mode, 'say_hello', 'c1', null);
+
+        $this->assertSame(self::REFUSAL, $body['response'] ?? null, "{$mode} is not a weaker transport");
     }
 
     // ------------------------------------------------------------------
