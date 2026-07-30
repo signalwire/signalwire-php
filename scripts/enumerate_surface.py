@@ -744,7 +744,17 @@ RE_PUBLIC_METHOD = re.compile(
     # surface: every concrete subclass implements them, and go/TS surface the
     # corresponding SkillBase.setup / register_tools members). PHP also allows
     # the modifiers in either order (`public abstract`), so accept both.
-    r"^\s*(?:abstract\s+)?public\s+(?:abstract\s+)?(?:static\s+)?function\s+(\w+)\s*\("
+    #
+    # `final` is accepted on either side of `public` too. It is a SEALING
+    # modifier, not a visibility one: `final public function x()` is exactly as
+    # public as `public function x()`, and a template method that seals its own
+    # guard (SkillBase::getPromptSections) is the canonical case. Omitting it
+    # SILENTLY DROPPED the member from the enumerated surface — the kind of
+    # false deletion that reads as a port gap. Only the oracle-gated field fold
+    # happened to re-add it downstream, and the native-name sidecar (which has
+    # no such backstop) lost it outright.
+    r"^\s*(?:final\s+|abstract\s+)*public\s+(?:final\s+|abstract\s+)*(?:static\s+)?"
+    r"function\s+(\w+)\s*\("
 )
 
 # ANY member declaration (function/const/property, at any visibility). Used only
@@ -1292,13 +1302,28 @@ def _parse_file(
         if _cut != -1:
             line = line[:_cut]
 
-        # Class declaration
+        # Class / enum declaration. An `@internal` marker on the TYPE excludes
+        # it (and its methods) from the surface, on exactly the same terms as
+        # the interface branch below and as signature_dump.php's own type-level
+        # skip (`$r->getDocComment()` contains `@internal` -> `continue`, which
+        # is reflection over EVERY type kind, class and enum included).
+        #
+        # This branch used to hardcode `cur_excluded = False`, so the surface
+        # axis honoured class-level `@internal` for interfaces ONLY while the
+        # signature axis honoured it for every kind. That asymmetry was latent
+        # rather than harmless: it went unnoticed only because all three
+        # `@internal` markers in the tree today happen to be interfaces. The
+        # first `@internal` class or enum anyone writes would have been dropped
+        # from port_signatures.json and kept in port_surface.json — one type
+        # visible on one parity axis and not the other, which is a
+        # SURFACE-DIFF addition with no signature counterpart to explain it.
         m_class = RE_CLASS.match(line)
         if m_class:
             cur_class = m_class.group(1)
-            cur_excluded = False
+            cur_excluded = internal_pending
             cur_trait = None
-            classes.add(cur_class)
+            if not cur_excluded:
+                classes.add(cur_class)
             internal_pending = False
             # Brace might appear later on the same or following line; we'll
             # enter the class scope as soon as `{` is seen.
@@ -1800,12 +1825,15 @@ def _fold_accessors(modules: dict) -> None:
 #   2. A RENAME is not fold idiom. If a doc names a method that exists under NO
 #      spelling, the sidecar cannot and must not paper over it — fix the doc.
 # ---------------------------------------------------------------------------
+# Kept in lockstep with RE_PUBLIC_METHOD above, including its `final` handling —
+# a `final public` method is public API and a doc that names it must resolve.
 _RE_NATIVE_METHOD = re.compile(
-    r"^\s*(?:abstract\s+)?public\s+(?:abstract\s+)?(?:static\s+)?function\s+(\w+)\s*\("
+    r"^\s*(?:final\s+|abstract\s+)*public\s+(?:final\s+|abstract\s+)*(?:static\s+)?"
+    r"function\s+(\w+)\s*\("
 )
 # ``public [readonly] [?]Type $name`` / ``public $name`` / promoted ctor params.
 _RE_NATIVE_PROPERTY = re.compile(
-    r"^\s*public\s+(?:readonly\s+)?(?:static\s+)?(?:[\w\\|?]+\s+)?\$(\w+)"
+    r"^\s*(?:final\s+)?public\s+(?:readonly\s+)?(?:static\s+)?(?:[\w\\|?]+\s+)?\$(\w+)"
 )
 
 
