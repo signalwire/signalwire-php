@@ -24,6 +24,26 @@ function env(string $name): string
     return $value;
 }
 
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
 $client = new RestClient(
     project: env('SIGNALWIRE_PROJECT_ID'),
     token:   env('SIGNALWIRE_API_TOKEN'),

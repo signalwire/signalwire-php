@@ -113,7 +113,7 @@ function fieldAny(mixed $row, string $first, string $second, string $default = '
 /** The first row of a list response, or an empty array. */
 function firstRow(mixed $response): mixed
 {
-    return firstRow($response);
+    return dataRows($response)[0] ?? [];
 }
 
 // 1. Collect DTMF input
