@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ fe39e7d794745d47ff1e909fa0d03e17e5b1087f",
+  "generated_from": "signalwire-php @ c6901e5ed19524a155104c3ae7e644fbc7caaf5c",
   "modules": {
     "signalwire": {
       "classes": {
@@ -382,7 +382,6 @@
       "classes": {
         "DataMap": [
           "__init__",
-          "body",
           "create_expression_tool",
           "create_simple_api_tool",
           "description",

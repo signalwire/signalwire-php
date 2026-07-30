@@ -353,7 +353,7 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     (
         "signalwire.core.data_map.create_simple_api_tool",
         "Python factory function; PHP users instantiate `DataMap` and call "
-        "`webhook()`/`body()` directly.",
+        "`webhook()`/`params()` directly.",
     ),
     (
         "signalwire.core.function_result.FunctionResult.to_dict",

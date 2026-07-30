@@ -3632,20 +3632,6 @@
               ],
               "returns": "void"
             },
-            "body": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                },
-                {
-                  "name": "data",
-                  "type": "any",
-                  "required": true
-                }
-              ],
-              "returns": "any"
-            },
             "description": {
               "params": [
                 {
@@ -3955,12 +3941,6 @@
             },
             {
               "name": "headers",
-              "type": "optional<any>",
-              "required": false,
-              "default": null
-            },
-            {
-              "name": "body",
               "type": "optional<any>",
               "required": false,
               "default": null

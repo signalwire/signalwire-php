@@ -227,20 +227,13 @@ class DataMap
     }
 
     /**
-     * Set body on the last webhook.
-     *
-     * @param array<string, mixed> $data
-     */
-    public function body(array $data): self
-    {
-        if (!empty($this->webhooks)) {
-            $this->webhooks[array_key_last($this->webhooks)]['body'] = $data;
-        }
-        return $this;
-    }
-
-    /**
      * Set params on the last webhook.
+     *
+     * This is NOT an alias for a `body` setter: `params` is the only one of the
+     * two that is part of the webhook contract. `schema.json` `$defs/Webhook`
+     * lists `params` among its ten permitted properties and forbids everything
+     * else, and the engine's webhook readers look up `params` and never `body`.
+     * Use this method for POST/PUT request data.
      *
      * @param array<string, mixed> $data
      */
@@ -370,7 +363,7 @@ class DataMap
      *
      * Mirrors Python's module-level `create_simple_api_tool(name, url,
      * response_template, parameters=None, method="GET", headers=None,
-     * body=None, error_keys=None)` free function. PHP (PSR-4, file-per-class)
+     * error_keys=None)` free function. PHP (PSR-4, file-per-class)
      * cannot declare a module-level free function, so it is hosted here as a
      * static factory on DataMap and projected onto the canonical
      * `signalwire.create_simple_api_tool` via FREE_FUNCTION_PROJECTIONS.
@@ -378,7 +371,6 @@ class DataMap
      *
      * @param array<string, array{type?: string, description?: string, required?: bool}>|null $parameters
      * @param array<string, string>|null $headers
-     * @param array<string, mixed>|null  $body
      * @param list<string>|null           $errorKeys
      */
     public static function createSimpleApiTool(
@@ -388,7 +380,6 @@ class DataMap
         ?array $parameters = null,
         string $method = 'GET',
         ?array $headers = null,
-        ?array $body = null,
         ?array $errorKeys = null
     ): self {
         $dataMap = new self($name);
@@ -406,10 +397,6 @@ class DataMap
         }
 
         $dataMap->webhook($method, $url, $headers ?? []);
-
-        if ($body !== null) {
-            $dataMap->body($body);
-        }
 
         if ($errorKeys !== null) {
             $dataMap->errorKeys($errorKeys);
