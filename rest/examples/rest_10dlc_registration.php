@@ -39,19 +39,61 @@ $client = new RestClient(
  * Every REST method returns the decoded JSON body as array<string,mixed>, so
  * that is what a success yields; a failure yields null.
  *
- * @param callable(): array<string,mixed> $fn
- * @return array<string,mixed>|null
+ * @param callable(): mixed $fn
+ * @return array<array-key,mixed>|null
  */
 function safe(string $label, callable $fn): ?array
 {
     try {
         $result = $fn();
+        $result = is_array($result) ? $result : null;
         echo "  {$label}: OK\n";
         return $result;
     } catch (\Exception $e) {
         echo "  {$label}: failed ({$e->getMessage()})\n";
         return null;
     }
+}
+
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
+/**
+ * Narrow a `mixed` to a list that is safe to foreach/count/array_slice.
+ * A missing or non-array value yields an empty list.
+ *
+ * @return list<mixed>
+ */
+function rows(mixed $value): array
+{
+    return is_array($value) ? array_values($value) : [];
+}
+
+/**
+ * The `data` collection of a list response, narrowed to a list.
+ *
+ * @return list<mixed>
+ */
+function dataRows(mixed $response): array
+{
+    return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
 // 1. Register a brand
@@ -71,8 +113,8 @@ $brandId = $brand ? ($brand['id'] ?? null) : null;
 echo "\nListing brands...\n";
 $brands = safe('List brands', fn () => $client->registry()->brands()->list());
 if ($brands) {
-    foreach (($brands['data'] ?? []) as $b) {
-        echo "  - {$b['id']}: " . ($b['name'] ?? 'unnamed') . "\n";
+    foreach (dataRows($brands) as $b) {
+        echo '  - ' . field($b, 'id') . ': ' . field($b, 'name', 'unnamed') . "\n";
     }
     if (!$brandId && !empty($brands['data'])) {
         $brandId = $brands['data'][0]['id'];
@@ -83,8 +125,8 @@ if ($brands) {
 if ($brandId) {
     $detail = safe('Brand detail', fn () => $client->registry()->brands()->get($brandId));
     if ($detail) {
-        echo "\nBrand detail: " . ($detail['name'] ?? 'N/A')
-            . ' (' . ($detail['state'] ?? 'N/A') . ")\n";
+        echo "\nBrand detail: " . field($detail, 'name', 'N/A')
+            . ' (' . field($detail, 'state', 'N/A') . ")\n";
     }
 }
 
@@ -113,8 +155,8 @@ if ($brandId) {
         $client->registry()->brands()->listCampaigns($brandId)
     );
     if ($campaigns) {
-        foreach (($campaigns['data'] ?? []) as $c) {
-            echo "  - {$c['id']}: " . ($c['name'] ?? 'unknown') . "\n";
+        foreach (dataRows($campaigns) as $c) {
+            echo '  - ' . field($c, 'id') . ': ' . field($c, 'name', 'unknown') . "\n";
             $campaignId ??= $c['id'];
         }
     }
@@ -124,8 +166,8 @@ if ($brandId) {
 if ($campaignId) {
     $campDetail = safe('Get campaign', fn () => $client->registry()->campaigns()->get($campaignId));
     if ($campDetail) {
-        echo "\nCampaign: " . ($campDetail['name'] ?? 'N/A')
-            . ' (' . ($campDetail['state'] ?? 'N/A') . ")\n";
+        echo "\nCampaign: " . field($campDetail, 'name', 'N/A')
+            . ' (' . field($campDetail, 'state', 'N/A') . ")\n";
     }
     safe(
         'Update campaign',
@@ -150,7 +192,7 @@ if ($campaignId) {
 if ($orderId) {
     $orderDetail = safe('Order status', fn () => $client->registry()->orders()->get($orderId));
     if ($orderDetail) {
-        echo '  Order status: ' . ($orderDetail['status'] ?? 'N/A') . "\n";
+        echo '  Order status: ' . field($orderDetail, 'status', 'N/A') . "\n";
     }
 }
 
@@ -159,15 +201,15 @@ if ($campaignId) {
     echo "\nListing campaign numbers...\n";
     $numbers = safe('List numbers', fn () => $client->registry()->campaigns()->listNumbers($campaignId));
     if ($numbers) {
-        foreach (($numbers['data'] ?? []) as $n) {
+        foreach (dataRows($numbers) as $n) {
             echo '  - ' . ($n['phone_number'] ?? $n['id'] ?? 'unknown') . "\n";
         }
     }
 
     $orders = safe('List orders', fn () => $client->registry()->campaigns()->listOrders($campaignId));
     if ($orders) {
-        foreach (($orders['data'] ?? []) as $o) {
-            echo "  - Order {$o['id']}: " . ($o['status'] ?? 'unknown') . "\n";
+        foreach (dataRows($orders) as $o) {
+            echo '  - Order ' . field($o, 'id') . ': ' . field($o, 'status', 'unknown') . "\n";
         }
     }
 }
@@ -177,8 +219,8 @@ if ($campaignId) {
     echo "\nUnassigning numbers...\n";
     $nums = safe('Get numbers', fn () => $client->registry()->campaigns()->listNumbers($campaignId));
     if ($nums) {
-        foreach (($nums['data'] ?? []) as $n) {
-            safe("Unassign {$n['id']}", fn () => $client->registry()->numbers()->delete($n['id']));
+        foreach (dataRows($nums) as $n) {
+            safe('Unassign ' . field($n, 'id'), fn () => $client->registry()->numbers()->delete($n['id']));
         }
     }
 }

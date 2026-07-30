@@ -36,19 +36,61 @@ $client = new RestClient(
  * Every REST method returns the decoded JSON body as array<string,mixed>, so
  * that is what a success yields; a failure yields null.
  *
- * @param callable(): array<string,mixed> $fn
- * @return array<string,mixed>|null
+ * @param callable(): mixed $fn
+ * @return array<array-key,mixed>|null
  */
 function safe(string $label, callable $fn): ?array
 {
     try {
         $result = $fn();
+        $result = is_array($result) ? $result : null;
         echo "  {$label}: OK\n";
         return $result;
     } catch (\Exception $e) {
         echo "  {$label}: failed ({$e->getMessage()})\n";
         return null;
     }
+}
+
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
+/**
+ * Narrow a `mixed` to a list that is safe to foreach/count/array_slice.
+ * A missing or non-array value yields an empty list.
+ *
+ * @return list<mixed>
+ */
+function rows(mixed $value): array
+{
+    return is_array($value) ? array_values($value) : [];
+}
+
+/**
+ * The `data` collection of a list response, narrowed to a list.
+ *
+ * @return list<mixed>
+ */
+function dataRows(mixed $response): array
+{
+    return is_array($response) ? rows($response['data'] ?? []) : [];
 }
 
 // 1. Search for available phone numbers
@@ -59,7 +101,7 @@ $available = safe(
     $client->phoneNumbers()->search(['areacode' => '512', 'max_results' => 3])
 );
 if ($available) {
-    foreach (($available['data'] ?? []) as $num) {
+    foreach (dataRows($available) as $num) {
         echo '  - ' . ($num['e164'] ?? $num['number'] ?? 'unknown') . "\n";
     }
 }
@@ -69,7 +111,7 @@ echo "\nPurchasing a phone number...\n";
 $numId = null;
 $number = safe('Purchase', function () use ($client, $available) {
     $first = ($available['data'] ?? [null])[0] ?? [];
-    return $client->phoneNumbers()->create(['number' => ($first['e164'] ?? '+15125551234')]);
+    return $client->phoneNumbers()->create(['number' => field($first, 'e164', '+15125551234')]);
 });
 $numId = $number ? ($number['id'] ?? null) : null;
 
@@ -77,14 +119,14 @@ $numId = $number ? ($number['id'] ?? null) : null;
 echo "\nListing owned numbers...\n";
 $owned = safe('List', fn () => $client->phoneNumbers()->list());
 if ($owned) {
-    foreach (array_slice($owned['data'] ?? [], 0, 5) as $n) {
-        echo '  - ' . ($n['number'] ?? 'unknown') . " ({$n['id']})\n";
+    foreach (array_slice(dataRows($owned), 0, 5) as $n) {
+        echo '  - ' . field($n, 'number', 'unknown') . ' (' . field($n, 'id') . ")\n";
     }
 }
 if ($numId) {
     $detail = safe('Get', fn () => $client->phoneNumbers()->get($numId));
     if ($detail) {
-        echo '  Detail: ' . ($detail['number'] ?? 'N/A') . "\n";
+        echo '  Detail: ' . field($detail, 'number', 'N/A') . "\n";
     }
 }
 
@@ -111,8 +153,8 @@ if ($groupId && $numId) {
         }
 
         $memberships = $client->numberGroups()->listMemberships($groupId);
-        foreach (($memberships['data'] ?? []) as $m) {
-            echo '  - Member: ' . ($m['id'] ?? 'unknown') . "\n";
+        foreach (dataRows($memberships) as $m) {
+            echo '  - Member: ' . field($m, 'id', 'unknown') . "\n";
         }
     });
 }
@@ -150,8 +192,8 @@ safe('SIP profile', function () use ($client) {
 echo "\nListing short codes...\n";
 safe('Short codes', function () use ($client) {
     $codes = $client->shortCodes()->list();
-    foreach (($codes['data'] ?? []) as $sc) {
-        echo '  - ' . ($sc['short_code'] ?? 'unknown') . "\n";
+    foreach (dataRows($codes) as $sc) {
+        echo '  - ' . field($sc, 'short_code', 'unknown') . "\n";
     }
 });
 
