@@ -55,10 +55,11 @@ class EventAccessorContractTest extends TestCase
     {
         $event = self::collectEvent('1');
 
-        self::assertTrue(
-            method_exists($event, 'getParams'),
-            'Event::getParams() is the accessor the SDK and examples must use',
-        );
+        // getParams() is the accessor the SDK and examples must use. Calling it
+        // here IS the assertion on its name: PHPStan proves the name
+        // statically, so a rename fails the analyser before this test runs.
+        self::assertArrayHasKey('result', $event->getParams());
+
         // The exact misspelling the IVR example guarded on. If a params()
         // accessor is ever added, this test must be revisited deliberately
         // rather than the example silently taking a different path.

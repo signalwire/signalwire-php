@@ -85,7 +85,8 @@ function collectResult(?Event $event): array
 // above are unit-tested) without opening a WebSocket. The client is built and
 // run only when this file is the CLI entrypoint.
 $isCliEntrypoint = PHP_SAPI === 'cli'
-    && isset($_SERVER['argv'][0])
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
     && \realpath($_SERVER['argv'][0]) === __FILE__;
 
 if (!$isCliEntrypoint) {

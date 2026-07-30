@@ -143,7 +143,8 @@ PROMPT);
 // `swaig-test --file examples/simple_agent.php --list-tools`) without starting
 // the HTTP server. run() fires only when this file is the CLI entrypoint.
 $isCliEntrypoint = PHP_SAPI === 'cli'
-    && isset($_SERVER['argv'][0])
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
     && \realpath($_SERVER['argv'][0]) === __FILE__;
 
 if ($isCliEntrypoint) {
