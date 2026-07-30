@@ -30,13 +30,13 @@ namespace SignalWire\Serverless;
  * PORT_ADDITION — the Python reference has no equivalent (its serverless
  * handling lives in the broader `cli.simulation.mock_env` machinery).
  *
- * The tokens are IDENTICAL to {@see \SignalWire\Logging\LoggingConfig}'s
- * execution-mode set (`cgi`/`lambda`/`google_cloud_function`/`azure_function`/
- * `server`), which mirrors Python's `get_execution_mode`. They used to differ
- * (`gcf`/`azure`), which made
- * `handleServerlessRequest(mode: 'azure_function')` — the spelling the
- * reference documents and dispatches on — throw \ValueError. Parity wins: the
- * reference tokens are the contract, so this enum uses them.
+ * There is ONE execution-mode vocabulary across the SDK: these tokens are the
+ * same ones {@see \SignalWire\Logging\LoggingConfig::getExecutionMode()}
+ * reports, so a mode read from one may be passed to the other unchanged.
+ *
+ * Note for upgrades: the two cloud-function modes were previously spelled
+ * `gcf` and `azure`. Those short spellings are no longer accepted — pass
+ * `google_cloud_function` and `azure_function` instead.
  */
 enum ExecutionMode: string
 {
