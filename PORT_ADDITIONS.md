@@ -360,7 +360,6 @@ signalwire.skills.http_helper.HttpHelper.post_json: PHP-internal HTTP helper use
 signalwire.skills.http_helper.HttpHelper.request: PHP-internal HTTP helper used by the skill base class; Python skills use `requests` directly.
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_description: PHP idiomatic accessor / public hook on InfoGathererSkill.
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_name: PHP idiomatic accessor / public hook on InfoGathererSkill.
-signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_prompt_sections: PHP idiomatic accessor / public hook on InfoGathererSkill.
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.supports_multiple_instances: PHP idiomatic accessor / public hook on InfoGathererSkill.
 signalwire.skills.joke.skill.JokeSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.joke.skill.JokeSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -422,7 +421,6 @@ signalwire.rest.namespaces._client_tree_generated.VideoNamespace.__get: PHP magi
 signalwire.rest.namespaces.calling_resources_generated.Calling.get_base_path: PHP-idiom getter: explicit getBasePath() on the generated command-dispatch resource; Python exposes the base path as a class-level attribute. Same data, different access shape.
 
 # --- Skill override methods PHP declares that the reference skill does not ---
-signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.
 
 # --- LiveWire subsystem (item I) — LiveKit-compat shim, PHP hosting devices + idiomatic accessors ---
 

@@ -683,11 +683,8 @@ class ClaudeSkills extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
         if (count($this->skills) === 0) {
             return [];
         }

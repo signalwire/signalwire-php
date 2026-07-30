@@ -177,14 +177,39 @@ abstract class SkillBase
     }
 
     /**
+     * Prompt sections this skill contributes to the agent, or `[]` when the
+     * caller passed `skip_prompt`.
+     *
+     * FINAL TEMPLATE METHOD — the `skip_prompt` guard lives here and here only,
+     * so it cannot be forgotten by a subclass. Mirrors Python
+     * `SkillBase.get_prompt_sections` (core/skill_base.py:88-93), which applies
+     * the same guard and delegates to a protected hook. Subclasses override
+     * {@see self::_getPromptSections()}, never this method.
+     *
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    final public function getPromptSections(): array
     {
         if (!empty($this->params['skip_prompt'])) {
             return [];
         }
 
+        return $this->_getPromptSections();
+    }
+
+    /**
+     * Override this in subclasses to provide prompt sections.
+     *
+     * Protected hook behind the {@see self::getPromptSections()} template
+     * method; the `skip_prompt` guard has already been applied by the time this
+     * runs. Mirrors Python `SkillBase._get_prompt_sections`
+     * (core/skill_base.py:95-97) — protected there and here, so it is internal
+     * plumbing on both sides and is exported by neither.
+     *
+     * @return list<array{title: string, body?: string, bullets?: list<string>}>
+     */
+    protected function _getPromptSections(): array
+    {
         return [];
     }
 

@@ -329,12 +329,8 @@ class InfoGatherer extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
-
         $instanceKey = $this->getInstanceKey();
         $questions = $this->normalizeQuestions($this->paramArray('questions'));
         $bullets = [
