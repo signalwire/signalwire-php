@@ -15,13 +15,30 @@ require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
 
-$fromNumber = $_ENV['RELAY_FROM_NUMBER'] ?? die("Set RELAY_FROM_NUMBER\n");
-$toNumber   = $_ENV['RELAY_TO_NUMBER']   ?? die("Set RELAY_TO_NUMBER\n");
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
+
+/** Read an optional setting from the environment, falling back to a default. */
+function envOr(string $name, string $default): string
+{
+    $value = $_ENV[$name] ?? null;
+    return is_string($value) && $value !== '' ? $value : $default;
+}
+
+$fromNumber = env('RELAY_FROM_NUMBER');
+$toNumber   = env('RELAY_TO_NUMBER');
 
 $client = new Client([
-    'project' => $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    'token'   => $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    'host'    => $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
+    'project' => env('SIGNALWIRE_PROJECT_ID'),
+    'token'   => env('SIGNALWIRE_API_TOKEN'),
+    'host'    => envOr('SIGNALWIRE_SPACE', 'relay.signalwire.com'),
 ]);
 
 $client->connect();  // opens the WebSocket and authenticates (throws on failure)
