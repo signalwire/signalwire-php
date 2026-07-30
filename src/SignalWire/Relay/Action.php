@@ -46,22 +46,22 @@ class Action
      * `callId`/`nodeId`/`client` triple — is what stops an action's identity
      * disagreeing with its call, and gives a caller a route back to the Call.
      */
-    protected ?Call $call = null;
+    protected Call $call;
 
     private bool $callbackFired = false;
 
     /**
-     * @param Call|null $call The owning Call.
-     *   Optional (trailing) so the three subclasses that declare
-     *   their own constructor keep working unchanged; {@see Call} always supplies
-     *   it on the production path.
+     * @param Call $call The owning Call. REQUIRED — an Action without its Call
+     *   has no identity to resolve against, and the reference declares it
+     *   required too (relay/call.py:77). It was previously optional purely so
+     *   test fakes could skip it; the fakes now build a Call.
      */
     public function __construct(
         string $controlId,
         string $callId,
         string $nodeId,
         object $client,
-        ?Call $call = null,
+        Call $call,
     ) {
         $this->controlId = $controlId;
         $this->callId = $callId;
@@ -70,11 +70,8 @@ class Action
         $this->call = $call;
     }
 
-    /**
-     * The Call this action runs on. Null only for an Action constructed
-     * outside a Call (test fakes), never on the production path.
-     */
-    public function getCall(): ?Call
+    /** The Call this action runs on. Always present — supplied at construction. */
+    public function getCall(): Call
     {
         return $this->call;
     }
@@ -554,7 +551,7 @@ class StandaloneCollectAction extends CollectAction
         string $callId,
         string $nodeId,
         object $client,
-        ?Call $call = null,
+        Call $call,
     ) {
         parent::__construct($controlId, $callId, $nodeId, $client, $call);
         $this->setStopMethod('calling.collect.stop');
@@ -602,16 +599,19 @@ class FaxAction extends Action
     protected string $faxType;
 
     /**
-     * @param string    $faxType 'send' or 'receive'
-     * @param Call|null $call    The owning Call.
+     * @param Call   $call    The owning Call (REQUIRED, as in the reference).
+     * @param string $faxType 'send' or 'receive'.
+     *
+     * `$call` precedes `$faxType`: PHP forbids a required parameter after an
+     * optional one, and `$faxType` carries a default.
      */
     public function __construct(
         string $controlId,
         string $callId,
         string $nodeId,
         object $client,
+        Call $call,
         string $faxType = 'send',
-        ?Call $call = null,
     ) {
         parent::__construct($controlId, $callId, $nodeId, $client, $call);
         $this->faxType = $faxType;

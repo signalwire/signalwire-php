@@ -1220,7 +1220,7 @@ class Call
         if ($actionClass === FaxAction::class) {
             $faxTypeRaw = $opts['fax_type'] ?? 'send';
             $faxType = is_string($faxTypeRaw) ? $faxTypeRaw : 'send';
-            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $faxType, $this);
+            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $this, $faxType);
         } else {
             /** @psalm-suppress UnsafeInstantiation */
             $action = new $actionClass($controlId, $callId, $nodeId, $this->client, $this);

@@ -60,7 +60,8 @@ class RelayTest extends TestCase
 
     private function makeAction(?RelayClientLike $client = null): Action
     {
-        return new Action('ctrl-1', 'call-1', 'node-1', $client ?? $this->makeMockClient());
+        $client ??= $this->makeMockClient();
+        return new Action('ctrl-1', 'call-1', 'node-1', $client, $this->makeCall($client));
     }
 
     private function makeCall(?RelayClientLike $client = null): Call
@@ -341,7 +342,7 @@ class RelayTest extends TestCase
     public function actionConstructionWithControlIdCallIdNodeId(): void
     {
         $client = $this->makeMockClient();
-        $action = new Action('ctrl-abc', 'call-xyz', 'node-123', $client);
+        $action = new Action('ctrl-abc', 'call-xyz', 'node-123', $client, $this->makeCall($client));
 
         $this->assertSame('ctrl-abc', $action->getControlId());
         $this->assertSame('call-xyz', $action->getCallId());
@@ -419,7 +420,7 @@ class RelayTest extends TestCase
     public function playActionHasPauseResumeVolumeMethods(): void
     {
         $client = $this->makeMockClient();
-        $play = new PlayAction('ctrl-p', 'call-1', 'node-1', $client);
+        $play = new PlayAction('ctrl-p', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         $this->assertSame('calling.play.stop', $play->getStopMethod());
 
@@ -438,7 +439,7 @@ class RelayTest extends TestCase
     public function recordActionHasUrlDurationSize(): void
     {
         $client = $this->makeMockClient();
-        $record = new RecordAction('ctrl-r', 'call-1', 'node-1', $client);
+        $record = new RecordAction('ctrl-r', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         $this->assertNull($record->getUrl());
         $this->assertNull($record->getDuration());
@@ -461,7 +462,7 @@ class RelayTest extends TestCase
     public function collectActionIgnoresPlayEvents(): void
     {
         $client = $this->makeMockClient();
-        $collect = new CollectAction('ctrl-c', 'call-1', 'node-1', $client);
+        $collect = new CollectAction('ctrl-c', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         $playEvent = new Event('calling.call.play', [
             'state' => 'playing',
@@ -478,7 +479,7 @@ class RelayTest extends TestCase
     public function collectActionProcessesCollectEventsNormally(): void
     {
         $client = $this->makeMockClient();
-        $collect = new CollectAction('ctrl-c', 'call-1', 'node-1', $client);
+        $collect = new CollectAction('ctrl-c', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         $collectEvent = new Event('calling.call.collect', [
             'state' => 'finished',
@@ -499,7 +500,7 @@ class RelayTest extends TestCase
     public function detectActionGetDetectResult(): void
     {
         $client = $this->makeMockClient();
-        $detect = new DetectAction('ctrl-d', 'call-1', 'node-1', $client);
+        $detect = new DetectAction('ctrl-d', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         $this->assertNull($detect->getDetectResult());
 
@@ -520,11 +521,11 @@ class RelayTest extends TestCase
     {
         $client = $this->makeMockClient();
 
-        $sendFax = new FaxAction('ctrl-fs', 'call-1', 'node-1', $client, 'send');
+        $sendFax = new FaxAction('ctrl-fs', 'call-1', 'node-1', $client, $this->makeCall($client), 'send');
         $this->assertSame('send', $sendFax->getFaxType());
         $this->assertSame('calling.send_fax.stop', $sendFax->getStopMethod());
 
-        $recvFax = new FaxAction('ctrl-fr', 'call-1', 'node-1', $client, 'receive');
+        $recvFax = new FaxAction('ctrl-fr', 'call-1', 'node-1', $client, $this->makeCall($client), 'receive');
         $this->assertSame('receive', $recvFax->getFaxType());
         $this->assertSame('calling.receive_fax.stop', $recvFax->getStopMethod());
     }
@@ -684,8 +685,8 @@ class RelayTest extends TestCase
         $client = $this->makeMockClient();
         $call = $this->makeCall($client);
 
-        $action1 = new Action('ctrl-1', 'call-100', 'node-200', $client);
-        $action2 = new Action('ctrl-2', 'call-100', 'node-200', $client);
+        $action1 = new Action('ctrl-1', 'call-100', 'node-200', $client, $this->makeCall($client));
+        $action2 = new Action('ctrl-2', 'call-100', 'node-200', $client, $this->makeCall($client));
         $call->actions['ctrl-1'] = $action1;
         $call->actions['ctrl-2'] = $action2;
 
@@ -707,7 +708,7 @@ class RelayTest extends TestCase
         $client = $this->makeMockClient();
         $call = $this->makeCall($client);
 
-        $action = new PlayAction('ctrl-play', 'call-100', 'node-200', $client);
+        $action = new PlayAction('ctrl-play', 'call-100', 'node-200', $client, $this->makeCall($client));
         $call->actions['ctrl-play'] = $action;
 
         $event = new Event('calling.call.play', [
@@ -779,7 +780,7 @@ class RelayTest extends TestCase
         $call = $this->makeCall($client);
 
         // Simulate what startAction does: create an action and store it
-        $action = new PlayAction('ctrl-manual', 'call-100', 'node-200', $client);
+        $action = new PlayAction('ctrl-manual', 'call-100', 'node-200', $client, $this->makeCall($client));
         $call->actions['ctrl-manual'] = $action;
 
         $this->assertArrayHasKey('ctrl-manual', $call->actions);
@@ -791,7 +792,7 @@ class RelayTest extends TestCase
     public function callPlayActionStopMethodCorrect(): void
     {
         $client = $this->makeMockClient();
-        $action = new PlayAction('ctrl-play', 'call-100', 'node-200', $client);
+        $action = new PlayAction('ctrl-play', 'call-100', 'node-200', $client, $this->makeCall($client));
         $call = $this->makeCall($client);
         $call->actions['ctrl-play'] = $action;
 
@@ -1135,7 +1136,7 @@ class RelayTest extends TestCase
     public function standaloneCollectActionSendsCollectStartInputTimers(): void
     {
         $client = $this->makeMockClient();
-        $action = new StandaloneCollectAction('ctrl-sc', 'call-1', 'node-1', $client);
+        $action = new StandaloneCollectAction('ctrl-sc', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         $action->startInputTimers();
 
@@ -1148,7 +1149,7 @@ class RelayTest extends TestCase
     public function standaloneCollectActionUsesCollectStopMethod(): void
     {
         $client = $this->makeMockClient();
-        $action = new StandaloneCollectAction('ctrl-sc2', 'call-1', 'node-1', $client);
+        $action = new StandaloneCollectAction('ctrl-sc2', 'call-1', 'node-1', $client, $this->makeCall($client));
 
         // The constructor pins the standalone-collect stop method.
         $this->assertSame('calling.collect.stop', $action->getStopMethod());

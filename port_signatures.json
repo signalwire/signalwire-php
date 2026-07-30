@@ -21575,9 +21575,8 @@
                 },
                 {
                   "name": "call",
-                  "type": "optional<class:signalwire.relay.call.Call>",
-                  "required": false,
-                  "default": null
+                  "type": "class:signalwire.relay.call.Call",
+                  "required": true
                 }
               ],
               "returns": "void"
@@ -21589,7 +21588,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "optional<class:signalwire.relay.call.Call>"
+              "returns": "class:signalwire.relay.call.Call"
             },
             "completed": {
               "params": [
@@ -23024,16 +23023,15 @@
                   "required": true
                 },
                 {
+                  "name": "call",
+                  "type": "class:signalwire.relay.call.Call",
+                  "required": true
+                },
+                {
                   "name": "fax_type",
                   "type": "string",
                   "required": false,
                   "default": "send"
-                },
-                {
-                  "name": "call",
-                  "type": "optional<class:signalwire.relay.call.Call>",
-                  "required": false,
-                  "default": null
                 }
               ],
               "returns": "void"
@@ -23243,9 +23241,8 @@
                 },
                 {
                   "name": "call",
-                  "type": "optional<class:signalwire.relay.call.Call>",
-                  "required": false,
-                  "default": null
+                  "type": "class:signalwire.relay.call.Call",
+                  "required": true
                 }
               ],
               "returns": "void"
@@ -89730,8 +89727,8 @@
     "signalwire.relay.call.AIAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89754,8 +89751,8 @@
     "signalwire.relay.call.Action": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89790,8 +89787,8 @@
     "signalwire.relay.call.CollectAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89814,8 +89811,8 @@
     "signalwire.relay.call.DetectAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89838,8 +89835,8 @@
     "signalwire.relay.call.FaxAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89866,8 +89863,8 @@
     "signalwire.relay.call.PayAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89890,8 +89887,8 @@
     "signalwire.relay.call.PlayAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89914,8 +89911,8 @@
     "signalwire.relay.call.RecordAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89938,8 +89935,8 @@
     "signalwire.relay.call.StandaloneCollectAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89962,8 +89959,8 @@
     "signalwire.relay.call.StreamAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -89986,8 +89983,8 @@
     "signalwire.relay.call.TapAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
@@ -90010,8 +90007,8 @@
     "signalwire.relay.call.TranscribeAction": {
       "params": {
         "call": {
-          "type": "optional<class:signalwire.relay.call.Call>",
-          "required": false
+          "type": "class:signalwire.relay.call.Call",
+          "required": true
         },
         "call_id": {
           "type": "string",
