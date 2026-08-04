@@ -19,15 +19,15 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class ContextSwitchAction
 {
-    public mixed $system_prompt = null;
-
-    public mixed $user_prompt = null;
-
-    public mixed $system_pom = null;
-
-    public mixed $user_pom = null;
-
     public ?bool $consolidate = null;
 
     public ?bool $full_reset = null;
+
+    public mixed $system_pom = null;
+
+    public ?string $system_prompt = null;
+
+    public mixed $user_pom = null;
+
+    public ?string $user_prompt = null;
 }

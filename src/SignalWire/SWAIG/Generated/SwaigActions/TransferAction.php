@@ -19,7 +19,7 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class TransferAction
 {
-    public mixed $dest = null;
+    public ?string $dest = null;
 
     public ?bool $summarize = null;
 }

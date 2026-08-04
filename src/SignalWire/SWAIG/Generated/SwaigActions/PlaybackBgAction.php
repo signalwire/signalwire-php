@@ -19,7 +19,7 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class PlaybackBgAction
 {
-    public mixed $file = null;
+    public ?string $file = null;
 
     public ?bool $wait = null;
 }

@@ -19,5 +19,5 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class HoldAction
 {
-    public ?int $timeout = null;
+    public ?float $timeout = null;
 }

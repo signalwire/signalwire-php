@@ -35,10 +35,4 @@ class PostPromptSystemLogEntry
 
     /** @var array<string,mixed>|null */
     public ?array $metadata = null;
-
-    public ?string $context = null;
-
-    public ?string $step = null;
-
-    public ?int $step_index = null;
 }

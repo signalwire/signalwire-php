@@ -7448,7 +7448,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "string"
+              "returns": "bool"
             },
             "mcp_response": {
               "params": [
@@ -7457,7 +7457,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "any"
+              "returns": "string"
             },
             "mcp_tool": {
               "params": [
@@ -7593,15 +7593,6 @@
               ],
               "returns": "string"
             },
-            "context": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
             "lang": {
               "params": [
                 {
@@ -7628,24 +7619,6 @@
                 }
               ],
               "returns": "string"
-            },
-            "step": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "string"
-            },
-            "step_index": {
-              "params": [
-                {
-                  "name": "self",
-                  "kind": "self"
-                }
-              ],
-              "returns": "int"
             },
             "timestamp": {
               "params": [
@@ -9235,7 +9208,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "any"
+              "returns": "string"
             },
             "user_pom": {
               "params": [
@@ -9253,7 +9226,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "any"
+              "returns": "string"
             }
           }
         },
@@ -9275,7 +9248,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "int"
+              "returns": "float"
             }
           }
         },
@@ -9297,7 +9270,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "any"
+              "returns": "string"
             },
             "wait": {
               "params": [
@@ -9328,7 +9301,7 @@
                   "kind": "self"
                 }
               ],
-              "returns": "any"
+              "returns": "string"
             },
             "summarize": {
               "params": [
