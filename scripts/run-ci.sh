@@ -27,8 +27,11 @@
 #   Per-gate PASS/FAIL + the FAILED_GATES tally preserved exactly; each gate's output
 #   captured + replayed atomically.
 #
-# Flags:
-#   --fail-fast   stop launching new gates at the first failure (local dev loop).
+# Flags (this is the COMPLETE set; anything else is a hard error — see the argv
+# validation block below. There is NO single-gate filter flag):
+#   --fail-fast          stop launching new gates at the first failure (local dev loop).
+#   --tier=pr|nightly|all  which gate tier to run (default pr).
+#   -h|--help            print usage and exit 0.
 #
 # GATE-INVENTORY NOTE: porting-sdk/GATE_INVENTORY.md is GENERATED (by
 # gen_gate_inventory.py) from the REFERENCE port's run-ci.sh (signalwire-typescript),
@@ -99,6 +102,51 @@ PYTHON_SDK_DIR="$(resolve_python_sdk)" || {
     echo "       (expected $PORTING_SDK_DIR/../signalwire-python or \$PYTHON_SDK env var)" >&2
     exit 2
 }
+
+# ── argv validation: an UNRECOGNISED flag is a hard error ─────────────────
+# gate_scheduler.sh's sched_init() loops over argv recognizing exactly two tokens
+# (--fail-fast, --tier=*) with NO default case, so anything else — a typo, a
+# renamed flag, or an invented one like `--gate REPO-LINT` — is SILENTLY DROPPED
+# and the FULL suite runs. That failure mode is silence PLUS a better-than-expected
+# result: a caller who reads `==> CI PASS` from `--gate X` believes gate X passed
+# when in fact everything ran, and pays the full multi-gate cost on a shared box.
+#
+# So validate here, BEFORE the mock servers are spawned (a typo must die instantly,
+# not after standing up three listeners). This rejects the whole CLASS, not one
+# flag: any future flag added to sched_init must also be added to the case below,
+# which is the point — an unknown token can never again mean "run everything".
+#
+# There is deliberately NO third state: a bad flag NEVER warns-and-proceeds.
+#
+# NOTE: there is no per-gate filter flag. Nothing in run-ci.sh or gate_scheduler.sh
+# implements one, and `--gate NAME` has never existed. To run a single gate, invoke
+# that gate's underlying command directly (each sched_gate line below shows it), or
+# use SW_CI_JOBS=1 for a serial transcript.
+ci_usage() {
+    cat >&2 <<'USAGE'
+usage: bash scripts/run-ci.sh [--fail-fast] [--tier=pr|nightly|all]
+
+  --fail-fast            stop launching new gates at the first failure.
+  --tier=pr              (default) run only the per-PR gate tier.
+  --tier=nightly|all     also run the heavy nightly-tier gates.
+
+Environment: SW_CI_JOBS (concurrency cap), SW_CI_TIER, SW_CI_FAIL_FAST.
+There is no single-gate filter flag; run a gate's command directly instead.
+USAGE
+}
+for _ci_arg in "$@"; do
+    case "$_ci_arg" in
+        --fail-fast) ;;
+        --tier=pr|--tier=nightly|--tier=all) ;;
+        -h|--help) ci_usage; exit 0 ;;
+        *)
+            echo "FATAL: unknown option '$_ci_arg'" >&2
+            ci_usage
+            exit 2
+            ;;
+    esac
+done
+unset _ci_arg
 
 # ── Mock-server lifecycle (for the PARALLEL test gate) ────────────────────
 # The mock-backed suites are session-isolated, so file parallelism is safe. We
