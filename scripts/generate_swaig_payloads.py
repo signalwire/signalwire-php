@@ -365,7 +365,7 @@ def main(argv: list[str]) -> int:
                     stale.append(f"{p} (leftover — not in generator output)")
         if stale:
             sys.stderr.write(
-                f"GEN-FRESH FAIL: {len(stale)} generated SWAIG-payload file(s) stale:\\n"
+                f"GEN-FRESH FAIL: {len(stale)} generated SWAIG-payload file(s) stale:\n"
             )
             for s in stale:
                 sys.stderr.write(f"  - {s}\n")

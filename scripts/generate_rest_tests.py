@@ -430,7 +430,7 @@ def main(argv: list[str]) -> int:
             )
         if stale:
             sys.stderr.write(
-                f"GEN-FRESH FAIL: {len(stale)} generated REST test file(s) stale:\\n"
+                f"GEN-FRESH FAIL: {len(stale)} generated REST test file(s) stale:\n"
             )
             for s in stale:
                 sys.stderr.write(f"  - {s}\n")
