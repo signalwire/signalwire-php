@@ -16,16 +16,15 @@ the authoritative SWAIG wire spec):
         one class per components/schemas OBJECT schema; the ``PostPromptCallLogEntry``
         oneOf alias is NOT surfaced (the reference records it as a module-level
         TypeAlias its enumerator drops), so 15 schemas - 1 alias = 14.
-  * ``swaig-response.yaml`` -> signalwire.core.swaig_actions_generated  (4 classes)
+  * ``swaig-response.yaml`` -> signalwire.core.swaig_actions_generated  (6 classes)
         one ``<Action>`` class per action key whose value is an object-with-properties
         (a bare object OR an object variant of a oneOf): context_switch ->
         ContextSwitchAction, hold -> HoldAction, playback_bg -> PlaybackBgAction,
-        transfer -> TransferAction. The ``SwaigResponse``/``SwaigAction`` envelope
-        schemas + the ergonomic ``_SwaigActions`` method surface are NOT part of the
-        cross-port surface oracle (the method surface is ``_``-prefixed in the
-        reference), so only the 4 object-shaped action value classes are emitted.
+        transfer -> TransferAction, PLUS the two ENVELOPE schemas SwaigAction and
+        SwaigResponse. The ergonomic ``_SwaigActions`` builder base is NOT emitted —
+        it is ``_``-prefixed in the reference and outside the surface oracle.
 
-  2 + 14 + 4 = 20 classes == the surface oracle EXACTLY (0 missing / 0 extra).
+  2 + 14 + 6 = 22 classes == the surface oracle EXACTLY (0 missing / 0 extra).
 
 Every emitted class is a method-less PHP data DTO: public typed nullable properties
 carrying the snake wire key, no methods. The emit/drop rule + property typing reuse
@@ -262,8 +261,15 @@ def _build_swaig_actions(psdk: Path) -> dict[str, str]:
 
     The naming mirrors the reference exactly: the FIRST object variant is
     ``<Verb>Action``; a second object variant would be ``<Verb>Action2`` (none occur
-    in the current spec). The ``SwaigResponse``/``SwaigAction`` envelope schemas and
-    the ``_SwaigActions`` method surface are not part of the cross-port surface oracle."""
+    in the current spec).
+
+    The ``SwaigAction`` / ``SwaigResponse`` ENVELOPE schemas ARE emitted too (see the
+    envelope block at the end). They were not, on the reading that they sat outside
+    the cross-port surface oracle; porting-sdk 4ddda70 made that false by teaching the
+    reference generator to resolve post-prompt.yaml's cross-file $ref into them, so
+    both now carry oracle members and their absence read as 5 missing-port drifts. The
+    ergonomic ``_SwaigActions`` builder base stays unemitted — it is ``_``-prefixed in
+    the reference and genuinely outside the surface."""
     spec_file = "swaig-response.yaml"
     sub = "SwaigActions"
     spec = _load_yaml(psdk / "swaig-specs" / spec_file)
@@ -278,6 +284,8 @@ def _build_swaig_actions(psdk: Path) -> dict[str, str]:
 
     outs: dict[str, str] = {}
     emitted: set[str] = set()
+    # verb -> the FIRST lifted <Verb>Action class, for the SwaigAction envelope below.
+    lifted: dict[str, str] = {}
     for verb in sorted(actions):
         schema = actions[verb]
         if not isinstance(schema, dict):
@@ -298,6 +306,7 @@ def _build_swaig_actions(psdk: Path) -> dict[str, str]:
             if php_name in emitted:
                 continue
             emitted.add(php_name)
+            lifted.setdefault(verb, php_name)
             outs[f"{sub}/{php_name}.php"] = _emit_class(
                 php_name,
                 b.get("properties") or {},
@@ -306,7 +315,147 @@ def _build_swaig_actions(psdk: Path) -> dict[str, str]:
                 sub,
                 f"swaig-response action {verb!r} value object",
             )
+
+    # The response ENVELOPE types, mirroring the reference's generate_swaig_actions.
+    # SwaigAction is the action OBJECT (one or more action keys set at once; the
+    # engine dispatches every recognized key) and SwaigResponse is the
+    # {response, action, post_process} body a handler returns. They live in THIS
+    # module because it owns swaig-response.yaml — which is what makes
+    # ``swaig-response.yaml#/components/schemas/SwaigResponse`` resolvable from
+    # post-prompt.yaml's post_response / delayed_post_response.
+    action_fields: list[tuple[str, str, str | None]] = []
+    for verb in sorted(actions):
+        schema = actions[verb]
+        if not isinstance(schema, dict):
+            continue
+        php_type, doc = _envelope_property_type(schema, lifted.get(verb))
+        action_fields.append((verb, php_type, doc))
+    outs[f"{sub}/SwaigAction.php"] = _emit_envelope_class(
+        "SwaigAction",
+        action_fields,
+        spec_file,
+        sub,
+        "swaig-response `SwaigAction` envelope schema",
+    )
+
+    # SwaigResponse.action is `SwaigAction | list[SwaigAction]` in the reference. PHP
+    # has no generic array TYPE HINT, so the list branch is a native `array` carrying a
+    # `list<SwaigAction>` PHPDoc — which is also what PHPStan L9 requires (a bare
+    # `array` is missingType.iterableValue). The native union still NAMES SwaigAction,
+    # which is what the oracle keys on; the docblock is what keeps the element type.
+    resp = spec["components"]["schemas"]["SwaigResponse"]
+    resp_fields: list[tuple[str, str, str | None]] = []
+    for wire_key, psc in (resp.get("properties") or {}).items():
+        if wire_key == "action":
+            resp_fields.append(
+                (
+                    wire_key,
+                    "SwaigAction|array|null",
+                    "SwaigAction|list<SwaigAction>|null",
+                )
+            )
+            continue
+        php_type, doc = GR.php_property_type(psc if isinstance(psc, dict) else {}, {})
+        resp_fields.append((wire_key, php_type, doc))
+    outs[f"{sub}/SwaigResponse.php"] = _emit_envelope_class(
+        "SwaigResponse",
+        resp_fields,
+        spec_file,
+        sub,
+        "swaig-response `SwaigResponse` envelope schema",
+    )
     return outs
+
+
+def _envelope_property_type(schema: dict, lifted: str | None) -> tuple[str, str | None]:
+    """The PHP property type for one ENVELOPE field of SwaigAction / SwaigResponse.
+
+    This is the ONE place a generated SWAIG payload property may NAME another
+    generated class, and it is required rather than stylistic: the reference
+    records ``SwaigAction.context_switch`` as
+    ``union<string,class:...ContextSwitchAction>`` and ``SwaigResponse.action`` as
+    ``union<class:...SwaigAction,list<class:...SwaigAction>>``. The shared
+    ``GR.php_property_type`` deliberately collapses every object / $ref / union
+    field to ``?array`` (see its docstring) — correct for the per-action value
+    classes, but on the envelope it erases the very ``class:`` token the oracle
+    keys on, and the field then reads to DRIFT as missing-port even though the
+    property exists. go hit exactly this (signalwire-go 41a012c) and fixed it the
+    same way: keep the lifted class in the envelope field's type.
+
+    ``lifted`` is the ``<Verb>Action`` class this action's inline object branch was
+    lifted to, or None when the action has no object variant. The emitted type is a
+    native PHP 8 union of the scalar branches plus that class, which
+    ``translate_php_type`` canonicalizes to the reference's union verbatim. When
+    there is no lifted class the shared helper is used unchanged, so a scalar-only
+    action stays exactly what it was — those fields carry no ``class:`` and the
+    oracle does not record them.
+    """
+    if lifted is None:
+        return GR.php_property_type(schema, {})
+
+    branches = schema.get("oneOf") or [schema]
+    parts: list[str] = []
+    for b in branches:
+        if not isinstance(b, dict):
+            continue
+        if b.get("type") == "object" and b.get("properties"):
+            continue  # the lifted class stands in for this branch
+        php, _doc = GR.php_property_type(b, {})
+        scalar = php.lstrip("?")
+        if scalar not in parts:
+            parts.append(scalar)
+    parts.append(lifted)
+    return "|".join(parts) + "|null", None
+
+
+def _emit_envelope_class(
+    php_name: str,
+    fields: list[tuple[str, str, str | None]],
+    spec: str,
+    sub: str,
+    source_desc: str,
+) -> str:
+    """Emit one envelope data class from pre-typed ``(wire_key, php_type, doc)``
+    fields. Same shape as ``_emit_class`` — a method-less DTO of public typed
+    nullable properties — but the caller supplies the types, because an envelope
+    field may name a lifted class (see ``_envelope_property_type``)."""
+    lines: list[str] = []
+    lines.append("/**")
+    lines.append(f" * {php_name} — generated SWAIG payload wire type ({source_desc}).")
+    lines.append(" *")
+    lines.append(
+        " * Pure data DTO: public typed properties named for the snake_case wire keys"
+    )
+    lines.append(
+        " * they carry. It declares no methods — the values ARE the interface."
+    )
+    lines.append(" */")
+    lines.append(f"class {php_name}")
+    lines.append("{")
+    body: list[str] = []
+    used: set[str] = set()
+    for wire_key, php_type, doc in fields:
+        prop = GR.php_property_name(wire_key)
+        while prop in used:
+            prop += "_"
+        used.add(prop)
+        if doc is not None:
+            body.append(f"    /** @var {doc} */")
+        elif prop != wire_key:
+            body.append(f"    /** wire key: {wire_key} */")
+        body.append(f"    public {php_type} ${prop} = null;")
+        body.append("")
+    if body and body[-1] == "":
+        body.pop()
+    lines.extend(body)
+    lines.append("}")
+    desc = f"Generated SWAIG payload wire type from porting-sdk/swaig-specs/{spec}."
+    return (
+        SWAIG_HEADER.format(spec=spec, desc=desc, sub=sub)
+        + "\n"
+        + "\n".join(lines)
+        + "\n"
+    )
 
 
 def _pascal_verb(verb: str) -> str:
