@@ -23,11 +23,13 @@ class ContextSwitchAction
 
     public ?bool $full_reset = null;
 
-    public mixed $system_pom = null;
+    /** @var array<string,mixed>|null */
+    public ?array $system_pom = null;
 
     public ?string $system_prompt = null;
 
-    public mixed $user_pom = null;
+    /** @var array<string,mixed>|null */
+    public ?array $user_pom = null;
 
     public ?string $user_prompt = null;
 }
