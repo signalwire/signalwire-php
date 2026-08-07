@@ -19,6 +19,9 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class SwaigAction
 {
+    /** @var array<string,mixed>|null */
+    public ?array $SWML = null;
+
     /** @var list<mixed>|null */
     public ?array $add_dynamic_hints = null;
 

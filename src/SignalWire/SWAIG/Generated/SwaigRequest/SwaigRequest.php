@@ -19,6 +19,12 @@ namespace SignalWire\SWAIG\Generated\SwaigRequest;
  */
 class SwaigRequest
 {
+    /** @var array<string,mixed>|null */
+    public ?array $SWMLCall = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $SWMLVars = null;
+
     public ?string $ai_session_id = null;
 
     public ?string $app_name = null;
