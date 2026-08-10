@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * Section — generated wire type from the 'fabric' spec (components/schemas 'Section').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Section
 {

@@ -165,13 +165,72 @@ class SWMLServiceTest extends TestCase
     }
 
     // ------------------------------------------------------------------
+    // TLS-serving values mirrored onto the service (reference parity:
+    // core/swml_service.py:143-146 sets self.ssl_enabled / self.domain /
+    // self.ssl_cert_path / self.ssl_key_path off self.security).
+    // ------------------------------------------------------------------
+
+    public function testTlsValuesDefaultOff(): void
+    {
+        $svc = $this->makeService();
+        $this->assertFalse($svc->sslEnabled);
+        $this->assertNull($svc->domain);
+        $this->assertNull($svc->sslCertPath);
+        $this->assertNull($svc->sslKeyPath);
+    }
+
+    public function testTlsValuesMirrorSecurityConfigFromEnv(): void
+    {
+        putenv('SWML_SSL_ENABLED=true');
+        putenv('SWML_SSL_CERT_PATH=/etc/tls/fullchain.pem');
+        putenv('SWML_SSL_KEY_PATH=/etc/tls/privkey.pem');
+        putenv('SWML_DOMAIN=agent.example.com');
+        try {
+            $svc = $this->makeService();
+            $this->assertTrue($svc->sslEnabled);
+            $this->assertSame('agent.example.com', $svc->domain);
+            $this->assertSame('/etc/tls/fullchain.pem', $svc->sslCertPath);
+            $this->assertSame('/etc/tls/privkey.pem', $svc->sslKeyPath);
+        } finally {
+            putenv('SWML_SSL_ENABLED');
+            putenv('SWML_SSL_CERT_PATH');
+            putenv('SWML_SSL_KEY_PATH');
+            putenv('SWML_DOMAIN');
+        }
+    }
+
+    public function testGetFullUrlUsesHttpsAndDomainWhenTlsEnabled(): void
+    {
+        $svc = $this->makeService();
+        $svc->sslEnabled = true;
+        $svc->domain = 'agent.example.com';
+        // Non-standard port -> the port stays in the authority.
+        $this->assertSame('https://agent.example.com:3000/', $svc->getFullUrl());
+    }
+
+    public function testGetFullUrlElidesStandardHttpsPort(): void
+    {
+        $svc = $this->makeService(['port' => 443]);
+        $svc->sslEnabled = true;
+        $svc->domain = 'agent.example.com';
+        $this->assertSame('https://agent.example.com/', $svc->getFullUrl());
+    }
+
+    public function testGetFullUrlHttpsWithoutDomainKeepsHost(): void
+    {
+        $svc = $this->makeService();
+        $svc->sslEnabled = true;
+        $this->assertSame('https://0.0.0.0:3000/', $svc->getFullUrl());
+    }
+
+    // ------------------------------------------------------------------
     // Verb auto-vivification (__call)
     // ------------------------------------------------------------------
 
     public function testAnswerVerb(): void
     {
         $svc = $this->makeService();
-        $svc->answer(['max_duration' => 3600]); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->answer(['max_duration' => 3600]);
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertCount(1, $verbs);
@@ -181,7 +240,7 @@ class SWMLServiceTest extends TestCase
     public function testHangupVerbNoArgs(): void
     {
         $svc = $this->makeService();
-        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->hangup();
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertCount(1, $verbs);
@@ -196,7 +255,7 @@ class SWMLServiceTest extends TestCase
     public function testSleepVerbInteger(): void
     {
         $svc = $this->makeService();
-        $svc->sleep(2000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->sleep(2000);
 
         $verbs = $svc->getDocument()->getVerbs('main');
         $this->assertSame(['sleep' => 2000], $verbs[0]);
@@ -206,7 +265,7 @@ class SWMLServiceTest extends TestCase
     {
         $svc = $this->makeService();
         $svc->getDocument()->addSection('custom');
-        $svc->sleep('custom', 1000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->sleep('custom', 1000);
 
         $verbs = $svc->getDocument()->getVerbs('custom');
         $this->assertSame(['sleep' => 1000], $verbs[0]);
@@ -216,7 +275,7 @@ class SWMLServiceTest extends TestCase
     {
         $svc = $this->makeService();
         $svc->getDocument()->addSection('custom');
-        $svc->answer('custom', ['max_duration' => 7200]); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->answer('custom', ['max_duration' => 7200]);
 
         $verbs = $svc->getDocument()->getVerbs('custom');
         $this->assertSame(['answer' => ['max_duration' => 7200]], $verbs[0]);
@@ -225,14 +284,14 @@ class SWMLServiceTest extends TestCase
     public function testVerbChaining(): void
     {
         $svc = $this->makeService();
-        $result = $svc->answer(['max_duration' => 3600]); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $result = $svc->answer(['max_duration' => 3600]);
         $this->assertSame($svc, $result);
     }
 
     public function testMultipleVerbs(): void
     {
         $svc = $this->makeService();
-        $svc->answer(['max_duration' => 3600]) // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->answer(['max_duration' => 3600])
             ->sleep(1000)
             ->hangup();
 
@@ -240,22 +299,67 @@ class SWMLServiceTest extends TestCase
         $this->assertCount(3, $verbs);
     }
 
-    public function testAllSchemaVerbsCallable(): void
+    /**
+     * Every schema verb is reachable through `__call`, and `__call` routes
+     * through the VALIDATING path (Service::addVerbToSection) rather than the
+     * raw Document.
+     *
+     * Reachability is proven by the absence of BadMethodCallException ("Unknown
+     * method"): a verb the schema does not know never gets as far as
+     * validation. A SchemaValidationError therefore PROVES the verb resolved
+     * AND that its config was checked — which is the property under test. The
+     * old version of this test passed `[]` for every verb and asserted all of
+     * them landed in the document; that only held because `__call` went raw, so
+     * it was asserting the bypass itself. Verbs with required properties (ai,
+     * connect, transfer, …) legitimately reject an empty config now.
+     */
+    public function testAllSchemaVerbsCallableAndValidated(): void
     {
         $svc = $this->makeService();
-        $schema = Schema::instance();
-        $names = $schema->getVerbNames();
+        $names = Schema::instance()->getVerbNames();
+        $this->assertNotEmpty($names, 'schema must expose verbs');
 
+        $added = 0;
+        $rejected = 0;
         foreach ($names as $verb) {
-            if ($verb === 'sleep') {
-                $svc->sleep(1000); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
-            } else {
-                $svc->$verb([]);
+            try {
+                if ($verb === 'sleep') {
+                    $svc->sleep(1000);
+                } else {
+                    $svc->$verb([]);
+                }
+                $added++;
+            } catch (\SignalWire\Utils\SchemaValidationError $e) {
+                // Resolved as a verb, then its config was validated and refused.
+                $rejected++;
+            } catch (\BadMethodCallException $e) {
+                $this->fail("schema verb '{$verb}' is not reachable via __call: " . $e->getMessage());
             }
         }
 
-        $verbs = $svc->getDocument()->getVerbs('main');
-        $this->assertCount(count($names), $verbs);
+        $this->assertSame(count($names), $added + $rejected);
+        $this->assertGreaterThan(
+            0,
+            $rejected,
+            '__call must validate: verbs with required properties (ai, transfer, …) '
+            . 'have to reject an empty config, or the auto-vivified path is going raw',
+        );
+        $this->assertCount($added, $svc->getDocument()->getVerbs('main'));
+    }
+
+    /**
+     * The auto-vivified verb path enforces the same schema rules as the
+     * explicit `addVerb`. `play` has no `text` key, so `$svc->play(['text' =>
+     * ...])` must throw exactly as `$svc->addVerb('play', ['text' => ...])`
+     * does. Before `__call` was routed onto the validating path, the first of
+     * these silently produced a document the server rejects.
+     */
+    public function testAutoVivifiedVerbRejectsSchemaInvalidConfig(): void
+    {
+        $svc = $this->makeService();
+
+        $this->expectException(\SignalWire\Utils\SchemaValidationError::class);
+        $svc->play(['text' => 'hello']);
     }
 
     public function testUnknownMethodThrows(): void
@@ -272,7 +376,7 @@ class SWMLServiceTest extends TestCase
     public function testHealthEndpoint(): void
     {
         $svc = $this->makeService();
-        [$status, $headers, $body] = $svc->handleRequest('GET', '/health');
+        [$status, $headers, $body] = $svc->handleRequest('GET', '/health', []);
 
         $this->assertSame(200, $status);
         $this->assertSame('application/json', $headers['Content-Type']);
@@ -283,7 +387,7 @@ class SWMLServiceTest extends TestCase
     public function testReadyEndpoint(): void
     {
         $svc = $this->makeService();
-        [$status, $headers, $body] = $svc->handleRequest('GET', '/ready');
+        [$status, $headers, $body] = $svc->handleRequest('GET', '/ready', []);
 
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
@@ -293,7 +397,7 @@ class SWMLServiceTest extends TestCase
     public function testHealthNoAuthRequired(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('GET', '/health');
+        [$status,,] = $svc->handleRequest('GET', '/health', []);
         $this->assertSame(200, $status);
     }
 
@@ -304,7 +408,7 @@ class SWMLServiceTest extends TestCase
     public function testRootWithoutAuthReturns401(): void
     {
         $svc = $this->makeService();
-        [$status, $headers,] = $svc->handleRequest('GET', '/');
+        [$status, $headers,] = $svc->handleRequest('GET', '/', []);
 
         $this->assertSame(401, $status);
         $this->assertArrayHasKey('WWW-Authenticate', $headers);
@@ -337,7 +441,7 @@ class SWMLServiceTest extends TestCase
     public function testNoAuthHeaderReturns401(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('GET', '/');
+        [$status,,] = $svc->handleRequest('GET', '/', []);
         $this->assertSame(401, $status);
     }
 
@@ -346,6 +450,45 @@ class SWMLServiceTest extends TestCase
         $svc = $this->makeService();
         [$status,,] = $svc->handleRequest('GET', '/', ['Authorization' => 'Bearer token123']);
         $this->assertSame(401, $status);
+    }
+
+    /**
+     * RFC 7235 makes the auth-scheme token case-insensitive, and the reference
+     * compares `scheme.lower() != "basic"`, so `basic <cred>` authenticates.
+     */
+    public function testLowercaseBasicSchemeAuthenticates(): void
+    {
+        $svc = $this->makeService();
+        $cred = base64_encode('testuser:testpass');
+        foreach (['basic', 'BaSiC', 'BASIC', 'Basic'] as $scheme) {
+            [$status,,] = $svc->handleRequest('GET', '/', ['Authorization' => $scheme . ' ' . $cred]);
+            $this->assertSame(200, $status, $scheme);
+        }
+    }
+
+    /**
+     * Case-insensitivity must not widen the accepted scheme set, and a
+     * colon-less decoded payload stays rejected (the reference partitions on
+     * ':' and raises when there is no separator).
+     */
+    public function testWrongSchemesAndColonLessPayloadStillReturn401(): void
+    {
+        $svc = $this->makeService();
+        $cred = base64_encode('testuser:testpass');
+        $noColon = base64_encode('testuser');
+        foreach ([
+            'Digest ' . $cred,
+            'Negotiate ' . $cred,
+            'Basicx ' . $cred,
+            'basicx ' . $cred,
+            'Bearer ' . $cred,
+            $cred,
+            'Basic ' . $noColon,
+            'basic ' . $noColon,
+        ] as $header) {
+            [$status,,] = $svc->handleRequest('GET', '/', ['Authorization' => $header]);
+            $this->assertSame(401, $status, $header);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -365,7 +508,7 @@ class SWMLServiceTest extends TestCase
         $this->assertSame(200, $status);
         $this->assertSame([], $headers, '200 SWML core response must carry no headers');
 
-        [$status401, $headers401,] = $svc->handleRequest('GET', '/');
+        [$status401, $headers401,] = $svc->handleRequest('GET', '/', []);
         $this->assertSame(401, $status401);
         $this->assertSame(['WWW-Authenticate'], array_keys($headers401));
         $this->assertSame('Basic', $headers401['WWW-Authenticate']);
@@ -378,7 +521,7 @@ class SWMLServiceTest extends TestCase
     public function testSwmlEndpointReturnsDocument(): void
     {
         $svc = $this->makeService();
-        $svc->answer(['max_duration' => 3600])->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->answer(['max_duration' => 3600])->hangup();
 
         [$status, , $body] = $svc->handleRequest('GET', '/', $this->authHeader());
         $this->assertSame(200, $status);
@@ -391,7 +534,7 @@ class SWMLServiceTest extends TestCase
     public function testSwaigEndpointAuth(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('POST', '/swaig');
+        [$status,,] = $svc->handleRequest('POST', '/swaig', []);
         $this->assertSame(401, $status);
     }
 
@@ -409,7 +552,7 @@ class SWMLServiceTest extends TestCase
     public function testPostPromptEndpointAuth(): void
     {
         $svc = $this->makeService();
-        [$status,,] = $svc->handleRequest('POST', '/post_prompt');
+        [$status,,] = $svc->handleRequest('POST', '/post_prompt', []);
         $this->assertSame(401, $status);
     }
 
@@ -427,7 +570,7 @@ class SWMLServiceTest extends TestCase
     public function testCustomRouteSwml(): void
     {
         $svc = $this->makeService(['route' => '/agent']);
-        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->hangup();
 
         [$status, , $body] = $svc->handleRequest('GET', '/agent', $this->authHeader());
         $this->assertSame(200, $status);
@@ -456,7 +599,7 @@ class SWMLServiceTest extends TestCase
     public function testCustomRouteHealthStillWorks(): void
     {
         $svc = $this->makeService(['route' => '/agent']);
-        [$status,,] = $svc->handleRequest('GET', '/health');
+        [$status,,] = $svc->handleRequest('GET', '/health', []);
         $this->assertSame(200, $status);
     }
 
@@ -490,10 +633,10 @@ class SWMLServiceTest extends TestCase
         // preserving method+body, with the returned route as the Location.
         $svc = $this->makeService();
         $called = false;
-        $svc->registerRoutingCallback('/custom', function (?array $data, array $headers) use (&$called) {
+        $svc->registerRoutingCallback(function (?array $data, array $headers) use (&$called) {
             $called = true;
             return '/other-service';
-        });
+        }, path: '/custom');
 
         [$status, $headers, $body] = $svc->handleRequest('POST', '/custom', $this->authHeader(), '{}');
         $this->assertTrue($called);
@@ -508,10 +651,10 @@ class SWMLServiceTest extends TestCase
         // this service — it renders and returns the SWML document (200).
         $svc = $this->makeService();
         $called = false;
-        $svc->registerRoutingCallback('/custom', function (?array $data, array $headers) use (&$called) {
+        $svc->registerRoutingCallback(function (?array $data, array $headers) use (&$called) {
             $called = true;
             return null;
-        });
+        }, path: '/custom');
 
         [$status, , $body] = $svc->handleRequest('POST', '/custom', $this->authHeader(), '{}');
         $this->assertTrue($called);
@@ -602,7 +745,7 @@ class SWMLServiceTest extends TestCase
     public function testRender(): void
     {
         $svc = $this->makeService();
-        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->hangup();
         $json = $svc->render();
         $decoded = json_decode($json, true);
         $this->assertSame('1.0.0', Shape::at($decoded, 'version'));
@@ -611,7 +754,7 @@ class SWMLServiceTest extends TestCase
     public function testRenderPretty(): void
     {
         $svc = $this->makeService();
-        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->hangup();
         $json = $svc->renderPretty();
         $this->assertStringContainsString("\n", $json);
     }

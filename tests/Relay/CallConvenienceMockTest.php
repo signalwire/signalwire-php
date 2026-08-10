@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\Constants;
+use SignalWire\Relay\Event\RelayEvent;
+use SignalWire\Relay\RelayError;
 use SignalWire\Tests\Support\Shape;
 
 /**
@@ -214,8 +216,10 @@ class CallConvenienceMockTest extends TestCase
     public function playSilenceJournalsSilenceMediaShape(): void
     {
         $call = $this->answeredInboundCall('call-psil');
+        // The reference takes exactly one option, `on_completed`; a caller who
+        // omits it gets null (no completion handler), NOT an invented default.
         // Return type is PlayAction; instanceof would be redundant.
-        $call->playSilence(2.5, ['control_id' => 'psil-ctl']);
+        $call->playSilence(2.5);
 
         $entries = $this->mock->journal()->recv('calling.play');
         $this->assertCount(1, $entries);
@@ -490,9 +494,17 @@ class CallConvenienceMockTest extends TestCase
         // Already 'answered' — must return immediately without touching the
         // wire (no calling.* frame is sent by a wait).
         $before = count($this->mock->journal()->recv());
-        $this->assertTrue($call->waitForAnswered(5.0));
+        $event = $call->waitForAnswered(5.0);
         $after = count($this->mock->journal()->recv());
         $this->assertSame($before, $after, 'wait_for_answered must not send a wire frame');
+
+        // The short-circuit returns the reference's synthetic state snapshot:
+        // RelayEvent(event_type=EVENT_CALL_STATE, params={"call_state": state}).
+        $this->assertSame('calling.call.state', $event->getEventType());
+        $this->assertSame(
+            Constants::CALL_STATE_ANSWERED,
+            $event->getParams()['call_state'] ?? null,
+        );
     }
 
     #[Test]
@@ -502,7 +514,14 @@ class CallConvenienceMockTest extends TestCase
         // wait_for_ringing returns true immediately.
         $call = $this->answeredInboundCall('call-wfr-past');
         $this->assertSame(Constants::CALL_STATE_ANSWERED, $call->state);
-        $this->assertTrue($call->waitForRinging(5.0));
+        $event = $call->waitForRinging(5.0);
+        // The snapshot carries the CURRENT state (answered), not the target —
+        // matching the reference's `params={"call_state": self.state}`.
+        $this->assertSame('calling.call.state', $event->getEventType());
+        $this->assertSame(
+            Constants::CALL_STATE_ANSWERED,
+            $event->getParams()['call_state'] ?? null,
+        );
     }
 
     #[Test]
@@ -514,8 +533,14 @@ class CallConvenienceMockTest extends TestCase
         // Queue a ringing state event; wait_for_ringing pumps readOnce()
         // internally, drains it, and resolves true.
         $this->mock->push(self::stateFrame('call-wfr-fwd', 'ringing'));
-        $this->assertTrue($call->waitForRinging(5.0));
+        $event = $call->waitForRinging(5.0);
         $this->assertSame(Constants::CALL_STATE_RINGING, $call->state);
+
+        // The returned event is the REAL wire event that satisfied the wait,
+        // projected onto RelayEvent — not a snapshot and not a bool.
+        $this->assertSame('calling.call.state', $event->getEventType());
+        $this->assertSame('ringing', $event->getParams()['call_state'] ?? null);
+        $this->assertSame('call-wfr-fwd', $event->getCallId());
     }
 
     #[Test]
@@ -524,8 +549,12 @@ class CallConvenienceMockTest extends TestCase
         $call = $this->createdInboundCall('call-wfa-fwd');
         $this->mock->push(self::stateFrame('call-wfa-fwd', 'ringing'));
         $this->mock->push(self::stateFrame('call-wfa-fwd', 'answered'));
-        $this->assertTrue($call->waitForAnswered(5.0));
+        $event = $call->waitForAnswered(5.0);
         $this->assertSame(Constants::CALL_STATE_ANSWERED, $call->state);
+        // The ringing frame arrived FIRST but does not satisfy an answered
+        // wait; the returned event must be the answered one.
+        $this->assertSame('answered', $event->getParams()['call_state'] ?? null);
+        $this->assertSame('call-wfa-fwd', $event->getCallId());
     }
 
     #[Test]
@@ -533,17 +562,27 @@ class CallConvenienceMockTest extends TestCase
     {
         $call = $this->createdInboundCall('call-wfe-fwd');
         $this->mock->push(self::stateFrame('call-wfe-fwd', 'ending'));
-        $this->assertTrue($call->waitForEnding(5.0));
+        $event = $call->waitForEnding(5.0);
         $this->assertSame(Constants::CALL_STATE_ENDING, $call->state);
+        $this->assertSame('ending', $event->getParams()['call_state'] ?? null);
     }
 
     #[Test]
-    public function waitForAnsweredReturnsFalseOnTimeout(): void
+    public function waitForAnsweredThrowsOnTimeout(): void
     {
         $call = $this->createdInboundCall('call-wfa-to');
         // No state event is pushed; the call stays 'created'. The short
-        // timeout elapses and the wait returns false.
-        $this->assertFalse($call->waitForAnswered(0.3));
+        // timeout elapses and the wait RAISES — the reference awaits
+        // asyncio.wait_for(), which throws TimeoutError rather than resolving
+        // to None, which is why its annotation is a non-optional RelayEvent.
+        try {
+            $call->waitForAnswered(0.3);
+            $this->fail('waitForAnswered must throw when the timeout elapses');
+        } catch (RelayError $e) {
+            // 408 is the port's client-side-timeout sentinel (Client::dial).
+            $this->assertSame(408, $e->relayCode);
+            $this->assertStringContainsString('timed out', $e->relayMessage);
+        }
         $this->assertSame(Constants::CALL_STATE_CREATED, $call->state);
     }
 
@@ -553,15 +592,22 @@ class CallConvenienceMockTest extends TestCase
         $call = $this->createdInboundCall('call-wfd-fwd');
         // wait_for_ended pumps readOnce() until the terminal ended state.
         $this->mock->push(self::stateFrame('call-wfd-fwd', 'ended'));
-        $this->assertTrue($call->waitForEnded(5.0));
+        $event = $call->waitForEnded(5.0);
         $this->assertSame(Constants::CALL_STATE_ENDED, $call->state);
+        $this->assertSame('ended', $event->getParams()['call_state'] ?? null);
+        $this->assertSame('call-wfd-fwd', $event->getCallId());
     }
 
     #[Test]
-    public function waitForEndedReturnsFalseOnTimeout(): void
+    public function waitForEndedThrowsOnTimeout(): void
     {
         $call = $this->createdInboundCall('call-wfd-to');
-        $this->assertFalse($call->waitForEnded(0.3));
+        try {
+            $call->waitForEnded(0.3);
+            $this->fail('waitForEnded must throw when the timeout elapses');
+        } catch (RelayError $e) {
+            $this->assertSame(408, $e->relayCode);
+        }
         $this->assertSame(Constants::CALL_STATE_CREATED, $call->state);
     }
 
@@ -573,8 +619,12 @@ class CallConvenienceMockTest extends TestCase
         // readOnce() internally until it arrives.
         $this->mock->push(self::stateFrame('call-wf-evt', 'ringing'));
         $event = $call->waitFor('calling.call.state', null, 5.0);
-        $this->assertNotNull($event);
+        // Returns the reference's typed RelayEvent, projected from the raw
+        // dispatch Event at the boundary — same four fields the reference's
+        // RelayEvent.from_payload extracts.
         $this->assertSame('calling.call.state', $event->getEventType());
+        $this->assertSame('ringing', $event->getParams()['call_state'] ?? null);
+        $this->assertSame('call-wf-evt', $event->getCallId());
     }
 
     #[Test]
@@ -584,20 +634,39 @@ class CallConvenienceMockTest extends TestCase
         // Push ringing then answered; the predicate only matches answered.
         $this->mock->push(self::stateFrame('call-wf-pred', 'ringing'));
         $this->mock->push(self::stateFrame('call-wf-pred', 'answered'));
+        $seen = [];
         $event = $call->waitFor(
             'calling.call.state',
-            fn ($e) => ($e->getParams()['call_state'] ?? null) === 'answered',
+            function (RelayEvent $e) use (&$seen): bool {
+                // The predicate receives the TYPED RelayEvent, matching the
+                // reference's `Callable[[RelayEvent], bool]`.
+                $seen[] = $e->getParams()['call_state'] ?? null;
+                return ($e->getParams()['call_state'] ?? null) === 'answered';
+            },
             5.0,
         );
-        $this->assertNotNull($event);
         $this->assertSame('answered', $event->getParams()['call_state'] ?? null);
+        // The non-matching ringing event was offered to the predicate and
+        // skipped, proving the filter runs rather than the first event winning.
+        $this->assertSame(['ringing', 'answered'], $seen);
     }
 
     #[Test]
-    public function waitForReturnsNullOnTimeout(): void
+    public function waitForThrowsOnTimeout(): void
     {
         $call = $this->createdInboundCall('call-wf-to');
-        // No matching event pushed; the short timeout elapses -> null.
-        $this->assertNull($call->waitFor('calling.call.state', null, 0.3));
+        // No matching event pushed; the short timeout elapses -> RelayError.
+        // The reference's asyncio.wait_for raises TimeoutError here; it never
+        // resolves to None, hence the non-optional RelayEvent annotation.
+        try {
+            $call->waitFor('calling.call.state', null, 0.3);
+            $this->fail('waitFor must throw when the timeout elapses');
+        } catch (RelayError $e) {
+            $this->assertSame(408, $e->relayCode);
+            $this->assertStringContainsString(
+                'wait_for(calling.call.state)',
+                $e->relayMessage,
+            );
+        }
     }
 }

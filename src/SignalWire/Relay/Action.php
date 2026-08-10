@@ -19,7 +19,14 @@ class Action
     protected string $callId;
     protected string $nodeId;
     protected ?string $state = null;
-    protected bool $completed = false;
+
+    /**
+     * Whether this action has reached a terminal state. Starts false, flipped
+     * true by {@see complete()}. Public because it is a caller-observable
+     * value: {@see isDone()} is the accessor spelling, this is the field —
+     * the same flag read two ways.
+     */
+    public bool $completed = false;
     /** @var mixed */
     protected $result = null;
     /** @var list<Event> */
@@ -31,31 +38,30 @@ class Action
     protected object $client;
 
     /**
-     * The Call this action runs on. The reference takes the Call ITSELF as its
-     * first construction param (`Action.__init__(call, control_id, …)`,
-     * relay/call.py:75-82) and exposes it as a public `self.call`; php took the
-     * loose `callId`/`nodeId`/`client` triple instead, so the action's identity
-     * could disagree with its call and a caller had no route back to the Call
-     * object at all. Supplied at construction — Call builds every Action, so the
-     * back-reference resolves directly rather than through a client registry
-     * (which is where it could dangle).
+     * The Call this action runs on.
+     *
+     * Supplied at construction: Call builds every Action, so the back-reference
+     * resolves DIRECTLY rather than through a client registry (which is where
+     * it could dangle). Carrying the Call itself — instead of only the loose
+     * `callId`/`nodeId`/`client` triple — is what stops an action's identity
+     * disagreeing with its call, and gives a caller a route back to the Call.
      */
-    protected ?Call $call = null;
+    protected Call $call;
 
     private bool $callbackFired = false;
 
     /**
-     * @param Call|null $call The owning Call — the reference's `Action.call`
-     *   back-reference. Optional (trailing) so the three subclasses that declare
-     *   their own constructor keep working unchanged; {@see Call} always supplies
-     *   it on the production path.
+     * @param Call $call The owning Call. REQUIRED — an Action without its Call
+     *   has no identity to resolve against, and the reference declares it
+     *   required too (relay/call.py:77). It was previously optional purely so
+     *   test fakes could skip it; the fakes now build a Call.
      */
     public function __construct(
         string $controlId,
         string $callId,
         string $nodeId,
         object $client,
-        ?Call $call = null,
+        Call $call,
     ) {
         $this->controlId = $controlId;
         $this->callId = $callId;
@@ -64,12 +70,8 @@ class Action
         $this->call = $call;
     }
 
-    /**
-     * The Call this action runs on — the reference's public `self.call`
-     * back-reference. Null only for an Action constructed outside a Call
-     * (test fakes), never on the production path.
-     */
-    public function getCall(): ?Call
+    /** The Call this action runs on. Always present — supplied at construction. */
+    public function getCall(): Call
     {
         return $this->call;
     }
@@ -84,18 +86,21 @@ class Action
      * Each iteration calls $client->readOnce() so the event-loop
      * keeps processing inbound frames.
      *
-     * Returns the resolving Event when the action completes (mirrors
-     * Python's ``return self._wait_event.wait()``). Returns null on
-     * timeout. The numeric ``$timeout`` is interpreted as seconds and
-     * accepts integers or floats.
+     * Returns the resolving Event when the action completes, or null on
+     * timeout.
+     * The numeric ``$timeout`` is interpreted as seconds and accepts
+     * integers or floats.
+     *
+     * ``$timeout = null`` — the default — waits INDEFINITELY; there is no
+     * invented cap.
      *
      * @return Event|null
      */
-    public function wait(int|float $timeout = 30): ?Event
+    public function wait(int|float|null $timeout = null): ?Event
     {
-        $deadline = microtime(true) + $timeout;
+        $deadline = $timeout === null ? null : microtime(true) + $timeout;
 
-        while (!$this->completed && microtime(true) < $deadline) {
+        while (!$this->completed && ($deadline === null || microtime(true) < $deadline)) {
             if (method_exists($this->client, 'readOnce')) {
                 $this->client->readOnce();
             }
@@ -182,6 +187,11 @@ class Action
 
     /**
      * Append an incoming event and update local state / payload.
+     *
+     * @internal Event-router plumbing, not exported API. Call::dispatchEvent
+     *           calls this from a different class, so PHP forces `public`;
+     *           the reference keeps the identical machinery private
+     *           (`Action._check_event` in signalwire/relay/call.py).
      */
     public function handleEvent(Event $event): void
     {
@@ -205,6 +215,11 @@ class Action
      * fired exactly once.
      *
      * @param mixed $result
+     *
+     * @internal Event-router plumbing, not exported API. Call::dispatchEvent
+     *           calls this from a different class, so PHP forces `public`;
+     *           the reference keeps the identical machinery private
+     *           (`Action._resolve` in signalwire/relay/call.py).
      */
     public function resolve($result = null): void
     {
@@ -251,6 +266,12 @@ class Action
      * the server knows which action instance to target.
      *
      * @param array<string,mixed> $extraParams
+     *
+     * @internal Subcommand plumbing, not exported API. The reference issues the
+     *           same RPC through the PRIVATE `Call._execute` (see
+     *           `StoppableAction.stop` / `CollectAction.start_input_timers` in
+     *           signalwire/relay/call.py); PHP has no package-private
+     *           visibility, so the cross-class call forces `public`.
      */
     public function executeSubcommand(string $method, array $extraParams = []): void
     {
@@ -285,9 +306,8 @@ class Action
     /**
      * Narrow a JSON-decoded payload value to an ``array<string,mixed>`` (a
      * JSON object), or null when it is absent or not an object. RELAY
-     * ``result`` / ``detect`` payloads are objects on the wire (the Python
-     * reference reads ``event.params.get("result", {})`` /
-     * ``...get("detect", {})`` as dicts). Re-keys to guarantee string keys.
+     * ``result`` / ``detect`` payloads are objects on the wire. Re-keys to
+     * guarantee string keys.
      *
      * @return array<string,mixed>|null
      */
@@ -322,8 +342,8 @@ class PlayAction extends Action
     /**
      * Pause playback.
      *
-     * Mirrors Python's ``PausableAction.pause(behavior=None)``: the optional
-     * ``$behavior`` string is only sent on the wire when non-empty.
+     * The optional ``$behavior`` string is only sent on the wire when
+     * non-empty.
      */
     public function pause(?string $behavior = null): void
     {
@@ -331,6 +351,10 @@ class PlayAction extends Action
         $this->executeSubcommand('calling.play.pause', $extra);
     }
 
+    /**
+     * Resume playback paused by {@see PlayAction::pause()}.
+     * Sends the `calling.play.resume` RELAY sub-command.
+     */
     public function resume(): void
     {
         $this->executeSubcommand('calling.play.resume');
@@ -363,9 +387,8 @@ class RecordAction extends Action
     /**
      * Pause the recording.
      *
-     * Mirrors Python's ``PausableAction.pause(behavior=None)``: the optional
-     * ``$behavior`` string (e.g. ``'continuous'``) is only sent on the wire
-     * when non-empty.
+     * The optional ``$behavior`` string (e.g. ``'continuous'``) is only sent
+     * on the wire when non-empty.
      */
     public function pause(?string $behavior = null): void
     {
@@ -373,6 +396,10 @@ class RecordAction extends Action
         $this->executeSubcommand('calling.record.pause', $extra);
     }
 
+    /**
+     * Resume a recording paused by {@see RecordAction::pause()}.
+     * Sends the `calling.record.resume` RELAY sub-command.
+     */
     public function resume(): void
     {
         $this->executeSubcommand('calling.record.resume');
@@ -417,6 +444,22 @@ class CollectAction extends Action
      */
     private string $stopMethod = 'calling.collect.stop';
 
+    /**
+     * Override the RELAY stop sub-command for this handle.
+     *
+     * `calling.collect` and `calling.play_and_collect` both produce a
+     * CollectAction, but their wire sub-commands differ, so the dispatcher
+     * sets this to the originating verb's `.stop`. It also determines the
+     * prefix {@see CollectAction::commandPrefix()} derives for
+     * pause/resume/volume — so setting it re-routes those too, not just
+     * `stop()`.
+     *
+     * @internal Dispatcher plumbing, not exported API. The reference expresses
+     *           the same choice as the private `_command_prefix` CLASS ATTRIBUTE
+     *           on CollectAction / StandaloneCollectAction; PHP resolves the two
+     *           verbs onto one handle class, so the value is set by Call at
+     *           construction — a cross-class write that forces `public`.
+     */
     public function setStopMethod(string $method): void
     {
         $this->stopMethod = $method;
@@ -432,7 +475,7 @@ class CollectAction extends Action
      * The RELAY command prefix (e.g. ``calling.play_and_collect``) shared by
      * this action's pause/resume/volume sub-commands. Derived from the stop
      * method so play_and_collect vs standalone-collect route correctly, and so
-     * pause/resume/volume mirror Python's ``_command_prefix`` behaviour.
+     * pause/resume/volume all derive the same prefix.
      */
     protected function commandPrefix(): string
     {
@@ -443,8 +486,8 @@ class CollectAction extends Action
     /**
      * Pause the collect.
      *
-     * Mirrors Python's ``CollectAction`` (a ``VolumeAction``): the optional
-     * ``$behavior`` string is only sent on the wire when non-empty.
+     * The optional ``$behavior`` string is only sent on the wire when
+     * non-empty.
      */
     public function pause(?string $behavior = null): void
     {
@@ -452,6 +495,11 @@ class CollectAction extends Action
         $this->executeSubcommand($this->commandPrefix() . '.pause', $extra);
     }
 
+    /**
+     * Resume a collect paused by {@see CollectAction::pause()}.
+     * Sends `<prefix>.resume`, where the prefix follows the originating
+     * verb (see {@see CollectAction::setStopMethod()}).
+     */
     public function resume(): void
     {
         $this->executeSubcommand($this->commandPrefix() . '.resume');
@@ -491,6 +539,9 @@ class CollectAction extends Action
     /**
      * Override: silently ignore intermediate play events that arrive
      * during a play_and_collect operation.
+     *
+     * @internal Event-router plumbing (see Action::handleEvent). The reference's
+     *           counterpart is the private `_check_event` override.
      */
     public function handleEvent(Event $event): void
     {
@@ -506,28 +557,26 @@ class CollectAction extends Action
  * Handle for a standalone ``calling.collect`` operation (a collect without an
  * accompanying play).
  *
- * Mirrors Python's ``StandaloneCollectAction``: unlike {@see CollectAction}
- * (which backs ``play_and_collect`` and shares a control_id across the play
- * and collect phases), this handle backs a bare ``calling.collect`` and uses
- * the ``collect`` command prefix for its stop/start-input-timers sub-commands.
+ * Unlike {@see CollectAction} — which backs ``play_and_collect`` and shares
+ * a control_id across the play and collect phases — this handle backs a bare
+ * ``calling.collect`` and uses the ``collect`` command prefix for its
+ * stop/start-input-timers sub-commands.
  */
 class StandaloneCollectAction extends CollectAction
 {
     /**
      * Construct a standalone-collect action handle.
      *
-     * Declared explicitly (rather than inheriting {@see Action::__construct})
-     * so the surface enumerator records this subclass's ``__init__`` — the
-     * Python reference records ``StandaloneCollectAction.__init__`` as its own
-     * member. Forwards to the base constructor and pins the standalone-collect
-     * stop method.
+     * Declared explicitly rather than inheriting {@see Action::__construct}:
+     * forwards to the base constructor and pins the standalone-collect stop
+     * method.
      */
     public function __construct(
         string $controlId,
         string $callId,
         string $nodeId,
         object $client,
-        ?Call $call = null,
+        Call $call,
     ) {
         parent::__construct($controlId, $callId, $nodeId, $client, $call);
         $this->setStopMethod('calling.collect.stop');
@@ -536,9 +585,8 @@ class StandaloneCollectAction extends CollectAction
     /**
      * Start the initial_timeout timer on an active standalone collect.
      *
-     * Mirrors Python's ``StandaloneCollectAction.start_input_timers`` (which
-     * sends the ``collect.start_input_timers`` command). Same wire sub-command
-     * as {@see CollectAction::startInputTimers}.
+     * Sends the ``collect.start_input_timers`` command — the same wire
+     * sub-command as {@see CollectAction::startInputTimers}.
      */
     public function startInputTimers(): void
     {
@@ -576,16 +624,19 @@ class FaxAction extends Action
     protected string $faxType;
 
     /**
-     * @param string    $faxType 'send' or 'receive'
-     * @param Call|null $call    The owning Call (the reference's `Action.call`).
+     * @param Call   $call    The owning Call (REQUIRED, as in the reference).
+     * @param string $faxType 'send' or 'receive'.
+     *
+     * `$call` precedes `$faxType`: PHP forbids a required parameter after an
+     * optional one, and `$faxType` carries a default.
      */
     public function __construct(
         string $controlId,
         string $callId,
         string $nodeId,
         object $client,
+        Call $call,
         string $faxType = 'send',
-        ?Call $call = null,
     ) {
         parent::__construct($controlId, $callId, $nodeId, $client, $call);
         $this->faxType = $faxType;

@@ -88,22 +88,30 @@ final class PlanRecordingHttpClient extends HttpClient
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function post(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
-    {
+    /**
+     * @param array<string,mixed>|null $body
+     * @param array<string,mixed>|null $params
+     * @return array<string,mixed>
+     */
+    public function post(
+        string $path,
+        ?array $body = null,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null
+    ): array {
         $this->calls[] = ['POST', $path];
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function put(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    /** @param array<string,mixed>|null $data @return array<string,mixed> */
+    public function put(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['PUT', $path];
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function patch(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    /** @param array<string,mixed>|null $data @return array<string,mixed> */
+    public function patch(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['PATCH', $path];
         return [];

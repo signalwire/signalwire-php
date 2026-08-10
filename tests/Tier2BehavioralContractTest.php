@@ -459,9 +459,9 @@ class Tier2BehavioralContractTest extends TestCase
         // SIP callback declines (returns null) for its own agent's usernames,
         // so use an explicit redirecting callback at a distinct path to assert
         // the served-path 307 contract end to end.
-        $agent->registerRoutingCallback('/redir', static function (array $body, array $headers): string {
+        $agent->registerRoutingCallback(static function (array $body, array $headers): string {
             return '/elsewhere';
-        });
+        }, path: '/redir');
 
         // A routing callback returning a route -> 307 redirect (POST preserved).
         [$status, $headers, $rbody] = $agent->handleRequest(

@@ -110,7 +110,7 @@ class SWMLServiceSwaigTest extends TestCase
     public function testSwaigGetReturnsSwml(): void
     {
         $svc = $this->svc();
-        $svc->hangup(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->hangup();
         [$status, , $body] = $svc->handleRequest('GET', '/swaig', $this->auth());
         $this->assertSame(200, $status);
         $decoded = json_decode($body, true);
@@ -190,7 +190,7 @@ class SWMLServiceSwaigTest extends TestCase
         $svc = $this->svc();
 
         // 1. Build the SWML — an `answer` then an `ai_sidecar` verb config.
-        $svc->answer(); // @phpstan-ignore method.notFound (auto-vivified SWML verb via __call)
+        $svc->answer();
         // ai_sidecar isn't in the live schema yet; bypass via the document.
         // Once schema lands, callers will use the auto-vivified verb method.
         $svc->getDocument()->addVerbToSection('main', 'ai_sidecar', [
@@ -216,10 +216,13 @@ class SWMLServiceSwaigTest extends TestCase
 
         // 3. Register an event-sink endpoint via routing callback.
         $eventsSeen = [];
-        $svc->registerRoutingCallback('/events', function (?array $body) use (&$eventsSeen): array {
+        // The routing-callback contract is `(array $body, array $headers): ?string`
+        // — a route to redirect to, or null to decline. This sink records the
+        // event and declines, so the service serves its own SWML (200).
+        $svc->registerRoutingCallback(function (array $body, array $headers) use (&$eventsSeen): ?string {
             $eventsSeen[] = $body['type'] ?? 'unknown';
-            return ['ok' => true];
-        });
+            return null;
+        }, path: '/events');
 
         // Verify the SWAIG dispatch works end-to-end.
         [$status, , $body] = $svc->handleRequest('POST', '/swaig', $this->auth(), $this->encode([

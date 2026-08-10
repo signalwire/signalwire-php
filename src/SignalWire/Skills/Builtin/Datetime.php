@@ -7,6 +7,10 @@ namespace SignalWire\Skills\Builtin;
 use SignalWire\Skills\SkillBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Current date, time, and timezone information, computed in-process — no API
+ * key and no network access.
+ */
 class Datetime extends SkillBase
 {
     /** The name. */
@@ -21,6 +25,7 @@ class Datetime extends SkillBase
         return 'Get current date, time, and timezone information';
     }
 
+    /** Always succeeds — this skill has no configuration to validate. */
     public function setup(): bool
     {
         return true;
@@ -53,6 +58,11 @@ class Datetime extends SkillBase
         return parent::getParameterSchema();
     }
 
+    /**
+     * Define the `get_current_time` and `get_current_date` tools. Both take an
+     * optional IANA `timezone` argument and default to UTC when it is absent.
+     * The names are fixed — they do not honour a `tool_name` override.
+     */
     public function registerTools(): void
     {
         $this->defineTool(
@@ -113,12 +123,8 @@ class Datetime extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
-
         return [
             [
                 'title' => 'Date and Time Information',

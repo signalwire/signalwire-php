@@ -38,7 +38,7 @@ class RegistryBrands extends \SignalWire\REST\BaseResource
      */
     public function create(array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->basePath, $body, $requestOptions);
+        return $this->http->post($this->basePath, $body, requestOptions: $requestOptions);
     }
 
     /**
@@ -68,6 +68,6 @@ class RegistryBrands extends \SignalWire\REST\BaseResource
      */
     public function createCampaign(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->path($id, 'campaigns'), $body, $requestOptions);
+        return $this->http->post($this->path($id, 'campaigns'), $body, requestOptions: $requestOptions);
     }
 }

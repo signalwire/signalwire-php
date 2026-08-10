@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Skills System Demo
  *
@@ -36,14 +38,14 @@ try {
     $agent->addSkill('datetime');
     echo "Added datetime skill\n";
 } catch (\Exception $e) {
-    echo "Failed to add datetime skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add datetime skill: ' . $e->getMessage() . "\n";
 }
 
 try {
     $agent->addSkill('math');
     echo "Added math skill\n";
 } catch (\Exception $e) {
-    echo "Failed to add math skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add math skill: ' . $e->getMessage() . "\n";
 }
 
 try {
@@ -62,7 +64,7 @@ try {
     ]);
     echo "Added web_search skill\n";
 } catch (\Exception $e) {
-    echo "Web search not available: " . $e->getMessage() . "\n";
+    echo 'Web search not available: ' . $e->getMessage() . "\n";
 }
 
 // List loaded skills

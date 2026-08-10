@@ -123,7 +123,7 @@ $out['http_handle_request_401_bad_password'] = observeResponse($s, $h, $b, 'resp
 
 // ---- handle_request: 307 redirect via routing callback ----
 $svc = newService();
-$svc->registerRoutingCallback('/sip', 'redirectCB');
+$svc->registerRoutingCallback('redirectCB', '/sip');
 [$s, $h, $b] = $svc->handleRequest(
     'POST',
     urlPath('http://localhost:3000/swml/sip'),
@@ -134,7 +134,7 @@ $out['http_handle_request_307_redirect'] = observeResponse($s, $h, $b, 'response
 
 // ---- handle_request: callback returns null -> normal 200 SWML ----
 $svc = newService();
-$svc->registerRoutingCallback('/sip', 'redirectCB');
+$svc->registerRoutingCallback('redirectCB', '/sip');
 [$s, $h, $b] = $svc->handleRequest(
     'POST',
     urlPath('http://localhost:3000/swml/sip'),
@@ -166,11 +166,33 @@ $out['http_webhook_validate_twilio_alias'] = $decision('POST', WH_URL, WH_BODY, 
 // ---- serverless (lambda) ----
 // Build the agent at route "/" so the event's root-relative "/swaig" path routes
 // (mirrors the Go reference dump; Python's serverless dispatch strips the route).
-$out['http_serverless_lambda_swaig'] = serverlessSwaig();
+$out['http_serverless_lambda_swaig'] = serverlessSwaig(withToken: false);
+$out['http_serverless_lambda_swaig_valid_token'] = serverlessSwaig(withToken: true);
 $out['http_serverless_lambda_noauth_401'] = serverlessNoAuth();
 
-/** @return array<string,mixed> */
-function serverlessSwaig(): array
+/**
+ * The serverless SWAIG token contract, both halves.
+ *
+ * The tool is `secure` (defineTool's default), so it REQUIRES a valid per-call
+ * `__token`. With $withToken=false no credential is presented and the call must
+ * be REFUSED (a 200 + FunctionResult body, never an HTTP error status); with
+ * $withToken=true a genuine token is minted from THIS agent's own session
+ * manager and the handler must RUN.
+ *
+ * `__TOKEN__:<fn>:<call_id>` is a corpus DIRECTIVE, never a literal: the token
+ * is HMAC-keyed by a per-process random secret and expires, so it can only be
+ * minted from the same agent instance the case then drives — exactly the round
+ * trip a real deployment performs. Each port mints its own; only the
+ * accept/refuse OUTCOME is compared against the oracle.
+ *
+ * WHERE THE CREDENTIAL RIDES: the token in the query string
+ * (`queryStringParameters`, the parsed mapping both lambda payload shapes
+ * provide), the call_id in the POST body. That is the identical split the
+ * direct HTTP transport uses.
+ *
+ * @return array<string,mixed>
+ */
+function serverlessSwaig(bool $withToken): array
 {
     $a = new AgentBase(name: 'demo', route: '/', basicAuthUser: HTTP_USER, basicAuthPassword: HTTP_PASS);
     $a->defineTool(
@@ -188,6 +210,9 @@ function serverlessSwaig(): array
         'body' => '{"function":"say_hello","argument":{"parsed":[{}]},"call_id":"c1"}',
         'requestContext' => ['http' => ['method' => 'POST']],
     ];
+    if ($withToken) {
+        $event['queryStringParameters'] = ['__token' => $a->createToolToken('say_hello', 'c1')];
+    }
     return reduceLambda($a->handleServerlessRequest(event: $event, mode: 'lambda'));
 }
 

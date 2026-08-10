@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * LLM Parameters Demo
  *
@@ -23,7 +25,7 @@ $agent = match ($agentType) {
     default    => createCustomerServiceAgent(),
 };
 
-echo "Starting " . ucfirst($agentType) . " Agent\n";
+echo 'Starting ' . ucfirst($agentType) . " Agent\n";
 echo "Available at: http://localhost:3000\n";
 
 $agent->run();
@@ -60,7 +62,10 @@ function createPreciseAssistant(): AgentBase
         handler: function (array $args, array $raw): FunctionResult {
             return new FunctionResult(sprintf(
                 'System Status: CPU %d%%, Memory %dGB, Disk %dGB free, Uptime %d days',
-                rand(10, 90), rand(1, 16), rand(50, 500), rand(1, 30)
+                rand(10, 90),
+                rand(1, 16),
+                rand(50, 500),
+                rand(1, 30)
             ));
         },
     );

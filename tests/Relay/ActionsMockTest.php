@@ -120,6 +120,10 @@ class ActionsMockTest extends TestCase
         $event = $action->wait(5);
         $this->assertNotNull($event);
         $this->assertTrue($action->isDone());
+        // Reference parity: Action exposes the terminal-state flag BOTH as the
+        // `completed` value (relay/call.py:90/102) and the `is_done` property.
+        // Same flag, two reads — a caller may branch on either.
+        $this->assertTrue($action->completed);
         $this->assertSame('finished', $event->getParams()['state'] ?? null);
 
         $this->assertNotEmpty($this->mock->journal()->recv('calling.play'));
@@ -724,6 +728,193 @@ class ActionsMockTest extends TestCase
         $this->assertSame(
             'ai-stop',
             Shape::at($stops[count($stops) - 1]->frame, 'params', 'control_id'),
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // API-name -> WIRE-key remaps
+    //
+    // The reference exposes a keyword parameter under one name but puts it on
+    // the wire under a DIFFERENT key. A construction-level assertion cannot
+    // catch a port that sends the API name instead — only a wire assertion on
+    // the exact emitted key can. The seven sites in
+    // signalwire-python/signalwire/relay/call.py:
+    //
+    //   :567   play()             media        -> "play"
+    //   :844   play_and_collect() media        -> "play"
+    //   :1024  pay()              input_method -> "input"
+    //   :1260  join_conference()  stream_obj   -> "stream"
+    //   :1359  bind_digit()       bind_params  -> "params"
+    //   :1479  ai()               ai_params    -> "params"
+    //   :1502  amazon_bedrock()   ai_params    -> "params"
+    //
+    // Server-confirmed in mod_infrastructure/relay_apis.c (pay:1595 "input";
+    // join_conference:1758 "stream"; bind_digit:1479 and
+    // amazon_bedrock:1982 "params").
+    //
+    // Each test below asserts BOTH that the wire key is present with the right
+    // value AND that the reference's API name did NOT leak onto the wire.
+    // ------------------------------------------------------------------
+
+    #[Test]
+    public function playRemapsMediaToWireKeyPlay(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-play');
+        $call->play(
+            [['type' => 'tts', 'params' => ['text' => 'remap']]],
+            ['control_id' => 'remap-play'],
+        );
+        $entries = $this->mock->journal()->recv('calling.play');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame(
+            [['type' => 'tts', 'params' => ['text' => 'remap']]],
+            $p['play'] ?? null,
+            'play() must emit the media list under the wire key "play"',
+        );
+        $this->assertArrayNotHasKey('media', $p, 'the API name "media" must not reach the wire');
+    }
+
+    #[Test]
+    public function playAndCollectRemapsMediaToWireKeyPlay(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-pac');
+        $call->playAndCollect(
+            [['type' => 'tts', 'params' => ['text' => 'remap']]],
+            ['digits' => ['max' => 1]],
+            ['control_id' => 'remap-pac'],
+        );
+        $entries = $this->mock->journal()->recv('calling.play_and_collect');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame(
+            [['type' => 'tts', 'params' => ['text' => 'remap']]],
+            $p['play'] ?? null,
+            'playAndCollect() must emit the media list under the wire key "play"',
+        );
+        $this->assertArrayNotHasKey('media', $p, 'the API name "media" must not reach the wire');
+    }
+
+    #[Test]
+    public function payRemapsInputMethodToWireKeyInput(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-pay');
+        $call->pay('https://pay.example/connect', [
+            'control_id' => 'remap-pay',
+            'input'      => 'dtmf',
+        ]);
+        $entries = $this->mock->journal()->recv('calling.pay');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame('dtmf', $p['input'] ?? null, 'pay() must emit the wire key "input"');
+        $this->assertArrayNotHasKey(
+            'input_method',
+            $p,
+            'the API name "input_method" must not reach the wire',
+        );
+    }
+
+    #[Test]
+    public function joinConferenceRemapsStreamObjToWireKeyStream(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-jc');
+        $call->joinConference([
+            'name'   => 'room-1',
+            'stream' => ['url' => 'wss://stream.example/conf'],
+        ]);
+        $entries = $this->mock->journal()->recv('calling.conference.join');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame(
+            ['url' => 'wss://stream.example/conf'],
+            $p['stream'] ?? null,
+            'joinConference() must emit the stream object under the wire key "stream"',
+        );
+        $this->assertArrayNotHasKey(
+            'stream_obj',
+            $p,
+            'the API name "stream_obj" must not reach the wire',
+        );
+    }
+
+    #[Test]
+    public function bindDigitRemapsBindParamsToWireKeyParams(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-bd');
+        $call->bindDigit([
+            'digits'      => '123',
+            'bind_method' => 'calling.play',
+            'params'      => ['volume' => 3],
+        ]);
+        $entries = $this->mock->journal()->recv('calling.bind_digit');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame('123', $p['digits'] ?? null);
+        $this->assertSame('calling.play', $p['bind_method'] ?? null);
+        // The remapped knob: reference `bind_params` rides the wire as `params`,
+        // NESTED inside the RPC frame's own `params` payload. The php bag is
+        // named `$params` too, but it is spread one level below the frame's
+        // params — so a caller-supplied `params` key nests rather than collides.
+        $this->assertSame(
+            ['volume' => 3],
+            $p['params'] ?? null,
+            'bindDigit() must emit bind_params under the nested wire key "params"',
+        );
+        $this->assertArrayNotHasKey(
+            'bind_params',
+            $p,
+            'the API name "bind_params" must not reach the wire',
+        );
+    }
+
+    #[Test]
+    public function aiRemapsAiParamsToWireKeyParams(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-ai');
+        $call->ai(
+            ['text' => 'You are helpful.'],
+            [
+                'control_id' => 'remap-ai',
+                'params'     => ['temperature' => 0.7],
+            ],
+        );
+        $entries = $this->mock->journal()->recv('calling.ai');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame(['text' => 'You are helpful.'], $p['prompt'] ?? null);
+        $this->assertSame(
+            ['temperature' => 0.7],
+            $p['params'] ?? null,
+            'ai() must emit ai_params under the nested wire key "params"',
+        );
+        $this->assertArrayNotHasKey(
+            'ai_params',
+            $p,
+            'the API name "ai_params" must not reach the wire',
+        );
+    }
+
+    #[Test]
+    public function amazonBedrockRemapsAiParamsToWireKeyParams(): void
+    {
+        $call = $this->answeredInboundCall('call-remap-ab');
+        $call->amazonBedrock([
+            'prompt' => ['text' => 'You are helpful.'],
+            'params' => ['temperature' => 0.7],
+        ]);
+        $entries = $this->mock->journal()->recv('calling.amazon_bedrock');
+        $this->assertCount(1, $entries);
+        $p = Shape::sub($entries[0]->frame, 'params');
+        $this->assertSame(['text' => 'You are helpful.'], $p['prompt'] ?? null);
+        $this->assertSame(
+            ['temperature' => 0.7],
+            $p['params'] ?? null,
+            'amazonBedrock() must emit ai_params under the nested wire key "params"',
+        );
+        $this->assertArrayNotHasKey(
+            'ai_params',
+            $p,
+            'the API name "ai_params" must not reach the wire',
         );
     }
 

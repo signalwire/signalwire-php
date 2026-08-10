@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Voice;
 /**
  * Types_StatusCodes_StatusCode401 — generated wire type from the 'voice' spec (components/schemas 'Types.StatusCodes.StatusCode401').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Types_StatusCodes_StatusCode401
 {

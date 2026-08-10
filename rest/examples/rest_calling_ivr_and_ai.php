@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: IVR input collection, AI operations, and advanced call control.
  *
@@ -16,18 +18,38 @@ require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
 
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
+
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:   $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:    $_ENV['SIGNALWIRE_SPACE']      ?? die("Set SIGNALWIRE_SPACE\n"),
+    project: env('SIGNALWIRE_PROJECT_ID'),
+    token:   env('SIGNALWIRE_API_TOKEN'),
+    host:    env('SIGNALWIRE_SPACE'),
 );
 
 $CALL_ID = 'demo-call-id';
 
-function safe(string $label, callable $fn): mixed
+/**
+ * Run an SDK call, reporting OK/failed instead of aborting the demo.
+ *
+ * Every REST method returns the decoded JSON body as array<string,mixed>, so
+ * that is what a success yields; a failure yields null.
+ *
+ * @param callable(): mixed $fn
+ * @return array<array-key,mixed>|null
+ */
+function safe(string $label, callable $fn): ?array
 {
     try {
         $result = $fn();
+        $result = is_array($result) ? $result : null;
         echo "  {$label}: OK\n";
         return $result;
     } catch (\Exception $e) {
@@ -36,68 +58,129 @@ function safe(string $label, callable $fn): mixed
     }
 }
 
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
+/**
+ * Narrow a `mixed` to a list that is safe to foreach/count/array_slice.
+ * A missing or non-array value yields an empty list.
+ *
+ * @return list<mixed>
+ */
+function rows(mixed $value): array
+{
+    return is_array($value) ? array_values($value) : [];
+}
+
+/**
+ * The `data` collection of a list response, narrowed to a list.
+ *
+ * @return list<mixed>
+ */
+function dataRows(mixed $response): array
+{
+    return is_array($response) ? rows($response['data'] ?? []) : [];
+}
+
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return dataRows($response)[0] ?? [];
+}
+
 // 1. Collect DTMF input
 echo "Collecting DTMF input...\n";
-safe('Collect', fn() => $client->calling()->collect($CALL_ID,
+safe('Collect', fn () => $client->calling()->collect(
+    $CALL_ID,
     controlId: 'collect-1',
     digits: ['max' => 4, 'terminators' => '#'],
     initialTimeout: 5.0,
 ));
-safe('Start input timers', fn() => $client->calling()->collectStartInputTimers($CALL_ID, 'collect-1'));
-safe('Stop collect',       fn() => $client->calling()->collectStop($CALL_ID, 'collect-1'));
+safe('Start input timers', fn () => $client->calling()->collectStartInputTimers($CALL_ID, 'collect-1'));
+safe('Stop collect', fn () => $client->calling()->collectStop($CALL_ID, 'collect-1'));
 
 // 2. Answering machine detection
 echo "\nDetecting answering machine...\n";
-safe('Detect',      fn() => $client->calling()->detect($CALL_ID, ['type' => 'machine'], controlId: 'detect-1'));
-safe('Stop detect', fn() => $client->calling()->detectStop($CALL_ID, 'detect-1'));
+safe('Detect', fn () => $client->calling()->detect($CALL_ID, ['type' => 'machine'], controlId: 'detect-1'));
+safe('Stop detect', fn () => $client->calling()->detectStop($CALL_ID, 'detect-1'));
 
 // 3. AI operations
 echo "\nAI agent operations...\n";
-safe('AI message', fn() => $client->calling()->aiMessage($CALL_ID,
+safe('AI message', fn () => $client->calling()->aiMessage(
+    $CALL_ID,
     role: 'system',
     messageText: 'The customer wants to check their balance.',
 ));
-safe('AI hold',   fn() => $client->calling()->aiHold($CALL_ID));
-safe('AI unhold', fn() => $client->calling()->aiUnhold($CALL_ID));
-safe('AI stop',   fn() => $client->calling()->aiStop($CALL_ID, 'ai-1'));
+safe('AI hold', fn () => $client->calling()->aiHold($CALL_ID));
+safe('AI unhold', fn () => $client->calling()->aiUnhold($CALL_ID));
+safe('AI stop', fn () => $client->calling()->aiStop($CALL_ID, 'ai-1'));
 
 // 4. Live transcription and translation
 echo "\nLive transcription and translation...\n";
-safe('Live transcribe', fn() => $client->calling()->liveTranscribe($CALL_ID, ['start' => ['lang' => 'en-US']]));
-safe('Live translate',  fn() => $client->calling()->liveTranslate($CALL_ID, ['start' => ['from_lang' => 'en-US', 'to_lang' => 'es-ES']]));
+safe('Live transcribe', fn () => $client->calling()->liveTranscribe($CALL_ID, ['start' => ['lang' => 'en-US']]));
+safe('Live translate', fn () => $client->calling()->liveTranslate($CALL_ID, ['start' => ['from_lang' => 'en-US', 'to_lang' => 'es-ES']]));
 
 // 5. Tap (media fork)
 echo "\nTap (media fork)...\n";
-safe('Tap start', fn() => $client->calling()->tap($CALL_ID,
+safe('Tap start', fn () => $client->calling()->tap(
+    $CALL_ID,
     tap:    ['type' => 'audio', 'params' => ['direction' => 'both']],
     device: ['type' => 'rtp', 'params' => ['addr' => '192.168.1.100', 'port' => 9000]],
     controlId: 'tap-1',
 ));
-safe('Tap stop', fn() => $client->calling()->tapStop($CALL_ID, 'tap-1'));
+safe('Tap stop', fn () => $client->calling()->tapStop($CALL_ID, 'tap-1'));
 
 // 6. Stream (WebSocket)
 echo "\nStream (WebSocket)...\n";
-safe('Stream start', fn() => $client->calling()->stream($CALL_ID, 'wss://example.com/audio-stream', controlId: 'stream-1'));
-safe('Stream stop',  fn() => $client->calling()->streamStop($CALL_ID, 'stream-1'));
+safe('Stream start', fn () => $client->calling()->stream($CALL_ID, 'wss://example.com/audio-stream', controlId: 'stream-1'));
+safe('Stream stop', fn () => $client->calling()->streamStop($CALL_ID, 'stream-1'));
 
 // 7. User event
 echo "\nSending user event...\n";
-safe('User event', fn() => $client->calling()->userEvent($CALL_ID, [
+safe('User event', fn () => $client->calling()->userEvent($CALL_ID, [
     'action' => 'agent_note',
     'data'   => ['note' => 'VIP caller'],
 ]));
 
 // 8. SIP refer
 echo "\nSIP refer...\n";
-safe('SIP refer', fn() => $client->calling()->refer($CALL_ID, ['type' => 'sip', 'params' => ['to' => 'sip:support@example.com']]));
+safe('SIP refer', fn () => $client->calling()->refer($CALL_ID, ['type' => 'sip', 'params' => ['to' => 'sip:support@example.com']]));
 
 // 9. Fax stop commands
 echo "\nFax stop commands...\n";
-safe('Send fax stop',    fn() => $client->calling()->sendFaxStop($CALL_ID, 'fax-1'));
-safe('Receive fax stop', fn() => $client->calling()->receiveFaxStop($CALL_ID, 'fax-1'));
+safe('Send fax stop', fn () => $client->calling()->sendFaxStop($CALL_ID, 'fax-1'));
+safe('Receive fax stop', fn () => $client->calling()->receiveFaxStop($CALL_ID, 'fax-1'));
 
 // 10. Transfer and disconnect
 echo "\nTransfer and disconnect...\n";
-safe('Transfer',   fn() => $client->calling()->transfer($CALL_ID, ['transfer' => ['dest' => 'sip:destination@example.com']]));
-safe('Update call', fn() => $client->calling()->update($CALL_ID, status: 'completed'));
-safe('Disconnect', fn() => $client->calling()->disconnect($CALL_ID));
+safe('Transfer', fn () => $client->calling()->transfer($CALL_ID, ['transfer' => ['dest' => 'sip:destination@example.com']]));
+safe('Update call', fn () => $client->calling()->update($CALL_ID, status: 'completed'));
+safe('Disconnect', fn () => $client->calling()->disconnect($CALL_ID));

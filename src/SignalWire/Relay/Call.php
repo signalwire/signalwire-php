@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SignalWire\Relay;
 
 use SignalWire\Logging\Logger;
+use SignalWire\Relay\Event\RelayEvent;
 
 /**
  * Represents a RELAY voice call.
@@ -45,9 +46,8 @@ class Call
     // ── back-references ───────────────────────────────────────────────
     /**
      * RELAY client handle, typed via the internal RelayClientLike contract.
-     * Mirrors the Python reference's PRIVATE ``self._client`` back-reference
-     * (not part of the public surface); kept non-public so it is not a
-     * port-only public extra.
+     * Deliberately non-public: it is internal plumbing, not part of the
+     * call's API.
      */
     protected RelayClientLike $client;
 
@@ -93,8 +93,7 @@ class Call
     /**
      * Narrow a JSON-decoded value to a string, or null when absent / a
      * non-string. The RELAY call identity fields (call_id, node_id, tag,
-     * context, direction) are strings on the wire — see the Python
-     * reference's ``str`` typing in relay/call.py.
+     * context, direction) are strings on the wire.
      */
     private static function asNullableString(mixed $value): ?string
     {
@@ -103,9 +102,8 @@ class Call
 
     /**
      * Narrow a JSON-decoded value to an ``array<string,mixed>`` (a JSON
-     * object) — RELAY ``device``/``peer`` are objects (Python types them as
-     * ``dict[str, Any]``). A missing or non-object value yields an empty
-     * array.
+     * object) — RELAY ``device``/``peer`` are objects. A missing or
+     * non-object value yields an empty array.
      *
      * @return array<string,mixed>
      */
@@ -128,6 +126,11 @@ class Call
     /**
      * Central event router invoked by the Client whenever a server event
      * targets this call.
+     *
+     * @internal Event-router plumbing, not exported API. Client::handleEvent
+     *           calls this from a different class, so PHP forces `public`; the
+     *           reference keeps the identical machinery private
+     *           (`Call._dispatch_event` in signalwire/relay/call.py).
      */
     public function dispatchEvent(Event $event): void
     {
@@ -250,8 +253,7 @@ class Call
 
     /**
      * Lifecycle ordering used by the state-wait short-circuit.
-     * ``created < ringing < answered < ending < ended`` — mirrors Python's
-     * ``Call._wait_for_state`` ordering at relay/call.py.
+     * ``created < ringing < answered < ending < ended``.
      *
      * @var array<int,string>
      */
@@ -264,41 +266,74 @@ class Call
     ];
 
     /**
+     * Project a raw dispatch {@see Event} onto the typed {@see RelayEvent}
+     * the wait_for* family returns.
+     *
+     * These two classes are NOT a rename of one another. {@see Event} is the
+     * raw dispatch envelope (`Call::dispatchEvent`, `Action::handleEvent`,
+     * `Message::handleEvent` route a frame with it); {@see RelayEvent} is the
+     * typed public event (same field set, a `fromPayload` factory, plus the 23
+     * typed subclasses). The public wait surface speaks RelayEvent, so the
+     * boundary projects — reading exactly the four fields `fromPayload`
+     * extracts.
+     */
+    private static function toRelayEvent(Event $event): RelayEvent
+    {
+        return new RelayEvent(
+            $event->getEventType(),
+            $event->getParams(),
+            $event->getCallId() ?? '',
+            $event->getTimestamp(),
+        );
+    }
+
+    /**
+     * Build the synthetic `calling.call.state` event returned when a state
+     * wait short-circuits — there is no wire event in hand, so one is
+     * constructed carrying just ``{"call_state": state}``.
+     */
+    private static function stateSnapshot(string $state): RelayEvent
+    {
+        return new RelayEvent('calling.call.state', ['call_state' => $state]);
+    }
+
+    /**
      * Wait until the call reaches ``$target`` (or a later lifecycle state),
      * pumping inbound frames via ``$client->readOnce()`` — the same loop
      * {@see Action::wait()} uses, so we never mock the transport.
      *
      * If the call is ALREADY at or past ``$target`` this returns immediately
-     * (matching Python's ``_wait_for_state`` which short-circuits when
-     * ``rank(state) >= rank(target)``). Returns null on timeout.
+     * with a synthetic state snapshot — the short-circuit fires when
+     * ``rank(state) >= rank(target)``. Otherwise it delegates to
+     * {@see waitFor()} with a ``call_state == target`` predicate.
+     *
+     * The rank comparison governs only the SHORT-CIRCUIT; the forward wait
+     * then matches the target state EXACTLY. The two are not interchangeable:
+     * an exact forward match means a server that SKIPS a lifecycle state never
+     * satisfies a wait for the skipped one, and that is the contract.
      *
      * @param string         $target  Target lifecycle state.
      * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @throws RelayError When the timeout elapses before the state is reached.
      */
-    private function waitForState(string $target, int|float|null $timeout): bool
+    private function waitForState(string $target, int|float|null $timeout): RelayEvent
     {
-        $targetRank = $this->stateRank($target);
-
         // Already at or past the target -> return immediately.
-        if ($this->stateRank($this->state) >= $targetRank) {
-            return true;
+        if ($this->stateRank($this->state) >= $this->stateRank($target)) {
+            return self::stateSnapshot($this->state);
         }
 
-        $deadline = microtime(true) + ($timeout ?? 30);
-        while ($this->stateRank($this->state) < $targetRank
-            && microtime(true) < $deadline
-        ) {
-            // readOnce() is part of the RelayClientLike contract.
-            $this->client->readOnce();
-        }
-
-        return $this->stateRank($this->state) >= $targetRank;
+        return $this->waitFor(
+            'calling.call.state',
+            fn (RelayEvent $event): bool
+                => ($event->getParams()['call_state'] ?? null) === $target,
+            $timeout,
+        );
     }
 
     /**
      * Rank a lifecycle state for the state-wait ordering. Unknown states
-     * rank -1 (never satisfies a forward wait), matching Python's
-     * ``order.index(s) if s in order else -1``.
+     * rank -1, so they never satisfy a forward wait.
      */
     private function stateRank(string $state): int
     {
@@ -308,39 +343,42 @@ class Call
 
     /**
      * Wait until the call is answered (immediate if already answered or past
-     * it). Typed wait over the call lifecycle, mirroring Python's
-     * ``Call.wait_for_answered(timeout)``.
+     * it). Typed wait over the call lifecycle.
      *
-     * @return bool True once the call is answered (or already past it); false
-     *   on timeout.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return RelayEvent The `calling.call.state` event that satisfied the wait
+     *   (a synthetic snapshot when the call was already at or past answered).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForAnswered(int|float|null $timeout = null): bool
+    public function waitForAnswered(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_ANSWERED, $timeout);
     }
 
     /**
      * Wait until the call is ringing (immediate if already ringing or past
-     * it). Typed wait over the call lifecycle, mirroring Python's
-     * ``Call.wait_for_ringing(timeout)``.
+     * it). Typed wait over the call lifecycle.
      *
-     * @return bool True once the call is ringing (or already past it); false
-     *   on timeout.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return RelayEvent The `calling.call.state` event that satisfied the wait
+     *   (a synthetic snapshot when the call was already at or past ringing).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForRinging(int|float|null $timeout = null): bool
+    public function waitForRinging(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_RINGING, $timeout);
     }
 
     /**
      * Wait until the call is ending (immediate if already ending or past it).
-     * Typed wait over the call lifecycle, mirroring Python's
-     * ``Call.wait_for_ending(timeout)``.
+     * Typed wait over the call lifecycle.
      *
-     * @return bool True once the call is ending (or already past it); false
-     *   on timeout.
+     * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
+     * @return RelayEvent The `calling.call.state` event that satisfied the wait
+     *   (a synthetic snapshot when the call was already at or past ending).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForEnding(int|float|null $timeout = null): bool
+    public function waitForEnding(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_ENDING, $timeout);
     }
@@ -349,24 +387,33 @@ class Call
      * Wait for a specific event on this call, optionally filtered by a
      * predicate, pumping inbound frames via ``$client->readOnce()``.
      *
-     * Mirrors Python's async ``Call.wait_for(event_type, predicate, timeout)``
-     * and TS ``Call.waitFor``; the PHP port is synchronous (single-threaded),
-     * so instead of awaiting a future it drives the same read loop
-     * {@see waitForState}/{@see Action::wait} use until a matching event
-     * arrives. A one-shot listener captures the first matching {@see Event}.
+     * Synchronous (PHP is single-threaded): rather than awaiting a future,
+     * it drives the same read loop {@see waitForState}/{@see Action::wait} use
+     * until a matching event arrives. A one-shot listener captures the first
+     * matching event and projects it onto the typed {@see RelayEvent}.
      *
-     * @param string                     $eventType The event type to wait for.
-     * @param (callable(Event): bool)|null $predicate Optional filter — only an
-     *        event for which this returns true resolves the wait.
-     * @param int|float|null             $timeout   Seconds to wait; null uses
-     *        the 30s default.
-     * @return Event|null The first matching event, or null on timeout.
+     * TIMEOUT RAISES. The reference awaits ``asyncio.wait_for(future,
+     * timeout=timeout)``, which throws ``TimeoutError`` — it never resolves to
+     * None, which is why its annotation is a non-optional ``RelayEvent``. The
+     * timeout is purely a CLIENT-SIDE deadline on a local future: it is not a
+     * wire concept, the server never sees it and never sends a timeout
+     * response. ts, java, go and dotnet all return non-optional too. This port
+     * raises {@see RelayError} with the 408 client-timeout sentinel already
+     * used for the dial timeout (`Client::dial`).
+     *
+     * @param string                          $eventType The event type to wait for.
+     * @param (callable(RelayEvent): bool)|null $predicate Optional filter — only
+     *        an event for which this returns true resolves the wait.
+     * @param int|float|null                  $timeout   Seconds to wait; null
+     *        uses the 30s default.
+     * @return RelayEvent The first matching event.
+     * @throws RelayError When the timeout elapses before a matching event arrives.
      */
     public function waitFor(
         string $eventType,
         ?callable $predicate = null,
         int|float|null $timeout = null
-    ): ?Event {
+    ): RelayEvent {
         $matched = null;
         $listener = function (Event $event, Call $call) use (
             &$matched,
@@ -379,8 +426,9 @@ class Call
             if ($event->getEventType() !== $eventType) {
                 return;
             }
-            if ($predicate === null || $predicate($event)) {
-                $matched = $event;
+            $typed = self::toRelayEvent($event);
+            if ($predicate === null || $predicate($typed)) {
+                $matched = $typed;
             }
         };
 
@@ -400,18 +448,27 @@ class Call
             $this->onEventCallbacks = array_values($this->onEventCallbacks);
         }
 
+        if ($matched === null) {
+            throw new RelayError(
+                408,
+                "wait_for({$eventType}) timed out after "
+                . ($timeout ?? 30) . 's',
+            );
+        }
+
         return $matched;
     }
 
     /**
      * Wait for the call to reach the terminal ``ended`` state, pumping inbound
-     * frames until it does. Mirrors Python's ``Call.wait_for_ended(timeout)``
-     * / TS ``Call.waitForEnded``.
+     * frames until it does.
      *
      * @param int|float|null $timeout Seconds to wait; null uses the 30s default.
-     * @return bool True once the call has ended; false on timeout.
+     * @return RelayEvent The `calling.call.state` event that ended the call
+     *   (a synthetic snapshot when the call had already ended).
+     * @throws RelayError When the timeout elapses first.
      */
-    public function waitForEnded(int|float|null $timeout = null): bool
+    public function waitForEnded(int|float|null $timeout = null): RelayEvent
     {
         return $this->waitForState(Constants::CALL_STATE_ENDED, $timeout);
     }
@@ -446,12 +503,14 @@ class Call
      * was named ``calling.hangup`` — we send ``calling.end`` to match the
      * RELAY schema set extracted from switchblade.
      *
+     * ``$reason`` defaults to ``"hangup"`` and is ALWAYS sent, matching the
+     * reference (relay/call.py:542 — ``_execute("end", {"reason": reason})``).
+     *
      * @return array<string,mixed>
      */
-    public function hangup(?string $reason = null): array
+    public function hangup(string $reason = 'hangup'): array
     {
-        $extra = $reason !== null ? ['reason' => $reason] : [];
-        return $this->execute('calling.end', $extra);
+        return $this->execute('calling.end', ['reason' => $reason]);
     }
 
     /** @return array<string,mixed> */
@@ -540,8 +599,6 @@ class Call
 
     /**
      * Clear all digit bindings, optionally filtered by realm.
-     *
-     * Mirrors Python's Call.clear_digit_bindings(*, realm=None, **kwargs).
      *
      * @param ?string $realm  Optional realm filter — restricts clearing to
      *                         bindings registered under that realm.
@@ -639,11 +696,21 @@ class Call
     }
 
     /**
-     * @param array<string,mixed> $params
+     * Send a custom user-defined event.
+     *
+     * ``$event`` is OPTIONAL and emitted only when supplied; anything else
+     * the caller wants on the wire rides in ``$kwargs``.
+     *
+     * @param array<string,mixed> $kwargs
      * @return array<string,mixed>
      */
-    public function userEvent(array $params): array
+    public function userEvent(?string $event = null, array $kwargs = []): array
     {
+        $params = [];
+        if ($event !== null) {
+            $params['event'] = $event;
+        }
+        $params = array_merge($params, $kwargs);
         return $this->execute('calling.user_event', $params);
     }
 
@@ -659,16 +726,12 @@ class Call
     /**
      * Remove the call from a named queue.
      *
-     * Mirrors Python's Call.queue_leave(queue_name, *, control_id=None,
-     * queue_id=None, status_url=None, **kwargs). When called with no args
-     * the legacy "leave the current queue" behavior is preserved.
+     * ``$queue_name`` is REQUIRED and always emitted on the wire — there is
+     * no "leave whichever queue I am in" shape.
      *
-     * @param ?string $queue_name  Name of the queue to leave. Required when
-     *                             also supplying control_id / queue_id; when
-     *                             null the legacy no-arg "leave-current"
-     *                             behavior is preserved.
+     * @param string  $queue_name  Name of the queue to leave.
      * @param ?string $control_id  Optional control_id; auto-generated when
-     *                             null and other named-args are supplied.
+     *                             null.
      * @param ?string $queue_id    Optional explicit queue_id passed to the
      *                             server.
      * @param ?string $status_url  Optional status callback URL.
@@ -677,28 +740,16 @@ class Call
      * @return array<string,mixed>
      */
     public function queueLeave(
-        ?string $queue_name = null,
+        string $queue_name,
         ?string $control_id = null,
         ?string $queue_id = null,
         ?string $status_url = null,
         array $kwargs = []
     ): array {
-        if ($queue_name === null
-            && $control_id === null
-            && $queue_id === null
-            && $status_url === null
-            && empty($kwargs)
-        ) {
-            // Legacy no-arg shape: leave whatever queue the call is in.
-            return $this->execute('calling.queue.leave');
-        }
-
         $params = [
             'control_id' => $control_id ?? bin2hex(random_bytes(16)),
+            'queue_name' => $queue_name,
         ];
-        if ($queue_name !== null) {
-            $params['queue_name'] = $queue_name;
-        }
         if ($queue_id !== null) {
             $params['queue_id'] = $queue_id;
         }
@@ -753,8 +804,8 @@ class Call
      * Play text-to-speech. Typed convenience over {@see play()}.
      *
      * Restores the legacy ``play_tts(text=...)`` ergonomics so callers don't
-     * hand-build the ``{type:"tts", params:{...}}`` media shape. Mirrors
-     * Python's ``Call.play_tts(text, *, language, gender, voice, volume,
+     * hand-build the ``{type:"tts", params:{...}}`` media shape. Accepts
+     * ``(text, *, language, gender, voice, volume,
      * on_completed)``. Optional ``language`` / ``gender`` / ``voice`` are
      * nested under ``params`` only when supplied; ``volume`` rides at the
      * top level via the generic play frame; ``control_id`` / ``on_completed``
@@ -781,8 +832,6 @@ class Call
     /**
      * Play an audio file from a URL. Typed convenience over {@see play()}.
      *
-     * Mirrors Python's ``Call.play_audio(url, *, volume, on_completed)``.
-     *
      * Wire shape: play ``[{type:"audio", params:{url}}]`` with optional
      * top-level ``volume``.
      *
@@ -797,27 +846,26 @@ class Call
 
     /**
      * Play silence for ``$duration`` seconds. Typed convenience over
-     * {@see play()}. Mirrors Python's ``Call.play_silence(duration, *,
-     * on_completed)``.
+     * {@see play()}.
      *
      * Wire shape: play ``[{type:"silence", params:{duration}}]``.
      *
-     * @param array<string,mixed> $opts ``control_id`` / ``on_completed``.
+     * The reference (relay/call.py:620) takes exactly ONE keyword option here —
+     * ``on_completed`` — so it is declared explicitly rather than folded into a
+     * generic opts bag, and its default is ``null``.
      */
-    public function playSilence(int|float $duration, array $opts = []): PlayAction
+    public function playSilence(int|float $duration, ?callable $onCompleted = null): PlayAction
     {
-        $playOpts = $this->carryPlayOpts($opts);
         return $this->play(
             [['type' => 'silence', 'params' => ['duration' => $duration]]],
-            $playOpts,
+            $onCompleted === null ? [] : ['on_completed' => $onCompleted],
         );
     }
 
     /**
      * Play a named ringtone by country code. Typed convenience over
-     * {@see play()}. Mirrors Python's ``Call.play_ringtone(name, *,
-     * duration, volume, on_completed)``. ``duration`` is nested under
-     * ``params`` only when supplied; ``volume`` rides at the top level.
+     * {@see play()}. ``duration`` is nested under ``params`` only when
+     * supplied; ``volume`` rides at the top level.
      *
      * Wire shape: play ``[{type:"ringtone", params:{name, duration?}}]`` with
      * optional top-level ``volume``.
@@ -885,10 +933,8 @@ class Call
     /**
      * Play TTS then collect input. Typed media over {@see playAndCollect()}.
      *
-     * Mirrors Python's ``Call.prompt_tts(text, collect, *, language, gender,
-     * voice, volume, on_completed)``. Builds the same ``{type:"tts"}`` media
-     * shape as {@see playTts()} and forwards the caller's ``$collect`` object
-     * verbatim.
+     * Builds the same ``{type:"tts"}`` media shape as {@see playTts()} and
+     * forwards the caller's ``$collect`` object verbatim.
      *
      * Wire shape: play_and_collect ``[{type:"tts", params:{text, language?,
      * gender?, voice?}}]`` + the given ``collect`` with optional top-level
@@ -916,8 +962,7 @@ class Call
 
     /**
      * Play an audio file then collect input. Typed media over
-     * {@see playAndCollect()}. Mirrors Python's ``Call.prompt_audio(url,
-     * collect, *, volume, on_completed)``.
+     * {@see playAndCollect()}.
      *
      * Wire shape: play_and_collect ``[{type:"audio", params:{url}}]`` + the
      * given ``collect`` with optional top-level ``volume``.
@@ -954,10 +999,8 @@ class Call
     /**
      * Detect DTMF digits. Typed convenience over {@see detect()}.
      *
-     * Mirrors Python's ``Call.detect_digit(*, digits, timeout,
-     * on_completed)``. ``digits`` is nested under ``params`` only when
-     * supplied; ``timeout`` rides at the top level via the generic detect
-     * frame.
+     * ``digits`` is nested under ``params`` only when supplied; ``timeout``
+     * rides at the top level via the generic detect frame.
      *
      * Wire shape: detect ``{type:"digit", params:{digits?}}`` with optional
      * top-level ``timeout``.
@@ -982,11 +1025,8 @@ class Call
 
     /**
      * Detect human vs answering machine (AMD). Typed convenience over
-     * {@see detect()}. Mirrors Python's ``Call.detect_answering_machine(*,
-     * initial_timeout, end_silence_timeout, machine_voice_threshold,
-     * machine_words_threshold, detect_interruptions, detect_message_end,
-     * timeout, on_completed)``. Only the AMD keys the caller supplies are
-     * emitted under ``params`` (matches Python's only-provided-keys behavior);
+     * {@see detect()}. Only the AMD keys the caller SUPPLIES are emitted
+     * under ``params`` — an omitted key is absent from the wire, not defaulted;
      * ``timeout`` rides at the top level.
      *
      * Wire shape: detect ``{type:"machine", params:{...only-provided...}}``
@@ -1021,7 +1061,6 @@ class Call
     /**
      * Detect a fax tone (CED/CNG). Typed convenience over {@see detect()}.
      *
-     * Mirrors Python's ``Call.detect_fax(*, tone, timeout, on_completed)``.
      * ``tone`` is nested under ``params`` only when supplied; ``timeout``
      * rides at the top level.
      *
@@ -1186,7 +1225,7 @@ class Call
         if ($actionClass === FaxAction::class) {
             $faxTypeRaw = $opts['fax_type'] ?? 'send';
             $faxType = is_string($faxTypeRaw) ? $faxTypeRaw : 'send';
-            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $faxType, $this);
+            $action = new FaxAction($controlId, $callId, $nodeId, $this->client, $this, $faxType);
         } else {
             /** @psalm-suppress UnsafeInstantiation */
             $action = new $actionClass($controlId, $callId, $nodeId, $this->client, $this);

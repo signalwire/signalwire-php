@@ -63,7 +63,7 @@ if ($token === '') {
 }
 $contexts = $contextsRaw === ''
     ? ['audit_ctx']
-    : array_values(array_filter(array_map('trim', explode(',', $contextsRaw)), 'strlen'));
+    : array_values(array_filter(array_map('trim', explode(',', $contextsRaw)), static fn (string $c): bool => $c !== ''));
 
 $client = new Client([
     'project' => $project,

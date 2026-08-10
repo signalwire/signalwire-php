@@ -57,6 +57,6 @@ class SipProfile extends \SignalWire\REST\BaseResource
             $__body['default_send_as'] = $defaultSendAs;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->basePath, $__body, $requestOptions);
+        return $this->http->put($this->basePath, $__body, requestOptions: $requestOptions);
     }
 }

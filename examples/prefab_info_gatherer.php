@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * InfoGatherer Prefab Example
  *
@@ -10,14 +12,25 @@ require 'vendor/autoload.php';
 
 use SignalWire\Prefabs\InfoGathererAgent;
 
+/**
+ * The question set. The prefab's contract is `key_name` — that is the key it
+ * reads when recording each answer into global_data.
+ *
+ * @return list<array{key_name: string, question_text: string}>
+ */
+function buildInfoGathererQuestions(): array
+{
+    return [
+        ['key_name' => 'full_name', 'question_text' => 'What is your full name?'],
+        ['key_name' => 'email',     'question_text' => 'What is your email address?'],
+        ['key_name' => 'phone',     'question_text' => 'What is your phone number?'],
+    ];
+}
+
 $agent = new InfoGathererAgent(
     name:  'registration',
     route: '/register',
-    questions: [
-        ['question_text' => 'What is your full name?',     'field' => 'full_name'],
-        ['question_text' => 'What is your email address?', 'field' => 'email'],
-        ['question_text' => 'What is your phone number?',  'field' => 'phone'],
-    ],
+    questions: buildInfoGathererQuestions(),
 );
 
 $agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
@@ -45,8 +58,17 @@ $agent->setSummaryCallback(function ($summary, $raw) {
     }
 });
 
-echo "Starting InfoGatherer Agent\n";
-echo "Available at: http://localhost:3000/register\n";
-echo "This agent will collect: name, email, phone\n\n";
+// Guard the blocking run() so this file can be LOADED in-process (the question
+// set above is unit-tested) without starting the HTTP server.
+$isCliEntrypoint = PHP_SAPI === 'cli'
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
+    && \realpath($_SERVER['argv'][0]) === __FILE__;
 
-$agent->run();
+if ($isCliEntrypoint) {
+    echo "Starting InfoGatherer Agent\n";
+    echo "Available at: http://localhost:3000/register\n";
+    echo "This agent will collect: name, email, phone\n\n";
+
+    $agent->run();
+}

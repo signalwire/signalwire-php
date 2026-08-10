@@ -46,15 +46,19 @@ class SwmlRenderer
         string $format = 'json',
         ?string $defaultWebhookUrl = null,
     ): string {
-        $doc = $service->getDocument();
-        $doc->reset();
+        // Route through Service::addVerb, not the raw Document — the raw entry
+        // point (Document::addVerb) bypasses schema validation entirely, which
+        // is how the schema-forbidden `play` `text` key shipped unnoticed. Every
+        // emission below therefore goes through the validating path, so a wrong
+        // verb name or an unknown config key fails loud at build time.
+        $service->resetDocument();
 
         if ($addAnswer) {
-            $doc->addVerb('answer', new \stdClass());
+            $service->addVerb('answer', []);
         }
 
         if ($recordCall) {
-            $doc->addVerb('record_call', ['format' => $recordFormat, 'stereo' => $recordStereo]);
+            $service->addVerb('record_call', ['format' => $recordFormat, 'stereo' => $recordStereo]);
         }
 
         // Assemble the SWAIG function list, prepending startup/hangup hooks.
@@ -114,7 +118,7 @@ class SwmlRenderer
             $ai[$k] = $v;
         }
 
-        $doc->addVerb('ai', $ai);
+        $service->addVerb('ai', $ai);
 
         return self::renderIn($service, $format);
     }
@@ -123,7 +127,8 @@ class SwmlRenderer
      * Generate a SWML document for a function response — a `play` of the
      * response text followed by any provided actions.
      *
-     * @param list<array<string,mixed>>|null $actions
+     * @param list<array<string,array<string,mixed>|int>>|null $actions Each entry maps
+     *        a verb name ("play"/"hangup"/"transfer"/"ai") to that verb's config.
      * @return string SWML document as a JSON string.
      */
     public static function renderFunctionResponseSwml(
@@ -132,17 +137,25 @@ class SwmlRenderer
         ?array $actions = null,
         string $format = 'json',
     ): string {
-        $doc = $service->getDocument();
-        $doc->reset();
+        $service->resetDocument();
 
+        // Text is played via the `say:` URL scheme — the SWML `play` verb has no
+        // `text` key (its config is PlayWithURL/PlayWithURLS, url matching
+        // `^...|say: ?.*|...$`). Emitting `{"text": ...}` produced a document the
+        // SWML schema rejects. Mirrors the reference's
+        // `service.add_verb("play", {"url": f"say:{response_text}"})`.
+        //
+        // Route through Service::addVerb, not the raw Document — the raw entry
+        // point bypasses schema validation, which is how the invalid `text` key
+        // shipped unnoticed.
         if ($responseText !== '') {
-            $doc->addVerb('play', ['text' => $responseText]);
+            $service->addVerb('play', ['url' => "say:{$responseText}"]);
         }
 
         foreach ($actions ?? [] as $action) {
             foreach (['play', 'hangup', 'transfer', 'ai'] as $verb) {
                 if (array_key_exists($verb, $action)) {
-                    $doc->addVerb($verb, $action[$verb]);
+                    $service->addVerb($verb, $action[$verb]);
                     break;
                 }
             }

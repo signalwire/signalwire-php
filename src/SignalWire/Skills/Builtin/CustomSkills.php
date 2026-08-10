@@ -6,6 +6,17 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Registers caller-supplied tool definitions from the `tools` param, so an
+ * application can inject its own SWAIG functions through the skill system.
+ *
+ * Each entry is dispatched on its shape: an entry with a `function` key is
+ * registered as a RAW SWAIG definition (with this skill's `swaig_fields`
+ * merged in at the top level); an entry with a `name` key is a standard tool
+ * definition, registered with its `handler` when one is callable and as a
+ * handler-less SWAIG function otherwise. Malformed entries are skipped
+ * silently rather than raising.
+ */
 class CustomSkills extends SkillBase
 {
     /** The name. */
@@ -20,16 +31,27 @@ class CustomSkills extends SkillBase
         return 'Register user-defined custom tools';
     }
 
+    /**
+     * True — an agent may load several custom-tool bundles. This skill does
+     * not override {@see \SignalWire\Skills\SkillBase::getInstanceKey()}, so
+     * they are kept apart by the base key's `tool_name` suffix.
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
     }
 
+    /** Always succeeds — this skill has no configuration to validate. */
     public function setup(): bool
     {
         return true;
     }
 
+    /**
+     * Register each entry of the `tools` param. A non-array `tools` value, or
+     * an entry that is neither a `function`- nor `name`-keyed array, is
+     * skipped without error.
+     */
     public function registerTools(): void
     {
         $tools = $this->params['tools'] ?? [];

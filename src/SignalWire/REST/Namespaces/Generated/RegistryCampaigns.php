@@ -43,7 +43,7 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
             $__body['name'] = $name;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->path($id), $__body, $requestOptions);
+        return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -82,6 +82,6 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
             $__body['status_callback_url'] = $statusCallbackUrl;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path($id, 'orders'), $__body, $requestOptions);
+        return $this->http->post($this->path($id, 'orders'), $__body, requestOptions: $requestOptions);
     }
 }

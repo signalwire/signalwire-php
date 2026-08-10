@@ -37,6 +37,6 @@ class VideoConferenceTokens extends \SignalWire\REST\BaseResource
      */
     public function reset(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->path($id, 'reset'), [], $requestOptions);
+        return $this->http->post($this->path($id, 'reset'), [], requestOptions: $requestOptions);
     }
 }

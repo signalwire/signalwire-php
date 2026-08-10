@@ -20,7 +20,9 @@ declare(strict_types=1);
  * What this serves:
  *     GET  /sales-sidecar         → SWML doc with the ai_sidecar verb
  *     POST /sales-sidecar/swaig   → SWAIG tool dispatch (used by the sidecar's LLM)
- *     POST /sales-sidecar/events  → Optional sidecar lifecycle/transcription sink
+ *     POST /sales-sidecar/events  → Optional sidecar lifecycle/transcription
+ *                                   observer (logs the event, then serves the
+ *                                   SWML document — see the callback below)
  *
  * Drive the SWAIG path through the SDK CLI:
  *     bin/swaig-test --url http://user:pass@localhost:3000/sales-sidecar --list-tools
@@ -39,9 +41,8 @@ use SignalWire\SWML\Service;
 /**
  * Build the AI-sidecar SWMLService.
  *
- * Emits an `ai_sidecar` verb (via the document's addVerbToSection, since
- * `ai_sidecar` is not in the schema yet), registers a SWAIG tool the
- * sidecar's LLM can call, and mounts an event-sink routing callback.
+ * Emits an `ai_sidecar` verb, registers a SWAIG tool the sidecar's LLM can
+ * call, and mounts an event-sink routing callback.
  */
 function buildAiSidecarService(string $publicUrl = 'https://your-host.example.com/sales-sidecar'): Service
 {
@@ -52,11 +53,12 @@ function buildAiSidecarService(string $publicUrl = 'https://your-host.example.co
         port:  (int) (getenv('PORT') ?: 3000),
     );
 
-    // 1. Emit any SWML — including ai_sidecar. SWML\Service exposes the
-    //    underlying Document so callers can drop in arbitrary verb hashes
-    //    even before the schema lists a new platform verb.
+    // 1. Emit any SWML — including ai_sidecar — through Service::addVerb, the
+    //    validating entry point. `ai_sidecar` is in the schema, so this config
+    //    is checked at build time; going around the Service via getDocument()
+    //    would skip that check and let a typo'd key ship silently.
     $svc->answer();
-    $svc->getDocument()->addVerbToSection('main', 'ai_sidecar', [
+    $svc->addVerb('ai_sidecar', [
         // Required: prompt + lang.
         'prompt' => 'You are a real-time sales copilot. Listen to the call '
             . 'and surface competitor pricing comparisons when relevant.',
@@ -97,13 +99,21 @@ function buildAiSidecarService(string $publicUrl = 'https://your-host.example.co
         secure: false,
     );
 
-    // 3. Optional: mount an event sink for ai_sidecar lifecycle events at
+    // 3. Optional: observe ai_sidecar lifecycle events at
     //    POST /sales-sidecar/events. mod_openai POSTs each event as JSON.
-    $svc->registerRoutingCallback('/events', function (?array $body, array $headers): array {
-        $type = is_array($body) ? ($body['type'] ?? '<unknown>') : '<unknown>';
+    //
+    //    A routing callback is `(body, headers): ?string`. Returning a non-empty
+    //    string redirects (307) to that route; returning null means "handled
+    //    here", and the service answers with its SWML document. There is no
+    //    return value that produces a custom JSON ack — so this logs the event
+    //    and returns null, which is what the endpoint genuinely does.
+    $svc->registerRoutingCallback(function (array $body, array $headers): ?string {
+        $type = $body['type'] ?? '<unknown>';
+        $type = is_string($type) ? $type : '<unknown>';
         fwrite(STDERR, "[sidecar event] type={$type} body=" . json_encode($body) . "\n");
-        return ['ok' => true];
-    });
+
+        return null;
+    }, path: '/events');
 
     return $svc;
 }
@@ -115,7 +125,8 @@ function buildAiSidecarService(string $publicUrl = 'https://your-host.example.co
 //      the built-in server loaded this file as a router; build the
 //      service and dispatch the inbound request via Service::run().
 $isCliEntrypoint = PHP_SAPI === 'cli'
-    && isset($_SERVER['argv'][0])
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
     && \realpath($_SERVER['argv'][0]) === __FILE__;
 $isCliServer = PHP_SAPI === 'cli-server';
 if ($isCliEntrypoint || $isCliServer) {

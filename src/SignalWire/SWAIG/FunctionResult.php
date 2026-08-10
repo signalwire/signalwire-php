@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 namespace SignalWire\SWAIG;
 
+/**
+ * The response a SWAIG function returns to the AI engine: spoken/returned text
+ * plus an ordered list of actions the engine executes.
+ *
+ * Every mutator returns `$this` for chaining, and {@see FunctionResult::toArray()}
+ * renders the wire payload — `response` (omitted when empty), `action` (omitted
+ * when there are none), and `post_process` (only when both the flag is set AND
+ * at least one action exists). If that leaves the payload empty, a default
+ * `response` of "Action completed." is emitted so the engine always receives one
+ * of the two required keys.
+ */
 class FunctionResult
 {
     private string $response;
@@ -11,6 +22,12 @@ class FunctionResult
     /** @var list<array<string,mixed>> */
     private array $actions = [];
 
+    /**
+     * @param string|null $response    initial response text; null is coerced to ''
+     *   (an empty response is omitted from the wire payload entirely).
+     * @param bool        $postProcess whether the AI should post-process the result;
+     *   only reaches the wire when actions are also present.
+     */
     public function __construct(?string $response = '', bool $postProcess = false)
     {
         $this->response = $response ?? '';
@@ -19,12 +36,18 @@ class FunctionResult
 
     // ── Core ─────────────────────────────────────────────────────────────
 
+    /** Replace the response text the AI speaks/returns. */
     public function setResponse(string $text): self
     {
         $this->response = $text;
         return $this;
     }
 
+    /**
+     * Set the post-process flag. It is emitted as `post_process: true` only when
+     * the result also carries at least one action — see
+     * {@see FunctionResult::toArray()}.
+     */
     public function setPostProcess(bool $val): self
     {
         $this->postProcess = $val;
@@ -96,6 +119,12 @@ class FunctionResult
         return $result;
     }
 
+    /**
+     * JSON-encode {@see FunctionResult::toArray()} for the SWAIG HTTP response body.
+     *
+     * @throws \RuntimeException if `json_encode` fails (e.g. an action carries a
+     *   value that is not JSON-encodable).
+     */
     public function toJson(): string
     {
         $encoded = json_encode($this->toArray());
@@ -107,10 +136,23 @@ class FunctionResult
 
     // ── Call Control ─────────────────────────────────────────────────────
 
-    public function connect(string $destination, bool $final = true, string $from = ''): self
+    /**
+     * Connect the call to another destination via a SWML `connect` verb.
+     *
+     * The action is `{"SWML": {sections:{main:[{connect:{to[,from]}}]}, version},
+     * "transfer": "true"|"false"}` — `transfer` is a top-level sibling of `SWML`
+     * and is a lowercased bool STRING, not a boolean.
+     *
+     * @param string      $destination the `to` value (phone number, SIP URI, …).
+     * @param bool        $final       true (default) = permanent transfer, the AI
+     *   does not regain control; false = the AI resumes when the leg ends.
+     * @param string|null $from        caller ID; omitted from the wire when null
+     *   or empty.
+     */
+    public function connect(string $destination, bool $final = true, ?string $from = null): self
     {
         $connectObj = ['to' => $destination];
-        if ($from !== '') {
+        if ($from !== null && $from !== '') {
             $connectObj['from'] = $from;
         }
 
@@ -156,6 +198,7 @@ class FunctionResult
         return $this;
     }
 
+    /** End the call. Emits `{"hangup": true}`. */
     public function hangup(): self
     {
         // Python: add_action("hangup", True) -> {"hangup": true}.
@@ -163,6 +206,13 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Put the call on hold. Emits `{"hold": <int seconds>}` — a bare integer,
+     * not an object.
+     *
+     * @param int $timeout seconds to hold, CLAMPED to [0, 900]; out-of-range
+     *   values are silently pulled to the nearest bound rather than rejected.
+     */
     public function hold(int $timeout = 300): self
     {
         // Python: add_action("hold", timeout) -> {"hold": <int>} (bare int,
@@ -172,6 +222,18 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Make the AI wait for the user to speak before continuing.
+     *
+     * Emits `{"wait_for_user": <scalar>}` — the value is a SCALAR, never an
+     * object, chosen by this precedence: `$answerFirst` wins with the string
+     * `"answer_first"`, else a non-null `$timeout` (int), else a non-null
+     * `$enabled` (bool), else the literal `true`.
+     *
+     * @param bool|null $enabled     enable/disable waiting.
+     * @param int|null  $timeout     milliseconds to wait.
+     * @param bool      $answerFirst wait until the call is answered first.
+     */
     public function waitForUser(?bool $enabled = null, ?int $timeout = null, bool $answerFirst = false): self
     {
         // Python emits a SCALAR (not an object): "answer_first" string,
@@ -191,6 +253,7 @@ class FunctionResult
         return $this;
     }
 
+    /** Stop the AI from processing further. Emits `{"stop": true}`. */
     public function stop(): self
     {
         $this->actions[] = ['stop' => true];
@@ -260,6 +323,10 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Jump to another step within the current context.
+     * Emits `{"change_step": "<name>"}` — a bare string value.
+     */
     public function swmlChangeStep(string $stepName): self
     {
         // Python: add_action("change_step", step_name) -> bare string value.
@@ -267,6 +334,12 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Switch to another named context defined on the agent.
+     * Emits `{"change_context": "<name>"}` — a bare string value. Distinct from
+     * {@see FunctionResult::switchContext()}, which supplies ad-hoc prompts
+     * rather than naming a pre-declared context.
+     */
     public function swmlChangeContext(string $contextName): self
     {
         // Python: add_action("change_context", context_name) -> bare string.
@@ -274,9 +347,24 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Replace the AI's prompt context in place with ad-hoc prompt text.
+     *
+     * Two emitted shapes. When ONLY `$systemPrompt` is non-empty and every other
+     * argument is at its default, the action value is the BARE system-prompt
+     * STRING: `{"context_switch": "<prompt>"}`. Otherwise it is an object
+     * carrying only the keys that were supplied/enabled — `system_prompt` (only
+     * when non-empty), `user_prompt`, `consolidate`, `full_reset`, `isolated`.
+     *
+     * @param string|null $systemPrompt new system prompt.
+     * @param string|null $userPrompt   new user prompt.
+     * @param bool        $consolidate  fold the prior conversation into a summary.
+     * @param bool        $fullReset    discard the prior conversation entirely.
+     * @param bool        $isolated     run the new context isolated from prior history.
+     */
     public function switchContext(
-        string $systemPrompt,
-        string $userPrompt = '',
+        ?string $systemPrompt = null,
+        ?string $userPrompt = null,
         bool $consolidate = false,
         bool $fullReset = false,
         bool $isolated = false
@@ -287,14 +375,21 @@ class FunctionResult
         // STRING ({"context_switch": "<prompt>"}), not an object. Parity with
         // the simple/object branch in function_result.py:switch_context and the
         // verified Go/Rust siblings.
-        if ($systemPrompt !== '' && $userPrompt === '' && !$consolidate && !$fullReset && !$isolated) {
+        $hasSystem = $systemPrompt !== null && $systemPrompt !== '';
+        $hasUser = $userPrompt !== null && $userPrompt !== '';
+
+        if ($hasSystem && !$hasUser && !$consolidate && !$fullReset && !$isolated) {
             $this->actions[] = ['context_switch' => $systemPrompt];
             return $this;
         }
 
-        $ctx = ['system_prompt' => $systemPrompt];
+        // Python emits system_prompt only when truthy (function_result.py:730).
+        $ctx = [];
+        if ($hasSystem) {
+            $ctx['system_prompt'] = $systemPrompt;
+        }
 
-        if ($userPrompt !== '') {
+        if ($hasUser) {
             $ctx['user_prompt'] = $userPrompt;
         }
         if ($consolidate) {
@@ -328,12 +423,23 @@ class FunctionResult
 
     // ── Media ────────────────────────────────────────────────────────────
 
+    /** Speak text immediately as an action. Emits `{"say": "<text>"}`. */
     public function say(string $text): self
     {
         $this->actions[] = ['say' => $text];
         return $this;
     }
 
+    /**
+     * Play an audio file in the background behind the conversation.
+     *
+     * The wire action name is `playback_bg`. Its value SHAPE depends on `$wait`:
+     * the bare filename string when false, the object `{file, wait: true}` when
+     * true.
+     *
+     * @param string $filename URL or path of the audio file.
+     * @param bool   $wait     block the AI until playback finishes.
+     */
     public function playBackgroundFile(string $filename, bool $wait = false): self
     {
         // Python action name is "playback_bg". With wait, the value is an
@@ -346,6 +452,11 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Stop the background file started by
+     * {@see FunctionResult::playBackgroundFile()}.
+     * Emits `{"stop_playback_bg": true}`.
+     */
     public function stopBackgroundFile(): self
     {
         // Python action name is "stop_playback_bg" (value true).
@@ -444,6 +555,17 @@ class FunctionResult
         return $this->executeSwml($swmlDoc);
     }
 
+    /**
+     * Stop a recording started by {@see FunctionResult::recordCall()}.
+     *
+     * Wraps a `{"stop_record_call": ...}` verb in a full SWML document emitted
+     * via {@see FunctionResult::executeSwml()}. The value is `{control_id}` when
+     * an id is supplied, otherwise an empty JSON OBJECT `{}` (a `\stdClass`, so
+     * it does not encode as `[]`) which stops the default recording.
+     *
+     * @param string|null $controlId id of the recording to stop; null/empty
+     *   targets the unnamed recording.
+     */
     public function stopRecordCall(?string $controlId = null): self
     {
         // Python wraps {"stop_record_call": {...}} in a SWML document. Empty
@@ -475,6 +597,10 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Clear hints added by {@see FunctionResult::addDynamicHints()}.
+     * Emits `{"clear_dynamic_hints": {}}` — the value is an empty JSON OBJECT.
+     */
     public function clearDynamicHints(): self
     {
         // Python: self.action.append({"clear_dynamic_hints": {}}) — the value is
@@ -485,12 +611,24 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Set how long silence must last before the user's speech is treated as
+     * finished. Emits `{"end_of_speech_timeout": <ms>}`.
+     *
+     * @param int $ms milliseconds.
+     */
     public function setEndOfSpeechTimeout(int $ms): self
     {
         $this->actions[] = ['end_of_speech_timeout' => $ms];
         return $this;
     }
 
+    /**
+     * Set the timeout for individual speech events.
+     * Emits `{"speech_event_timeout": <ms>}`.
+     *
+     * @param int $ms milliseconds.
+     */
     public function setSpeechEventTimeout(int $ms): self
     {
         $this->actions[] = ['speech_event_timeout' => $ms];
@@ -510,6 +648,10 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Allow SWAIG functions to fire when the speaker timeout elapses.
+     * The wire action name is `functions_on_speaker_timeout` (NOT the method name).
+     */
     public function enableFunctionsOnTimeout(bool $enabled = true): self
     {
         // Python action name is "functions_on_speaker_timeout".
@@ -517,6 +659,10 @@ class FunctionResult
         return $this;
     }
 
+    /**
+     * Toggle sending extensive conversation data to the AI.
+     * Emits `{"extensive_data": <bool>}`.
+     */
     public function enableExtensiveData(bool $enabled = true): self
     {
         $this->actions[] = ['extensive_data' => $enabled];
@@ -766,6 +912,12 @@ class FunctionResult
         )) . ']';
     }
 
+    /**
+     * Join a SignalWire video/audio room. Wraps `{"join_room": {"name": …}}` in
+     * a full SWML document emitted via {@see FunctionResult::executeSwml()}, so
+     * it lands under the "SWML" action key. Distinct from
+     * {@see FunctionResult::joinConference()} (the ad-hoc PSTN/CXML conference).
+     */
     public function joinRoom(string $name): self
     {
         // Python wraps {"join_room": {name}} in a full SWML document.
@@ -781,6 +933,13 @@ class FunctionResult
         return $this->executeSwml($swmlDoc);
     }
 
+    /**
+     * Issue a SIP REFER to hand the call off to another SIP endpoint. Wraps
+     * `{"sip_refer": {"to_uri": …}}` in a full SWML document emitted via
+     * {@see FunctionResult::executeSwml()}.
+     *
+     * @param string $toUri the SIP URI to refer the call to.
+     */
     public function sipRefer(string $toUri): self
     {
         // Python wraps {"sip_refer": {to_uri}} in a full SWML document.
@@ -879,6 +1038,17 @@ class FunctionResult
         return $this->executeSwml($swmlDoc);
     }
 
+    /**
+     * Stop a media tap started by {@see FunctionResult::tap()}.
+     *
+     * Wraps `{"stop_tap": ...}` in a full SWML document via
+     * {@see FunctionResult::executeSwml()}. The value is `{control_id}` when an
+     * id is supplied, otherwise an empty JSON OBJECT `{}` (a `\stdClass`, so it
+     * does not encode as `[]`).
+     *
+     * @param string|null $controlId id of the tap to stop; null/empty targets
+     *   the unnamed tap.
+     */
     public function stopTap(?string $controlId = null): self
     {
         // Python wraps {"stop_tap": {...}} in a SWML document; {} when no
@@ -907,16 +1077,16 @@ class FunctionResult
      * full SWML document via executeSwml. Optional fields (body/media/tags/
      * region) are emitted only when supplied.
      *
-     * @param list<string> $media URLs to send (optional if $body is given).
-     * @param list<string> $tags  tags for UI searching.
+     * @param list<string>|null $media URLs to send (optional if $body is given).
+     * @param list<string>|null $tags  tags for UI searching.
      * @throws \InvalidArgumentException if neither body nor media is provided.
      */
     public function sendSms(
         string $toNumber,
         string $fromNumber,
         ?string $body = null,
-        array $media = [],
-        array $tags = [],
+        ?array $media = null,
+        ?array $tags = null,
         ?string $region = null
     ): self {
         // Validate that at least body or media is provided.
@@ -1130,6 +1300,10 @@ class FunctionResult
         return $this->executeRpc('ai_unhold', [], $callId);
     }
 
+    /**
+     * Feed text to the AI as if the user had spoken it. The wire action name is
+     * `user_input` (NOT the method name).
+     */
     public function simulateUserInput(string $text): self
     {
         // Python action name is "user_input" (not "simulate_user_input").

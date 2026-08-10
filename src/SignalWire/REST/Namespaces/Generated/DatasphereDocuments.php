@@ -54,7 +54,7 @@ class DatasphereDocuments extends \SignalWire\REST\CrudResource
             $__body['max_synonyms'] = $maxSynonyms;
         }
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path('search'), $__body, $requestOptions);
+        return $this->client->post($this->path('search'), $__body, requestOptions: $requestOptions);
     }
 
     /**

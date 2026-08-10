@@ -6,6 +6,10 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Random jokes from the API Ninjas service, emitted as a DataMap tool so the
+ * platform calls the API directly. Requires an `api_key` param.
+ */
 class Joke extends SkillBase
 {
     /** The name. */
@@ -20,6 +24,7 @@ class Joke extends SkillBase
         return 'Tell jokes using the API Ninjas joke API';
     }
 
+    /** Require a non-empty `api_key`; returns false (skill not loaded) without one. */
     public function setup(): bool
     {
         if (empty($this->params['api_key'])) {
@@ -71,6 +76,10 @@ class Joke extends SkillBase
         return $schema;
     }
 
+    /**
+     * Emit the joke tool (`get_joke` unless overridden by `tool_name`) as a
+     * DataMap definition taking an optional joke `type` argument.
+     */
     public function registerTools(): void
     {
         $toolName = $this->getToolName('get_joke');
@@ -129,12 +138,8 @@ class Joke extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
-
         return [
             [
                 'title' => 'Joke Telling',

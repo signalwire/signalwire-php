@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Auto-Vivified SWML Service Example
  *
@@ -83,7 +85,7 @@ $transfer->addVerb('connect', [
         ['to' => '+15556667777'],
     ],
 ]);
-$transfer->play(['url' => "say:All agents are busy. Please leave a message."]);
+$transfer->play(['url' => 'say:All agents are busy. Please leave a message.']);
 $transfer->record([
     'format'      => 'mp3',
     'stereo'      => false,

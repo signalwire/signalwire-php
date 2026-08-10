@@ -262,6 +262,53 @@ class SecurityConfig
     }
 
     /**
+     * Refuse to serve when TLS is switched ON but not usable.
+     *
+     * SECURITY (#90 — the silently-plain-HTTP shape). Every serving path used
+     * to fold "TLS configured but unusable" into "TLS off" and bind a PLAINTEXT
+     * listener: an operator who set ``SWML_SSL_ENABLED=true`` with a missing or
+     * unreadable cert got a WORKING cleartext endpoint, with no error, no
+     * non-zero exit, and (in WebService/Service) a startup line and
+     * ``getUrl()`` that both claimed ``https://``. They asked for encryption,
+     * served cleartext, and were never told.
+     *
+     * Called BEFORE any listener is bound, so a misconfigured service never
+     * accepts a single plaintext byte. The three serving paths
+     * ({@see \SignalWire\Server\AgentServer::serve()},
+     * {@see \SignalWire\Web\WebService::start()},
+     * {@see \SignalWire\SWML\Service::serve()}) all delegate here so they
+     * refuse identically rather than drifting.
+     *
+     * A no-op when TLS was never requested — plain HTTP stays a deliberate,
+     * working choice.
+     *
+     * @internal Serving-path guard, not exported API — every port expresses
+     *           the refusal in its own serve path; there is no reference
+     *           counterpart method (the reference folds the same
+     *           misconfiguration into plaintext, which is the bug being fixed).
+     *
+     * @throws \RuntimeException when ssl is enabled but the cert/key is unusable
+     */
+    public static function assertTlsUsableOrRefuse(?self $config = null): void
+    {
+        $cfg = $config ?? new self();
+        if (!$cfg->sslEnabled) {
+            return; // TLS not requested — plaintext is the deliberate choice.
+        }
+        [$isValid, $error] = $cfg->validateSslConfig();
+        if ($isValid) {
+            return;
+        }
+        throw new \RuntimeException(
+            'Refusing to serve: TLS is enabled but not usable — ' . $error . '. '
+            . 'Serving plaintext here would silently downgrade a connection you '
+            . 'asked to encrypt. Supply a readable SWML_SSL_CERT_PATH and '
+            . 'SWML_SSL_KEY_PATH, or set SWML_SSL_ENABLED=false to serve HTTP '
+            . 'deliberately.'
+        );
+    }
+
+    /**
      * PHP-native TLS-serving options — the ``get_ssl_context_kwargs`` analog.
      * Python returns a primitive dict ``{ssl_certfile, ssl_keyfile}``; PHP returns
      * the equivalent primitive stream-context ``ssl`` option array

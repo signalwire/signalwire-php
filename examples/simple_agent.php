@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Simple example of using the SignalWire AI Agent SDK (PHP)
  *
@@ -27,26 +29,26 @@ function buildSimpleAgent(): AgentBase
 
     // --- Prompt Configuration ---
 
-$agent->promptAddSection('Personality', 'You are a friendly and helpful assistant.');
-$agent->promptAddSection('Goal', 'Help users with basic tasks and answer questions.');
-$agent->promptAddSection('Instructions', '', bullets: [
-    'Be concise and direct in your responses.',
-    "If you don't know something, say so clearly.",
-    'Use the get_time function when asked about the current time.',
-    'Use the get_weather function when asked about the weather.',
-]);
+    $agent->promptAddSection('Personality', 'You are a friendly and helpful assistant.');
+    $agent->promptAddSection('Goal', 'Help users with basic tasks and answer questions.');
+    $agent->promptAddSection('Instructions', '', bullets: [
+        'Be concise and direct in your responses.',
+        "If you don't know something, say so clearly.",
+        'Use the get_time function when asked about the current time.',
+        'Use the get_weather function when asked about the weather.',
+    ]);
 
-// LLM parameters
-$agent->setPromptLlmParams([
-    'temperature'       => 0.3,
-    'top_p'             => 0.9,
-    'barge_confidence'  => 0.7,
-    'presence_penalty'  => 0.1,
-    'frequency_penalty' => 0.2,
-]);
+    // LLM parameters
+    $agent->setPromptLlmParams([
+        'temperature'       => 0.3,
+        'top_p'             => 0.9,
+        'barge_confidence'  => 0.7,
+        'presence_penalty'  => 0.1,
+        'frequency_penalty' => 0.2,
+    ]);
 
-// Post-prompt for summary generation
-$agent->setPostPrompt(<<<'PROMPT'
+    // Post-prompt for summary generation
+    $agent->setPostPrompt(<<<'PROMPT'
 Return a JSON summary of the conversation:
 {
     "topic": "MAIN_TOPIC",
@@ -55,79 +57,82 @@ Return a JSON summary of the conversation:
 }
 PROMPT);
 
-// --- Pronunciation and Hints ---
+    // --- Pronunciation and Hints ---
 
-$agent->addHints(['SignalWire', 'SWML', 'SWAIG']);
-$agent->addPronunciation('API', 'A P I', ignoreCase: false);
-$agent->addPronunciation('SIP', 'sip', ignoreCase: true);
+    $agent->addHints(['SignalWire', 'SWML', 'SWAIG']);
+    $agent->addPronunciation('API', 'A P I', ignoreCase: false);
+    $agent->addPronunciation('SIP', 'sip', ignoreCase: true);
 
-// --- Languages ---
+    // --- Languages ---
 
-$agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
-$agent->addLanguage(name: 'Spanish', code: 'es', voice: 'inworld.Sarah');
-$agent->addLanguage(name: 'French', code: 'fr-FR', voice: 'inworld.Hanna');
+    $agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
+    $agent->addLanguage(name: 'Spanish', code: 'es', voice: 'inworld.Sarah');
+    $agent->addLanguage(name: 'French', code: 'fr-FR', voice: 'inworld.Hanna');
 
-// --- AI Behavior ---
+    // --- AI Behavior ---
 
-$agent->setParams([
-    'ai_model'              => 'gpt-4.1-nano',
-    'wait_for_user'         => false,
-    'end_of_speech_timeout' => 1000,
-    'ai_volume'             => 5,
-    'languages_enabled'     => true,
-    'local_tz'              => 'America/Los_Angeles',
-]);
+    $agent->setParams([
+        'ai_model'              => 'gpt-4.1-nano',
+        'wait_for_user'         => false,
+        'end_of_speech_timeout' => 1000,
+        'ai_volume'             => 5,
+        'languages_enabled'     => true,
+        'local_tz'              => 'America/Los_Angeles',
+    ]);
 
-$agent->setGlobalData([
-    'company_name'       => 'SignalWire',
-    'product'            => 'AI Agent SDK',
-    'supported_features' => ['Voice AI', 'Telephone integration', 'SWAIG functions'],
-]);
+    $agent->setGlobalData([
+        'company_name'       => 'SignalWire',
+        'product'            => 'AI Agent SDK',
+        'supported_features' => ['Voice AI', 'Telephone integration', 'SWAIG functions'],
+    ]);
 
-// --- Native Functions ---
+    // --- Native Functions ---
 
-$agent->setNativeFunctions(['check_time', 'wait_seconds']);
+    $agent->setNativeFunctions(['check_time', 'wait_seconds']);
 
-// --- Tool Definitions ---
+    // --- Tool Definitions ---
 
-$agent->defineTool(
-    name:        'get_time',
-    description: 'Get the current time',
-    parameters:  ['type' => 'object', 'properties' => []],
-    handler: function (array $args, array $rawData): FunctionResult {
-        $time = date('H:i:s');
-        return new FunctionResult("The current time is {$time}");
-    },
-);
+    $agent->defineTool(
+        name:        'get_time',
+        description: 'Get the current time',
+        parameters:  ['type' => 'object', 'properties' => []],
+        handler: function (array $args, array $rawData): FunctionResult {
+            $time = date('H:i:s');
+            return new FunctionResult("The current time is {$time}");
+        },
+    );
 
-$agent->defineTool(
-    name:        'get_weather',
-    description: 'Get the current weather for a location',
-    parameters:  [
-        'type' => 'object',
-        'properties' => [
-            'location' => ['type' => 'string', 'description' => 'The city or location to get weather for'],
+    $agent->defineTool(
+        name:        'get_weather',
+        description: 'Get the current weather for a location',
+        parameters:  [
+            'type' => 'object',
+            'properties' => [
+                'location' => ['type' => 'string', 'description' => 'The city or location to get weather for'],
+            ],
         ],
-    ],
-    handler: function (array $args, array $rawData): FunctionResult {
-        $location = $args['location'] ?? 'Unknown location';
-        $result = new FunctionResult("It's sunny and 72F in {$location}.");
-        $result->addAction('set_global_data', ['weather_location' => $location]);
-        return $result;
-    },
-);
+        handler: function (array $args, array $rawData): FunctionResult {
+            $location = is_string($args['location'] ?? null) ? $args['location'] : 'Unknown location';
+            $result = new FunctionResult("It's sunny and 72F in {$location}.");
+            // updateGlobalData() IS the set_global_data action. PHP's
+            // addAction() takes ONE pre-wrapped array — unlike the Python
+            // reference's two-argument add_action(name, data).
+            $result->updateGlobalData(['weather_location' => $location]);
+            return $result;
+        },
+    );
 
-// --- Summary Callback ---
+    // --- Summary Callback ---
 
-$agent->setSummaryCallback(function ($summary, $rawData) {
-    if ($summary) {
-        if (is_array($summary)) {
-            echo "SUMMARY: " . json_encode($summary) . "\n";
-        } else {
-            echo "SUMMARY: {$summary}\n";
+    $agent->setSummaryCallback(function ($summary, $rawData) {
+        if ($summary) {
+            if (is_array($summary)) {
+                echo 'SUMMARY: ' . json_encode($summary) . "\n";
+            } else {
+                echo "SUMMARY: {$summary}\n";
+            }
         }
-    }
-});
+    });
 
     return $agent;
 }
@@ -138,7 +143,8 @@ $agent->setSummaryCallback(function ($summary, $rawData) {
 // `swaig-test --file examples/simple_agent.php --list-tools`) without starting
 // the HTTP server. run() fires only when this file is the CLI entrypoint.
 $isCliEntrypoint = PHP_SAPI === 'cli'
-    && isset($_SERVER['argv'][0])
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
     && \realpath($_SERVER['argv'][0]) === __FILE__;
 
 if ($isCliEntrypoint) {

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Receptionist Agent Example
  *
@@ -32,13 +34,13 @@ $agent->promptAddSection(
 
 $deptText = "Available departments for transfer:\n";
 foreach ($departments as $dept) {
-    $deptText .= "- " . ucfirst($dept['name']) . ": {$dept['description']}\n";
+    $deptText .= '- ' . ucfirst($dept['name']) . ": {$dept['description']}\n";
 }
 $agent->promptAddSection('Transfer Options', $deptText);
 
 $agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
-        echo "Call Summary: " . json_encode($summary, JSON_PRETTY_PRINT) . "\n";
+        echo 'Call Summary: ' . json_encode($summary, JSON_PRETTY_PRINT) . "\n";
 
         if (is_array($summary) && ($summary['satisfaction'] ?? '') === 'low') {
             echo "ALERT: Caller had low satisfaction. Schedule follow-up.\n";
