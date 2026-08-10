@@ -24,11 +24,35 @@ namespace SignalWire\Utils;
  *   - The env var SWML_SKIP_SCHEMA_VALIDATION=1/true/yes also disables
  *     validation regardless of the constructor argument.
  *
- * The PHP port currently ships only the lightweight validator (verb
- * existence + required-property check). Full JSON Schema validation
- * can be wired in via justinrainbow/json-schema by extending
- * initFullValidator(). The lightweight contract matches Python's
- * _validate_verb_lightweight() exactly.
+ * The PHP port ships no Draft-2020-12 engine. Instead of Python's
+ * jsonschema-rs full-document validator it performs the required-property
+ * check PLUS a resolved closed-key/type check walked directly off the
+ * schema fragment (see validateAgainstInnerSchema). Full JSON Schema
+ * validation can additionally be wired in via justinrainbow/json-schema by
+ * extending initFullValidator().
+ *
+ * FAIL-CLOSED CONTRACT (do not "simplify" this away). A validator that could
+ * not be built must never degrade into a check that reports an unvalidated
+ * config as valid. In this port that property holds structurally rather than
+ * by a rescue clause: every loadSchema failure mode -- absent file, unreadable
+ * file, malformed JSON, non-object JSON, truncated schema -- returns an EMPTY
+ * schema, which extracts ZERO verbs, so validateVerb answers
+ * "Unknown verb: <name>" (valid=false) for every verb rather than passing.
+ * validateDocument likewise refuses with 'Schema validator not initialized'.
+ * Pinned by tests/SchemaUtilsFailClosedTest.php.
+ *
+ * Sibling-port note: ruby (c606d77), typescript (d8cfe4c) and rust each had a
+ * `rescue`/`catch` around validator construction that set the validator to
+ * null and then ROUTED to the lightweight check, silently accepting a
+ * forbidden key. PHP has no such catch -- the only catch in this file is
+ * \JsonException inside loadSchema, and it lands on the empty-schema
+ * fail-closed path above. An earlier revision of this docblock claimed the
+ * lightweight contract "matches Python's _validate_verb_lightweight()
+ * exactly"; that was the same false parity claim ruby carried, and it is
+ * corrected here: Python reaches its lightweight path only for a partial
+ * schema with no properties.sections, never as a fallback from a failed
+ * validator build (its Draft202012Validator call has no try/except at all,
+ * so a compile failure propagates out of the constructor).
  */
 final class SchemaUtils
 {
@@ -153,9 +177,16 @@ final class SchemaUtils
     }
 
     /**
-     * Initialize the full JSON Schema validator. The PHP port currently
-     * leaves this empty — extend by wiring justinrainbow/json-schema or
-     * a similar library here.
+     * Initialize the full JSON Schema validator. The PHP port ships no
+     * Draft-2020-12 engine, so this leaves $fullValidator null — extend by
+     * wiring justinrainbow/json-schema or a similar library here.
+     *
+     * If you DO wire one in, it must not swallow a construction failure into
+     * `$this->fullValidator = null`: that is exactly the fail-open bug ruby
+     * (c606d77) and typescript (d8cfe4c) had to undo. A build failure means
+     * validation did not happen and validateVerb must refuse, not fall through
+     * to a check that would report a forbidden key as valid. See the class
+     * docblock's FAIL-CLOSED CONTRACT.
      */
     private function initFullValidator(): void
     {
