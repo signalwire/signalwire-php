@@ -1040,6 +1040,20 @@ class Client implements RelayClientLike
             return;
         }
 
+        // RELAY delivers at least once, so ``calling.call.receive`` can arrive
+        // again for a call already in flight. Receive is idempotent per
+        // call_id: keep the live instance and do NOT re-enter the on_call
+        // handler. Replacing the map entry would orphan the Call the
+        // application is holding — routing only ever reads $this->calls by
+        // call_id, so the original would silently stop receiving events and a
+        // blocking action on it would wait out its timeout instead of
+        // returning at hangup. The event is ACKed by the read loop before this
+        // runs, so returning early still stops the server's retries.
+        if (isset($this->calls[$callId])) {
+            $this->logger->debug("Ignoring redelivered calling.call.receive for in-flight call {$callId}");
+            return;
+        }
+
         // Production wire uses ``call_state`` on the receive frame; the
         // Call constructor already accepts both.
         $callParams = $params + ['direction' => 'inbound'];

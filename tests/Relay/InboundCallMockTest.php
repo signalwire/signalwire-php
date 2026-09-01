@@ -586,4 +586,100 @@ class InboundCallMockTest extends TestCase
 
         $this->assertNotEmpty($this->mock->journal()->send('calling.call.receive'));
     }
+
+    // ------------------------------------------------------------------
+    // Redelivered calling.call.receive (porting-sdk#141)
+    //
+    // RELAY delivers at least once: the same receive frame can arrive twice
+    // for one call. Receive must therefore be idempotent per call_id — see
+    // the "Event Redelivery" section of porting-sdk's
+    // RELAY_IMPLEMENTATION_GUIDE.md.
+    // ------------------------------------------------------------------
+
+    /**
+     * Without the idempotency guard the second receive builds a second Call
+     * and overwrites $calls[$callId]. Routing only ever reads that map, so the
+     * first Call — the one handed to the application — silently stops
+     * receiving events and never reaches a terminal state.
+     */
+    #[Test]
+    public function redeliveredReceiveKeepsTheLiveCall(): void
+    {
+        /** @var \ArrayObject<int, Call> $handlerCalls */
+        $handlerCalls = new \ArrayObject();
+        $this->client->onCall(function (Call $call) use ($handlerCalls): void {
+            $handlerCalls[] = $call;
+        });
+
+        $this->mock->inboundCall([
+            'call_id'           => 'c-redeliver',
+            'auto_states'       => ['ringing', 'answered'],
+            'delay_ms'          => 20,
+            'redeliver_receive' => 1,
+        ]);
+        $this->assertTrue(
+            MockTest::pumpUntil($this->client, fn () => count($handlerCalls) >= 1, 5.0)
+        );
+        // Let the redelivery and the trailing state frame drain.
+        MockTest::pumpFor($this->client, 400);
+
+        // 1. One call means one handler invocation.
+        $this->assertCount(
+            1,
+            $handlerCalls,
+            'on_call handler re-entered for a redelivered receive'
+        );
+
+        // 2. The live instance survives — the map still points at what the
+        //    application was handed, not at a replacement.
+        $first = $handlerCalls[0];
+        $this->assertNotNull($first);
+        $this->assertSame($first, $this->client->calls['c-redeliver'] ?? null);
+
+        // 3. And it is still the object events route to.
+        $this->assertSame(
+            'answered',
+            $first->state,
+            'the Call handed to the application stopped receiving events'
+        );
+
+        // The duplicate really was on the wire — otherwise this proves nothing.
+        $redelivered = array_filter(
+            $this->mock->journal()->send('calling.call.receive'),
+            fn ($s) => (Shape::sub($s->frame, 'params', 'params')['call_id'] ?? null) === 'c-redeliver'
+        );
+        $this->assertCount(
+            2,
+            $redelivered,
+            'mock did not redeliver the receive frame; the scenario never happened'
+        );
+    }
+
+    /**
+     * The dedup is per call_id and must not swallow a genuinely new
+     * concurrent inbound call.
+     */
+    #[Test]
+    public function distinctCallIdsStillCreateSeparateCalls(): void
+    {
+        /** @var \ArrayObject<int, Call> $handlerCalls */
+        $handlerCalls = new \ArrayObject();
+        $this->client->onCall(function (Call $call) use ($handlerCalls): void {
+            $handlerCalls[] = $call;
+        });
+
+        $this->mock->inboundCall(['call_id' => 'c-first', 'auto_states' => ['ringing']]);
+        $this->mock->inboundCall(['call_id' => 'c-second', 'auto_states' => ['ringing']]);
+        $this->assertTrue(
+            MockTest::pumpUntil($this->client, fn () => count($handlerCalls) >= 2, 5.0)
+        );
+
+        $ids = array_map(fn (Call $c) => $c->callId, iterator_to_array($handlerCalls));
+        sort($ids);
+        $this->assertSame(['c-first', 'c-second'], $ids);
+        $this->assertNotSame(
+            $this->client->calls['c-first'] ?? null,
+            $this->client->calls['c-second'] ?? null
+        );
+    }
 }
