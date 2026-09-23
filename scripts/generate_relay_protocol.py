@@ -186,7 +186,9 @@ def _emit_class(php_name: str, properties: dict, source_desc: str) -> str:
         body.pop()
     lines.extend(body)
     lines.append("}")
-    desc = "Generated RELAY protocol wire type from porting-sdk/combined-specs/relay.yaml."
+    desc = (
+        "Generated RELAY protocol wire type from porting-sdk/combined-specs/relay.yaml."
+    )
     return RELAY_HEADER.format(desc=desc) + "\n" + "\n".join(lines) + "\n"
 
 
