@@ -63,20 +63,19 @@ class QueueAndDigitMockTest extends TestCase
     // queueLeave
     // ------------------------------------------------------------------
 
+    /**
+     * `queue_name` is REQUIRED (relay/call.py:1603). The port previously
+     * defaulted it to null and silently sent a bare `calling.queue.leave` with
+     * no control_id / no queue_name — the server rejected it. Omitting the
+     * argument must now fail at the call, not on the wire.
+     */
     #[Test]
-    public function queueLeaveNoArgsJournalsBareCalling(): void
+    public function queueLeaveRequiresQueueName(): void
     {
-        // Legacy no-arg shape is still callable but the relay schema rejects
-        // a queue.leave with no control_id; capture and assert the error.
         $call = $this->answeredInboundCall('call-q-1');
-        $threw = false;
-        try {
-            $call->queueLeave();
-        } catch (\SignalWire\Relay\RelayError $e) {
-            $threw = true;
-            $this->assertStringContainsString('control_id', $e->getMessage());
-        }
-        $this->assertTrue($threw, 'bare queueLeave() must surface schema rejection');
+        $this->expectException(\ArgumentCountError::class);
+        /** @phpstan-ignore-next-line intentionally under-applied */
+        $call->queueLeave();
     }
 
     #[Test]

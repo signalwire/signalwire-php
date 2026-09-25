@@ -196,11 +196,16 @@ class AgentBaseSigningKeyTest extends TestCase
     public function testValidSignatureOnSwaigAccepted(): void
     {
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);
+        // secure: false — this test is about the WEBHOOK SIGNATURE gate, which
+        // is a separate, earlier check from the per-call SWAIG `__token`
+        // (SwaigTokenEnforcementTest). A secure tool called without a token is
+        // correctly refused, which would mask the signature result.
         $agent->defineTool(
             'echo_tool',
             'Echoes input',
             ['msg' => ['type' => 'string']],
             fn (array $args) => new \SignalWire\SWAIG\FunctionResult('Echo: ' . ($args['msg'] ?? '')),
+            secure: false,
         );
 
         $body = json_encode([
@@ -296,7 +301,7 @@ class AgentBaseSigningKeyTest extends TestCase
     {
         $agent = $this->makeAgent(['signing_key' => self::SIGNING_KEY]);
 
-        [$status, ,] = $agent->handleRequest('GET', '/health');
+        [$status, ,] = $agent->handleRequest('GET', '/health', []);
         $this->assertSame(200, $status);
     }
 

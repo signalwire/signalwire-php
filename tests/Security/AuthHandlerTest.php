@@ -13,6 +13,8 @@ namespace SignalWire\Tests\Security;
 
 use PHPUnit\Framework\TestCase;
 use SignalWire\Security\AuthHandler;
+use SignalWire\Security\BasicCredentials;
+use SignalWire\Security\BearerCredentials;
 use SignalWire\Tests\Support\Shape;
 
 /**
@@ -39,16 +41,37 @@ class AuthHandlerTest extends TestCase
     public function testVerifyBearerTokenValidAndInvalid(): void
     {
         $h = new AuthHandler(bearerToken: 'abc123');
-        $this->assertTrue($h->verifyBearerToken('abc123'));
-        $this->assertFalse($h->verifyBearerToken('nope'));
+        $this->assertTrue($h->verifyBearerToken(new BearerCredentials('Bearer', 'abc123')));
+        $this->assertFalse($h->verifyBearerToken(new BearerCredentials('Bearer', 'nope')));
+    }
+
+    /**
+     * Only the token is matched — the scheme the carrier records is not part of
+     * the comparison (the reference reads `credentials.credentials` alone).
+     */
+    public function testVerifyBearerTokenIgnoresTheScheme(): void
+    {
+        $h = new AuthHandler(bearerToken: 'abc123');
+        $this->assertTrue($h->verifyBearerToken(new BearerCredentials('Token', 'abc123')));
     }
 
     public function testVerifyBasicAuthValidAndInvalid(): void
     {
         $h = new AuthHandler(basicAuth: ['admin', 'pw']);
-        $this->assertTrue($h->verifyBasicAuth('admin', 'pw'));
-        $this->assertFalse($h->verifyBasicAuth('admin', 'wrong'));
-        $this->assertFalse($h->verifyBasicAuth('other', 'pw'));
+        $this->assertTrue($h->verifyBasicAuth(new BasicCredentials('admin', 'pw')));
+        $this->assertFalse($h->verifyBasicAuth(new BasicCredentials('admin', 'wrong')));
+        $this->assertFalse($h->verifyBasicAuth(new BasicCredentials('other', 'pw')));
+    }
+
+    public function testCredentialCarriersExposeTheirFields(): void
+    {
+        $basic = new BasicCredentials('admin', 'pw');
+        $this->assertSame('admin', $basic->username);
+        $this->assertSame('pw', $basic->password);
+
+        $bearer = new BearerCredentials('Bearer', 'abc123');
+        $this->assertSame('Bearer', $bearer->scheme);
+        $this->assertSame('abc123', $bearer->credentials);
     }
 
     public function testGetAuthInfoReflectsConfiguredMethods(): void
@@ -90,6 +113,80 @@ class AuthHandlerTest extends TestCase
         $this->assertTrue($h->validate(['authorization' => $header]));
         $bad = 'Basic ' . base64_encode('admin:bad');
         $this->assertFalse($h->validate(['authorization' => $bad]));
+    }
+
+    /**
+     * RFC 7235 makes the auth-scheme token case-insensitive, and the reference
+     * (FastAPI HTTPBearer) partitions the header on the first space and
+     * compares `scheme.lower() != "bearer"`. So `bearer <token>` is legal and
+     * must authenticate.
+     */
+    public function testValidateAcceptsBearerSchemeCaseInsensitively(): void
+    {
+        $h = new AuthHandler(bearerToken: 'abc123');
+        $this->assertTrue($h->validate(['Authorization' => 'bearer abc123']));
+        $this->assertTrue($h->validate(['Authorization' => 'BeArEr abc123']));
+        $this->assertTrue($h->validate(['Authorization' => 'BEARER abc123']));
+    }
+
+    /** The reference compares `scheme.lower() != "basic"` — `basic` is legal. */
+    public function testValidateAcceptsBasicSchemeCaseInsensitively(): void
+    {
+        $h = new AuthHandler(basicAuth: ['admin', 'pw']);
+        $cred = base64_encode('admin:pw');
+        $this->assertTrue($h->validate(['authorization' => 'basic ' . $cred]));
+        $this->assertTrue($h->validate(['authorization' => 'BaSiC ' . $cred]));
+        $this->assertTrue($h->validate(['authorization' => 'BASIC ' . $cred]));
+    }
+
+    /**
+     * Case-insensitivity must not widen the accepted scheme set: a different
+     * scheme, a scheme that merely starts with the right token, the other
+     * branch's scheme, and a scheme-less header all stay rejected.
+     */
+    public function testValidateStillRejectsWrongSchemesOnTheBearerBranch(): void
+    {
+        $h = new AuthHandler(bearerToken: 'abc123');
+        foreach ([
+            'Digest abc123',
+            'Negotiate abc123',
+            'Bearerx abc123',
+            'bearerx abc123',
+            'Basic abc123',
+            'abc123',
+        ] as $header) {
+            $this->assertFalse($h->validate(['Authorization' => $header]), $header);
+        }
+    }
+
+    public function testValidateStillRejectsWrongSchemesOnTheBasicBranch(): void
+    {
+        $h = new AuthHandler(basicAuth: ['admin', 'pw']);
+        $cred = base64_encode('admin:pw');
+        foreach ([
+            'Digest ' . $cred,
+            'Negotiate ' . $cred,
+            'Basicx ' . $cred,
+            'basicx ' . $cred,
+            'Bearer ' . $cred,
+            $cred,
+        ] as $header) {
+            $this->assertFalse($h->validate(['Authorization' => $header]), $header);
+        }
+    }
+
+    /**
+     * The reference does `username, separator, password = data.partition(":")`
+     * and raises when there is no separator, so a colon-less decoded payload is
+     * rejected outright — it must never authenticate as a user with an empty
+     * password.
+     */
+    public function testValidateRejectsColonLessBasicPayloadInEitherSchemeCase(): void
+    {
+        $h = new AuthHandler(basicAuth: ['admin', '']);
+        $cred = base64_encode('admin');
+        $this->assertFalse($h->validate(['Authorization' => 'Basic ' . $cred]));
+        $this->assertFalse($h->validate(['Authorization' => 'basic ' . $cred]));
     }
 
     public function testValidateAcceptsApiKeyHeaderCaseInsensitive(): void

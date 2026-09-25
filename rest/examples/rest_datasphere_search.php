@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Upload a document to Datasphere and run a semantic search.
  *
@@ -12,10 +14,40 @@ require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
 
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
+
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:   $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:    $_ENV['SIGNALWIRE_SPACE']      ?? die("Set SIGNALWIRE_SPACE\n"),
+    project: env('SIGNALWIRE_PROJECT_ID'),
+    token:   env('SIGNALWIRE_API_TOKEN'),
+    host:    env('SIGNALWIRE_SPACE'),
 );
 
 // 1. Upload a document
@@ -24,19 +56,19 @@ $doc = $client->datasphere()->documents()->create([
     'url'  => 'https://filesamples.com/samples/document/txt/sample3.txt',
     'tags' => ['support', 'demo'],
 ]);
-$docId = $doc['id'] ?? 'demo-doc-id';
-echo "  Document created: {$docId} (status: " . ($doc['status'] ?? 'unknown') . ")\n";
+$docId = field($doc, 'id', 'demo-doc-id');
+echo "  Document created: {$docId} (status: " . field($doc, 'status', 'unknown') . ")\n";
 
 // 2. Wait for vectorization to complete
 echo "\nWaiting for document to be vectorized...\n";
 for ($i = 1; $i <= 30; $i++) {
     sleep(2);
     $docStatus = $client->datasphere()->documents()->get($docId);
-    $status = $docStatus['status'] ?? 'unknown';
+    $status = field($docStatus, 'status', 'unknown');
     echo "  Poll {$i}: status={$status}\n";
 
     if ($status === 'completed') {
-        echo "  Vectorized! Chunks: " . ($docStatus['number_of_chunks'] ?? 0) . "\n";
+        echo '  Vectorized! Chunks: ' . field($docStatus, 'number_of_chunks', '0') . "\n";
         break;
     }
     if ($status === 'error' || $status === 'failed') {
@@ -55,13 +87,12 @@ for ($i = 1; $i <= 30; $i++) {
 // 3. List chunks
 echo "\nListing chunks for document {$docId}...\n";
 $chunks = $client->datasphere()->documents()->listChunks($docId);
-$chunkList = $chunks['data'] ?? [];
-foreach (array_slice($chunkList, 0, 5) as $chunk) {
-    $content = $chunk['content'] ?? '';
+foreach (array_slice(dataRows($chunks), 0, 5) as $chunk) {
+    $content = field($chunk, 'content', '');
     if (strlen($content) > 80) {
         $content = substr($content, 0, 80) . '...';
     }
-    echo "  - Chunk {$chunk['id']}: {$content}\n";
+    echo '  - Chunk ' . field($chunk, 'id') . ": {$content}\n";
 }
 
 // 4. Semantic search
@@ -70,8 +101,8 @@ $results = $client->datasphere()->documents()->search(
     queryString: 'lorem ipsum dolor sit amet',
     count:       3,
 );
-foreach (($results['chunks'] ?? []) as $chunk) {
-    $text = $chunk['text'] ?? '';
+foreach (rows($results['chunks'] ?? null) as $chunk) {
+    $text = field($chunk, 'text', '');
     if (strlen($text) > 100) {
         $text = substr($text, 0, 100) . '...';
     }

@@ -7,6 +7,13 @@ namespace SignalWire\Skills\Builtin;
 use SignalWire\Skills\SkillBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Walks the caller through a fixed list of questions, one at a time, storing
+ * each answer before moving on.
+ *
+ * Requires a `questions` param. An optional `prefix` param namespaces the tool
+ * names, which is what lets several gatherers coexist on one agent.
+ */
 class InfoGatherer extends SkillBase
 {
     /** The name. */
@@ -56,6 +63,11 @@ class InfoGatherer extends SkillBase
         return 'Gather answers to a configurable list of questions';
     }
 
+    /**
+     * True — several question sets may run on one agent, distinguished by
+     * the `prefix` param, which both namespaces the tool names and forms the
+     * instance key.
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -124,6 +136,10 @@ class InfoGatherer extends SkillBase
         return $schema;
     }
 
+    /**
+     * Require a non-empty ARRAY `questions` param; returns false (skill not
+     * loaded) when it is missing, empty, or not an array.
+     */
     public function setup(): bool
     {
         if (empty($this->params['questions']) || !is_array($this->params['questions'])) {
@@ -133,6 +149,12 @@ class InfoGatherer extends SkillBase
         return true;
     }
 
+    /**
+     * Define the two flow tools — `start_questions` and `submit_answer`, each
+     * prefixed with `<prefix>_` when a `prefix` param is set. The
+     * `completion_message` param overrides the text spoken once every
+     * question is answered.
+     */
     public function registerTools(): void
     {
         $prefix = $this->paramString('prefix');
@@ -307,12 +329,8 @@ class InfoGatherer extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
-
         $instanceKey = $this->getInstanceKey();
         $questions = $this->normalizeQuestions($this->paramArray('questions'));
         $bullets = [

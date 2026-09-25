@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Quickstart: the minimal AI agent from the top-level README.
  *

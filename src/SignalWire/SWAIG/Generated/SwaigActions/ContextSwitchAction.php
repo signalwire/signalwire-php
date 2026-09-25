@@ -14,20 +14,22 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
 /**
  * ContextSwitchAction — generated SWAIG payload wire type (swaig-response action 'context_switch' value object).
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ContextSwitchAction
 {
-    public mixed $system_prompt = null;
-
-    public mixed $user_prompt = null;
-
-    public mixed $system_pom = null;
-
-    public mixed $user_pom = null;
-
     public ?bool $consolidate = null;
 
     public ?bool $full_reset = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $system_pom = null;
+
+    public ?string $system_prompt = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $user_pom = null;
+
+    public ?string $user_prompt = null;
 }

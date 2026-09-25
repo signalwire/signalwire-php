@@ -6,6 +6,12 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Pattern-matched call transfer: the AI picks a destination from a configured
+ * `transfers` map and the skill emits the corresponding SWML transfer.
+ *
+ * Requires a non-empty `transfers` param.
+ */
 class SwmlTransfer extends SkillBase
 {
     /** The name. */
@@ -35,6 +41,10 @@ class SwmlTransfer extends SkillBase
         return 'Transfer calls between agents based on pattern matching';
     }
 
+    /**
+     * True — several transfer tables may be loaded on one agent,
+     * distinguished by `tool_name` (default `transfer_call`).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -149,6 +159,10 @@ class SwmlTransfer extends SkillBase
         return $schema;
     }
 
+    /**
+     * Require a non-empty ARRAY `transfers` param; returns false (skill not
+     * loaded) when it is missing, empty, or not an array.
+     */
     public function setup(): bool
     {
         if (empty($this->params['transfers']) || !is_array($this->params['transfers'])) {
@@ -158,6 +172,13 @@ class SwmlTransfer extends SkillBase
         return true;
     }
 
+    /**
+     * Define the transfer tool (`transfer_call` unless overridden by
+     * `tool_name`). The argument the AI fills is named by `parameter_name`
+     * (default `transfer_type`) and described by `parameter_description`;
+     * `required_fields` adds further required arguments, and
+     * `default_message` is spoken when no transfer pattern matches.
+     */
     public function registerTools(): void
     {
         $toolName = $this->getToolName('transfer_call');
@@ -280,12 +301,8 @@ class SwmlTransfer extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
-
         $transfers = $this->paramArray('transfers');
         $destinations = [];
 

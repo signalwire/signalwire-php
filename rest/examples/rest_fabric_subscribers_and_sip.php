@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Provision a SIP-enabled user on Fabric.
  *
@@ -12,22 +14,100 @@ require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
 
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
+
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:   $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:    $_ENV['SIGNALWIRE_SPACE']      ?? die("Set SIGNALWIRE_SPACE\n"),
+    project: env('SIGNALWIRE_PROJECT_ID'),
+    token:   env('SIGNALWIRE_API_TOKEN'),
+    host:    env('SIGNALWIRE_SPACE'),
 );
 
-function safe(string $label, callable $fn): mixed
+/**
+ * Run an SDK call, reporting OK/failed instead of aborting the demo.
+ *
+ * Every REST method returns the decoded JSON body as array<string,mixed>, so
+ * that is what a success yields; a failure yields null.
+ *
+ * @param callable(): mixed $fn
+ * @return array<array-key,mixed>|null
+ */
+function safe(string $label, callable $fn): ?array
 {
     try {
         $result = $fn();
+        $result = is_array($result) ? $result : null;
         echo "  {$label}: OK\n";
         return $result;
     } catch (\Exception $e) {
         echo "  {$label}: failed ({$e->getMessage()})\n";
         return null;
     }
+}
+
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
+/**
+ * Narrow a `mixed` to a list that is safe to foreach/count/array_slice.
+ * A missing or non-array value yields an empty list.
+ *
+ * @return list<mixed>
+ */
+function rows(mixed $value): array
+{
+    return is_array($value) ? array_values($value) : [];
+}
+
+/**
+ * The `data` collection of a list response, narrowed to a list.
+ *
+ * @return list<mixed>
+ */
+function dataRows(mixed $response): array
+{
+    return is_array($response) ? rows($response['data'] ?? []) : [];
+}
+
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return dataRows($response)[0] ?? [];
 }
 
 // 1. Create a subscriber
@@ -37,30 +117,31 @@ $subscriber = $client->fabric()->subscribers()->create([
     'first_name' => 'Alice',
     'last_name'  => 'Johnson',
 ]);
-$subId      = $subscriber['id'] ?? 'demo-subscriber-id';
-$innerSubId = ($subscriber['subscriber'] ?? [])['id'] ?? $subId;
+$subId      = field($subscriber, 'id', 'demo-subscriber-id');
+$innerSubId = field($subscriber['subscriber'] ?? null, 'id', $subId);
 echo "  Created subscriber: {$subId}\n";
 
 // 2. Add a SIP endpoint
 echo "\nCreating SIP endpoint on subscriber...\n";
-$endpoint = $client->fabric()->subscribers()->createSipEndpoint($subId,
+$endpoint = $client->fabric()->subscribers()->createSipEndpoint(
+    $subId,
     username: 'alice_sip',
     password: 'SecurePass123!',
 );
-$epId = $endpoint['id'] ?? 'demo-endpoint-id';
+$epId = field($endpoint, 'id', 'demo-endpoint-id');
 echo "  Created SIP endpoint: {$epId}\n";
 
 // 3. List SIP endpoints
 echo "\nListing subscriber SIP endpoints...\n";
 $endpoints = $client->fabric()->subscribers()->listSipEndpoints($subId);
-foreach (($endpoints['data'] ?? []) as $ep) {
-    echo "  - {$ep['id']}: " . ($ep['username'] ?? 'unknown') . "\n";
+foreach (dataRows($endpoints) as $ep) {
+    echo '  - ' . field($ep, 'id') . ': ' . field($ep, 'username', 'unknown') . "\n";
 }
 
 // 4. Get specific endpoint details
 echo "\nGetting SIP endpoint {$epId}...\n";
 $epDetail = $client->fabric()->subscribers()->getSipEndpoint($subId, $epId);
-echo "  Username: " . ($epDetail['username'] ?? 'N/A') . "\n";
+echo '  Username: ' . field($epDetail, 'username', 'N/A') . "\n";
 
 // 5. Create a standalone SIP gateway
 echo "\nCreating SIP gateway...\n";
@@ -71,21 +152,22 @@ $gateway = $client->fabric()->sipGateways()->create([
     'ciphers'    => ['AES_256_CM_HMAC_SHA1_80'],
     'codecs'     => ['PCMU', 'PCMA'],
 ]);
-$gwId = $gateway['id'] ?? 'demo-gateway-id';
+$gwId = field($gateway, 'id', 'demo-gateway-id');
 echo "  Created SIP gateway: {$gwId}\n";
 
 // 6. List fabric addresses
 echo "\nListing fabric addresses...\n";
 safe('List addresses', function () use ($client) {
     $addresses = $client->fabric()->addresses()->list();
-    foreach (array_slice($addresses['data'] ?? [], 0, 5) as $addr) {
-        echo "  - " . ($addr['display_name'] ?? $addr['id'] ?? 'unknown') . "\n";
+    foreach (array_slice(dataRows($addresses), 0, 5) as $addr) {
+        echo '  - ' . fieldAny($addr, 'display_name', 'id', 'unknown') . "\n";
     }
 
     // 7. Get a specific address
-    if (!empty($addresses['data']) && !empty($addresses['data'][0]['id'])) {
-        $addrDetail = $client->fabric()->addresses()->get($addresses['data'][0]['id']);
-        echo "  Address detail: " . ($addrDetail['display_name'] ?? 'N/A') . "\n";
+    $firstAddrId = field(firstRow($addresses), 'id');
+    if ($firstAddrId !== '') {
+        $addrDetail = $client->fabric()->addresses()->get($firstAddrId);
+        echo '  Address detail: ' . field($addrDetail, 'display_name', 'N/A') . "\n";
     }
 });
 
@@ -95,8 +177,10 @@ safe('Subscriber token', function () use ($client, $innerSubId) {
     $token = $client->fabric()->tokens()->createSubscriberToken(
         reference: $innerSubId,
     );
-    $t = $token['token'] ?? '';
-    if ($t) echo "  Token: " . substr($t, 0, 40) . "...\n";
+    $t = field($token, 'token', '');
+    if ($t) {
+        echo '  Token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 
 // 9. Clean up

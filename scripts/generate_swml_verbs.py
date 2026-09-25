@@ -54,6 +54,7 @@ Usage:
     python3 scripts/generate_swml_verbs.py --check    # GEN-FRESH: fail if stale
     python3 scripts/generate_swml_verbs.py --out DIR  # scratch: emit into DIR
 """
+
 from __future__ import annotations
 
 import argparse
@@ -70,9 +71,12 @@ from pathlib import Path
 # Import by path so the two generators never diverge on the emit rule.
 # ---------------------------------------------------------------------------
 
+
 def _load_rest_generator():
     here = Path(__file__).resolve().parent
-    spec = importlib.util.spec_from_file_location("generate_rest", here / "generate_rest.py")
+    spec = importlib.util.spec_from_file_location(
+        "generate_rest", here / "generate_rest.py"
+    )
     if spec is None or spec.loader is None:  # pragma: no cover
         raise SystemExit("generate_swml_verbs.py: cannot load generate_rest.py")
     mod = importlib.util.module_from_spec(spec)
@@ -172,8 +176,14 @@ namespace SignalWire\\SWML\\Generated;
 """
 
 
-def _emit_class(psdk: Path, php_name: str, schema_name: str, properties: dict,
-                defs: dict, source_desc: str) -> str:
+def _emit_class(
+    psdk: Path,
+    php_name: str,
+    schema_name: str,
+    properties: dict,
+    defs: dict,
+    source_desc: str,
+) -> str:
     """Emit one method-less PHP data class for an object/config schema. Property
     typing reuses generate_rest.php_property_type (pure idiom — the surface records
     only the class name; types keep the DTO PHPStan-L9-clean). SDK-surface policy
@@ -183,8 +193,12 @@ def _emit_class(psdk: Path, php_name: str, schema_name: str, properties: dict,
     lines.append("/**")
     lines.append(f" * {php_name} — generated SWML verb config type ({source_desc}).")
     lines.append(" *")
-    lines.append(" * Pure data DTO: public typed properties carrying the snake wire key; no")
-    lines.append(" * methods (the reference records this as a method-less type definition).")
+    lines.append(
+        " * Pure data DTO: public typed properties named for the snake_case wire keys"
+    )
+    lines.append(
+        " * they carry. It declares no methods — the values ARE the interface."
+    )
     lines.append(" */")
     lines.append(f"class {php_name}")
     lines.append("{")
@@ -242,7 +256,11 @@ def build_outputs(psdk: Path) -> dict[str, str]:
             continue
         emitted_names.add(php_name)
         outs[f"{php_name}.php"] = _emit_class(
-            psdk, php_name, raw_name, node.get("properties") or {}, defs,
+            psdk,
+            php_name,
+            raw_name,
+            node.get("properties") or {},
+            defs,
             f"$defs schema {raw_name!r}",
         )
 
@@ -279,7 +297,11 @@ def build_outputs(psdk: Path) -> dict[str, str]:
             # scopes target real spec schema names (AIParams), so pass the verb
             # wrapper name — a scoped rule won't match here, which is correct.
             outs[f"{php_name}.php"] = _emit_class(
-                psdk, php_name, wrapper, props, defs,
+                psdk,
+                php_name,
+                wrapper,
+                props,
+                defs,
                 f"flattened SWMLMethod verb {verb!r} config",
             )
 
@@ -290,9 +312,12 @@ def build_outputs(psdk: Path) -> dict[str, str]:
 # Driver.
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="GEN-FRESH: exit non-zero if stale")
+    ap.add_argument(
+        "--check", action="store_true", help="GEN-FRESH: exit non-zero if stale"
+    )
     ap.add_argument("--out", default="", help="scratch: emit into this dir")
     args = ap.parse_args(argv)
 
@@ -317,11 +342,15 @@ def main(argv: list[str]) -> int:
                 if rel not in expected:
                     stale.append(f"{p} (leftover — not in generator output)")
         if stale:
-            sys.stderr.write("GEN-FRESH FAIL: %d generated SWML-verb file(s) stale:\n" % len(stale))
+            sys.stderr.write(
+                f"GEN-FRESH FAIL: {len(stale)} generated SWML-verb file(s) stale:\n"
+            )
             for s in stale:
-                sys.stderr.write("  - %s\n" % s)
+                sys.stderr.write(f"  - {s}\n")
             return 1
-        print("GEN-FRESH: generated SWML-verb files match porting-sdk/schema.json ($defs).")
+        print(
+            "GEN-FRESH: generated SWML-verb files match porting-sdk/schema.json ($defs)."
+        )
         return 0
 
     out_dir.mkdir(parents=True, exist_ok=True)

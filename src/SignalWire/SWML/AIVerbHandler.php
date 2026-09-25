@@ -30,6 +30,7 @@ class AIVerbHandler extends SWMLVerbHandler
      *  - `prompt` is present and is an object/array,
      *  - `prompt` contains exactly one of `text` or `pom` (mutually exclusive),
      *  - `prompt.contexts`, if present, is an object,
+     *  - `post_prompt`, if present, is an object,
      *  - `SWAIG`, if present, is an object.
      *
      * @param array<string, mixed> $config
@@ -68,6 +69,33 @@ class AIVerbHandler extends SWMLVerbHandler
             $contexts = $prompt['contexts'];
             if (!is_array($contexts)) {
                 $errors[] = "'prompt.contexts' must be an object";
+            }
+        }
+
+        // post_prompt is OPTIONAL, but when present the engine holds it to the
+        // SAME contract as prompt: mod_openai/app_config.c checks
+        // !cJSON_IsObject(assistant_prompt) at :3193 and !cJSON_IsObject(post_prompt)
+        // at :3219 -- same structure, same fatal:true calling.error, and both error
+        // payloads read "must be an object with 'text' or 'pom' field". Validating
+        // one and not the other reported configs VALID that abort the call on the
+        // wire; buildConfig has always emitted the right shape, so the hole was
+        // only reachable by a caller hand-assembling a config -- which is exactly
+        // how signalwire-go shipped a bare-string post_prompt (go 51934ec).
+        //
+        // PHP has no dict/list distinction, so `is_array()` alone does NOT
+        // reproduce the reference's `isinstance(dict)` -- a JSON-array-shaped
+        // post_prompt (the case :3219's payload names explicitly) is also an
+        // `array`. A non-empty LIST is therefore rejected as well. `[]` stays
+        // accepted: `array_is_list([])` is true but PHP cannot tell `[]` from
+        // `{}`, and the reference accepts an empty dict. A `\stdClass` is the
+        // SWML layer's own JSON-object representation (Document::addVerb), so it
+        // is accepted too.
+        if (array_key_exists('post_prompt', $config)) {
+            $postPrompt = $config['post_prompt'];
+            $isJsonObject = is_object($postPrompt)
+                || (is_array($postPrompt) && ($postPrompt === [] || !array_is_list($postPrompt)));
+            if (!$isJsonObject) {
+                $errors[] = "'post_prompt' must be an object";
             }
         }
 

@@ -25,6 +25,10 @@ class PomBuilder
     /** @var array<string, Section> Title -> section lookup (auto-vivification). */
     private array $sections = [];
 
+    /**
+     * Start with an empty {@see PromptObjectModel}, exposed as the public
+     * `$pom` property so callers can reach the underlying document directly.
+     */
     public function __construct()
     {
         $this->pom = new PromptObjectModel();

@@ -8,9 +8,11 @@ namespace SignalWire\Serverless;
  * The runtime environment {@see Adapter} detects, as a typed, backed enum.
  *
  * The five members are exactly the modes {@see Adapter::detect()} can return
- * (`lambda`, `gcf`, `azure`, `cgi`, `server`). The backing string of each case
- * IS that wire/dispatch token, so the enum and the legacy bare string are
- * interchangeable:
+ * (`lambda`, `google_cloud_function`, `azure_function`, `cgi`, `server`) — the
+ * SAME closed vocabulary the Python reference's `get_execution_mode()` returns
+ * and that `handle_serverless_request(mode=…)` dispatches on. The backing
+ * string of each case IS that wire/dispatch token, so the enum and the bare
+ * string are interchangeable:
  *
  *     Adapter::detect();                       // 'lambda'         (string)
  *     Adapter::detectMode();                   // ExecutionMode::Lambda (typed)
@@ -28,11 +30,13 @@ namespace SignalWire\Serverless;
  * PORT_ADDITION — the Python reference has no equivalent (its serverless
  * handling lives in the broader `cli.simulation.mock_env` machinery).
  *
- * NOTE: this is the {@see Adapter} platform-detection vocabulary ONLY. It is
- * deliberately NOT unified with {@see \SignalWire\Logging\LoggingConfig}'s
- * execution-mode set (`cgi`/`lambda`/`google_cloud_function`/`azure_function`/
- * `server`), which mirrors Python's `get_execution_mode` and uses different,
- * longer tokens. The two vocabularies must not be merged.
+ * There is ONE execution-mode vocabulary across the SDK: these tokens are the
+ * same ones {@see \SignalWire\Logging\LoggingConfig::getExecutionMode()}
+ * reports, so a mode read from one may be passed to the other unchanged.
+ *
+ * Note for upgrades: the two cloud-function modes were previously spelled
+ * `gcf` and `azure`. Those short spellings are no longer accepted — pass
+ * `google_cloud_function` and `azure_function` instead.
  */
 enum ExecutionMode: string
 {
@@ -40,10 +44,10 @@ enum ExecutionMode: string
     case Lambda = 'lambda';
 
     /** Google Cloud Functions / Cloud Run. */
-    case Gcf = 'gcf';
+    case GoogleCloudFunction = 'google_cloud_function';
 
     /** Azure Functions. */
-    case Azure = 'azure';
+    case AzureFunction = 'azure_function';
 
     /** CGI / FastCGI. */
     case Cgi = 'cgi';

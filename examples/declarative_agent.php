@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Declarative Agent Example
  *
@@ -86,7 +88,7 @@ $agent->defineTool(
 
 $agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
-        echo "Conversation summary: " . json_encode($summary) . "\n";
+        echo 'Conversation summary: ' . json_encode($summary) . "\n";
     }
 });
 

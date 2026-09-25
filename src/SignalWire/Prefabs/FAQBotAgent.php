@@ -7,6 +7,14 @@ namespace SignalWire\Prefabs;
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Ready-made FAQ agent that answers from a fixed question/answer list.
+ *
+ * Registers one SWAIG tool, `search_faqs`, over the `$faqs` pairs supplied at
+ * construction. `$persona` overrides the default helpful-FAQ-bot framing and
+ * `$suggestRelated` (default true) lets it offer neighbouring entries.
+ * Default route `/faq`; an empty `$name` falls back to `faq_bot`.
+ */
 class FAQBotAgent extends AgentBase
 {
     /** @var list<array{question: string, answer: string}> */

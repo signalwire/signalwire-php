@@ -116,6 +116,11 @@ class Message
      * Accepts both ``state`` and ``message_state`` keys on the event
      * payload — production RELAY emits ``message_state`` while older
      * fixtures use ``state``.
+     *
+     * @internal Event-router plumbing, not exported API. Client::handleEvent
+     *           calls this from a different class, so PHP forces `public`; the
+     *           reference keeps the identical machinery private
+     *           (`Message._dispatch_event` in signalwire/relay/message.py).
      */
     public function dispatchEvent(Event $event): void
     {
@@ -154,6 +159,9 @@ class Message
      * Alias for ``dispatchEvent`` so the Client's event router (which
      * calls ``handleEvent`` for symmetry with Action) doesn't need a
      * special case. Both names route the same way.
+     *
+     * @internal Event-router plumbing, not exported API (see
+     *           Message::dispatchEvent).
      */
     public function handleEvent(Event $event): void
     {
@@ -171,13 +179,16 @@ class Message
      * another mechanism (e.g. the client's read loop).  This method
      * simply spins until completion.
      *
+     * ``$timeout = null`` (the reference default, relay/message.py:93) waits
+     * INDEFINITELY — there is no invented cap.
+     *
      * @return mixed The resolved result, or null on timeout.
      */
-    public function wait(int $timeout = 30)
+    public function wait(int|float|null $timeout = null)
     {
-        $deadline = microtime(true) + $timeout;
+        $deadline = $timeout === null ? null : microtime(true) + $timeout;
 
-        while (!$this->completed && microtime(true) < $deadline) {
+        while (!$this->completed && ($deadline === null || microtime(true) < $deadline)) {
             // Yield the CPU briefly so we don't spin at 100%.
             usleep(5000);
         }
@@ -337,6 +348,11 @@ class Message
      * exactly once.
      *
      * @param mixed $result
+     *
+     * @internal Event-router plumbing, not exported API. dispatchEvent (called
+     *           from Client) drives this, so PHP forces `public`; the reference
+     *           keeps the identical machinery private (`Message._resolve` in
+     *           signalwire/relay/message.py).
      */
     public function resolve($result = null): void
     {

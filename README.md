@@ -161,10 +161,20 @@ require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
 
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
+
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'],
-    token:   $_ENV['SIGNALWIRE_API_TOKEN'],
-    host:    $_ENV['SIGNALWIRE_SPACE'],
+    project: env('SIGNALWIRE_PROJECT_ID'),
+    token:   env('SIGNALWIRE_API_TOKEN'),
+    host:    env('SIGNALWIRE_SPACE'),
 );
 
 $client->fabric()->aiAgents()->create(['name' => 'Support Bot', 'prompt' => ['text' => 'You are helpful.']]);

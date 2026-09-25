@@ -49,7 +49,7 @@ class Mfa extends \SignalWire\REST\BaseResource
             $__body['allow_alphas'] = $allowAlphas;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path('sms'), $__body, $requestOptions);
+        return $this->http->post($this->path('sms'), $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -80,7 +80,7 @@ class Mfa extends \SignalWire\REST\BaseResource
             $__body['allow_alphas'] = $allowAlphas;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path('call'), $__body, $requestOptions);
+        return $this->http->post($this->path('call'), $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -93,6 +93,6 @@ class Mfa extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['token'] = $token;
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->path($requestId, 'verify'), $__body, $requestOptions);
+        return $this->http->post($this->path($requestId, 'verify'), $__body, requestOptions: $requestOptions);
     }
 }

@@ -73,6 +73,17 @@ jobs:
           pip install -e porting-sdk/test_harness/mock_relay
           pip install -e porting-sdk/test_harness/mock_signalwire
 
+      # ruff backs the REPO-LINT / REPO-FMT gates over this repo's hand-written
+      # Python under scripts/. run-ci.sh fails LOUD if it is missing rather than
+      # skipping, so this install is load-bearing, not optional.
+      - name: Install Python dev dependencies (ruff for REPO-LINT/REPO-FMT)
+        # requirements-dev.txt is repo-relative; without working-directory this
+        # step runs at the workspace root (where porting-sdk/ and signalwire-php/
+        # are siblings) and dies with "Could not open requirements file". Every
+        # other repo-relative step below sets it too.
+        working-directory: signalwire-php
+        run: pip install -r requirements-dev.txt
+
       # EMISSION needs `import signalwire` (the oracle). Install from the
       # adjacent checkout only if not already importable.
       - name: Install signalwire-python (EMISSION oracle) if not importable

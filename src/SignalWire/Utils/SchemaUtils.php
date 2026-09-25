@@ -24,11 +24,35 @@ namespace SignalWire\Utils;
  *   - The env var SWML_SKIP_SCHEMA_VALIDATION=1/true/yes also disables
  *     validation regardless of the constructor argument.
  *
- * The PHP port currently ships only the lightweight validator (verb
- * existence + required-property check). Full JSON Schema validation
- * can be wired in via justinrainbow/json-schema by extending
- * initFullValidator(). The lightweight contract matches Python's
- * _validate_verb_lightweight() exactly.
+ * The PHP port ships no Draft-2020-12 engine. Instead of Python's
+ * jsonschema-rs full-document validator it performs the required-property
+ * check PLUS a resolved closed-key/type check walked directly off the
+ * schema fragment (see validateAgainstInnerSchema). Full JSON Schema
+ * validation can additionally be wired in via justinrainbow/json-schema by
+ * extending initFullValidator().
+ *
+ * FAIL-CLOSED CONTRACT (do not "simplify" this away). A validator that could
+ * not be built must never degrade into a check that reports an unvalidated
+ * config as valid. In this port that property holds structurally rather than
+ * by a rescue clause: every loadSchema failure mode -- absent file, unreadable
+ * file, malformed JSON, non-object JSON, truncated schema -- returns an EMPTY
+ * schema, which extracts ZERO verbs, so validateVerb answers
+ * "Unknown verb: <name>" (valid=false) for every verb rather than passing.
+ * validateDocument likewise refuses with 'Schema validator not initialized'.
+ * Pinned by tests/SchemaUtilsFailClosedTest.php.
+ *
+ * Sibling-port note: ruby (c606d77), typescript (d8cfe4c) and rust each had a
+ * `rescue`/`catch` around validator construction that set the validator to
+ * null and then ROUTED to the lightweight check, silently accepting a
+ * forbidden key. PHP has no such catch -- the only catch in this file is
+ * \JsonException inside loadSchema, and it lands on the empty-schema
+ * fail-closed path above. An earlier revision of this docblock claimed the
+ * lightweight contract "matches Python's _validate_verb_lightweight()
+ * exactly"; that was the same false parity claim ruby carried, and it is
+ * corrected here: Python reaches its lightweight path only for a partial
+ * schema with no properties.sections, never as a fallback from a failed
+ * validator build (its Draft202012Validator call has no try/except at all,
+ * so a compile failure propagates out of the constructor).
  */
 final class SchemaUtils
 {
@@ -153,9 +177,43 @@ final class SchemaUtils
     }
 
     /**
-     * Initialize the full JSON Schema validator. The PHP port currently
-     * leaves this empty — extend by wiring justinrainbow/json-schema or
-     * a similar library here.
+     * Initialize the full JSON Schema validator. The PHP port ships no
+     * Draft-2020-12 engine, so this leaves $fullValidator null — extend by
+     * wiring justinrainbow/json-schema or a similar library here.
+     *
+     * If you DO wire one in, it must not swallow a construction failure into
+     * `$this->fullValidator = null`: that is exactly the fail-open bug ruby
+     * (c606d77) and typescript (d8cfe4c) had to undo. A build failure means
+     * validation did not happen and validateVerb must refuse, not fall through
+     * to a check that would report a forbidden key as valid. See the class
+     * docblock's FAIL-CLOSED CONTRACT.
+     *
+     * WHY THIS MATTERS TO THE SHALLOW CHECK. In the ports that DO keep a deep
+     * Draft-2020-12 engine (go/ts/dotnet/python), the shallow closed-key check
+     * disengaging on a shape it cannot enumerate is survivable: the deep engine
+     * catches what the shallow pass misses. Here there is nothing behind it, so
+     * a disengage is the LAST line — which is exactly how an `anyOf` verb came
+     * to accept a forbidden key all the way into the emitted document.
+     *
+     * That argues for making an un-enumerable shape REFUSE rather than pass, and
+     * it was considered. It is the wrong call, because "cannot enumerate" and
+     * "legitimately open" are the SAME observation here and the schema contains
+     * real instances of the latter: `set` is an open object by design (a
+     * free-form variable bag: zero declared properties, `unevaluatedProperties`
+     * with no `not`), `unset` is a union of string | array-of-string with no
+     * object branch at all, and cond/label/return are not objects. Refusing on a
+     * null key-set would reject every one of those valid documents — a check
+     * that fails valid input is not a stronger gate, it is a broken one, and it
+     * would push users to SWML_SKIP_SCHEMA_VALIDATION, disabling the check
+     * wholesale.
+     *
+     * So the resolver's job is to make the disengaged set SMALL and DELIBERATE
+     * rather than accidental, and to pin it by test: the five verbs that stay
+     * disengaged (cond/label/return/set/unset) are each disengaged for a reason
+     * readable in the schema, and every shape that CAN be enumerated now is.
+     * Engaged verbs go 32 -> 34 with this fix. Closing the remaining gap is a
+     * deep-validation question — wire a real engine here — not a reason to turn
+     * this pass into a blanket refusal.
      */
     private function initFullValidator(): void
     {
@@ -321,10 +379,11 @@ final class SchemaUtils
         // a MISSPELLED or UNKNOWN key on a closed verb, and a wrong-typed value,
         // must be REJECTED -- never silently dropped/accepted. We walk the
         // verb's resolved inner schema (the $defs fragment under
-        // properties[verb], following $ref/oneOf) rather than pull in a full
-        // Draft-2020-12 engine. Only verbs whose schema is CLOSED
-        // (unevaluatedProperties/additionalProperties disallows extras) get the
-        // stray-key check, so an open verb never false-reds.
+        // properties[verb], following $ref and anyOf/oneOf union branches)
+        // rather than pull in a full Draft-2020-12 engine. Only verbs whose
+        // schema is CLOSED (unevaluatedProperties/additionalProperties
+        // disallows extras) get the stray-key check, so an open verb never
+        // false-reds.
         if (isset($this->verbs[$verbName])) {
             $inner = $this->getVerbProperties($verbName);
             $errors = array_merge(
@@ -337,13 +396,20 @@ final class SchemaUtils
     }
 
     /**
+     * Bounds `$ref` / union following so a schema with a self-referential `$ref`
+     * cannot spin the resolver. Eight levels is well past anything the SWML
+     * schema needs (verb body -> $ref -> union branch -> $ref).
+     */
+    private const MAX_SCHEMA_RESOLVE_DEPTH = 8;
+
+    /**
      * Validate a verb config against its resolved inner schema fragment.
      *
-     * Handles the three shapes the SWML verb schemas actually use:
+     * Handles the shapes the SWML verb schemas actually use:
      *   - a plain object schema ({type:object, properties, unevaluatedProperties})
      *     -- e.g. answer / record / prompt,
-     *   - a `oneOf` of such objects (each `$ref`-resolved) -- e.g. play, where the
-     *     config must match exactly one branch,
+     *   - a `oneOf` OR `anyOf` union of such objects (each `$ref`-resolved) --
+     *     e.g. play/connect (oneOf) and send_sms/sleep (anyOf),
      *   - a `$ref` to another `$defs` entry -- e.g. ai -> AIObject.
      *
      * @param array<string, mixed> $verbConfig
@@ -352,21 +418,94 @@ final class SchemaUtils
      */
     private function validateAgainstInnerSchema(string $verbName, array $verbConfig, array $inner): array
     {
-        $inner = $this->resolveRef($inner);
+        return $this->validateAgainstSchemaNode($verbName, $verbConfig, $inner, 0);
+    }
 
-        // oneOf: the config must satisfy exactly one branch. Report the branch
+    /**
+     * Validate the config against ONE schema node, recursively.
+     *
+     * Three node shapes are handled, and the union case is the one that matters:
+     *
+     *   - `$ref` -- followed into `$defs` and resolved recursively (ai -> AIObject).
+     *   - `anyOf` / `oneOf` -- resolved BRANCH BY BRANCH, with the config accepted
+     *     when it satisfies SOME branch. Only `oneOf` used to be tested here; an
+     *     `anyOf`-shaped node carries no `type` of its own, so it fell through to
+     *     the plain-object path where `properties` is empty and
+     *     {@see schemaIsClosed()} answers false -- silently DISENGAGING the
+     *     closed-key check and reporting SUCCESS for any key whatsoever. That is
+     *     strictly worse than failing, and php has no full-validator fallback
+     *     behind it (see {@see initFullValidator()}), so this partial check is the
+     *     only gate. Three verbs in the shipped schema are `anyOf`-shaped --
+     *     send_sms (2 object branches), sleep (object / integer / SWMLVar) and
+     *     unset (string / array) -- and the first two were accepting arbitrary
+     *     keys end to end, all the way into the emitted document.
+     *
+     *     The union (not intersection) semantic is the correct one for this schema
+     *     shape: a config satisfying an anyOf/oneOf satisfies SOME branch, so a
+     *     key belonging to no branch belongs to no valid document. An intersection
+     *     would reject connect's serial / parallel / serial_parallel forms, whose
+     *     four branches differ precisely in their discriminating key. Non-object
+     *     branches (sleep's bare `integer`, SWMLVar) contribute no keys -- they
+     *     constrain the config to not be an object at all, a different question
+     *     from which keys an object config may carry -- so a union with NO object
+     *     branch (unset) has no key-set and correctly stays disengaged.
+     *   - a plain object schema -- checked directly.
+     *
+     * A depth bound keeps a self-referential `$ref` from spinning.
+     *
+     * @param array<string, mixed> $verbConfig
+     * @param array<string, mixed> $node
+     * @return list<string>
+     */
+    private function validateAgainstSchemaNode(
+        string $verbName,
+        array $verbConfig,
+        array $node,
+        int $depth,
+    ): array {
+        if ($depth > self::MAX_SCHEMA_RESOLVE_DEPTH) {
+            return [];
+        }
+
+        // Follow a $ref (ai -> AIObject) to the node that declares the properties.
+        if (isset($node['$ref']) && is_string($node['$ref'])) {
+            $target = $this->resolveRef($node);
+            if ($target !== $node) {
+                return $this->validateAgainstSchemaNode($verbName, $verbConfig, $target, $depth + 1);
+            }
+            return [];  // unresolvable $ref -- nothing enumerable here
+        }
+
+        // A union node: the config must satisfy SOME branch. Report the branch
         // with the FEWEST errors (the closest match) so the message is useful,
-        // mirroring jsonschema's "did not match any branch" surfacing.
-        if (isset($inner['oneOf']) && is_array($inner['oneOf'])) {
+        // mirroring jsonschema's "did not match any branch" surfacing. Branches
+        // that yield no enumerable check at all (a non-object branch such as
+        // sleep's bare integer or SWMLVar) contribute nothing and are skipped --
+        // counting their zero errors as a clean match would re-disengage the
+        // check for every union that has one.
+        $branches = null;
+        if (isset($node['anyOf']) && is_array($node['anyOf'])) {
+            $branches = $node['anyOf'];
+        } elseif (isset($node['oneOf']) && is_array($node['oneOf'])) {
+            $branches = $node['oneOf'];
+        }
+        if ($branches !== null) {
             $bestErrors = null;
-            foreach ($inner['oneOf'] as $branch) {
+            $anyEnumerable = false;
+            foreach ($branches as $branch) {
                 if (!is_array($branch)) {
                     continue;
                 }
-                $branchErrors = $this->validateAgainstObjectSchema(
+                $resolved = $this->resolveRef(self::onlyStringKeys($branch));
+                if ($this->closedKeySet($resolved, $depth + 1) === null) {
+                    continue;
+                }
+                $anyEnumerable = true;
+                $branchErrors = $this->validateAgainstSchemaNode(
                     $verbName,
                     $verbConfig,
-                    $this->resolveRef(self::onlyStringKeys($branch))
+                    $resolved,
+                    $depth + 1
                 );
                 if ($branchErrors === []) {
                     return [];  // matched a branch cleanly
@@ -375,12 +514,89 @@ final class SchemaUtils
                     $bestErrors = $branchErrors;
                 }
             }
+            if (!$anyEnumerable) {
+                // No branch closes over an enumerable key set (e.g. unset:
+                // string | array-of-string). There is nothing to enforce here.
+                return [];
+            }
             return $bestErrors ?? [
                 "Verb '$verbName' config did not match any allowed shape",
             ];
         }
 
-        return $this->validateAgainstObjectSchema($verbName, $verbConfig, $inner);
+        return $this->validateAgainstObjectSchema($verbName, $verbConfig, $node);
+    }
+
+    /**
+     * Resolve ONE schema node to the set of top-level property names it closes
+     * over, or null when it has no such enumerable closed key-set. Same three
+     * node shapes and same union semantic as
+     * {@see validateAgainstSchemaNode()} -- see that method for why the union
+     * (rather than the intersection) of the object branches' keys is correct.
+     *
+     * Kept PRIVATE with no public accessor over it: the python reference's
+     * SchemaUtils exposes only validate_verb and has no counterpart to this
+     * resolver, so a public getter would be invented surface (the port-surface
+     * enumerator projects one to `get_verb_top_level_property_names`, which no
+     * reference member backs). The engaged/disengaged contract is pinned through
+     * the PUBLIC api instead -- validateVerb naming the offending key -- which is
+     * how a caller experiences it anyway.
+     *
+     * @param array<string, mixed> $node
+     * @return array<string, true>|null
+     */
+    private function closedKeySet(array $node, int $depth): ?array
+    {
+        if ($depth > self::MAX_SCHEMA_RESOLVE_DEPTH) {
+            return null;
+        }
+        if (isset($node['$ref']) && is_string($node['$ref'])) {
+            $target = $this->resolveRef($node);
+            return $target === $node ? null : $this->closedKeySet($target, $depth + 1);
+        }
+        $branches = null;
+        if (isset($node['anyOf']) && is_array($node['anyOf'])) {
+            $branches = $node['anyOf'];
+        } elseif (isset($node['oneOf']) && is_array($node['oneOf'])) {
+            $branches = $node['oneOf'];
+        }
+        if ($branches !== null) {
+            $union = [];
+            $found = false;
+            foreach ($branches as $branch) {
+                if (!is_array($branch)) {
+                    continue;
+                }
+                $keys = $this->closedKeySet(self::onlyStringKeys($branch), $depth + 1);
+                if ($keys === null) {
+                    continue;
+                }
+                $found = true;
+                foreach ($keys as $k => $_) {
+                    $union[$k] = true;
+                }
+            }
+            // No branch is a closed object (e.g. unset: string | array-of-string).
+            return $found ? $union : null;
+        }
+        // A CLOSED object is enumerable even when it declares ZERO properties:
+        // `denoise` / `stop_denoise` are {type:object, properties:{},
+        // unevaluatedProperties:{not:{}}} — "this verb takes no keys at all", an
+        // EMPTY key-set, which forbids every key. That is a different thing from
+        // `set`, which is OPEN (unevaluatedProperties with no `not`) and forbids
+        // nothing. Treating empty-and-closed as "not enumerable" would report
+        // those two verbs as disengaged when the check does in fact reject stray
+        // keys on them.
+        if (!is_array($node['properties'] ?? null) || !$this->schemaIsClosed($node)) {
+            return null;
+        }
+        /** @var array<mixed, mixed> $props */
+        $props = $node['properties'];
+        $out = [];
+        foreach (array_keys($props) as $k) {
+            $out[(string) $k] = true;
+        }
+        return $out;
     }
 
     /**

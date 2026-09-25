@@ -203,6 +203,57 @@ if ($dumpSwml) {
 exit(0);
 
 // ============================================================
+//  Narrowing helpers
+// ============================================================
+//
+// A decoded JSON document is `mixed` all the way down — the server decides its
+// shape — so every field read needs a real check before it can be printed or
+// passed to a typed parameter. These do that check and fall back, so a
+// malformed document prints a placeholder instead of raising a TypeError.
+
+/** Read a string field out of a decoded JSON value. */
+function jsonStr(mixed $node, string $key, string $default = ''): string
+{
+    if (!is_array($node)) {
+        return $default;
+    }
+    $value = $node[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
+/** The first present string field, in order. */
+function jsonStrAny(mixed $node, string $first, string $second, string $default = ''): string
+{
+    $value = jsonStr($node, $first, '');
+
+    return $value !== '' ? $value : jsonStr($node, $second, $default);
+}
+
+/**
+ * Narrow a `mixed` to an array safe to foreach / count / ksort.
+ *
+ * @return array<array-key,mixed>
+ */
+function jsonArr(mixed $value): array
+{
+    return is_array($value) ? $value : [];
+}
+
+/**
+ * Narrow a nested `mixed` field to an array.
+ *
+ * @return array<array-key,mixed>
+ */
+function jsonArrAt(mixed $node, string $key): array
+{
+    return is_array($node) ? jsonArr($node[$key] ?? null) : [];
+}
+
+// ============================================================
 //  Operations
 // ============================================================
 
@@ -242,19 +293,10 @@ function doListTools(): void
     // Extract SWAIG functions from the SWML document
     $functions = [];
 
-    if (isset($data['sections']) && is_array($data['sections'])) {
-        foreach ($data['sections'] as $sectionName => $verbs) {
-            if (!is_array($verbs)) {
-                continue;
-            }
-            foreach ($verbs as $verb) {
-                if (is_array($verb) && isset($verb['ai'])) {
-                    $ai = $verb['ai'];
-                    if (isset($ai['SWAIG']['functions']) && is_array($ai['SWAIG']['functions'])) {
-                        $functions = array_merge($functions, $ai['SWAIG']['functions']);
-                    }
-                }
-            }
+    foreach (jsonArrAt($data, 'sections') as $verbs) {
+        foreach (jsonArr($verbs) as $verb) {
+            $swaig = jsonArrAt(jsonArrAt($verb, 'ai'), 'SWAIG');
+            $functions = array_merge($functions, array_values(jsonArrAt($swaig, 'functions')));
         }
     }
 
@@ -265,8 +307,8 @@ function doListTools(): void
 
     if ($raw) {
         foreach ($functions as $f) {
-            $name = $f['function'] ?? 'unnamed';
-            $desc = $f['description'] ?? $f['purpose'] ?? '';
+            $name = jsonStr($f, 'function', 'unnamed');
+            $desc = jsonStrAny($f, 'description', 'purpose', '');
             echo "{$name}\t{$desc}\n";
         }
     } else {
@@ -274,23 +316,28 @@ function doListTools(): void
         echo "Found {$count} SWAIG function(s):\n\n";
 
         foreach ($functions as $f) {
-            $name = $f['function'] ?? 'unnamed';
-            $desc = $f['description'] ?? $f['purpose'] ?? '(no description)';
+            $name = jsonStr($f, 'function', 'unnamed');
+            $desc = jsonStrAny($f, 'description', 'purpose', '(no description)');
             printf("  %-30s %s\n", $name, $desc);
 
             // Show parameters if any
-            $paramsSchema = $f['parameters'] ?? $f['argument'] ?? null;
-            if ($paramsSchema !== null && isset($paramsSchema['properties'])) {
-                $props    = $paramsSchema['properties'];
-                $required = $paramsSchema['required'] ?? [];
-                $requiredMap = array_flip($required);
+            $paramsSchema = is_array($f) ? ($f['parameters'] ?? $f['argument'] ?? null) : null;
+            $props = jsonArrAt($paramsSchema, 'properties');
+            if ($props !== []) {
+                $required = array_values(jsonArrAt($paramsSchema, 'required'));
+                $requiredMap = [];
+                foreach ($required as $req) {
+                    if (is_string($req)) {
+                        $requiredMap[$req] = true;
+                    }
+                }
 
                 ksort($props);
                 foreach ($props as $pname => $pdef) {
-                    $ptype = $pdef['type'] ?? 'any';
-                    $pdesc = $pdef['description'] ?? '';
+                    $ptype = jsonStr($pdef, 'type', 'any');
+                    $pdesc = jsonStr($pdef, 'description', '');
                     $reqMarker = isset($requiredMap[$pname]) ? '*' : ' ';
-                    printf("    %s %-20s %-10s %s\n", $reqMarker, $pname, "({$ptype})", $pdesc);
+                    printf("    %s %-20s %-10s %s\n", $reqMarker, (string) $pname, "({$ptype})", $pdesc);
                 }
             }
 
@@ -422,11 +469,25 @@ function doListToolsFromFile(string $path): void
         // Most-recently-declared wins.
         $candidates = array_reverse($candidates);
         foreach ($candidates as $cls) {
+            // Probe each candidate: a service that can be built with no
+            // arguments is the one this file meant to expose. Reflection asks
+            // the question directly instead of constructing-and-catching, which
+            // would also swallow a genuine error thrown from a valid
+            // constructor's body.
+            $ctor = (new \ReflectionClass($cls))->getConstructor();
+            if ($ctor !== null && $ctor->getNumberOfRequiredParameters() > 0) {
+                continue;
+            }
+            // PHPStan resolves $cls to the Service BASE, whose constructor
+            // requires $name. But $cls is a SUBCLASS — e.g.
+            // examples/dynamic_swml_service.php's DynamicGreetingService — that
+            // declares its own no-argument constructor. The reflection check
+            // above proves this call is safe; PHPStan cannot follow that
+            // through a class-string.
             try {
-                $service = new $cls();
+                $service = new $cls(); // @phpstan-ignore arguments.count (subclass declares a no-arg constructor; proven by the reflection check above)
                 break;
             } catch (\Throwable) {
-                // Constructor needs args — skip this one.
                 continue;
             }
         }
@@ -457,8 +518,8 @@ function doListToolsFromFile(string $path): void
 
     if ($raw) {
         foreach ($tools as $t) {
-            $name = $t['function'] ?? 'unnamed';
-            $desc = $t['purpose'] ?? $t['description'] ?? '';
+            $name = jsonStr($t, 'function', 'unnamed');
+            $desc = jsonStrAny($t, 'purpose', 'description', '');
             echo "{$name}\t{$desc}\n";
         }
         return;
@@ -468,24 +529,28 @@ function doListToolsFromFile(string $path): void
     echo "Found {$count} SWAIG function(s):\n\n";
 
     foreach ($tools as $t) {
-        $name = $t['function'] ?? 'unnamed';
-        $desc = $t['purpose'] ?? $t['description'] ?? '(no description)';
+        $name = jsonStr($t, 'function', 'unnamed');
+        $desc = jsonStrAny($t, 'purpose', 'description', '(no description)');
         printf("  %-30s %s\n", $name, $desc);
 
         // Tool definitions on Service use 'argument' for the schema (with
         // 'properties'). Some raw definitions may use 'parameters' instead.
-        $paramsSchema = $t['argument'] ?? $t['parameters'] ?? null;
-        if (is_array($paramsSchema) && isset($paramsSchema['properties']) && is_array($paramsSchema['properties'])) {
-            $props    = $paramsSchema['properties'];
-            $required = $paramsSchema['required'] ?? [];
-            $requiredMap = is_array($required) ? array_flip($required) : [];
+        $paramsSchema = is_array($t) ? ($t['argument'] ?? $t['parameters'] ?? null) : null;
+        $props = jsonArrAt($paramsSchema, 'properties');
+        if ($props !== []) {
+            $requiredMap = [];
+            foreach (array_values(jsonArrAt($paramsSchema, 'required')) as $req) {
+                if (is_string($req)) {
+                    $requiredMap[$req] = true;
+                }
+            }
 
             ksort($props);
             foreach ($props as $pname => $pdef) {
-                $ptype = is_array($pdef) ? ($pdef['type'] ?? 'any') : 'any';
-                $pdesc = is_array($pdef) ? ($pdef['description'] ?? '') : '';
+                $ptype = jsonStr($pdef, 'type', 'any');
+                $pdesc = jsonStr($pdef, 'description', '');
                 $reqMarker = isset($requiredMap[$pname]) ? '*' : ' ';
-                printf("    %s %-20s %-10s %s\n", $reqMarker, $pname, "({$ptype})", $pdesc);
+                printf("    %s %-20s %-10s %s\n", $reqMarker, (string) $pname, "({$ptype})", $pdesc);
             }
         }
         echo "\n";
@@ -519,6 +584,10 @@ function doExec(string $funcName): void
     ];
 
     $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($jsonBody === false) {
+        fwrite(STDERR, 'Error: failed to encode the SWAIG request body: ' . json_last_error_msg() . "\n");
+        exit(1);
+    }
 
     if ($verbose) {
         fwrite(STDERR, ">>> POST {$swaigUrl}\n");
@@ -618,6 +687,7 @@ function parseParam(string $param): ?array
 //  HTTP Helpers
 // ============================================================
 
+/** @return list<string> */
 function buildAuthHeaders(): array
 {
     global $authUser, $authPass;
@@ -657,13 +727,13 @@ function httpGet(string $targetUrl): string
         exit(1);
     }
 
-    // Check HTTP status from response headers
+    // Check HTTP status from response headers. PHP sets the
+    // $http_response_header local in this scope whenever the stream wrapper ran
+    // (which a non-false file_get_contents above proves), so it needs no guard.
     $statusCode = 0;
-    if (isset($http_response_header) && is_array($http_response_header)) {
-        foreach ($http_response_header as $header) {
-            if (preg_match('#^HTTP/\S+\s+(\d+)#', $header, $m)) {
-                $statusCode = (int) $m[1];
-            }
+    foreach ($http_response_header as $header) {
+        if (preg_match('#^HTTP/\S+\s+(\d+)#', $header, $m)) {
+            $statusCode = (int) $m[1];
         }
     }
 
@@ -704,13 +774,13 @@ function httpPost(string $targetUrl, string $body): string
         exit(1);
     }
 
-    // Check HTTP status from response headers
+    // Check HTTP status from response headers. PHP sets the
+    // $http_response_header local in this scope whenever the stream wrapper ran
+    // (which a non-false file_get_contents above proves), so it needs no guard.
     $statusCode = 0;
-    if (isset($http_response_header) && is_array($http_response_header)) {
-        foreach ($http_response_header as $header) {
-            if (preg_match('#^HTTP/\S+\s+(\d+)#', $header, $m)) {
-                $statusCode = (int) $m[1];
-            }
+    foreach ($http_response_header as $header) {
+        if (preg_match('#^HTTP/\S+\s+(\d+)#', $header, $m)) {
+            $statusCode = (int) $m[1];
         }
     }
 

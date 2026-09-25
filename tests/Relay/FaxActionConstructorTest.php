@@ -6,6 +6,7 @@ namespace SignalWire\Tests\Relay;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use SignalWire\Relay\Call;
 use SignalWire\Relay\Client as RelayClient;
 use SignalWire\Relay\FaxAction;
 
@@ -41,10 +42,22 @@ class FaxActionConstructorTest extends TestCase
         }
     }
 
+    /** The owning Call every Action requires (a bare handle; never driven here). */
+    private function makeCall(): Call
+    {
+        return new Call([
+            'call_id' => 'call-1',
+            'node_id' => 'node-1',
+            'tag' => 'tag-1',
+            'device' => ['type' => 'phone', 'params' => ['to_number' => '+15551234567']],
+            'context' => 'default',
+        ], $this->client);
+    }
+
     #[Test]
     public function constructDefaultFaxTypeIsSend(): void
     {
-        $fax = new FaxAction('ctl-1', 'call-1', 'node-1', $this->client);
+        $fax = new FaxAction('ctl-1', 'call-1', 'node-1', $this->client, $this->makeCall());
         $this->assertSame('send', $fax->getFaxType());
         $this->assertSame('calling.send_fax.stop', $fax->getStopMethod());
     }
@@ -52,7 +65,7 @@ class FaxActionConstructorTest extends TestCase
     #[Test]
     public function constructWithExplicitSendFaxType(): void
     {
-        $fax = new FaxAction('ctl-2', 'call-2', 'node-2', $this->client, 'send');
+        $fax = new FaxAction('ctl-2', 'call-2', 'node-2', $this->client, $this->makeCall(), 'send');
         $this->assertSame('send', $fax->getFaxType());
         $this->assertSame('calling.send_fax.stop', $fax->getStopMethod());
     }
@@ -60,7 +73,7 @@ class FaxActionConstructorTest extends TestCase
     #[Test]
     public function constructWithReceiveFaxType(): void
     {
-        $fax = new FaxAction('ctl-3', 'call-3', 'node-3', $this->client, 'receive');
+        $fax = new FaxAction('ctl-3', 'call-3', 'node-3', $this->client, $this->makeCall(), 'receive');
         $this->assertSame('receive', $fax->getFaxType());
         $this->assertSame('calling.receive_fax.stop', $fax->getStopMethod());
     }
@@ -68,7 +81,7 @@ class FaxActionConstructorTest extends TestCase
     #[Test]
     public function constructPreservesControlIds(): void
     {
-        $fax = new FaxAction('ctl-fax-42', 'call-XYZ', 'node-A', $this->client);
+        $fax = new FaxAction('ctl-fax-42', 'call-XYZ', 'node-A', $this->client, $this->makeCall());
         // Inherited from Action — control_id and call_id round-trip.
         $this->assertSame('ctl-fax-42', $fax->getControlId());
         $this->assertSame('call-XYZ', $fax->getCallId());

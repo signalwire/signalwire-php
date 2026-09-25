@@ -49,6 +49,14 @@ jobs:
         with:
           repository: signalwire/signalwire-python
           path: signalwire-python
+          # Same rule as the porting-sdk checkout above: publish always builds the
+          # EMISSION oracle from signalwire-python main — deliberately NOT the
+          # coordinated-pass PORTING_SDK_REF variable, so a release can never be
+          # gated against an unmerged wave branch's oracle. Publish/release
+          # workflows are NOT part of the coordinated-test set
+          # (porting-sdk/COORDINATED_PASS.md; check_coordinated_refs.py skips them
+          # by design and asserts that skip in its selftest). This literal `main` is
+          # correct — do not "fix" it to the variable.
           ref: main
 
       - name: Set up PHP

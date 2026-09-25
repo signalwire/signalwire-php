@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 namespace SignalWire\SWML;
 
+/**
+ * Lazily-loaded singleton over the bundled SWML `schema.json`, from which the
+ * verb table that drives auto-vivified verb methods is derived.
+ *
+ * Verbs are read from `$defs.SWMLMethod.anyOf`, following each entry's `$ref`.
+ * Loading is strict about the file itself — a missing, unreadable, or
+ * non-object `schema.json` raises — but tolerant about its shape: a schema
+ * lacking the expected `$defs`/`SWMLMethod`/`anyOf` structure yields an EMPTY
+ * verb table rather than an error, so every verb then reads as invalid.
+ *
+ * The constructor is private; reach the shared instance through
+ * {@see Schema::instance()} and drop it in tests with {@see Schema::reset()}.
+ */
 class Schema
 {
     private static ?self $instance = null;

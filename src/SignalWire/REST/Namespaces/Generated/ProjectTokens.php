@@ -36,7 +36,7 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
             $__body['subproject_id'] = $subprojectId;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body, $requestOptions);
+        return $this->http->post($this->basePath, $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -55,7 +55,7 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
             $__body['permissions'] = $permissions;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->patch($this->path($tokenId), $__body, $requestOptions);
+        return $this->http->patch($this->path($tokenId), $__body, requestOptions: $requestOptions);
     }
 
     /**

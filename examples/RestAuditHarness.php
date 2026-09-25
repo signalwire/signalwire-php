@@ -57,10 +57,15 @@ if ($projectId === '' || $token === '') {
     fwrite(STDERR, "RestAuditHarness: SIGNALWIRE_PROJECT_ID and SIGNALWIRE_API_TOKEN required.\n");
     exit(1);
 }
-$args = $argsRaw === '' ? [] : json_decode($argsRaw, true);
-if (!is_array($args)) {
+$decodedArgs = $argsRaw === '' ? [] : json_decode($argsRaw, true);
+if (!is_array($decodedArgs)) {
     fwrite(STDERR, "RestAuditHarness: REST_OPERATION_ARGS is not a JSON object.\n");
     exit(1);
+}
+/** @var array<string,mixed> $args */
+$args = [];
+foreach ($decodedArgs as $argKey => $argValue) {
+    $args[(string) $argKey] = $argValue;
 }
 
 try {
@@ -102,6 +107,10 @@ exit(0);
 /**
  * GET /api/laml/2010-04-01/Accounts/{projectId}/Calls.json
  */
+/**
+ * @param array<string,mixed> $args
+ * @return array<string,mixed>
+ */
 function callingListCalls(RestClient $client, array $args): array
 {
     $path = '/api/laml/2010-04-01/Accounts/' . $client->getProjectId() . '/Calls.json';
@@ -116,6 +125,10 @@ function callingListCalls(RestClient $client, array $args): array
  * response regardless of the request body. PHP's REST surface
  * doesn't ship a typed `messaging.send()`, so we construct the
  * LAML POST directly via HttpClient.
+ */
+/**
+ * @param array<string,mixed> $args
+ * @return array<string,mixed>
  */
 function messagingSend(RestClient $client, array $args): array
 {

@@ -7,6 +7,17 @@ namespace SignalWire\Prefabs;
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Ready-made survey agent that administers a question list and validates each
+ * answer before recording it.
+ *
+ * Registers the `validate_response` and `log_response` SWAIG tools. Each
+ * question declares a `type` that drives validation: `rating` (an integer in
+ * 1..`scale`, default scale 5), `multiple_choice` (a case-insensitive match
+ * against `choices`), `yes_no` (yes/no/y/n, case-insensitive), and
+ * `open_ended` (non-empty only when `required`, which defaults to true). An
+ * unrecognized type is accepted without checking. Default route `/survey`.
+ */
 class SurveyAgent extends AgentBase
 {
     /** @var string */

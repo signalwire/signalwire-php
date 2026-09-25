@@ -112,11 +112,25 @@ class PaginatedIterator implements \Iterator
     // Iterator protocol
     // -----------------------------------------------------------------
 
+    /**
+     * No-op. This iterator is SINGLE-PASS — nothing is reset, so re-entering a
+     * `foreach` resumes where the previous one stopped rather than restarting
+     * from page one. The first page is not fetched here; the first
+     * {@see PaginatedIterator::valid()} call does that.
+     */
     public function rewind(): void
     {
         // The Python iterator is single-pass; we only fetch on first valid().
     }
 
+    /**
+     * Whether an item is available at the current index, fetching further pages
+     * as needed.
+     *
+     * This is where the network I/O happens: it LOOPS on fetch while the buffer
+     * is exhausted, so a page that legitimately returns zero items but still
+     * carries a `links.next` does not end iteration.
+     */
     public function valid(): bool
     {
         while ($this->index >= count($this->items)) {
@@ -136,11 +150,19 @@ class PaginatedIterator implements \Iterator
         return $this->items[$this->index];
     }
 
+    /**
+     * The flat, ever-increasing item index across ALL pages — not a per-page
+     * offset, and not an item id.
+     */
     public function key(): int
     {
         return $this->index;
     }
 
+    /**
+     * Advance to the next item. Purely an index bump; page fetching is
+     * {@see PaginatedIterator::valid()}'s job.
+     */
     public function next(): void
     {
         $this->index++;

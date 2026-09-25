@@ -265,6 +265,38 @@ class InboundCallMockTest extends TestCase
         $this->assertSame('busy', $p['reason'] ?? null);
     }
 
+    /**
+     * DEFAULT COVERAGE: a caller who supplies NO reason must still put
+     * `reason: "hangup"` on the wire — the reference always emits it
+     * (relay/call.py:542, `reason: str = "hangup"`). The port previously
+     * defaulted `$reason` to null and OMITTED the key entirely.
+     */
+    #[Test]
+    public function hangupWithNoArgumentSendsDefaultReasonHangup(): void
+    {
+        /** @var \ArrayObject<int, bool> $hung */
+        $hung = new \ArrayObject();
+        $this->client->onCall(function (Call $call) use ($hung): void {
+            $call->hangup();
+            $hung[] = true;
+        });
+
+        $this->mock->inboundCall(['call_id' => 'c-hangup-def', 'auto_states' => ['created']]);
+        $done = MockTest::pumpUntil(
+            $this->client,
+            fn () => count($hung) >= 1,
+            5.0,
+        );
+        $this->assertTrue($done);
+
+        $ends = $this->mock->journal()->recv('calling.end');
+        $this->assertNotEmpty($ends, 'no calling.end in journal');
+        $p = Shape::sub($ends[count($ends) - 1]->frame, 'params');
+        $this->assertSame('c-hangup-def', $p['call_id'] ?? null);
+        $this->assertArrayHasKey('reason', $p, 'reason must ALWAYS ride on the wire');
+        $this->assertSame('hangup', $p['reason']);
+    }
+
     #[Test]
     public function passInHandlerJournalsCallingPass(): void
     {

@@ -76,3 +76,23 @@ sw_php_tool() {
     local bin="$1"; shift
     (cd "$REPO_ROOT" && PHP_CS_FIXER_IGNORE_ENV=1 "vendor/bin/$bin" "$@")
 }
+
+# sw_ruff [args…] — run ruff over this repo's hand-written Python.
+#
+# ruff is the linter+formatter for the 8 Python programs under scripts/ (the
+# surface/signature enumerators and the REST/RELAY/SWML/SWAIG generators). It is
+# NOT a composer package, so it cannot ride along in vendor/; it is declared as a
+# dev dependency in requirements-dev.txt and installed in CI alongside the PHP
+# toolchain. Fail LOUD with the install hint rather than silently skipping —
+# a quality gate that no-ops when its tool is missing is worse than no gate.
+sw_ruff() {
+    if python3 -m ruff --version >/dev/null 2>&1; then
+        (cd "$REPO_ROOT" && python3 -m ruff "$@")
+        return $?
+    fi
+    echo "FATAL: ruff is not available (python3 -m ruff)." >&2
+    echo "       It lints + formats this repo's hand-written Python under scripts/." >&2
+    echo "       Install it with:  python3 -m pip install -r requirements-dev.txt" >&2
+    echo "       (or: python3 -m pip install ruff)" >&2
+    return 1
+}

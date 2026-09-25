@@ -49,7 +49,7 @@ class Messages extends \SignalWire\REST\BaseResource
             $__body['custom_variables'] = $customVariables;
         }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body, $requestOptions);
+        return $this->http->post($this->basePath, $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -62,6 +62,6 @@ class Messages extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['body'] = $body;
         $__body = array_merge($__body, $extras);
-        return $this->http->patch($this->path($messageId), $__body, $requestOptions);
+        return $this->http->patch($this->path($messageId), $__body, requestOptions: $requestOptions);
     }
 }

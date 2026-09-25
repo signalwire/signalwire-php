@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Dynamic SWML Service Example
  *
@@ -51,14 +53,18 @@ final class DynamicGreetingService extends SWMLService
         $this->resetDocument();
         $this->answer();
 
-        $callerName = $requestData['caller_name'] ?? null;
+        $callerName = is_string($requestData['caller_name'] ?? null)
+
+            ? $requestData['caller_name']
+
+            : '';
         if ($callerName) {
             $this->addVerb('play', ['url' => "say:Hello {$callerName}, welcome back to our service!"]);
         } else {
             $this->addVerb('play', ['url' => 'say:Hello, thank you for calling our service.']);
         }
 
-        $callerType = strtolower($requestData['caller_type'] ?? '');
+        $callerType = strtolower(is_string($requestData['caller_type'] ?? null) ? $requestData['caller_type'] : '');
 
         if ($callerType === 'vip') {
             $this->addVerb('play', ['url' => "say:As a VIP customer, you'll be connected to our priority support team."]);
@@ -77,7 +83,7 @@ final class DynamicGreetingService extends SWMLService
             ]);
         }
 
-        $department = strtolower($requestData['department'] ?? '');
+        $department = strtolower(is_string($requestData['department'] ?? null) ? $requestData['department'] : '');
         if ($department) {
             $numbers = [
                 'sales'     => '+15551112222',

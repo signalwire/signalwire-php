@@ -41,7 +41,7 @@ class VideoStreams extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['url'] = $url;
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->path($id), $__body, $requestOptions);
+        return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
     }
 
     /**

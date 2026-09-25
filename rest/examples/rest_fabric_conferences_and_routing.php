@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: Conference infrastructure, cXML resources, generic routing, and tokens.
  *
@@ -12,16 +14,36 @@ require 'vendor/autoload.php';
 
 use SignalWire\REST\RestClient;
 
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
+
 $client = new RestClient(
-    project: $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    token:   $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    host:    $_ENV['SIGNALWIRE_SPACE']      ?? die("Set SIGNALWIRE_SPACE\n"),
+    project: env('SIGNALWIRE_PROJECT_ID'),
+    token:   env('SIGNALWIRE_API_TOKEN'),
+    host:    env('SIGNALWIRE_SPACE'),
 );
 
-function safe(string $label, callable $fn): mixed
+/**
+ * Run an SDK call, reporting OK/failed instead of aborting the demo.
+ *
+ * Every REST method returns the decoded JSON body as array<string,mixed>, so
+ * that is what a success yields; a failure yields null.
+ *
+ * @param callable(): mixed $fn
+ * @return array<array-key,mixed>|null
+ */
+function safe(string $label, callable $fn): ?array
 {
     try {
         $result = $fn();
+        $result = is_array($result) ? $result : null;
         echo "  {$label}: OK\n";
         return $result;
     } catch (\Exception $e) {
@@ -30,18 +52,76 @@ function safe(string $label, callable $fn): mixed
     }
 }
 
+/**
+ * Read a string field out of a decoded response row.
+ *
+ * REST bodies are array<string,mixed> — the server decides the shape — so a
+ * field is `mixed` until checked. Numbers are stringified (an id may arrive as
+ * either); anything else yields $default.
+ */
+function field(mixed $row, string $key, string $default = ''): string
+{
+    if (!is_array($row)) {
+        return $default;
+    }
+    $value = $row[$key] ?? null;
+    if (is_string($value)) {
+        return $value;
+    }
+
+    return is_int($value) || is_float($value) ? (string) $value : $default;
+}
+
+/**
+ * Narrow a `mixed` to a list that is safe to foreach/count/array_slice.
+ * A missing or non-array value yields an empty list.
+ *
+ * @return list<mixed>
+ */
+function rows(mixed $value): array
+{
+    return is_array($value) ? array_values($value) : [];
+}
+
+/**
+ * The `data` collection of a list response, narrowed to a list.
+ *
+ * @return list<mixed>
+ */
+function dataRows(mixed $response): array
+{
+    return is_array($response) ? rows($response['data'] ?? []) : [];
+}
+
+/**
+ * The first present string field, in order — for responses where the same
+ * value travels under more than one name (e.g. `e164` or `number`).
+ */
+function fieldAny(mixed $row, string $first, string $second, string $default = ''): string
+{
+    $value = field($row, $first, '');
+
+    return $value !== '' ? $value : field($row, $second, $default);
+}
+
+/** The first row of a list response, or an empty array. */
+function firstRow(mixed $response): mixed
+{
+    return dataRows($response)[0] ?? [];
+}
+
 // 1. Create a conference room
 echo "Creating conference room...\n";
 $room = $client->fabric()->conferenceRooms()->create(['name' => 'team-standup']);
-$roomId = $room['id'] ?? 'demo-room-id';
+$roomId = field($room, 'id', 'demo-room-id');
 echo "  Created conference room: {$roomId}\n";
 
 // 2. List conference room addresses
 echo "\nListing conference room addresses...\n";
 safe('List addresses', function () use ($client, $roomId) {
     $addrs = $client->fabric()->conferenceRooms()->listAddresses($roomId);
-    foreach (($addrs['data'] ?? []) as $a) {
-        echo "  - " . ($a['display_name'] ?? $a['id'] ?? 'unknown') . "\n";
+    foreach (dataRows($addrs) as $a) {
+        echo '  - ' . fieldAny($a, 'display_name', 'id', 'unknown') . "\n";
     }
 });
 
@@ -51,7 +131,7 @@ $cxml = $client->fabric()->cxmlScripts()->create([
     'display_name' => 'Hold Music Script',
     'contents'     => '<Response><Say>Please hold.</Say><Play>https://example.com/hold.mp3</Play></Response>',
 ]);
-$cxmlId = $cxml['id'] ?? 'demo-cxml-id';
+$cxmlId = field($cxml, 'id', 'demo-cxml-id');
 echo "  Created cXML script: {$cxmlId}\n";
 
 // 4. Create a cXML webhook
@@ -60,7 +140,7 @@ $cxmlWh = $client->fabric()->cxmlWebhooks()->create([
     'name'                => 'External cXML Handler',
     'primary_request_url' => 'https://example.com/cxml-handler',
 ]);
-$cxmlWhId = $cxmlWh['id'] ?? 'demo-cxml-webhook-id';
+$cxmlWhId = field($cxmlWh, 'id', 'demo-cxml-webhook-id');
 echo "  Created cXML webhook: {$cxmlWhId}\n";
 
 // 5. Create a relay application
@@ -69,40 +149,44 @@ $relayApp = $client->fabric()->relayApplications()->create([
     'name'  => 'Inbound Handler',
     'topic' => 'office',
 ]);
-$relayId = $relayApp['id'] ?? 'demo-relay-id';
+$relayId = field($relayApp, 'id', 'demo-relay-id');
 echo "  Created relay application: {$relayId}\n";
 
 // 6. List all fabric resources
 echo "\nListing all fabric resources...\n";
-$resources = safe('List resources', fn() => $client->fabric()->resources()->list());
+$resources = safe('List resources', fn () => $client->fabric()->resources()->list());
 if ($resources) {
-    foreach (array_slice($resources['data'] ?? [], 0, 5) as $r) {
-        echo "  - " . ($r['type'] ?? 'unknown') . ": "
-            . ($r['display_name'] ?? $r['id'] ?? 'unknown') . "\n";
+    foreach (array_slice(dataRows($resources), 0, 5) as $r) {
+        echo '  - ' . field($r, 'type', 'unknown') . ': '
+            . fieldAny($r, 'display_name', 'id', 'unknown') . "\n";
     }
 }
 
 // 7. Get a specific resource
 if ($resources && !empty($resources['data'])) {
-    $first = $resources['data'][0];
-    if (!empty($first['id'])) {
-        $detail = safe('Get resource', fn() => $client->fabric()->resources()->get($first['id']));
+    $firstId = field(firstRow($resources), 'id');
+    if ($firstId !== '') {
+        $detail = safe('Get resource', fn () => $client->fabric()->resources()->get($firstId));
         if ($detail) {
-            echo "  Resource detail: " . ($detail['display_name'] ?? 'N/A')
-                . " (" . ($detail['type'] ?? 'N/A') . ")\n";
+            echo '  Resource detail: ' . field($detail, 'display_name', 'N/A')
+                . ' (' . field($detail, 'type', 'N/A') . ")\n";
         }
     }
 }
 
 // 8. Assign a phone route (demo)
 echo "\nAssigning phone route (demo)...\n";
-safe('Phone route', fn() =>
+safe(
+    'Phone route',
+    fn () =>
     $client->fabric()->resources()->assignPhoneRoute($relayId, phoneRouteId: 'route-1', handler: 'relay_application')
 );
 
 // 9. Assign a domain application (demo)
 echo "\nAssigning domain application (demo)...\n";
-safe('Domain app', fn() =>
+safe(
+    'Domain app',
+    fn () =>
     $client->fabric()->resources()->assignDomainApplication($relayId, domainApplicationId: 'app-1')
 );
 
@@ -110,18 +194,24 @@ safe('Domain app', fn() =>
 echo "\nGenerating tokens...\n";
 safe('Guest token', function () use ($client, $relayId) {
     $guest = $client->fabric()->tokens()->createGuestToken(allowedAddresses: [$relayId]);
-    $t = $guest['token'] ?? '';
-    if ($t) echo "  Guest token: " . substr($t, 0, 40) . "...\n";
+    $t = field($guest, 'token', '');
+    if ($t) {
+        echo '  Guest token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 safe('Invite token', function () use ($client, $relayId) {
     $invite = $client->fabric()->tokens()->createInviteToken(addressId: $relayId);
-    $t = $invite['token'] ?? '';
-    if ($t) echo "  Invite token: " . substr($t, 0, 40) . "...\n";
+    $t = field($invite, 'token', '');
+    if ($t) {
+        echo '  Invite token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 safe('Embed token', function () use ($client) {
     $embed = $client->fabric()->tokens()->createEmbedToken(token: 'guest-token-value');
-    $t = $embed['token'] ?? '';
-    if ($t) echo "  Embed token: " . substr($t, 0, 40) . "...\n";
+    $t = field($embed, 'token', '');
+    if ($t) {
+        echo '  Embed token: ' . substr($t, 0, 40) . "...\n";
+    }
 });
 
 // 11. Clean up

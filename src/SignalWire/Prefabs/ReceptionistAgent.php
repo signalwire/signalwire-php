@@ -7,6 +7,17 @@ namespace SignalWire\Prefabs;
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Ready-made receptionist agent: greets the caller, collects who they are,
+ * and routes them to a department.
+ *
+ * Each `$departments` entry carries a `name` and `description` the model
+ * matches against, plus its routing target. `transfer_type` (default
+ * `phone`) selects the mechanism: `swml` uses the entry's `swml_url`,
+ * anything else falls through to connecting the entry's `number`. Registers
+ * the `collect_caller_info` and `transfer_call` SWAIG tools. Default route
+ * `/receptionist`; an empty `$name` falls back to `receptionist`.
+ */
 class ReceptionistAgent extends AgentBase
 {
     /** @var list<array{name: string, description: string, number?: string, transfer_type?: string, swml_url?: string}> */

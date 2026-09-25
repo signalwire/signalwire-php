@@ -63,7 +63,7 @@ final class RecordingClient extends Client
      * @param array<string,mixed> $params
      * @return array<string,mixed>
      */
-    public function execute(string $method, array $params = []): array
+    public function execute(string $method, array $params): array
     {
         $this->frames[$method] = $params;
 

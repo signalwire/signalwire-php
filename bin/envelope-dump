@@ -71,8 +71,8 @@ const CREATE_CALL = ['method' => 'POST', 'path' => '/api/relay/rest/addresses', 
  *
  * @param array<string,mixed>|null $scenario
  * @param array<string,mixed>|null $requestOptions
- * @param array<string,mixed>|null $call
- * @return array<string,mixed>
+ * @param array{method: string, path: string, body?: array<string,mixed>}|null $call
+ * @return array{id: string, endpoint: string, call: array{method: string, path: string, body?: array<string,mixed>}, scenario?: array<string,mixed>, scenario_repeat?: int, request_options?: array<string,mixed>, transport: bool}
  */
 function ec_case(
     string $id,
@@ -109,8 +109,8 @@ function errors_body(string $code, string $message): array
     return ['errors' => [['code' => $code, 'message' => $message]]];
 }
 
-/** @return list<array<string,mixed>> */
-function corpus(): array
+/** @return list<array{id: string, endpoint: string, call: array{method: string, path: string, body?: array<string,mixed>}, scenario?: array<string,mixed>, scenario_repeat?: int, request_options?: array<string,mixed>, transport: bool}> */
+function envelopeCorpus(): array
 {
     return [
         ec_case('envelope_200_success', null),
@@ -293,7 +293,7 @@ $mockUrl = $harness->url();
 
 $out = [];
 
-foreach (corpus() as $case) {
+foreach (envelopeCorpus() as $case) {
     $cid = $case['id'];
     $call = $case['call'];
     $path = $call['path'];
@@ -330,17 +330,24 @@ foreach (corpus() as $case) {
     $reqOpts = null;
     if (isset($case['request_options'])) {
         $ro = $case['request_options'];
+        $timeout = $ro['timeout'] ?? null;
+        $retries = $ro['retries'] ?? null;
+        $backoff = $ro['retry_backoff'] ?? null;
         $reqOpts = new RequestOptions(
-            timeout: isset($ro['timeout']) ? (float) $ro['timeout'] : null,
-            retries: isset($ro['retries']) ? (int) $ro['retries'] : null,
-            retryBackoff: isset($ro['retry_backoff']) ? (float) $ro['retry_backoff'] : null,
+            timeout: is_numeric($timeout) ? (float) $timeout : null,
+            retries: is_numeric($retries) ? (int) $retries : null,
+            retryBackoff: is_numeric($backoff) ? (float) $backoff : null,
         );
     }
 
     $http = $client->getHttp();
     try {
         if ($method === 'POST') {
-            $http->post($path, $call['body'] ?? [], $reqOpts);
+            // post() is (path, body, params, requestOptions) — the options are
+            // the FOURTH argument. Passing them third put a RequestOptions into
+            // the `array $params` slot and raised a TypeError before any
+            // request went out.
+            $http->post($path, $call['body'] ?? [], null, $reqOpts);
         } else {
             $http->get($path, [], $reqOpts);
         }

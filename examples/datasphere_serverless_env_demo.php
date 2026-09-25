@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * DataSphere Serverless Environment Demo
  *
@@ -25,7 +27,7 @@ use SignalWire\Agent\AgentBase;
 function requireEnv(string $name): string
 {
     $value = $_ENV[$name] ?? getenv($name);
-    if (!$value) {
+    if (!is_string($value) || $value === '') {
         echo "Error: Required environment variable {$name} is not set\n\n";
         echo "Required:\n";
         echo "  SIGNALWIRE_SPACE_NAME, SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, DATASPHERE_DOCUMENT_ID\n";
@@ -41,11 +43,21 @@ $projectId  = requireEnv('SIGNALWIRE_PROJECT_ID');
 $token      = requireEnv('SIGNALWIRE_API_TOKEN');
 $documentId = requireEnv('DATASPHERE_DOCUMENT_ID');
 
-$count    = (int) ($_ENV['DATASPHERE_COUNT'] ?? getenv('DATASPHERE_COUNT') ?: 3);
-$distance = (float) ($_ENV['DATASPHERE_DISTANCE'] ?? getenv('DATASPHERE_DISTANCE') ?: 4.0);
-$tagsRaw  = $_ENV['DATASPHERE_TAGS'] ?? getenv('DATASPHERE_TAGS') ?: '';
-$tags     = $tagsRaw ? array_map('trim', explode(',', $tagsRaw)) : [];
-$language = $_ENV['DATASPHERE_LANGUAGE'] ?? getenv('DATASPHERE_LANGUAGE') ?: null;
+/** Read an optional setting from the environment as a string. */
+function optionalEnv(string $name): string
+{
+    $value = $_ENV[$name] ?? getenv($name);
+
+    return is_string($value) ? $value : '';
+}
+
+$countRaw    = optionalEnv('DATASPHERE_COUNT');
+$distanceRaw = optionalEnv('DATASPHERE_DISTANCE');
+$count    = $countRaw !== '' ? (int) $countRaw : 3;
+$distance = $distanceRaw !== '' ? (float) $distanceRaw : 4.0;
+$tagsRaw  = optionalEnv('DATASPHERE_TAGS');
+$tags     = $tagsRaw !== '' ? array_map('trim', explode(',', $tagsRaw)) : [];
+$language = optionalEnv('DATASPHERE_LANGUAGE') ?: null;
 
 $agent = new AgentBase(name: 'DataSphere Serverless Env Demo', route: '/ds-env');
 $agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
@@ -71,10 +83,14 @@ try {
     echo "Added DataSphere Serverless skill\n";
     echo "  Document ID: {$documentId}\n";
     echo "  Count: {$count}, Distance: {$distance}\n";
-    if ($tags) echo "  Tags: " . implode(', ', $tags) . "\n";
-    if ($language) echo "  Language: {$language}\n";
+    if ($tags) {
+        echo '  Tags: ' . implode(', ', $tags) . "\n";
+    }
+    if ($language) {
+        echo "  Language: {$language}\n";
+    }
 } catch (\Exception $e) {
-    echo "Failed: " . $e->getMessage() . "\n";
+    echo 'Failed: ' . $e->getMessage() . "\n";
     exit(1);
 }
 

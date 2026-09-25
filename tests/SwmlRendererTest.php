@@ -108,7 +108,14 @@ class SwmlRendererTest extends TestCase
         $this->assertSame('https://a.example.com/swaig', Shape::at($ai, 'SWAIG', 'defaults', 'web_hook_url'));
     }
 
-    public function testRenderFunctionResponseSwmlBuildsPlay(): void
+    /**
+     * The SWML `play` verb has NO `text` key — its config is PlayWithURL /
+     * PlayWithURLS, and spoken text goes through the `say:` URL scheme (schema
+     * `play_url` pattern `^(http://.*|...|say: ?.*|...)$`). Emitting
+     * `{"text": ...}` produced a document the schema rejects. Mirrors the
+     * reference's `service.add_verb("play", {"url": f"say:{response_text}"})`.
+     */
+    public function testRenderFunctionResponseSwmlPlaysTextViaSayUrl(): void
     {
         $swml = SwmlRenderer::renderFunctionResponseSwml('Here is your answer.', $this->service());
         $doc = $this->decode($swml);
@@ -118,7 +125,29 @@ class SwmlRendererTest extends TestCase
                 $play = $verb['play'];
             }
         }
-        $this->assertSame(['text' => 'Here is your answer.'], $play);
+        $this->assertSame(['url' => 'say:Here is your answer.'], $play);
+    }
+
+    /**
+     * The emitted play config must survive the port's OWN schema validator.
+     * The renderer used to reach past it via the raw Document entry point, so
+     * an invalid verb could never be caught; route through Service::addVerb.
+     */
+    public function testRenderFunctionResponseSwmlPlayPassesSchemaValidation(): void
+    {
+        $service = $this->service();
+        $swml = SwmlRenderer::renderFunctionResponseSwml('Here is your answer.', $service);
+        $doc = $this->decode($swml);
+        $play = null;
+        foreach (Shape::sub($doc, 'sections', 'main') as $verb) {
+            if (is_array($verb) && isset($verb['play'])) {
+                $play = $verb['play'];
+            }
+        }
+        $this->assertIsArray($play);
+        /** @var array<string,mixed> $play */
+        [$isValid, $errors] = $service->getSchemaUtils()->validateVerb('play', $play);
+        $this->assertTrue($isValid, 'emitted play config rejected: ' . implode('; ', $errors));
     }
 
     public function testRenderFunctionResponseSwmlAppendsActions(): void

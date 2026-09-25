@@ -72,7 +72,7 @@ const CALL_PATH = '/api/fabric/addresses';
  *
  * @return array<string, array{scenario: array{status:int, response:mixed}|null, transport: bool}>
  */
-function corpus(): array
+function emitCorpus(): array
 {
     return [
         // 200 success baseline: no error, nothing raised.
@@ -198,7 +198,7 @@ $journal->scopeTo($authHeader);
 /** @var array<string, array{raised:bool, error_kind:?string, status_code:?int, body_error_code:?string, request_count:int}> $out */
 $out = [];
 
-foreach (corpus() as $cid => $case) {
+foreach (emitCorpus() as $cid => $case) {
     // Fresh scenarios + journal per case so request_count is exact.
     $scenarios->reset();
     resetJournal($mockUrl); // global journal reset (scoped reset is a no-op)

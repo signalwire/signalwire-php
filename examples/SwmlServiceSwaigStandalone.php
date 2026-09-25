@@ -92,7 +92,8 @@ function buildStandaloneSwaigService(): Service
 //      and dispatch the inbound request via Service::run().
 // Other SAPIs (web tests including this file via require) skip auto-run.
 $isCliEntrypoint = PHP_SAPI === 'cli'
-    && isset($_SERVER['argv'][0])
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
     && \realpath($_SERVER['argv'][0]) === __FILE__;
 $isCliServer = PHP_SAPI === 'cli-server';
 if ($isCliEntrypoint || $isCliServer) {

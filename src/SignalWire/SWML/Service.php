@@ -12,14 +12,54 @@ use SignalWire\Utils\SchemaUtils;
 /**
  * SWML service — builds and serves an SWML document over HTTP.
  *
- * Every SWML schema verb is auto-vivified through {@see __call()} (the PHP
- * analog of Python's runtime `__getattr__` verb dispatch) and dispatched as
- * `$service->verb([$section], [$config])` — the first argument may be the
- * target section name OR the verb config array (see __call). Because that
- * receiver arity is genuinely polymorphic, the verbs are documented on
- * __call rather than as fixed-signature `@method` tags. (SWMLBuilder, whose
- * verb signature is the simpler `verb(array $config = [])`, DOES carry
- * per-verb @method tags.)
+ * Every SWML schema verb is auto-vivified through {@see __call()} and
+ * dispatched as `$service->verb([$section], [$config])` — the first argument
+ * may be the target section name OR the verb config array (see __call).
+ *
+ * That polymorphic first argument is expressed below as
+ * `string|array<string, mixed> $sectionOrConfig`, so the `@method` tags carry
+ * the real receiver arity and IDEs and PHPStan can both see the verbs. (They
+ * were previously documented only in __call's docblock, which meant every
+ * `$service->answer()` in the examples read as a call to an undefined method
+ * once examples/ came under the analyser.) The reserved-word verbs
+ * `goto`/`return`/`switch`/`unset` dispatch identically but are omitted — they
+ * are not callable as bare `->verb()` syntax in PHP.
+ *
+ * @method static ai(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `ai` verb.
+ * @method static ai_sidecar(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `ai_sidecar` verb.
+ * @method static amazon_bedrock(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `amazon_bedrock` verb.
+ * @method static answer(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `answer` verb.
+ * @method static cond(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `cond` verb.
+ * @method static connect(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `connect` verb.
+ * @method static denoise(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `denoise` verb.
+ * @method static detect_machine(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `detect_machine` verb.
+ * @method static enter_queue(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `enter_queue` verb.
+ * @method static execute(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `execute` verb.
+ * @method static hangup(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `hangup` verb.
+ * @method static join_conference(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `join_conference` verb.
+ * @method static join_room(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `join_room` verb.
+ * @method static label(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `label` verb.
+ * @method static live_transcribe(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `live_transcribe` verb.
+ * @method static live_translate(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `live_translate` verb.
+ * @method static pay(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `pay` verb.
+ * @method static play(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `play` verb.
+ * @method static prompt(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `prompt` verb.
+ * @method static receive_fax(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `receive_fax` verb.
+ * @method static record(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `record` verb.
+ * @method static record_call(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `record_call` verb.
+ * @method static request(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `request` verb.
+ * @method static send_digits(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `send_digits` verb.
+ * @method static send_fax(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `send_fax` verb.
+ * @method static send_sms(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `send_sms` verb.
+ * @method static set(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `set` verb.
+ * @method static sip_refer(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `sip_refer` verb.
+ * @method static sleep(int|string $sectionOrDuration, int $duration = 0) Auto-vivified SWML `sleep` verb (integer milliseconds).
+ * @method static stop_denoise(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `stop_denoise` verb.
+ * @method static stop_record_call(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `stop_record_call` verb.
+ * @method static stop_tap(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `stop_tap` verb.
+ * @method static tap(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `tap` verb.
+ * @method static transfer(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `transfer` verb.
+ * @method static user_event(string|array<string, mixed> $sectionOrConfig = [], array<string, mixed> $config = []) Auto-vivified SWML `user_event` verb.
  */
 class Service implements RequestHandlerLike
 {
@@ -36,24 +76,48 @@ class Service implements RequestHandlerLike
 
     /**
      * Constructor-supplied schema path, forwarded to SchemaUtils when the
-     * helper is built. Null means "use the bundled schema.json". Mirrors
-     * Python SWMLService's ``schema_path`` param.
+     * helper is built. Null means "use the bundled schema.json".
      */
     protected ?string $schemaPath = null;
 
     /**
      * Whether SWML schema validation is enabled. Forwarded to SchemaUtils
-     * (which additionally honours SWML_SKIP_SCHEMA_VALIDATION). Mirrors
-     * Python SWMLService's ``self._schema_validation``.
+     * (which additionally honours SWML_SKIP_SCHEMA_VALIDATION).
      */
     protected bool $schemaValidation = true;
 
     /**
      * Unified security configuration (SSL/CORS/HSTS/basic-auth/limits), built
-     * from defaults + env + the optional config file. Mirrors Python
-     * SWMLService's ``self.security``.
+     * from defaults + env + the optional config file.
      */
     protected SecurityConfig $security;
+
+    /**
+     * Whether TLS serving is enabled. Mirrored off ``$this->security`` at
+     * construction. Public because it is a caller-observable VALUE: a caller
+     * reads it to know which scheme the service serves, and may SET it before
+     * ``serve()`` to flip TLS on.
+     */
+    public bool $sslEnabled = false;
+
+    /**
+     * TLS certificate path (PEM). Mirrored off ``$this->security``; see
+     * ``$sslEnabled``. Null when TLS is not configured.
+     */
+    public ?string $sslCertPath = null;
+
+    /**
+     * TLS private-key path (PEM). Mirrored off ``$this->security``; see
+     * ``$sslEnabled``. Null when TLS is not configured.
+     */
+    public ?string $sslKeyPath = null;
+
+    /**
+     * The domain this service is served under. Mirrored off
+     * ``$this->security``. Used as the host part of the public URL when TLS
+     * is enabled.
+     */
+    public ?string $domain = null;
 
     protected Logger $logger;
 
@@ -64,31 +128,29 @@ class Service implements RequestHandlerLike
     protected array $routingCallbacks = [];
 
     /**
-     * Registry of specialized verb handlers (e.g. the "ai" verb). Mirrors
-     * Python SWMLService's `self.verb_registry`. Consulted by add_verb /
-     * add_verb_to_section before falling back to schema validation.
+     * Registry of specialized verb handlers (e.g. the "ai" verb). Consulted
+     * by add_verb / add_verb_to_section before falling back to schema
+     * validation.
      */
     protected VerbHandlerRegistry $verbRegistry;
 
     /**
      * Manually-set proxy base URL for webhook URL generation. Lives on the
-     * base Service (mirrors SWMLService/WebMixin) so both a plain
-     * SWMLService and AgentBase share one field; getProxyUrlBase() reads it.
+     * base Service so both a plain SWMLService and AgentBase share one
+     * field; getProxyUrlBase() reads it.
      */
     protected ?string $manualProxyUrl = null;
 
     /**
-     * Whether the web server is running. Flipped off by stop(); mirrors
-     * Python SWMLService's `self._running`.
+     * Whether the web server is running. Flipped off by stop().
      */
     protected bool $running = false;
 
     /**
      * Whether X-Forwarded-Proto / X-Forwarded-Host may be honoured when
      * reconstructing the URL that webhook signatures are validated against.
-     * Lives on the base Service because reconstructPublicUrl() does — the
-     * constructor knob is AgentBase's `trustProxyForSignature`, mirroring the
-     * reference (AgentBase.__init__ -> web_mixin's `trust_proxy`). Defaults
+     * Lives on the base Service because reconstructPublicUrl() does; the
+     * constructor knob is AgentBase's `trustProxyForSignature`. Defaults
      * false: proxy headers are spoofable.
      */
     protected bool $trustProxyForSignature = false;
@@ -152,6 +214,15 @@ class Service implements RequestHandlerLike
         // Python SWMLService.__init__: `self.security = SecurityConfig(
         // config_file=config_file, service_name=name)`.
         $this->security = new SecurityConfig(configFile: $configFile, serviceName: $name);
+
+        // Mirror the TLS-serving values onto the service itself, exactly as the
+        // reference does (core/swml_service.py:143-146). These are the values a
+        // caller reads to know how the service is served, and writes to flip TLS
+        // on before serve().
+        $this->sslEnabled = $this->security->sslEnabled;
+        $this->domain = $this->security->domain;
+        $this->sslCertPath = $this->security->sslCertPath;
+        $this->sslKeyPath = $this->security->sslKeyPath;
 
         // Auth: explicit > env > config file > auto-generated. The middle two
         // layers both live in SecurityConfig (env first, then the config
@@ -245,7 +316,14 @@ class Service implements RequestHandlerLike
             }
         }
 
-        $this->document->addVerbToSection($section, $method, $config);
+        // Route through the VALIDATING addVerbToSection, not the raw Document.
+        // A caller writing `$service->play([...])` reads exactly like the
+        // validating `$service->addVerb('play', [...])` and must behave the
+        // same; going raw here made this a silent second entry point that
+        // accepted schema-invalid configs. Mirrors the reference's generated
+        // verb methods, which call `self_instance.add_verb(name, config)`
+        // (core/swml_service.py:316) — the validating path.
+        $this->addVerbToSection($section, $method, $config);
         return $this;
     }
 
@@ -262,7 +340,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Validate provided basic-auth credentials against the configured ones
-     * using a constant-time comparison. Mirrors * AuthMixin.validate_basic_auth(username, password). */
+     * using a constant-time comparison. */
     public function validateBasicAuth(string $username, string $password): bool
     {
         return hash_equals($this->basicAuthUser, $username)
@@ -270,7 +348,7 @@ class Service implements RequestHandlerLike
     }
 
     /** Get (user, password, source) where source is "provided",
-     * "environment", or "generated". Mirrors * AuthMixin.get_basic_auth_credentials(include_source=True).
+     * "environment", or "generated".
      *
      * @return array{string, string, string} [user, password, source]
      */
@@ -293,21 +371,38 @@ class Service implements RequestHandlerLike
 
     /**
      * Build the full URL for this service.
+     *
+     * Honours the TLS-serving values ($sslEnabled / $domain): https when TLS
+     * is on, the domain as the host part when one is configured, and the port
+     * elided for the scheme's standard port (443/80).
      */
     public function getFullUrl(bool $includeAuth = false): string
     {
         $auth = $includeAuth
             ? "{$this->basicAuthUser}:{$this->basicAuthPassword}@"
             : '';
+        $scheme = $this->sslEnabled ? 'https' : 'http';
+        if ($this->sslEnabled && $this->domain !== null && $this->domain !== '') {
+            $hostPart = ($this->port === 443 || $this->port === 80)
+                ? $this->domain
+                : "{$this->domain}:{$this->port}";
+        } else {
+            $hostPart = "{$this->host}:{$this->port}";
+        }
         $path = $this->route;
-        return "http://{$auth}{$this->host}:{$this->port}{$path}";
+        return "{$scheme}://{$auth}{$hostPart}{$path}";
     }
 
     // ------------------------------------------------------------------
     // Routing callbacks
     // ------------------------------------------------------------------
 
-    public function registerRoutingCallback(string $path, callable $callback): void
+    /**
+     * Register a routing callback at ``$path`` (default "/sip").
+     *
+     * @param callable(array<string,mixed>, array<string,mixed>): ?string $callback
+     */
+    public function registerRoutingCallback(callable $callback, string $path = '/sip'): void
     {
         // Normalize the path for consistent lookup (Python parity: strip a
         // trailing slash, ensure a single leading slash). "/sip/" -> "/sip",
@@ -329,7 +424,6 @@ class Service implements RequestHandlerLike
      * Consults the verb-handler registry first (e.g. the "ai" verb), falling
      * back to schema-based validation for standard verbs. Raises
      * {@see \SignalWire\Utils\SchemaValidationError} on an invalid config.
-     * Mirrors Python's `SWMLService.add_verb()`.
      *
      * @param array<string, mixed>|int $config Verb config, or a direct integer
      *                                          for verbs like `sleep`.
@@ -344,8 +438,7 @@ class Service implements RequestHandlerLike
     /**
      * Add a new section to the document.
      *
-     * Mirrors Python's `SWMLService.add_section()`: returns true if created,
-     * false if the section already existed.
+     * Returns true if created, false if the section already existed.
      */
     public function addSection(string $sectionName): bool
     {
@@ -357,7 +450,7 @@ class Service implements RequestHandlerLike
      *
      * Consults the verb-handler registry first, falling back to schema
      * validation; raises {@see \SignalWire\Utils\SchemaValidationError} on an
-     * invalid config. Mirrors Python's `SWMLService.add_verb_to_section()`.
+     * invalid config.
      *
      * @param array<string, mixed>|int $config
      */
@@ -411,7 +504,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Reset the current document to an empty state.
-     * Mirrors Python's `SWMLService.reset_document()`.
      */
     public function resetDocument(): void
     {
@@ -420,7 +512,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Render the current SWML document as a JSON string.
-     * Mirrors Python's `SWMLService.render_document()`.
      */
     public function renderDocument(): string
     {
@@ -429,7 +520,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Register a custom verb handler.
-     * Mirrors Python's `SWMLService.register_verb_handler()`.
      */
     public function registerVerbHandler(SWMLVerbHandler $handler): void
     {
@@ -438,7 +528,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Whether full JSON Schema validation is enabled.
-     * Mirrors Python's `@property full_validation_enabled`.
      */
     public function fullValidationEnabled(): bool
     {
@@ -448,11 +537,10 @@ class Service implements RequestHandlerLike
     /**
      * Return this service as a mountable request handler.
      *
-     * Python returns a FastAPI `APIRouter`; PHP has no framework router, so the
-     * Service itself (which implements {@see RequestHandlerLike} via
-     * handleRequest) is the mountable unit. Mirrors Python's
-     * `SWMLService.as_router()` — callers mount the returned handler into their
-     * framework and dispatch through it.
+     * PHP has no framework router, so the Service itself — which implements
+     * {@see RequestHandlerLike} via handleRequest — IS the mountable unit.
+     * Callers mount the returned handler into their framework and dispatch
+     * through it.
      */
     public function asRouter(): RequestHandlerLike
     {
@@ -461,7 +549,6 @@ class Service implements RequestHandlerLike
 
     /**
      * Manually override the proxy base URL used for webhook URL generation.
-     * Mirrors Python's `SWMLService.manual_set_proxy_url()`.
      */
     public function manualSetProxyUrl(string $url): static
     {
@@ -470,8 +557,7 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * Stop the web server.
-     * Mirrors Python's `SWMLService.stop()` — flips the running flag off.
+     * Stop the web server — flips the running flag off.
      */
     public function stop(): void
     {
@@ -490,13 +576,10 @@ class Service implements RequestHandlerLike
      *
      * @param array<string, mixed> $parameters JSON-Schema `properties` map for the tool argument,
      *   OR a COMPLETE JSON-Schema object ({type, properties[, required]}) which is passed through
-     *   as-is. Mirrors Python `SWAIGFunction._ensure_parameter_structure`.
+     *   as-is.
      * @param array<string, mixed> $extraFields Additional SWAIG-only fields (e.g.
      *   `meta_data_token`, `web_hook_auth_user`) merged at the TOP LEVEL of the generated
-     *   function definition — siblings of `argument`, NOT nested inside it. This is PHP's
-     *   positional expression of Python's `**swaig_fields` bag (mirrors the documented
-     *   `SWAIGFunction.__init__` `extraFields` idiom); Python renders these via
-     *   `function_def.update(self.extra_swaig_fields)`.
+     *   function definition — siblings of `argument`, NOT nested inside it.
      */
     public function defineTool(
         string $name,
@@ -525,8 +608,7 @@ class Service implements RequestHandlerLike
      * When $parameters is a bare `properties` map it is wrapped in
      * {type: object, properties: $parameters}. When it is ALREADY a complete
      * JSON-Schema object (has both `type` and `properties`) it is passed
-     * through unchanged — wrapping it would double-nest the schema. Mirrors
-     * Python `SWAIGFunction._ensure_parameter_structure`.
+     * through unchanged — wrapping it would double-nest the schema.
      *
      * @param array<string, mixed> $parameters
      * @return array<string, mixed>
@@ -587,15 +669,13 @@ class Service implements RequestHandlerLike
         return $this->tools;
     }
 
-    /** Whether a SWAIG function with the given name is registered.
-     * Mirrors ``ToolRegistry.has_function``. */
+    /** Whether a SWAIG function with the given name is registered. */
     public function hasFunction(string $name): bool
     {
         return isset($this->tools[$name]);
     }
 
     /** Get a registered SWAIG function by name, or null when absent.
-     * Mirrors ``ToolRegistry.get_function``.
      *
      * @return array<string, mixed>|null */
     public function getFunction(string $name): ?array
@@ -604,7 +684,6 @@ class Service implements RequestHandlerLike
     }
 
     /** Snapshot of all registered SWAIG functions keyed by name.
-     * Mirrors ``ToolRegistry.get_all_functions``.
      *
      * @return array<string, array<string, mixed>> */
     public function getAllFunctions(): array
@@ -612,8 +691,7 @@ class Service implements RequestHandlerLike
         return $this->tools;  // copy on read in PHP arrays
     }
 
-    /** Remove a registered SWAIG function. True on success, false if absent.
-     * Mirrors ``ToolRegistry.remove_function``. */
+    /** Remove a registered SWAIG function. True on success, false if absent. */
     public function removeFunction(string $name): bool
     {
         if (!isset($this->tools[$name])) {
@@ -638,10 +716,10 @@ class Service implements RequestHandlerLike
     /**
      * Dispatch a function call to the registered handler.
      *
-     * @param array<string, mixed> $args    parsed function arguments
-     * @param array<string, mixed> $rawData full SWAIG request payload
+     * @param array<string, mixed>      $args    parsed function arguments
+     * @param array<string, mixed>|null $rawData full SWAIG request payload
      */
-    public function onFunctionCall(string $name, array $args, array $rawData): ?FunctionResult
+    public function onFunctionCall(string $name, array $args, ?array $rawData = null): ?FunctionResult
     {
         if (!isset($this->tools[$name])) {
             return null;
@@ -680,22 +758,149 @@ class Service implements RequestHandlerLike
     }
 
     /**
+     * Enforce `secure=true` for one SWAIG call, independent of transport.
+     *
+     * This is the SOLE security decision for a SWAIG call, deliberately free of
+     * any request/transport type so that EVERY transport — the direct HTTP
+     * dispatcher and all four serverless envelopes (lambda, cgi, google cloud
+     * function, azure function) — reaches the identical check with identical
+     * semantics. A transport is responsible only for EXTRACTING the credential
+     * from its own payload shape; none of them re-implements the decision.
+     *
+     * A tool registered with `secure: true` REQUIRES a valid `__token`. An
+     * ABSENT token is refused exactly like an invalid one — omitting the
+     * credential must never be weaker than presenting a wrong one, or `secure`
+     * would be a flag that permits anonymous calls. Likewise a missing
+     * `$callId`: a token is only meaningful bound to a call, so with none there
+     * is nothing to validate against and the call counts as unvalidated.
+     *
+     * The refusal is delivered as a **200 + FunctionResult body**, never an
+     * HTTP error status: the engine has no handling for a SWAIG refusal
+     * status, so the tool reports that it cannot execute and the model relays
+     * that to the caller.
+     *
+     * @param  string|null $token   The `__token` credential, or null when absent.
+     * @param  string|null $callId  The call the token must be bound to, or null.
+     * @return array<string, mixed>|null null to proceed with dispatch, or the
+     *         FunctionResult-shaped refusal to return INSTEAD of dispatching.
+     */
+    protected function swaigValidateToken(
+        string $functionName,
+        ?string $token,
+        ?string $callId,
+    ): ?array {
+        $func = $this->tools[$functionName] ?? null;
+        if ($func === null) {
+            // Unknown function: not this hook's decision — dispatch reports it.
+            return null;
+        }
+
+        // No token machinery on this service — nothing can be minted, so
+        // nothing can be validated, and enforcing would make every secure tool
+        // permanently unreachable rather than protected. The reference draws
+        // the same line: its base SWMLService hook returns "proceed", and the
+        // enforcing override is guarded on the session manager's presence
+        // (`hasattr(self, "_session_manager")`). Enforcement therefore begins
+        // exactly where credentials can exist: at AgentBase.
+        if (!$this->hasSwaigTokenValidation()) {
+            return null;
+        }
+
+        // A token can only be validated against a call_id; without one there is
+        // nothing to check it against, so treat it as unvalidated.
+        $isValid = false;
+        if ($token !== null && $token !== '' && $callId !== null && $callId !== '') {
+            $isValid = $this->validateSwaigToolToken($functionName, $token, $callId);
+        }
+
+        if ($isValid) {
+            return null;
+        }
+
+        if (($func['_secure'] ?? true) === true) {
+            $this->logger->warn(
+                'secure_function_refused: function="' . $functionName . '" '
+                . 'token_present="' . (($token !== null && $token !== '') ? 'true' : 'false') . '"'
+            );
+            return (new FunctionResult(
+                "I'm sorry, the security token for this function is invalid "
+                . 'or expired. I cannot execute this action.'
+            ))->toArray();
+        }
+
+        // secure: false — the tool runs ungated regardless of the credential.
+        return null;
+    }
+
+    /**
+     * Whether this service can validate per-call SWAIG tool tokens at all.
+     *
+     * False on the bare Service (it has no session manager, so it can neither
+     * MINT nor check a token); AgentBase overrides it to true. This is what
+     * scopes enforcement to the services that actually issue credentials —
+     * see {@see swaigValidateToken()} for why.
+     */
+    protected function hasSwaigTokenValidation(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Validate a per-call SWAIG tool token. Only ever reached when
+     * {@see hasSwaigTokenValidation()} is true; AgentBase overrides it to
+     * delegate to its SessionManager.
+     */
+    protected function validateSwaigToolToken(string $functionName, string $token, string $callId): bool
+    {
+        return false;
+    }
+
+    /**
+     * Extract the `__token` credential from a parsed query mapping.
+     *
+     * The reserved `__token` name is preferred (it cannot collide with a
+     * caller's own `token` parameter); a bare `token` is accepted as an
+     * alias.
+     *
+     * @param array<string, mixed> $query
+     */
+    protected static function swaigTokenFromQuery(array $query): ?string
+    {
+        foreach (['__token', 'token'] as $key) {
+            $value = $query[$key] ?? null;
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Extension point: invoked between argument parsing and function dispatch.
-     * AgentBase may override to add session-token validation or ephemeral
-     * config. Returns [target, shortCircuit]: shortCircuit non-null replies
-     * directly without dispatch.
+     * AgentBase may override to add ephemeral per-request config. Returns
+     * [target, shortCircuit]: shortCircuit non-null replies directly without
+     * dispatch.
+     *
+     * Security is NOT decided here — {@see swaigValidateToken()} owns that, and
+     * {@see handleSwaigRequest()} runs it BEFORE this hook, so a subclass that
+     * overrides this hook cannot accidentally drop token enforcement.
      *
      * @param array<string, mixed> $requestData
      * @param array<string, string> $headers
+     * @param array<string, mixed> $query
      * @return array{0: self, 1: ?array<string, mixed>}
      */
-    protected function swaigPreDispatch(array $requestData, array $headers, string $functionName): array
-    {
+    protected function swaigPreDispatch(
+        array $requestData,
+        array $headers,
+        string $functionName,
+        array $query = [],
+    ): array {
         return [$this, null];
     }
 
     // ------------------------------------------------------------------
-    // SWML customization hooks (Python WebMixin parity)
+    // SWML customization hooks
     // ------------------------------------------------------------------
 
     /**
@@ -705,10 +910,6 @@ class Service implements RequestHandlerLike
      *
      * Return null to use the default SWML rendering, or an array of
      * modifications to merge into the rendered document.
-     *
-     * Mirrors WebMixin.on_request(request_data, callback_path).
-     * The Python third `request` arg is FastAPI-specific and is not
-     * mirrored.
      *
      * @param array<string, mixed>|null $requestData
      * @return array<string, mixed>|null
@@ -723,8 +924,6 @@ class Service implements RequestHandlerLike
      * request data. The default implementation returns null (no
      * modification). Subclasses override to inspect the body or
      * callback path and return an associative array of overrides.
-     *
-     * Mirrors WebMixin.on_swml_request(request_data, callback_path).
      *
      * @param array<string, mixed>|null $requestData
      * @return array<string, mixed>|null
@@ -751,10 +950,11 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * This service, for the reference's `ToolRegistry.agent` back-reference.
-     * Python factors SWAIG registration into a `ToolRegistry` collaborator that
-     * holds a reference BACK to the agent; php flattens the registry onto the
-     * service itself, so the back-reference resolves to `$this`.
+     * This service itself.
+     *
+     * SWAIG registration is flattened ONTO the service rather than split into
+     * a registry collaborator that holds a reference back to it, so the
+     * back-reference an SDK consumer would follow resolves to `$this`.
      */
     public function getAgent(): self
     {
@@ -780,10 +980,8 @@ class Service implements RequestHandlerLike
     }
 
     /**
-     * SchemaUtils helper bound to this Service. Mirrors Python's
-     * self.schema_utils public instance attribute on SWMLService, built from
-     * the constructor's `schemaPath` / `schemaValidation`. Built lazily on
-     * first access.
+     * SchemaUtils helper bound to this Service, built from the constructor's
+     * `schemaPath` / `schemaValidation`. Built lazily on first access.
      */
     public function getSchemaUtils(): SchemaUtils
     {
@@ -793,11 +991,27 @@ class Service implements RequestHandlerLike
         return $this->schemaUtils;
     }
 
+    /**
+     * Render this service's document as compact SWML JSON, with slashes and
+     * unicode left unescaped.
+     *
+     * Renders the DOCUMENT as built — it does not go through
+     * {@see Service::renderSwml()}, so a subclass that overrides that
+     * per-request hook is bypassed here.
+     *
+     * @throws \RuntimeException if the document cannot be JSON-encoded.
+     */
     public function render(): string
     {
         return $this->document->render();
     }
 
+    /**
+     * As {@see Service::render()}, but pretty-printed for human reading.
+     * Same content, different whitespace.
+     *
+     * @throws \RuntimeException if the document cannot be JSON-encoded.
+     */
     public function renderPretty(): string
     {
         return $this->document->renderPretty();
@@ -828,9 +1042,30 @@ class Service implements RequestHandlerLike
     public function handleRequest(
         string $method,
         string $path,
-        array $headers = [],
+        array $headers,
         ?string $body = null,
     ): array {
+        // Split any query string off the path BEFORE routing. Routing compares
+        // $path against $this->route by exact match / prefix, so a path that
+        // still carries "?..." would never match and would 404. The parsed
+        // query is load-bearing for SWAIG: the per-call `__token` credential
+        // rides the query string on every transport (the call_id rides the
+        // POST body), so it must survive to handleSwaigRequest().
+        $query = [];
+        $qPos = strpos($path, '?');
+        if ($qPos !== false) {
+            $parsed = [];
+            parse_str(substr($path, $qPos + 1), $parsed);
+            // parse_str yields int keys for numeric parameter names; the query
+            // map is string-keyed by contract, so those are dropped.
+            foreach ($parsed as $k => $v) {
+                if (is_string($k)) {
+                    $query[$k] = $v;
+                }
+            }
+            $path = substr($path, 0, $qPos);
+        }
+
         // Health/ready: no auth
         if ($path === '/health') {
             return $this->jsonResponse(200, ['status' => 'healthy']);
@@ -907,7 +1142,7 @@ class Service implements RequestHandlerLike
             return $this->handleSwmlRequest($method, $requestData, $headers);
         }
         if ($subPath === '/swaig') {
-            return $this->handleSwaigRequest($method, $requestData, $headers);
+            return $this->handleSwaigRequest($method, $requestData, $headers, $query);
         }
         if ($subPath === '/post_prompt') {
             return $this->handlePostPrompt($requestData, $headers);
@@ -974,18 +1209,25 @@ class Service implements RequestHandlerLike
      * Handle SWAIG function dispatch.
      *
      * GET: return the rendered SWML document (parallel to root /).
-     * POST: parse {function, argument, call_id}, validate, run pre-dispatch
-     * hook, call onFunctionCall, return the FunctionResult.
+     * POST: parse {function, argument, call_id}, enforce `secure` via
+     * {@see swaigValidateToken()}, run the pre-dispatch hook, call
+     * onFunctionCall, return the FunctionResult.
      *
      * Lifted from AgentBase so non-agent SWMLServices (e.g. ai_sidecar host)
      * can serve /swaig without subclassing AgentBase.
      *
      * @param array<string, string> $headers
      * @param array<string, mixed>|null $requestData
+     * @param array<string, mixed> $query parsed query string — where the
+     *        per-call `__token` credential rides, on every transport.
      * @return array{int, array<string, string>, string}
      */
-    protected function handleSwaigRequest(string $method, ?array $requestData, array $headers): array
-    {
+    protected function handleSwaigRequest(
+        string $method,
+        ?array $requestData,
+        array $headers,
+        array $query = [],
+    ): array {
         if (strtoupper($method) === 'GET') {
             $swml = $this->renderSwml($requestData, $headers);
             return $this->jsonResponse(200, $swml);
@@ -1017,7 +1259,18 @@ class Service implements RequestHandlerLike
             $args = [];
         }
 
-        [$target, $shortCircuit] = $this->swaigPreDispatch($requestData, $headers, $functionName);
+        // Security FIRST, and unconditionally — before the (overridable)
+        // pre-dispatch hook and before any handler runs. The credential rides
+        // the query string; the call_id rides the POST body. That split is
+        // identical on every transport, so serverless is not a weaker one.
+        $callIdRaw = $requestData['call_id'] ?? null;
+        $callId = is_string($callIdRaw) && $callIdRaw !== '' ? $callIdRaw : null;
+        $refusal = $this->swaigValidateToken($functionName, self::swaigTokenFromQuery($query), $callId);
+        if ($refusal !== null) {
+            return $this->jsonResponse(200, $refusal);
+        }
+
+        [$target, $shortCircuit] = $this->swaigPreDispatch($requestData, $headers, $functionName, $query);
         if ($shortCircuit !== null) {
             return $this->jsonResponse(200, $shortCircuit);
         }
@@ -1143,6 +1396,12 @@ class Service implements RequestHandlerLike
             return;
         }
 
+        // SECURITY (#90): refuse BEFORE binding when TLS is switched on but
+        // unusable. This path never consulted the TLS config at all — it
+        // unconditionally spawned the plaintext `php -S` below while getFullUrl()
+        // advertised https:// to callers.
+        $this->assertTlsUsableOrRefuse();
+
         $this->logger->info("Starting server on {$this->host}:{$this->port} ...");
         $this->logger->info("Basic-auth credentials — user: {$this->basicAuthUser}  password: [REDACTED]");
 
@@ -1164,6 +1423,20 @@ class Service implements RequestHandlerLike
     }
 
     /**
+     * Refuse to serve when TLS is enabled but unusable (#90).
+     *
+     * Delegates to {@see \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse()}
+     * so this path, AgentServer::serve() and WebService::start() refuse
+     * identically. A no-op when TLS was never requested.
+     *
+     * @throws \RuntimeException when ssl is enabled but the cert/key is unusable
+     */
+    private function assertTlsUsableOrRefuse(): void
+    {
+        \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse($this->security);
+    }
+
+    /**
      * Run the service (alias for serve).
      */
     public function run(): void
@@ -1180,8 +1453,15 @@ class Service implements RequestHandlerLike
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $method = is_string($method) ? $method : 'GET';
-        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
+        $requestUri = is_string($_SERVER['REQUEST_URI'] ?? null) ? $_SERVER['REQUEST_URI'] : '/';
+        $parsedPath = parse_url($requestUri, PHP_URL_PATH);
+        $path = is_string($parsedPath) && $parsedPath !== '' ? $parsedPath : '/';
+        // Keep the query string: the per-call SWAIG `__token` rides it, and
+        // handleRequest() splits it back off before routing.
+        $parsedQuery = parse_url($requestUri, PHP_URL_QUERY);
+        if (is_string($parsedQuery) && $parsedQuery !== '') {
+            $path .= '?' . $parsedQuery;
+        }
 
         // Reconstruct headers from $_SERVER (cli-server doesn't populate
         // getallheaders() reliably; this works in every SAPI).
@@ -1422,11 +1702,12 @@ class Service implements RequestHandlerLike
             return false;
         }
 
-        if (!str_starts_with($authHeader, 'Basic ')) {
+        $param = self::schemeParam($authHeader, 'Basic');
+        if ($param === null) {
             return false;
         }
 
-        $decoded = base64_decode(substr($authHeader, 6), true);
+        $decoded = base64_decode($param, true);
         if ($decoded === false) {
             return false;
         }
@@ -1444,6 +1725,26 @@ class Service implements RequestHandlerLike
         $passOk = hash_equals($this->basicAuthPassword, $inputPass);
 
         return $userOk && $passOk;
+    }
+
+    /**
+     * Split an ``Authorization`` header into its scheme and credential:
+     * partition on the FIRST space, strip the credential.
+     *
+     * Returns ``null`` when the header is empty or its scheme token does not
+     * case-insensitively equal ``$expectedScheme``. RFC 7235 makes the
+     * auth-scheme token case-insensitive, so ``basic <cred>`` is legal.
+     */
+    private static function schemeParam(string $authHeader, string $expectedScheme): ?string
+    {
+        $sep = strpos($authHeader, ' ');
+        if ($sep === false) {
+            return null;
+        }
+        if (strcasecmp(substr($authHeader, 0, $sep), $expectedScheme) !== 0) {
+            return null;
+        }
+        return trim(substr($authHeader, $sep + 1));
     }
 
     /**

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Per-Question Function Whitelist Demo (gather_info)
  *
@@ -47,19 +49,19 @@ $agent->defineTool(
     'validate_email',
     'Validate that an email address is well-formed and deliverable',
     ['email' => ['type' => 'string']],
-    fn(array $args, array $raw) => new FunctionResult('valid'),
+    fn (array $args, array $raw) => new FunctionResult('valid'),
 );
 $agent->defineTool(
     'geocode_zip',
     'Look up the city/state for a US ZIP code',
     ['zip' => ['type' => 'string']],
-    fn(array $args, array $raw) => new FunctionResult('{"city":"...","state":"..."}'),
+    fn (array $args, array $raw) => new FunctionResult('{"city":"...","state":"..."}'),
 );
 $agent->defineTool(
     'check_age_eligibility',
     'Verify the customer is old enough for the product',
     ['age' => ['type' => 'integer']],
-    fn(array $args, array $raw) => new FunctionResult('eligible'),
+    fn (array $args, array $raw) => new FunctionResult('eligible'),
 );
 // These tools are NOT whitelisted on any gather question. They are
 // registered on the agent and active outside the gather, but during
@@ -68,13 +70,13 @@ $agent->defineTool(
     'escalate_to_human',
     'Transfer the conversation to a live agent',
     [],
-    fn(array $args, array $raw) => new FunctionResult('transferred'),
+    fn (array $args, array $raw) => new FunctionResult('transferred'),
 );
 $agent->defineTool(
     'lookup_existing_account',
     'Search for an existing account by email',
     ['email' => ['type' => 'string']],
-    fn(array $args, array $raw) => new FunctionResult('not found'),
+    fn (array $args, array $raw) => new FunctionResult('not found'),
 );
 
 // Build a single-context agent with one onboarding step.

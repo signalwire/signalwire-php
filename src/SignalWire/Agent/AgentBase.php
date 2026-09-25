@@ -46,9 +46,8 @@ class AgentBase extends Service implements AgentInterface
     /** @var list<string> */
     protected array $hints;
     /**
-     * Structured pattern hints. Each entry mirrors Python's
-     * ``AIConfigMixin.add_pattern_hint`` payload
-     * ``{hint, pattern, replace, ignore_case}`` and is merged into the
+     * Structured pattern hints. Each entry is a
+     * ``{hint, pattern, replace, ignore_case}`` payload, merged into the
      * rendered ``ai.hints`` array alongside the bare-string hints.
      *
      * @var list<array<string,mixed>>
@@ -102,19 +101,19 @@ class AgentBase extends Service implements AgentInterface
     // ── SIP routing ─────────────────────────────────────────────────────
     /**
      * SIP usernames registered to this agent (lowercased), the consultable
-     * set the SIP routing callback checks. Mirrors Python
-     * `AgentBase._sip_usernames` (a set). Keyed by lowercase username → true.
+     * set the SIP routing callback checks. A SET, keyed by lowercase
+     * username → true.
      *
      * @var array<string, bool>
      */
     protected array $sipUsernames = [];
 
     // ── Verbs ───────────────────────────────────────────────────────────
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string,mixed>}> */
     protected array $preAnswerVerbs;
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string,mixed>}> */
     protected array $postAnswerVerbs;
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{string, array<string,mixed>}> */
     protected array $postAiVerbs;
     /** @var array<string,mixed> */
     protected array $answerConfig;
@@ -169,31 +168,28 @@ class AgentBase extends Service implements AgentInterface
     // ── Identity / construction-time state ──────────────────────────────
     /**
      * Unique ID for this agent — the constructor's `agentId`, or a generated
-     * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     * UUIDv4.
      */
     protected string $agentId = '';
 
     /**
      * Default webhook URL for all SWAIG functions, as supplied at
-     * construction. Mirrors Python AgentBase's `_default_webhook_url`.
+     * construction.
      */
     protected ?string $defaultWebhookUrl = null;
 
     /**
-     * Whether structured request logs are suppressed. Mirrors Python
-     * AgentBase's `_suppress_logs`.
+     * Whether structured request logs are suppressed.
      */
     protected bool $suppressLogs = false;
 
     /**
-     * Post-prompt override flag, as supplied at construction. Mirrors Python
-     * AgentBase's `enable_post_prompt_override` constructor parameter.
+     * Post-prompt override flag, as supplied at construction.
      */
     protected bool $enablePostPromptOverride = false;
 
     /**
-     * Check-for-input override flag, as supplied at construction. Mirrors
-     * Python AgentBase's `check_for_input_override` constructor parameter.
+     * Check-for-input override flag, as supplied at construction.
      */
     protected bool $checkForInputOverride = false;
 
@@ -407,14 +403,10 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * This agent's unique ID — the constructor's `agentId` or a generated
-     * UUIDv4. Mirrors Python AgentBase's public `self.agent_id`.
+     * UUIDv4.
      *
      * PUBLIC, deliberately: the caller supplies `agentId` at construction, so
-     * the caller must be able to read it back. It was `protected`, which is the
-     * exact failure CONSTRUCTION-READBACK exists to catch — cpp made the same
-     * two members (`agent_id`, `token_expiry_secs`) protected purely to pass
-     * SURFACE-DIFF, and the consequence was that its callers could not read what
-     * Python callers can.
+     * the caller must be able to read it back.
      */
     public function getAgentId(): string
     {
@@ -422,11 +414,11 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * This agent, for the reference's `PromptManager.agent` / `ToolRegistry.agent`
-     * back-reference. Python factors prompt handling and tool registration into
-     * collaborator objects that hold a reference BACK to the agent; php flattens
-     * both onto the agent itself, so the back-reference resolves to `$this` (the
-     * same resolution cpp used when it merged the manager into the agent).
+     * This agent itself.
+     *
+     * Prompt handling and tool registration are flattened ONTO the agent rather
+     * than split into collaborator objects that hold a reference back to it, so
+     * the back-reference an SDK consumer would follow resolves to `$this`.
      */
     public function getAgent(): self
     {
@@ -435,7 +427,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * The construction-time default webhook URL for SWAIG functions, or null.
-     * Mirrors Python AgentBase's `_default_webhook_url`.
      */
     protected function getDefaultWebhookUrl(): ?string
     {
@@ -444,7 +435,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Whether structured request logs are suppressed.
-     * Mirrors Python AgentBase's `_suppress_logs`.
      */
     protected function getSuppressLogs(): bool
     {
@@ -454,7 +444,6 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Whether proxy headers are honoured when reconstructing the URL during
      * webhook signature validation.
-     * Mirrors Python AgentBase's `_trust_proxy_for_signature`.
      */
     protected function getTrustProxyForSignature(): bool
     {
@@ -462,10 +451,9 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Load the `service` section of the config file, mirroring Python's
-     * `AgentBase._load_service_config(config_file, service_name)`
-     * (agent_base.py:358-382): when no path is given the standard search
-     * paths are consulted for a service-named config first.
+     * Load the `service` section of the config file. When no path is given,
+     * the standard search paths are consulted for a service-named config
+     * first.
      *
      * @return array<string, mixed>
      */
@@ -487,8 +475,7 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Generate a RFC-4122 version-4 UUID, matching the reference's
-     * `str(uuid.uuid4())` agent-id default.
+     * Generate a RFC-4122 version-4 UUID — the agent-id default.
      */
     private static function generateUuidV4(): string
     {
@@ -502,12 +489,21 @@ class AgentBase extends Service implements AgentInterface
     //  Prompt Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Set the agent's main prompt as one plain-text string, an alternative to
+     * building it out of POM sections.
+     */
     public function setPromptText(string $text): self
     {
         $this->promptText = $text;
         return $this;
     }
 
+    /**
+     * Set the post-prompt — the instruction the AI runs after the conversation
+     * ends (typically a summary request). Its result is delivered to the
+     * post-prompt URL.
+     */
     public function setPostPrompt(string $text): self
     {
         $this->postPrompt = $text;
@@ -653,9 +649,7 @@ class AgentBase extends Service implements AgentInterface
      * Returns the post-prompt text that was set via setPostPrompt, or the
      * empty string when none has been set.
      *
-     * Mirrors Python's PromptManager::get_post_prompt /
-     * PromptMixin::get_post_prompt — used by SWML rendering when a
-     * post-prompt is configured.
+     * Used by SWML rendering when a post-prompt is configured.
      */
     public function getPostPrompt(): string
     {
@@ -666,8 +660,6 @@ class AgentBase extends Service implements AgentInterface
      * Returns the raw prompt text whatever setPromptText stored, or the
      * empty string when no raw prompt has been set. Distinct from
      * getPrompt() which returns the POM array when usePom is true.
-     *
-     * Mirrors Python's PromptManager::get_raw_prompt.
      */
     public function getRawPrompt(): string
     {
@@ -679,9 +671,6 @@ class AgentBase extends Service implements AgentInterface
      * supports keys "title", "body", "bullets", "numbered",
      * "numbered_bullets", and "subsections". Switches the agent to POM
      * mode.
-     *
-     * Mirrors Python's PromptManager::set_prompt_pom — accepts a list of
-     * section dicts and stores them in pomSections.
      *
      * @param list<mixed> $pom List of POM section arrays; non-array entries are
      *                         defensively skipped by the loop below.
@@ -705,7 +694,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Coerce an externally-supplied section array into the internal
      * PomSection shape, validating each recognised key at runtime. Sections
-     * without a string title are skipped (Python's renderer requires one).
+     * without a string title are skipped — the renderer requires one.
      *
      * @param array<mixed, mixed> $section
      * @return PomSection|null
@@ -762,17 +751,15 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Return the agent's POM as a typed PromptObjectModel instance.
      *
-     * Mirrors ``agent.pom`` instance attribute (agent_base.py
-     * line 209). Returns ``null`` when ``use_pom`` is false (mirroring
-     * Python's ``self.pom = None``).  Otherwise returns a PromptObjectModel
-     * built from the agent's stored POM section dicts — sections added via
+     * Returns ``null`` when POM mode is off. Otherwise returns a
+     * PromptObjectModel built from the agent's stored POM sections — those added via
      * ``promptAddSection`` / ``setPromptPom`` show up as native ``Section``
      * objects so callers can use ``renderMarkdown`` / ``renderXml`` /
      * ``findSection`` etc directly.
      *
-     * The returned instance is freshly constructed each call; mutating it
-     * does not affect the agent's stored state (the same behavior is achieved
-     * via construction-from-dicts rather than shared references).
+     * The returned instance is freshly constructed each call — it is built
+     * FROM the stored sections rather than sharing them, so mutating it does
+     * not affect the agent's state.
      */
     public function getPom(): ?PromptObjectModel
     {
@@ -789,8 +776,6 @@ class AgentBase extends Service implements AgentInterface
      * Returns the contexts dictionary as a serialised array, or null when
      * no contexts have been defined yet.
      *
-     * Mirrors Python's PromptManager::get_contexts which returns the
-     * contexts dict or None.
      *
      * @return array<string, array<string,mixed>>|null
      */
@@ -808,9 +793,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Mint a per-call SWAIG-function token via the agent's SessionManager.
      *
-     * Mirrors state_mixin.StateMixin._create_tool_token —
-     * delegates to SessionManager::createToolToken and returns "" on
-     * any thrown error (Python catches all exceptions and returns "").
+     * Delegates to SessionManager::createToolToken, returning "" on any
+     * thrown error rather than propagating it.
      */
     public function createToolToken(string $toolName, string $callId): string
     {
@@ -826,8 +810,7 @@ class AgentBase extends Service implements AgentInterface
      * function is not registered, when the SessionManager rejects the
      * token, or on any underlying exception.
      *
-     * Mirrors state_mixin.StateMixin.validate_tool_token —
-     * rejects unknown function names up-front and swallows exceptions.
+     * Rejects unknown function names up-front and swallows exceptions.
      */
     public function validateToolToken(string $functionName, string $token, string $callId): bool
     {
@@ -845,6 +828,11 @@ class AgentBase extends Service implements AgentInterface
     //  AI Config Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Append one speech-recognition hint — a word or phrase the recognizer
+     * should bias toward. Appends; it does not replace the existing list (use
+     * {@see AgentBase::addHints()} for a batch).
+     */
     public function addHint(string $hint): self
     {
         $this->hints[] = $hint;
@@ -865,10 +853,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Add a complex hint with pattern matching.
      *
-     * Mirrors Python's ``AIConfigMixin.add_pattern_hint``: attaches a
-     * STRUCTURED hint (not a bare string) that is merged into the rendered
-     * SWML ``ai.hints`` array. All three of hint/pattern/replace must be
-     * non-empty for the hint to be recorded (mirrors the reference).
+     * Attaches a STRUCTURED hint (not a bare string) that is merged into the
+     * rendered SWML ``ai.hints`` array. All three of hint/pattern/replace must
+     * be non-empty for the hint to be recorded.
      *
      * @param string $hint       The hint token to match.
      * @param string $pattern    Regular-expression pattern.
@@ -895,10 +882,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Add a language configuration to support multilingual conversations.
      *
-     * Mirrors Python's ``AIConfigMixin.add_language``: carries engine, model
-     * and fillers into the rendered SWML ``ai.languages`` entry, and parses
-     * the combined ``engine.voice:model`` voice string when engine/model are
-     * not given explicitly.
+     * Carries engine, model and fillers into the rendered SWML
+     * ``ai.languages`` entry, and parses the combined ``engine.voice:model``
+     * voice string when engine/model are not given explicitly.
      *
      * @param string                   $voice           TTS voice. Either a
      *     simple name, or the combined ``engine.voice:model`` format when
@@ -1046,7 +1032,6 @@ class AgentBase extends Service implements AgentInterface
      * mutually exclusive with setLanguages(); if both are set the server uses
      * `multilingual` and ignores `languages`.
      *
-     * Mirrors AIConfigMixin.set_multilingual(config).
      *
      * @param array<string,mixed> $config The multilingual config object
      *   (languages, allowed, start_language, min_switch_words, fillers, etc.).
@@ -1060,9 +1045,8 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Add a pronunciation rule (mirrors Python add_pronunciation(replace,
-     * with_text, ignore_case: bool = False)). Emits the SWML wire key
-     * `ignore_case` (bool, only when true), NOT `ignore`.
+     * Add a pronunciation rule. Emits the SWML wire key `ignore_case`
+     * (bool, only when true), NOT `ignore`.
      */
     public function addPronunciation(string $replace, string $with, bool $ignoreCase = false): self
     {
@@ -1086,6 +1070,14 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Set ONE AI-verb parameter, leaving the others intact — unlike
+     * {@see AgentBase::setParams()}, which replaces the whole `params` map.
+     *
+     * @param string $key   the wire parameter name, passed through verbatim
+     *   (this is not a validated closed set).
+     * @param mixed  $value the value, emitted as-is under `ai.params`.
+     */
     public function setParam(string $key, mixed $value): self
     {
         $this->params[$key] = $value;
@@ -1104,10 +1096,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Merge $data into global_data. Despite the name this does NOT replace
      * the existing object: existing keys are preserved and incoming keys
-     * overwrite only on collision. This mirrors updateGlobalData() and the
-     * TypeScript reference (safeAssign) — skills and other callers each
-     * contribute keys, so a replacing setGlobalData would silently clobber
-     * their contributions.
+     * overwrite only on collision — the same merge updateGlobalData() performs.
+     * Skills and other callers each contribute keys, so a REPLACING setter
+     * would silently clobber their contributions.
      *
      * @param array<string,mixed> $data
      */
@@ -1136,11 +1127,10 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * The native functions advertised to the platform. The reference records
-     * ``AgentBase.native_functions`` (the attribute) and
-     * ``AIConfigMixin.set_native_functions`` (the setter) as TWO DISTINCT
-     * members — so the setter does not stand in for the reader. php had only the
-     * setter, with the field ``protected``, so a caller could pass
+     * The native functions advertised to the platform.
+     *
+     * The reader and the setter are two DISTINCT members: the setter does not
+     * stand in for the reader. Without this accessor a caller could pass
      * ``nativeFunctions`` at construction and never read it back.
      *
      * @return list<string>
@@ -1222,29 +1212,24 @@ class AgentBase extends Service implements AgentInterface
     }
 
     /**
-     * Add a single internal filler entry.
+     * Add internal fillers for a single internal function and language.
      *
-     * Two calling conventions are supported for backward
-     * compatibility:
-     *
-     *   $agent->addInternalFiller('plain text')  // legacy
      *   $agent->addInternalFiller($functionName, $languageCode, $fillers)
      *
      * See setInternalFillers() for the complete list of supported
      * function names and what fillers do. Names outside the supported
      * set log a warning.
      *
-     * @param list<string>|null $fillers
+     * @param list<string> $fillers
      */
-    public function addInternalFiller(string $filler_or_function, ?string $languageCode = null, ?array $fillers = null): self
+    public function addInternalFiller(string $functionName, string $languageCode, array $fillers): self
     {
-        if ($languageCode === null || $fillers === null) {
-            // Legacy: single string argument.
-            $this->internalFillers[] = $filler_or_function;
+        // Python: the whole body is guarded on all three being truthy
+        // (ai_config_mixin.py:489) — an empty name/code/list is a no-op.
+        if ($functionName === '' || $languageCode === '' || $fillers === []) {
             return $this;
         }
 
-        $functionName = $filler_or_function;
         if (!in_array($functionName, self::SUPPORTED_INTERNAL_FILLER_NAMES, true)) {
             $supported = self::SUPPORTED_INTERNAL_FILLER_NAMES;
             sort($supported);
@@ -1268,8 +1253,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Enable the debug-event webhook for this agent.
      *
-     * Mirrors Python's enable_debug_events(level: int = 1): the AI module POSTs
-     * real-time debug events to the agent's /debug_events endpoint. The level is
+     * The AI module POSTs real-time debug events to the agent's
+     * /debug_events endpoint. The level is
      * the wire verbosity (1 = high-level events; 2+ = high-volume: every LLM
      * request/response, conversation_add) and is emitted as the SWML AI param
      * `debug_webhook_level` (int), NOT `debug_events`.
@@ -1293,9 +1278,9 @@ class AgentBase extends Service implements AgentInterface
      * Replace the entire list of function includes.
      *
      * Each include must have a truthy ``url`` and an array ``functions``
-     * field; entries missing either are dropped (matching the TypeScript
-     * reference's filter), and each dropped entry is warned so a malformed
-     * include is caught at registration time rather than silently vanishing.
+     * field; entries missing either are dropped, and each dropped entry is
+     * warned so a malformed include is caught at registration time rather than
+     * silently vanishing.
      *
      * @param list<mixed> $includes List of include arrays ({url, functions, ...});
      *                              malformed / non-array entries are defensively dropped.
@@ -1331,8 +1316,6 @@ class AgentBase extends Service implements AgentInterface
      *
      * Tools are discovered via the MCP protocol at session start and registered
      * as SWAIG functions; resources are optionally fetched into global_data.
-     * Mirrors Python's ``AIConfigMixin.add_mcp_server`` (projected onto the
-     * ai_config_mixin path by the surface enumerator).
      *
      * @param array<string, string>|null $headers      Optional HTTP headers.
      * @param array<string, string>|null $resourceVars Variables for URI templates.
@@ -1361,9 +1344,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Expose this agent's tools as an MCP server endpoint at ``/mcp``.
-     *
-     * Mirrors Python's ``AIConfigMixin.enable_mcp_server`` (projected onto the
-     * ai_config_mixin path by the surface enumerator).
      *
      * @return $this
      */
@@ -1395,8 +1375,7 @@ class AgentBase extends Service implements AgentInterface
      * Enable debug routes for testing and development.
      *
      * Debug routes are registered by the request router; this method exists for
-     * API compatibility and returns ``$this`` for chaining. Mirrors Python's
-     * ``WebMixin.enable_debug_routes`` (projected onto the web_mixin path).
+     * API compatibility and returns ``$this`` for chaining.
      *
      * @return $this
      */
@@ -1409,8 +1388,7 @@ class AgentBase extends Service implements AgentInterface
      * Register signal handlers for graceful shutdown (e.g. Kubernetes SIGTERM).
      *
      * Uses PHP's pcntl signal handling when available; a no-op otherwise (the
-     * ext-pcntl extension is optional and absent under most SAPIs). Mirrors
-     * Python's ``WebMixin.setup_graceful_shutdown``.
+     * ext-pcntl extension is optional and absent under most SAPIs).
      */
     public function setupGracefulShutdown(): void
     {
@@ -1434,9 +1412,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Merge LLM parameters into the main prompt config.
      *
-     * Mirrors Python `AIConfigMixin.set_prompt_llm_params`
-     * (ai_config_mixin.py:669): `self._prompt_llm_params.update(params)` —
-     * successive calls MERGE, so distinct keys accumulate rather than the
+     * Successive calls MERGE, so distinct keys accumulate rather than the
      * latest call replacing the earlier ones.
      *
      * @param array<string,mixed> $params
@@ -1450,9 +1426,7 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Merge LLM parameters into the post-prompt config.
      *
-     * Mirrors Python `AIConfigMixin.set_post_prompt_llm_params`
-     * (ai_config_mixin.py:703): `self._post_prompt_llm_params.update(params)`
-     * — successive calls MERGE (see {@see setPromptLlmParams}).
+     * Successive calls MERGE (see {@see setPromptLlmParams}).
      *
      * @param array<string,mixed> $params
      */
@@ -1466,13 +1440,38 @@ class AgentBase extends Service implements AgentInterface
     //  Verb Methods
     // ══════════════════════════════════════════════════════════════════════
 
-    public function addPreAnswerVerb(string $verb, mixed $config): self
+    /**
+     * Append a SWML verb that runs BEFORE the `answer` verb — i.e. while the
+     * call is still ringing (for example `play` on early media).
+     *
+     * Verbs are emitted into `sections.main` in call order:
+     * pre-answer → answer → record_call → post-answer → ai → post-ai.
+     * Repeated calls append, preserving insertion order.
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param array<string,mixed> $config the verb's configuration. Typed to
+     *        match what the validating Service::addVerb accepts — renderSwml
+     *        emits these through it, so a `mixed` here only deferred the type
+     *        error to render time.
+     */
+    public function addPreAnswerVerb(string $verb, array $config): self
     {
         $this->preAnswerVerbs[] = [$verb, $config];
         return $this;
     }
 
-    public function addPostAnswerVerb(string $verb, mixed $config): self
+    /**
+     * Append a SWML verb that runs after the call is answered but BEFORE the
+     * `ai` verb takes over. See {@see AgentBase::addPreAnswerVerb()} for the
+     * full ordering.
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param array<string,mixed> $config the verb's configuration. Typed to
+     *        match what the validating Service::addVerb accepts — renderSwml
+     *        emits these through it, so a `mixed` here only deferred the type
+     *        error to render time.
+     */
+    public function addPostAnswerVerb(string $verb, array $config): self
     {
         $this->postAnswerVerbs[] = [$verb, $config];
         return $this;
@@ -1480,30 +1479,49 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Alias for addPostAnswerVerb().
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param array<string,mixed> $config the verb's configuration.
      */
-    public function addAnswerVerb(string $verb, mixed $config): self
+    public function addAnswerVerb(string $verb, array $config): self
     {
         return $this->addPostAnswerVerb($verb, $config);
     }
 
-    public function addPostAiVerb(string $verb, mixed $config): self
+    /**
+     * Append a SWML verb that runs AFTER the `ai` verb finishes — the tail of
+     * `sections.main` (for example a closing `play` or `hangup`).
+     *
+     * @param string $verb   the SWML verb name, used verbatim as the object key.
+     * @param array<string,mixed> $config the verb's configuration. Typed to
+     *        match what the validating Service::addVerb accepts — renderSwml
+     *        emits these through it, so a `mixed` here only deferred the type
+     *        error to render time.
+     */
+    public function addPostAiVerb(string $verb, array $config): self
     {
         $this->postAiVerbs[] = [$verb, $config];
         return $this;
     }
 
+    /** Drop every verb registered by {@see AgentBase::addPreAnswerVerb()}. */
     public function clearPreAnswerVerbs(): self
     {
         $this->preAnswerVerbs = [];
         return $this;
     }
 
+    /**
+     * Drop every verb registered by {@see AgentBase::addPostAnswerVerb()} (and
+     * therefore by its `addAnswerVerb` alias).
+     */
     public function clearPostAnswerVerbs(): self
     {
         $this->postAnswerVerbs = [];
         return $this;
     }
 
+    /** Drop every verb registered by {@see AgentBase::addPostAiVerb()}. */
     public function clearPostAiVerbs(): self
     {
         $this->postAiVerbs = [];
@@ -1587,18 +1605,16 @@ class AgentBase extends Service implements AgentInterface
      * Surfaces a load failure by THROWING — a skill that is not in the
      * registry, is missing required env vars, whose ``setup()`` returns false,
      * or is a duplicate that forbids multiple instances is a configuration
-     * error the caller must see, NOT a silent no-op. Mirrors the python
-     * reference ``SkillMixin.add_skill`` which raises
-     * ``ValueError(f"Failed to load skill '{name}': {error}")``; PHP's idiom for
-     * that value-domain error is ``\InvalidArgumentException``.
+     * error the caller must see, NOT a silent no-op. The idiom for that
+     * value-domain error is ``\InvalidArgumentException``.
      *
-     * @param array<string, mixed> $params
+     * @param array<string, mixed>|null $params
      * @throws \InvalidArgumentException when the skill fails to load.
      */
-    public function addSkill(SkillName|string $name, array $params = []): static
+    public function addSkill(SkillName|string $name, ?array $params = null): static
     {
         $skillName = $name instanceof SkillName ? $name->value : $name;
-        [$success, $error] = $this->getSkillManager()->loadSkill($skillName, $params);
+        [$success, $error] = $this->getSkillManager()->loadSkill($skillName, params: $params);
         if (!$success) {
             throw new \InvalidArgumentException(
                 "Failed to load skill '{$skillName}': {$error}"
@@ -1607,6 +1623,16 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Unload a previously-added skill, running its `cleanup()` hook and
+     * dropping it from the skill manager.
+     *
+     * Unlike {@see AgentBase::addSkill()}, this does not throw when the skill is
+     * absent — the unload is silently a no-op, and the boolean the manager
+     * returns is discarded in favour of the fluent `$this`.
+     *
+     * @param SkillName|string $name the typed skill enum or its bare string name.
+     */
     public function removeSkill(SkillName|string $name): self
     {
         $this->getSkillManager()->unloadSkill($name instanceof SkillName ? $name->value : $name);
@@ -1637,6 +1663,18 @@ class AgentBase extends Service implements AgentInterface
     //  Web / Callback Methods
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Install the per-request reconfiguration callback used for multi-tenancy.
+     *
+     * The request handler retrieves it via
+     * {@see AgentBase::getDynamicConfigCallback()} and invokes it as
+     * `$cb($queryParams, $body, $headers, $agent)` against a
+     * {@see AgentBase::cloneForRequest()} copy just before SWML rendering, so
+     * mutations apply to that one request and never to the long-lived agent.
+     * Only one callback is held — a second call replaces the first.
+     *
+     * @param callable $callback `(array $queryParams, array $body, array $headers, AgentBase $agent): void`.
+     */
     public function setDynamicConfigCallback(callable $callback): self
     {
         $this->dynamicConfigCallback = $callback;
@@ -1653,12 +1691,26 @@ class AgentBase extends Service implements AgentInterface
         return $this->dynamicConfigCallback;
     }
 
+    /**
+     * Override the SHARED SWAIG callback endpoint emitted as
+     * `SWAIG.defaults.web_hook_url`.
+     *
+     * When unset, that default is derived from the request headers by the
+     * agent's own URL builder (which embeds basic-auth credentials and any
+     * SWAIG query params). Setting it here WINS over the derived URL, so the
+     * override must itself be reachable and authenticated — every tool without
+     * a per-tool `web_hook_url`, including every insecure tool, calls it.
+     */
     public function setWebHookUrl(string $url): self
     {
         $this->webhookUrl = $url;
         return $this;
     }
 
+    /**
+     * Override the URL the post-prompt summary is delivered to, emitted as
+     * `ai.post_prompt_url`. Omitted from the AI verb entirely when unset.
+     */
     public function setPostPromptUrl(string $url): self
     {
         $this->postPromptUrl = $url;
@@ -1677,6 +1729,15 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Drop every query param registered by
+     * {@see AgentBase::addSwaigQueryParams()}.
+     *
+     * Note this also changes WHICH tools get a per-tool `web_hook_url`: a
+     * handler-backed tool is given its own URL when it has a minted token OR
+     * when swaig query params exist, so clearing the params can push tokenless
+     * tools back onto the shared `SWAIG.defaults.web_hook_url`.
+     */
     public function clearSwaigQueryParams(): self
     {
         $this->swaigQueryParams = [];
@@ -1686,10 +1747,9 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Lifecycle handler invoked when a post-prompt summary is received.
      *
-     * Mirrors Python `AgentBase.on_summary(summary, raw_data)` and the TS
-     * `AgentBase.onSummary(summary, rawData)` overridable hook: the default
-     * implementation is a no-op, and subclasses (e.g. the prefab agents)
-     * override it to log or persist the interaction summary. The base
+     * An overridable hook: the default implementation is a no-op, and
+     * subclasses (e.g. the prefab agents) override it to log or persist the
+     * interaction summary. The base
      * dispatcher ({@see handlePostPrompt}) calls this method with the parsed
      * summary and the full raw POST payload.
      *
@@ -1707,10 +1767,10 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Register a callback invoked when a post-prompt summary is received.
      *
-     * PHP-additive convenience (recorded in PORT_ADDITIONS.md): where the
-     * canonical contract is to override {@see onSummary}, this lets a caller
-     * install a summary handler without subclassing. Both the registered
-     * callback and the overridable {@see onSummary} method run.
+     * A convenience over subclassing: where the canonical contract is to
+     * override {@see onSummary}, this lets a caller install a summary handler
+     * without subclassing. Both the registered callback and the overridable
+     * {@see onSummary} method run.
      *
      * @param callable $callback fn(mixed $summary, array $rawData, array $headers): void
      */
@@ -1720,6 +1780,13 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Register the handler for debug events, invoked as `$callback($event)`.
+     *
+     * Only one handler is held — a second call replaces the first — and it is
+     * carried across a {@see AgentBase::cloneForRequest()} by reference (the
+     * clone shares the same callable, it is not deep-copied).
+     */
     public function onDebugEvent(callable $callback): self
     {
         $this->debugEventHandler = $callback;
@@ -1733,10 +1800,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Enable SIP-based routing for this agent.
      *
-     * Mirrors Python `AgentBase.enable_sip_routing(auto_map=True, path="/sip")`
-     * (agent_base.py:708). PHP's public method takes no args by idiom (the
-     * auto_map / path overrides go through AgentServer::setupSipRouting); it
-     * uses the reference defaults auto_map=true, path="/sip".
+     * Takes no arguments: it applies the defaults (auto-map on, path
+     * "/sip"). To override either, use AgentServer::setupSipRouting.
      *
      * Registers a routing callback at the SIP path that extracts the SIP
      * username from the request body and consults this agent's registered
@@ -1767,7 +1832,7 @@ class AgentBase extends Service implements AgentInterface
             return null;
         };
 
-        $this->registerRoutingCallback($path, $callback);
+        $this->registerRoutingCallback($callback, $path);
 
         // auto_map defaults to true in the reference.
         $this->autoMapSipUsernames();
@@ -1775,6 +1840,20 @@ class AgentBase extends Service implements AgentInterface
         return $this;
     }
 
+    /**
+     * Register a SIP username this agent answers on.
+     *
+     * Does two things: sets the `sip_username` (and, when a route is given,
+     * `sip_route`) AI param, and adds the LOWERCASED username to the set the
+     * SIP routing callback matches inbound requests against — so matching is
+     * case-insensitive while the param keeps the caller's original casing.
+     *
+     * Successive calls overwrite the single `sip_username` param but ACCUMULATE
+     * in the matchable set, so an agent can answer on several usernames.
+     *
+     * @param string $route optional route to record as `sip_route`; the empty
+     *   default leaves the param unset.
+     */
     public function registerSipUsername(string $username, string $route = ''): self
     {
         $this->setParam('sip_username', $username);
@@ -1791,8 +1870,7 @@ class AgentBase extends Service implements AgentInterface
      * Automatically register common SIP usernames derived from this agent's
      * name and route.
      *
-     * Mirrors Python `AgentBase.auto_map_sip_usernames()`: registers a
-     * username from the cleaned agent name, one from the cleaned route (if
+     * Registers a username from the cleaned agent name, one from the cleaned route (if
      * different), and a vowel-stripped variant of the name when it is long
      * enough. Returns `$this` for chaining.
      */
@@ -1823,10 +1901,6 @@ class AgentBase extends Service implements AgentInterface
 
     /**
      * Get this agent's name.
-     *
-     * Mirrors Python `AgentBase.get_name()`. Declared on AgentBase (in
-     * addition to the inherited {@see Service::getName}) so the surface
-     * enumerator records it on the agent_base module in the reference.
      */
     public function getName(): string
     {
@@ -1836,10 +1910,8 @@ class AgentBase extends Service implements AgentInterface
     /**
      * Get the full URL for this agent's endpoint.
      *
-     * Mirrors Python `AgentBase.get_full_url(include_auth)`. Declared on
-     * AgentBase so the surface records it on the agent_base module; delegates
-     * to the parent {@see Service::getFullUrl} URL builder (which honours the
-     * manual/env proxy base, host, port, and route).
+     * Delegates to the parent {@see Service::getFullUrl} URL builder, which
+     * honours the manual/env proxy base, host, port, and route.
      *
      * @param bool $includeAuth Whether to embed basic-auth credentials.
      */
@@ -1872,53 +1944,54 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string, string>     $headers
      * @param string|null               $callId Optional call id. When present,
      *   secure SWAIG functions get a per-tool ``__token`` appended to their
-     *   ``web_hook_url`` (the wire manifestation of ``secure``), mirroring the
-     *   python reference ``AgentBase._render_swml(call_id=...)``. Omitted →
+     *   ``web_hook_url`` (the wire manifestation of ``secure``). Omitted →
      *   no per-tool token (the pre-render default; existing callers unaffected).
      * @return array<string, mixed>
      */
     public function renderSwml(?array $requestBody = null, array $headers = [], ?string $callId = null): array
     {
-        $main = [];
+        // Build the document through the VALIDATING Service entry point rather
+        // than hand-assembling the `{version, sections}` literal. The old code
+        // path touched neither Service nor Document, so nothing ever checked a
+        // verb name or its config — a third, entirely unvalidated way to emit
+        // SWML. Mirrors the reference `AgentBase._render_swml`, which resets the
+        // document and calls `add_verb(...)` for every phase before returning
+        // `render_document()` (core/agent_base.py:1194-1330).
+        $this->resetDocument();
 
         // 1. Pre-answer verbs
         foreach ($this->preAnswerVerbs as [$verb, $config]) {
-            $main[] = [$verb => $config];
+            $this->addVerb($verb, $config);
         }
 
         // 2. Answer verb
         if ($this->autoAnswer) {
             $answerParams = array_merge(['max_duration' => 14400], $this->answerConfig);
-            $main[] = ['answer' => $answerParams];
+            $this->addVerb('answer', $answerParams);
         }
 
         // 3. Record call verb
         if ($this->recordCall) {
-            $main[] = ['record_call' => [
+            $this->addVerb('record_call', [
                 'format' => $this->recordFormat,
                 'stereo' => $this->recordStereo,
-            ]];
+            ]);
         }
 
         // 4. Post-answer verbs
         foreach ($this->postAnswerVerbs as [$verb, $config]) {
-            $main[] = [$verb => $config];
+            $this->addVerb($verb, $config);
         }
 
         // 5. AI verb
-        $main[] = ['ai' => $this->buildAiVerb($headers, $callId)];
+        $this->addVerb('ai', $this->buildAiVerb($headers, $callId));
 
         // 6. Post-AI verbs
         foreach ($this->postAiVerbs as [$verb, $config]) {
-            $main[] = [$verb => $config];
+            $this->addVerb($verb, $config);
         }
 
-        return [
-            'version'  => '1.0.0',
-            'sections' => [
-                'main' => $main,
-            ],
-        ];
+        return $this->getDocument()->toArray();
     }
 
     /**
@@ -2072,6 +2145,32 @@ class AgentBase extends Service implements AgentInterface
     // version handles GET (renders SWML) and POST (dispatches via onFunctionCall).
 
     /**
+     * An agent carries a SessionManager, so it CAN mint and check per-call
+     * tokens — which is what turns `secure: true` from an unenforceable flag
+     * into a real credential check. This is the switch that scopes SWAIG token
+     * enforcement to agents (see Service::swaigValidateToken()).
+     */
+    protected function hasSwaigTokenValidation(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Validate a per-call SWAIG tool token against this agent's SessionManager.
+     *
+     * The parent Service has no session manager and so fails closed; an agent
+     * DOES, which is what turns `secure: true` from a refuse-everything flag
+     * into a real credential check. The decision itself — what an absent token
+     * or an absent call_id means, and what the refusal looks like — stays in
+     * the transport-agnostic {@see \SignalWire\SWML\Service::swaigValidateToken()};
+     * this override supplies only the cryptographic answer.
+     */
+    protected function validateSwaigToolToken(string $functionName, string $token, string $callId): bool
+    {
+        return $this->validateToolToken($functionName, $token, $callId);
+    }
+
+    /**
      * Handle the post-prompt callback.
      *
      * @param array<string, mixed>|null $requestData
@@ -2109,10 +2208,9 @@ class AgentBase extends Service implements AgentInterface
      */
     /**
      * Handle a serverless-environment invocation (CGI, Lambda, Cloud
-     * Functions, Azure). Mirrors the reference
-     * `signalwire.core.mixins.serverless_mixin.ServerlessMixin.handle_serverless_request`:
-     * detect (or accept an override for) the execution mode and dispatch to the
-     * matching platform handler, returning a platform-appropriate response.
+     * Functions, Azure): detect (or accept an override for) the execution mode
+     * and dispatch to the matching platform handler, returning a
+     * platform-appropriate response.
      *
      * Delegates the per-platform request extraction + response shaping to
      * {@see \SignalWire\Serverless\Adapter}, which reads the event/request and
@@ -2121,7 +2219,7 @@ class AgentBase extends Service implements AgentInterface
      *
      * @param array<string,mixed>|null $event   Serverless event (Lambda/Azure API-gateway payload).
      * @param object|null $context Serverless context object (Lambda/Cloud Functions).
-     * @param string|null $mode Override execution mode ('cgi'/'lambda'/'gcf'/'azure'/'server').
+     * @param string|null $mode Override execution mode ('cgi'/'lambda'/'google_cloud_function'/'azure_function'/'server').
      * @return array<string,mixed>|null Platform response array (Lambda/Azure), or null when
      *   the handler writes directly to the output stream (CGI/GCF) or starts the server.
      */
@@ -2142,10 +2240,10 @@ class AgentBase extends Service implements AgentInterface
                     $context ?? new \stdClass(),
                 );
 
-            case \SignalWire\Serverless\ExecutionMode::Azure:
+            case \SignalWire\Serverless\ExecutionMode::AzureFunction:
                 return \SignalWire\Serverless\Adapter::handleAzure($this, $event ?? []);
 
-            case \SignalWire\Serverless\ExecutionMode::Gcf:
+            case \SignalWire\Serverless\ExecutionMode::GoogleCloudFunction:
                 \SignalWire\Serverless\Adapter::handleGcf($this);
                 return null;
 
@@ -2159,6 +2257,21 @@ class AgentBase extends Service implements AgentInterface
         }
     }
 
+    /**
+     * Produce an isolated per-request copy of this agent, so a dynamic-config
+     * callback ({@see AgentBase::setDynamicConfigCallback()}) can reshape the
+     * agent for ONE request without mutating the long-lived instance shared by
+     * concurrent calls.
+     *
+     * The isolation is deliberate and partial:
+     *   - mutable configuration arrays (POM sections, tools, hints, languages,
+     *     pronunciations, params, global data, LLM params, the three verb
+     *     lists, answer config, SWAIG query params, includes, MCP servers) are
+     *     DEEP-copied, so per-request edits do not leak;
+     *   - the session manager and the context builder are cloned;
+     *   - the three callbacks (dynamic-config, summary, debug-event) are shared
+     *     BY REFERENCE — they are behaviour, not per-request state.
+     */
     public function cloneForRequest(): static
     {
         $clone = clone $this;
@@ -2211,10 +2324,12 @@ class AgentBase extends Service implements AgentInterface
      * @param array<string, string> $headers
      * @param string|null            $callId When present, a SECURE tool gets a
      *   per-tool ``__token`` appended to its ``web_hook_url`` (the wire
-     *   manifestation of ``secure`` — mirrors python agent_base.py:1040/1096-1100:
-     *   ``if func.secure and call_id: url_params['__token'] = token``). An
-     *   INSECURE tool (``secure=False``) never gets a token. When $callId is
-     *   null no token is minted (the render-without-call_id default).
+     *   manifestation of ``secure``: a token is appended only when the tool is
+     *   secure AND a call_id is in hand). An
+     *   INSECURE tool (``secure=False``) never gets a token, and therefore gets
+     *   NO per-tool ``web_hook_url`` at all — it falls back to the shared
+     *   ``SWAIG.defaults.web_hook_url``. When $callId is null no token is minted
+     *   (the render-without-call_id default).
      * @return array<string, mixed>
      */
     private function buildSwaigBlock(array $headers, ?string $callId = null): array
@@ -2233,25 +2348,47 @@ class AgentBase extends Service implements AgentInterface
             // Strip internal keys
             $funcDef = array_filter($tool, fn (string $key): bool => !str_starts_with($key, '_'), ARRAY_FILTER_USE_KEY);
 
-            // Add web_hook_url for callable tools (those with a handler)
-            if (isset($tool['_handler'])) {
+            // Resolve the per-tool web_hook_url for callable tools (those with a
+            // handler). Mirrors python agent_base.py:1085-1099 EXACTLY:
+            //
+            //   1. an EXTERNAL url supplied by the caller wins verbatim;
+            //   2. else emit a local URL ONLY when a token was minted OR SWAIG
+            //      query params exist;
+            //   3. else emit NO ``web_hook_url`` key at all.
+            //
+            // Case 3 is load-bearing security, not a cosmetic omission: an
+            // INSECURE tool (``secure=false``, therefore no token) must fall back
+            // to the shared ``SWAIG.defaults.web_hook_url``. Handing it its own
+            // URL would publish an UNAUTHENTICATED function-specific callback —
+            // a tokenless endpoint bound to one tool.
+            if (isset($tool['_handler']) && !isset($funcDef['web_hook_url'])) {
                 // Mint a per-tool token ONLY for a SECURE tool when we have a
-                // call_id — the platform validates that token on the callback,
+                // call_id — the platform round-trips that token on the callback,
                 // so its PRESENCE on the wire is what makes ``secure`` real.
-                // (python: ``if func.secure and call_id``). An insecure tool
-                // gets the plain webhook URL (no token).
+                // (python: ``if func.secure and call_id``.)
                 $token = null;
                 if ($callId !== null && $callId !== '' && ($tool['_secure'] ?? false) === true) {
                     $minted = $this->createToolToken($name, $callId);
                     $token = $minted !== '' ? $minted : null;
                 }
-                $funcDef['web_hook_url'] = $this->buildSwaigWebhookUrl($headers, $token);
+                // python's ``elif token or agent._swaig_query_params``.
+                if ($token !== null || !empty($this->swaigQueryParams)) {
+                    $funcDef['web_hook_url'] = $this->buildSwaigWebhookUrl($headers, $token);
+                }
             }
 
             $functions[] = $funcDef;
         }
         if (!empty($functions)) {
             $swaig['functions'] = $functions;
+            // The SHARED fallback endpoint every function without its own
+            // ``web_hook_url`` calls — notably an INSECURE tool, which by
+            // contract carries no per-tool URL. Mirrors python
+            // agent_base.py:1109-1113 (emitted whenever functions exist) and
+            // :972-979 (the ``setWebHookUrl`` override wins over the built URL).
+            $swaig['defaults'] = [
+                'web_hook_url' => $this->webhookUrl ?? $this->buildSwaigWebhookUrl($headers),
+            ];
         }
 
         // Native functions
@@ -2277,8 +2414,8 @@ class AgentBase extends Service implements AgentInterface
      *
      * @param array<string, string> $headers
      * @param string|null            $token Optional per-tool SWAIG token. When
-     *   present it is appended as the reserved ``__token`` query parameter
-     *   (python uses ``__token`` to avoid collision with a caller's ``token``).
+     *   present it is appended as the reserved ``__token`` query parameter —
+     *   reserved so it cannot collide with a caller's own ``token``.
      */
     private function buildSwaigWebhookUrl(array $headers, ?string $token = null): string
     {

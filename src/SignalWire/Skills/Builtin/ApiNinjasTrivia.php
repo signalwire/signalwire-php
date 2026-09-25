@@ -6,6 +6,15 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Trivia questions from the API Ninjas service, exposed as a DataMap-backed
+ * SWAIG tool (the platform calls the API directly — no callback into this SDK).
+ *
+ * Requires a non-empty string `api_key` param. An optional `categories` param
+ * narrows the question pool; the constructor rejects an empty list or any name
+ * outside the 14-value closed set, so a misconfigured skill fails at
+ * construction rather than at register time.
+ */
 class ApiNinjasTrivia extends SkillBase
 {
     private const ALL_CATEGORIES = [
@@ -78,6 +87,10 @@ class ApiNinjasTrivia extends SkillBase
         return 'Get trivia questions from API Ninjas';
     }
 
+    /**
+     * True — several trivia tools may be loaded on one agent, distinguished
+     * by `tool_name` (default `get_trivia`), e.g. one per category set.
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -135,6 +148,11 @@ class ApiNinjasTrivia extends SkillBase
         return $schema;
     }
 
+    /**
+     * Gate the load on a non-empty `api_key`. The constructor already
+     * rejects a missing key, so this is the second line of defence for a
+     * key emptied after construction.
+     */
     public function setup(): bool
     {
         if (empty($this->params['api_key'])) {
@@ -144,6 +162,11 @@ class ApiNinjasTrivia extends SkillBase
         return true;
     }
 
+    /**
+     * Register every definition from {@see ApiNinjasTrivia::getTools()} as a
+     * raw SWAIG function, merging this skill's `swaig_fields` in as
+     * TOP-LEVEL function-definition keys.
+     */
     public function registerTools(): void
     {
         foreach ($this->getTools() as $funcDef) {

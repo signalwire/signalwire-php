@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace SignalWire\Skills;
 
+/**
+ * Name → implementing-class map for skills, with a process-wide singleton
+ * ({@see SkillRegistry::instance()}) that {@see SkillManager} consults.
+ *
+ * Resolution is lazy and convention-based rather than eager: an unregistered
+ * name is snake_case→CamelCase'd and looked up under
+ * `SignalWire\Skills\Builtin\`, and a successful hit is memoized into the map.
+ * That is why the built-in skill names are a static table here — nothing scans
+ * the filesystem to find them.
+ */
 class SkillRegistry
 {
     private static ?self $instance = null;
@@ -49,6 +59,16 @@ class SkillRegistry
     {
     }
 
+    /**
+     * Bind a skill name to its implementing class, overriding the
+     * convention-based `Builtin\<CamelName>` lookup {@see getFactory()} would
+     * otherwise perform. Re-registering a name replaces the previous binding;
+     * the class is not validated here (existence is checked at resolve time by
+     * {@see getSkillClass()}).
+     *
+     * @param string $name      the snake_case skill name callers load by.
+     * @param string $className fully-qualified {@see SkillBase} subclass name.
+     */
     public function registerSkill(string $name, string $className): void
     {
         $this->registeredSkills[$name] = $className;
@@ -234,12 +254,22 @@ class SkillRegistry
      * Get complete schema for all registered skills.
      *
      * Mirrors Python's instance-method
-     * ``SkillRegistry.get_all_skills_schema()`` — returns an associative
-     * array keyed by skill name where each entry contains metadata +
-     * parameter schema. PHP skills don't carry rich Python-style
-     * parameter introspection in v1, so the value defaults to a minimal
-     * shape with the skill name; built-ins that expose
-     * ``getDescription`` / ``getVersion`` get those merged in.
+     * ``SkillRegistry.get_all_skills_schema()`` (registry.py:274) — an
+     * associative array keyed by skill name, each entry carrying the same
+     * eight fields the reference documents: `name`, `description`, `version`,
+     * `supports_multiple_instances`, `required_packages`, `required_env_vars`,
+     * `parameters` and `source`.
+     *
+     * **Metadata is read from the CLASS, never from a live skill.** The
+     * reference reads class attributes (``skill_class.SKILL_DESCRIPTION``
+     * et al.) and calls ``get_parameter_schema()`` off the class, so it never
+     * constructs a skill just to describe one. PHP expresses the same metadata
+     * as instance methods returning constants, and {@see SkillBase} requires an
+     * {@see \SignalWire\Agent\AgentInterface} at construction — so this uses
+     * {@see \ReflectionClass::newInstanceWithoutConstructor()} to obtain an
+     * un-constructed instance purely as a receiver for those constant readers.
+     * That keeps introspection free of an agent binding, exactly as the
+     * reference is: describing a skill must not require standing one up.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -247,24 +277,74 @@ class SkillRegistry
     {
         $out = [];
         foreach ($this->listSkills() as $name) {
-            $entry = ['name' => $name, 'parameters' => []];
-            $className = $this->getFactory($name);
-            if ($className && \class_exists($className)) {
-                try {
-                    $skill = new $className();
-                    if (\method_exists($skill, 'getDescription')) {
-                        $entry['description'] = $skill->getDescription();
-                    }
-                    if (\method_exists($skill, 'getVersion')) {
-                        $entry['version'] = $skill->getVersion();
-                    }
-                } catch (\Throwable $e) {
-                    // Skip on construction failure
-                }
+            $className = $this->getSkillClass($name);
+            if ($className === null) {
+                continue;
             }
-            $out[$name] = $entry;
+
+            $source = \in_array($name, self::BUILTIN_SKILL_NAMES, true) ? 'built-in' : 'registered';
+
+            try {
+                $meta = self::describeClass($className);
+            } catch (\Throwable $e) {
+                // One malformed skill must not abort the whole scan (the
+                // reference logs and skips too) — but it is LOGGED, never
+                // swallowed silently. A silent catch here is what previously
+                // turned a hard ArgumentCountError into permanently absent
+                // metadata that no caller could see.
+                \SignalWire\Logging\LoggingConfig::getLogger('signalwire.skills.registry')
+                    ->error("Failed to get schema for skill '{$name}': " . $e->getMessage());
+                continue;
+            }
+
+            $out[$name] = ['name' => $name] + $meta + ['source' => $source];
         }
         return $out;
+    }
+
+    /**
+     * Read one skill class's metadata without constructing it against an agent.
+     *
+     * @param class-string<SkillBase> $className
+     * @return array<string, mixed>
+     */
+    private static function describeClass(string $className): array
+    {
+        $reflection = new \ReflectionClass($className);
+        if ($reflection->isAbstract() || !$reflection->isSubclassOf(SkillBase::class)) {
+            throw new \RuntimeException("not a concrete SkillBase subclass: {$className}");
+        }
+
+        /** @var SkillBase $probe */
+        $probe = $reflection->newInstanceWithoutConstructor();
+
+        return [
+            'description' => $probe->getDescription(),
+            'version' => $probe->getVersion(),
+            'supports_multiple_instances' => $probe->supportsMultipleInstances(),
+            'required_packages' => self::requiredPackagesOf($reflection, $probe),
+            'required_env_vars' => $probe->getRequiredEnvVars(),
+            'parameters' => $probe->getParameterSchema(),
+        ];
+    }
+
+    /**
+     * {@see SkillBase::getRequiredPackages()} is `protected` (skills declare
+     * their requirements for {@see SkillBase::validatePackages()}, not for
+     * callers), so reach it reflectively rather than widening the contract just
+     * to describe a skill. The reference's `REQUIRED_PACKAGES` is a plain class
+     * attribute, hence readable without any such accommodation.
+     *
+     * @param \ReflectionClass<SkillBase> $reflection
+     * @return list<string>
+     */
+    private static function requiredPackagesOf(\ReflectionClass $reflection, SkillBase $probe): array
+    {
+        $method = $reflection->getMethod('getRequiredPackages');
+        $method->setAccessible(true);
+        /** @var list<string> $packages */
+        $packages = $method->invoke($probe);
+        return $packages;
     }
 
     private static function snakeToCamel(string $name): string

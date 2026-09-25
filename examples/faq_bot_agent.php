@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * FAQ Bot Agent
  *
@@ -50,7 +52,7 @@ POST);
 
 $agent->setSummaryCallback(function ($summary, $raw) {
     if ($summary) {
-        echo "FAQ Bot summary: " . json_encode($summary) . "\n";
+        echo 'FAQ Bot summary: ' . json_encode($summary) . "\n";
     }
 });
 

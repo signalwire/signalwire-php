@@ -109,7 +109,7 @@ class DataMapTest extends TestCase
     public function testExpressionAddsToExpressionsList(): void
     {
         $dm = new DataMap('fn');
-        $dm->expression('${args.color}', '/^red$/', ['response' => 'Red detected']);
+        $dm->expression('${args.color}', '/^red$/', new FunctionResult('Red detected'));
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayHasKey('data_map', $result);
@@ -117,23 +117,26 @@ class DataMapTest extends TestCase
         $this->assertSame('${args.color}', Shape::at($result, 'data_map', 'expressions', 0, 'string'));
         $this->assertSame('/^red$/', Shape::at($result, 'data_map', 'expressions', 0, 'pattern'));
         $this->assertSame(['response' => 'Red detected'], Shape::at($result, 'data_map', 'expressions', 0, 'output'));
-        $this->assertArrayNotHasKey('nomatch_output', Shape::sub($result, 'data_map', 'expressions', 0));
+        $this->assertArrayNotHasKey('nomatch-output', Shape::sub($result, 'data_map', 'expressions', 0));
     }
 
     public function testExpressionWithNomatchOutput(): void
     {
         $dm = new DataMap('fn');
-        $dm->expression('${args.x}', '/yes/', 'matched', 'not matched');
+        $dm->expression('${args.x}', '/yes/', new FunctionResult('matched'), new FunctionResult('not matched'));
         $result = $dm->toSwaigFunction();
 
-        $this->assertSame('not matched', Shape::at($result, 'data_map', 'expressions', 0, 'nomatch_output'));
+        // HYPHENATED key per the reference (data_map.py:202); an underscored key is
+        // one the server ignores, so the no-match branch would never fire.
+        $this->assertSame(['response' => 'not matched'], Shape::at($result, 'data_map', 'expressions', 0, 'nomatch-output'));
+        $this->assertArrayNotHasKey('nomatch_output', Shape::sub($result, 'data_map', 'expressions', 0));
     }
 
     public function testMultipleExpressionsAccumulate(): void
     {
         $dm = new DataMap('fn');
-        $dm->expression('${a}', '/1/', 'one');
-        $dm->expression('${b}', '/2/', 'two');
+        $dm->expression('${a}', '/1/', new FunctionResult('one'));
+        $dm->expression('${b}', '/2/', new FunctionResult('two'));
         $result = $dm->toSwaigFunction();
 
         $this->assertCount(2, Shape::sub($result, 'data_map', 'expressions'));
@@ -174,6 +177,66 @@ class DataMapTest extends TestCase
         $this->assertSame(['city'], $wh['require_args']);
     }
 
+    /**
+     * WIRE VALUE: the HTTP method is normalised to UPPER CASE before it
+     * reaches the wire, matching the reference
+     * (`data_map.py:230` — `{"url": url, "method": method.upper()}`).
+     *
+     * Every pre-existing webhook test passed an already-uppercase literal
+     * (`'GET'` / `'POST'`), so a port that echoed the caller's string
+     * verbatim was indistinguishable from one that normalised it. A caller
+     * writing the natural lowercase `'get'` put `"method": "get"` on the
+     * wire where the reference puts `"GET"`.
+     *
+     * The engine's data-map webhook reader compares case-insensitively
+     * (`mod_openai/actions.c:749` — `strcasecmp(method, "post")`), so a
+     * lowercase verb still *functions*; this is a cross-port wire-payload
+     * parity divergence, not a broken call. It is fixed rather than
+     * excused because the emitted document is compared byte-for-byte
+     * against the reference's.
+     */
+    public function testWebhookUpperCasesMethodOnTheWire(): void
+    {
+        $dm = new DataMap('fn');
+        $dm->webhook('get', 'https://api.example.com/data');
+        $result = $dm->toSwaigFunction();
+
+        $this->assertSame(
+            'GET',
+            Shape::at($result, 'data_map', 'webhooks', 0, 'method'),
+            'a lowercase verb must reach the wire upper-cased'
+        );
+    }
+
+    /**
+     * The same normalisation on the mixed-case and already-uppercase paths,
+     * and through the `createSimpleApiTool` factory, whose `$method`
+     * argument reaches the wire via the same `webhook()` call.
+     */
+    public function testWebhookMethodNormalisationIsIdempotentAndCoversTheFactory(): void
+    {
+        $dm = new DataMap('fn');
+        $dm->webhook('Post', 'https://a.com');
+        $dm->webhook('DELETE', 'https://b.com');
+        $result = $dm->toSwaigFunction();
+
+        $this->assertSame('POST', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
+        $this->assertSame('DELETE', Shape::at($result, 'data_map', 'webhooks', 1, 'method'));
+
+        $factory = DataMap::createSimpleApiTool(
+            'weather',
+            'https://api.example.com/w',
+            '${response.temp}',
+            null,
+            'put'
+        );
+        $this->assertSame(
+            'PUT',
+            Shape::at($factory->toSwaigFunction(), 'data_map', 'webhooks', 0, 'method'),
+            'createSimpleApiTool must normalise the method it forwards to webhook()'
+        );
+    }
+
     public function testWebhookOmitsEmptyOptionalFields(): void
     {
         $dm = new DataMap('fn');
@@ -185,6 +248,34 @@ class DataMapTest extends TestCase
         $this->assertArrayNotHasKey('form_param', $wh);
         $this->assertArrayNotHasKey('input_args_as_params', $wh);
         $this->assertArrayNotHasKey('require_args', $wh);
+    }
+
+    /**
+     * DEFAULT COVERAGE: the optional webhook args default to NULL, matching
+     * the reference (data_map.py:207 — `headers=None, form_param=None,
+     * require_args=None`). The port previously defaulted them to `[]` / `''`,
+     * which is a different value on the caller-visible contract even though
+     * both are falsy. Passing null EXPLICITLY must behave exactly like
+     * omitting the argument.
+     */
+    public function testWebhookOptionalArgsDefaultToNull(): void
+    {
+        $dm = new DataMap('fn');
+        $dm->webhook('GET', 'https://example.com', null, null, false, null);
+        $result = $dm->toSwaigFunction();
+        $wh = Shape::sub($result, 'data_map', 'webhooks', 0);
+
+        $this->assertArrayNotHasKey('headers', $wh);
+        $this->assertArrayNotHasKey('form_param', $wh);
+        $this->assertArrayNotHasKey('input_args_as_params', $wh);
+        $this->assertArrayNotHasKey('require_args', $wh);
+
+        // A reflection-level assertion so a re-introduced `= []` / `= ''`
+        // default fails here even if the emitted wire happens to match.
+        $rp = (new \ReflectionMethod(DataMap::class, 'webhook'))->getParameters();
+        $this->assertNull($rp[2]->getDefaultValue(), 'headers must default to null');
+        $this->assertNull($rp[3]->getDefaultValue(), 'formParam must default to null');
+        $this->assertNull($rp[5]->getDefaultValue(), 'requireArgs must default to null');
     }
 
     // ── webhookExpressions ───────────────────────────────────────────────
@@ -212,28 +303,12 @@ class DataMapTest extends TestCase
         $this->assertArrayNotHasKey('data_map', $result);
     }
 
-    // ── body ─────────────────────────────────────────────────────────────
-
-    public function testBodyModifiesLastWebhook(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->webhook('POST', 'https://a.com');
-        $dm->body(['key' => '${args.val}']);
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame(['key' => '${args.val}'], Shape::at($result, 'data_map', 'webhooks', 0, 'body'));
-    }
-
-    public function testBodyIgnoredWithNoWebhooks(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->body(['k' => 'v']);
-        $result = $dm->toSwaigFunction();
-
-        $this->assertArrayNotHasKey('data_map', $result);
-    }
-
     // ── params ───────────────────────────────────────────────────────────
+    //
+    // Was preceded by testBodyModifiesLastWebhook / testBodyIgnoredWithNoWebhooks,
+    // which PINNED the schema-forbidden `body` key as correct output. They are
+    // replaced by testBodyMethodIsGone below; the params() coverage they mirrored
+    // is already carried by the two tests in this section.
 
     public function testParamsModifiesLastWebhook(): void
     {
@@ -280,29 +355,6 @@ class DataMapTest extends TestCase
 
     // ── output on webhook ────────────────────────────────────────────────
 
-    public function testOutputOnWebhookWithArray(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->webhook('GET', 'https://a.com');
-        $dm->output(['response' => 'Done: ${response}']);
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame(
-            ['response' => 'Done: ${response}'],
-            Shape::at($result, 'data_map', 'webhooks', 0, 'output')
-        );
-    }
-
-    public function testOutputOnWebhookWithString(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->webhook('GET', 'https://a.com');
-        $dm->output('plain string');
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame('plain string', Shape::at($result, 'data_map', 'webhooks', 0, 'output'));
-    }
-
     public function testOutputOnWebhookWithFunctionResult(): void
     {
         // post_process flows through DataMap output only alongside an action
@@ -323,22 +375,13 @@ class DataMapTest extends TestCase
     public function testOutputIgnoredWithNoWebhooks(): void
     {
         $dm = new DataMap('fn');
-        $dm->output('ignored');
+        $dm->output(new FunctionResult('ignored'));
         $result = $dm->toSwaigFunction();
 
         $this->assertArrayNotHasKey('data_map', $result);
     }
 
     // ── fallbackOutput ───────────────────────────────────────────────────
-
-    public function testFallbackOutputSetsGlobalOutput(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->fallbackOutput(['response' => 'Fallback']);
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame(['response' => 'Fallback'], Shape::at($result, 'data_map', 'output'));
-    }
 
     public function testFallbackOutputWithFunctionResult(): void
     {
@@ -349,15 +392,6 @@ class DataMapTest extends TestCase
         $result = $dm->toSwaigFunction();
 
         $this->assertSame(['response' => 'Error occurred'], Shape::at($result, 'data_map', 'output'));
-    }
-
-    public function testFallbackOutputWithString(): void
-    {
-        $dm = new DataMap('fn');
-        $dm->fallbackOutput('simple fallback');
-        $result = $dm->toSwaigFunction();
-
-        $this->assertSame('simple fallback', Shape::at($result, 'data_map', 'output'));
     }
 
     // ── errorKeys on webhook ─────────────────────────────────────────────
@@ -400,10 +434,10 @@ class DataMapTest extends TestCase
         $dm->purpose('Get the weather for a city')
             ->parameter('city', 'string', 'City name', true)
             ->parameter('unit', 'string', 'Unit', false, ['celsius', 'fahrenheit'])
-            ->expression('${args.city}', '/^test$/', ['response' => 'Test mode'])
+            ->expression('${args.city}', '/^test$/', new FunctionResult('Test mode'))
             ->webhook('GET', 'https://api.weather.com', ['X-Key' => 'abc'])
-            ->output(['response' => 'Weather: ${temp}'])
-            ->fallbackOutput(['response' => 'Unable to retrieve weather'])
+            ->output(new FunctionResult('Weather: ${temp}'))
+            ->fallbackOutput(new FunctionResult('Unable to retrieve weather'))
             ->globalErrorKeys(['error']);
 
         $result = $dm->toSwaigFunction();
@@ -484,7 +518,13 @@ class DataMapTest extends TestCase
         $this->assertSame('GET', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
     }
 
-    public function testCreateSimpleApiToolWithBodyAndErrorKeys(): void
+    /**
+     * Was testCreateSimpleApiToolWithBodyAndErrorKeys, which passed a $body
+     * positionally and asserted the emitted `body` key — pinning a
+     * schema-forbidden key as correct. The parameter is gone; POST payloads go
+     * through params().
+     */
+    public function testCreateSimpleApiToolWithErrorKeys(): void
     {
         $dataMap = DataMap::createSimpleApiTool(
             'create_user',
@@ -493,13 +533,13 @@ class DataMapTest extends TestCase
             null,
             'POST',
             null,
-            ['name' => '${args.name}'],
             ['error', 'message']
-        );
+        )->params(['name' => '${args.name}']);
 
         $result = $dataMap->toSwaigFunction();
         $this->assertSame('POST', Shape::at($result, 'data_map', 'webhooks', 0, 'method'));
-        $this->assertSame(['name' => '${args.name}'], Shape::at($result, 'data_map', 'webhooks', 0, 'body'));
+        $this->assertSame(['name' => '${args.name}'], Shape::at($result, 'data_map', 'webhooks', 0, 'params'));
+        $this->assertArrayNotHasKey('body', Shape::sub($result, 'data_map', 'webhooks', 0));
         $this->assertSame(['error', 'message'], Shape::at($result, 'data_map', 'webhooks', 0, 'error_keys'));
     }
 
@@ -553,7 +593,7 @@ class DataMapTest extends TestCase
         $r3 = $dm->parameter('p', 'string', 'd');
         $this->assertSame($dm, $r3);
 
-        $r4 = $dm->expression('s', 'p', 'o');
+        $r4 = $dm->expression('s', 'p', new FunctionResult('o'));
         $this->assertSame($dm, $r4);
 
         $r5 = $dm->webhook('GET', 'https://x.com');
@@ -562,19 +602,16 @@ class DataMapTest extends TestCase
         $r6 = $dm->webhookExpressions([]);
         $this->assertSame($dm, $r6);
 
-        $r7 = $dm->body([]);
-        $this->assertSame($dm, $r7);
-
         $r8 = $dm->params([]);
         $this->assertSame($dm, $r8);
 
         $r9 = $dm->foreach(['input_key' => 'a', 'output_key' => 'b']);
         $this->assertSame($dm, $r9);
 
-        $r10 = $dm->output('x');
+        $r10 = $dm->output(new FunctionResult('x'));
         $this->assertSame($dm, $r10);
 
-        $r11 = $dm->fallbackOutput('x');
+        $r11 = $dm->fallbackOutput(new FunctionResult('x'));
         $this->assertSame($dm, $r11);
 
         $r12 = $dm->errorKeys([]);
@@ -590,15 +627,15 @@ class DataMapTest extends TestCase
             ->purpose('Test API')
             ->parameter('q', 'string', 'Query', true)
             ->webhook('POST', 'https://api.test.com')
-            ->body(['query' => '${args.q}'])
-            ->output(['response' => '${result}'])
+            ->params(['query' => '${args.q}'])
+            ->output(new FunctionResult('${result}'))
             ->globalErrorKeys(['err'])
             ->toSwaigFunction();
 
         $this->assertSame('api', $result['function']);
         $this->assertSame('Test API', $result['purpose']);
         $this->assertSame(['q'], Shape::at($result, 'argument', 'required'));
-        $this->assertSame(['query' => '${args.q}'], Shape::at($result, 'data_map', 'webhooks', 0, 'body'));
+        $this->assertSame(['query' => '${args.q}'], Shape::at($result, 'data_map', 'webhooks', 0, 'params'));
         $this->assertSame(['response' => '${result}'], Shape::at($result, 'data_map', 'webhooks', 0, 'output'));
         $this->assertSame(['err'], Shape::at($result, 'data_map', 'error_keys'));
     }
@@ -610,8 +647,7 @@ class DataMapTest extends TestCase
         $dm = new DataMap('fn');
         $dm->webhook('GET', 'https://first.com');
         $dm->webhook('POST', 'https://second.com');
-        $dm->output(['response' => 'from second']);
-        $dm->body(['key' => 'val']);
+        $dm->output(new FunctionResult('from second'));
         $dm->params(['p' => 'v']);
         $dm->errorKeys(['err']);
 
@@ -620,14 +656,70 @@ class DataMapTest extends TestCase
 
         // First webhook should be untouched
         $this->assertArrayNotHasKey('output', Shape::sub($webhooks, 0));
-        $this->assertArrayNotHasKey('body', Shape::sub($webhooks, 0));
         $this->assertArrayNotHasKey('params', Shape::sub($webhooks, 0));
         $this->assertArrayNotHasKey('error_keys', Shape::sub($webhooks, 0));
 
         // Second webhook should have all modifications
         $this->assertSame(['response' => 'from second'], Shape::at($webhooks, 1, 'output'));
-        $this->assertSame(['key' => 'val'], Shape::at($webhooks, 1, 'body'));
         $this->assertSame(['p' => 'v'], Shape::at($webhooks, 1, 'params'));
         $this->assertSame(['err'], Shape::at($webhooks, 1, 'error_keys'));
+    }
+
+    // ── body() is GONE ───────────────────────────────────────────────────
+    //
+    // `DataMap::body()` is REMOVED — the key it wrote is invalid, not merely
+    // ignored. Owner-ruled 2026-07-29 (reference: signalwire-python 71eed0c),
+    // extending the f171ce3 ruling ("if the server doesn't read them, remove
+    // them") from the createSimpleApiTool PARAMETER to the public BUILDER
+    // METHOD. The same three sources condemn both:
+    //
+    //   * porting-sdk/schema.json $defs/Webhook declares exactly ten properties
+    //     under `unevaluatedProperties: {"not": {}}` — error_keys, expressions,
+    //     foreach, headers, input_args_as_params, method, output, params,
+    //     require_args, url. `body` is not among them, so emitting it is a
+    //     SCHEMA VIOLATION.
+    //   * mod_openai/actions.c:735-739 and bedrock.c:4920-4926 read url, method,
+    //     form_param, `params` and `headers` and nothing else; `grep -n '"body"'`
+    //     across both returns ZERO matches.
+    //   * So the method's only possible effect was producing an invalid document
+    //     while silently discarding the caller's payload.
+    //
+    // `params()` is the correct method for POST/PUT request data — it writes the
+    // `params` key, which IS in the contract and IS read.
+
+    public function testBodyMethodIsGone(): void
+    {
+        $this->assertFalse(
+            method_exists(DataMap::class, 'body'),
+            'DataMap::body() must be removed — it writes a schema-forbidden key '
+            . 'that no engine reader consumes; use params() instead'
+        );
+    }
+
+    /** The replacement must keep working — this is the positive control. */
+    public function testParamsStillWritesTheContractKey(): void
+    {
+        $dm = (new DataMap('t'))
+            ->webhook('POST', 'https://x.test')
+            ->params(['q' => '${query}']);
+
+        $wh = Shape::sub($dm->toSwaigFunction(), 'data_map', 'webhooks', 0);
+
+        $this->assertSame(['q' => '${query}'], $wh['params']);
+        $this->assertArrayNotHasKey('body', $wh);
+    }
+
+    /** createSimpleApiTool must not accept or emit a `body`. */
+    public function testCreateSimpleApiToolHasNoBodyParameter(): void
+    {
+        $params = (new \ReflectionMethod(DataMap::class, 'createSimpleApiTool'))
+            ->getParameters();
+        $names = array_map(static fn ($p) => $p->getName(), $params);
+
+        $this->assertNotContains('body', $names, 'createSimpleApiTool must not take a $body');
+        $this->assertSame(
+            ['name', 'url', 'responseTemplate', 'parameters', 'method', 'headers', 'errorKeys'],
+            $names
+        );
     }
 }

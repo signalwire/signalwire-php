@@ -41,6 +41,12 @@ const HISTORY_MODES = ['keep', 'default', 'hide'];
 
 // ── GatherQuestion ──────────────────────────────────────────────────────────
 
+/**
+ * One question in a step's `gather_info` block: the answer key, the text to ask,
+ * and the per-question overrides. Serialized by
+ * {@see GatherQuestion::toArray()} into the `questions` array of the enclosing
+ * {@see GatherInfo}.
+ */
 class GatherQuestion
 {
     private string $key;
@@ -166,6 +172,13 @@ class GatherQuestion
 
 // ── GatherInfo ──────────────────────────────────────────────────────────────
 
+/**
+ * A step's `gather_info` block: an ordered set of {@see GatherQuestion}s the
+ * model asks before the step can complete, plus where to store the answers and
+ * what to do once they are all collected. While a gather is active the runtime
+ * injects the reserved `gather_submit` tool (see
+ * {@see RESERVED_NATIVE_TOOL_NAMES}).
+ */
 class GatherInfo
 {
     /** @var GatherQuestion[] */
@@ -175,6 +188,16 @@ class GatherInfo
     private ?string $prompt;
     private bool $isolated;
 
+    /**
+     * @param ?string $outputKey        global_data key the collected answers are
+     *                                  stored under; omitted from the wire when null.
+     * @param ?string $completionAction what to do once every question is answered.
+     * @param ?string $prompt           extra instruction text for the whole gather.
+     * @param bool    $isolated         hide the surrounding conversation while
+     *                                  gathering; emitted only when true, and
+     *                                  overridable per question via
+     *                                  {@see GatherQuestion}'s tri-state `isolated`.
+     */
     public function __construct(
         ?string $outputKey = null,
         ?string $completionAction = null,
@@ -255,6 +278,16 @@ class GatherInfo
 
 // ── Step ────────────────────────────────────────────────────────────────────
 
+/**
+ * One step of a {@see Context}: the instruction text the model runs, the
+ * completion criteria, which functions and navigation targets are legal while
+ * it is active, and the optional `gather_info` / `reset` blocks.
+ *
+ * Serialized by {@see Step::toArray()}; `name` and `text` are always emitted,
+ * every other key only when set (and the boolean flags only when true).
+ * Un-set fields are INHERITED from the previous step at runtime rather than
+ * reset — see {@see Step::setFunctions()}.
+ */
 class Step
 {
     private string $name;
@@ -288,6 +321,12 @@ class Step
     // History visibility mode (unset by default)
     private ?string $history = null;
 
+    /**
+     * @param string $name the step's identifier — the value other steps use in
+     *   `valid_steps` and that {@see \SignalWire\SWAIG\FunctionResult::swmlChangeStep()}
+     *   targets. Uniqueness within a context is enforced by
+     *   {@see Context::addStep()}.
+     */
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -353,6 +392,12 @@ class Step
         return $this;
     }
 
+    /**
+     * Set the natural-language condition the model must satisfy before the step
+     * is considered complete and navigation away from it is allowed. Emitted as
+     * `step_criteria`; when unset the key is omitted and the step may be left
+     * freely.
+     */
     public function setStepCriteria(string $criteria): self
     {
         $this->stepCriteria = $criteria;
@@ -435,12 +480,21 @@ class Step
         return $this;
     }
 
+    /**
+     * When true, the model speaks this step without pausing for the caller —
+     * emitted as `skip_user_turn: true`, and omitted entirely when false.
+     */
     public function setSkipUserTurn(bool $skip): self
     {
         $this->skipUserTurn = $skip;
         return $this;
     }
 
+    /**
+     * When true, the runtime advances to the next step immediately after this
+     * one runs, with no model decision — emitted as `skip_to_next_step: true`,
+     * and omitted entirely when false.
+     */
     public function setSkipToNextStep(bool $skip): self
     {
         $this->skipToNextStep = $skip;
@@ -569,24 +623,43 @@ class Step
         return $mode;
     }
 
+    /**
+     * Set the system prompt applied when this step is entered, under the step's
+     * `reset` object (`reset.system_prompt`). The `reset` object is emitted only
+     * when at least one of the four reset setters has been used.
+     */
     public function setResetSystemPrompt(string $systemPrompt): self
     {
         $this->resetSystemPrompt = $systemPrompt;
         return $this;
     }
 
+    /**
+     * Set the user prompt applied when this step is entered
+     * (`reset.user_prompt`). See {@see Step::setResetSystemPrompt()} for how the
+     * `reset` object is emitted.
+     */
     public function setResetUserPrompt(string $userPrompt): self
     {
         $this->resetUserPrompt = $userPrompt;
         return $this;
     }
 
+    /**
+     * Fold the prior conversation into a summary as part of this step's reset
+     * (`reset.consolidate`). Emitted only when true.
+     */
     public function setResetConsolidate(bool $consolidate): self
     {
         $this->resetConsolidate = $consolidate;
         return $this;
     }
 
+    /**
+     * Discard the prior conversation entirely as part of this step's reset
+     * (`reset.full_reset`). Emitted only when true; stronger than
+     * {@see Step::setResetConsolidate()}, which keeps a summary.
+     */
     public function setResetFullReset(bool $fullReset): self
     {
         $this->resetFullReset = $fullReset;
@@ -727,6 +800,20 @@ class Step
 
 // ── Context ─────────────────────────────────────────────────────────────────
 
+/**
+ * A named conversation flow: an ORDERED set of {@see Step}s plus the
+ * context-level prompt/entry configuration applied when the context is entered.
+ *
+ * Steps are keyed by name and their order is tracked separately, so
+ * {@see Context::moveStep()} can reorder without rebuilding. At most
+ * `MAX_STEPS_PER_CONTEXT` (100) steps may be added.
+ *
+ * Prompt text can be supplied EITHER as one string ({@see Context::setPrompt()} /
+ * {@see Context::setSystemPrompt()}) OR as POM sections
+ * ({@see Context::addSection()} / {@see Context::addSystemSection()}); mixing the
+ * two on the same prompt throws. Sections are rendered to markdown at
+ * serialization time and take priority over the string form.
+ */
 class Context
 {
     private const MAX_STEPS_PER_CONTEXT = 100;
@@ -773,6 +860,10 @@ class Context
     /** @var array<string, string[]>|null */
     private ?array $exitFillers = null;
 
+    /**
+     * @param string $name the context's identifier — the value steps use in
+     *   `valid_contexts` and that the runtime's `change_context` tool targets.
+     */
     public function __construct(string $name)
     {
         $this->name = $name;
@@ -870,6 +961,13 @@ class Context
         return $this->steps[$name] ?? null;
     }
 
+    /**
+     * Remove a step by name, dropping it from both the step map and the order.
+     * A name that is not present is a no-op — this does NOT throw, unlike
+     * {@see Context::moveStep()}. References to the removed step left in other
+     * steps' `valid_steps` are not cleaned up here; `ContextBuilder::validate()`
+     * reports them.
+     */
     public function removeStep(string $name): self
     {
         if (isset($this->steps[$name])) {
@@ -882,6 +980,17 @@ class Context
         return $this;
     }
 
+    /**
+     * Move an existing step to a new index in the context's ordering. The step
+     * is first removed from the order, then spliced in at `$position`, so the
+     * index refers to the list WITHOUT the step. Order matters: the first step
+     * is the default entry point unless
+     * {@see Context::setInitialStep()} says otherwise.
+     *
+     * @param int $position target index; `array_splice` semantics — a position
+     *   past the end appends, and a negative position counts back from the end.
+     * @throws \LogicException if no step with that name exists in this context.
+     */
     public function moveStep(string $name, int $position): self
     {
         if (!isset($this->steps[$name])) {
@@ -899,6 +1008,14 @@ class Context
 
     // ── Context prompt (POM) ────────────────────────────────────────────
 
+    /**
+     * Set the context prompt as one plain-text string.
+     *
+     * Mutually exclusive with the POM-section form
+     * ({@see Context::addSection()} / {@see Context::addBullets()}).
+     *
+     * @throws \LogicException if any POM section has already been added.
+     */
     public function setPrompt(string $prompt): self
     {
         if (!empty($this->promptSections)) {
@@ -910,6 +1027,14 @@ class Context
         return $this;
     }
 
+    /**
+     * Append a titled body section to the context prompt. Sections render to
+     * markdown as `## <title>` followed by the body.
+     *
+     * Mutually exclusive with {@see Context::setPrompt()}.
+     *
+     * @throws \LogicException if {@see Context::setPrompt()} was already used.
+     */
     public function addSection(string $title, string $body): self
     {
         if ($this->promptText !== null) {
@@ -937,6 +1062,16 @@ class Context
 
     // ── System prompt (POM) ─────────────────────────────────────────────
 
+    /**
+     * Set the context's system prompt as one plain-text string, emitted as
+     * `system_prompt` when the context is entered.
+     *
+     * Mutually exclusive with the POM-section form
+     * ({@see Context::addSystemSection()} / {@see Context::addSystemBullets()}),
+     * which takes priority at serialization time when both somehow exist.
+     *
+     * @throws \LogicException if any system POM section has already been added.
+     */
     public function setSystemPrompt(string $systemPrompt): self
     {
         if (!empty($this->systemPromptSections)) {
@@ -948,6 +1083,13 @@ class Context
         return $this;
     }
 
+    /**
+     * Append a titled body section to the context's SYSTEM prompt (rendered as
+     * `## <title>` + body). The system-prompt sections are a separate list from
+     * the context-prompt sections added by {@see Context::addSection()}.
+     *
+     * @throws \LogicException if {@see Context::setSystemPrompt()} was already used.
+     */
     public function addSystemSection(string $title, string $body): self
     {
         if ($this->systemPrompt !== null) {
@@ -1013,24 +1155,44 @@ class Context
         return $this;
     }
 
+    /**
+     * Set the post-prompt run when the context finishes (e.g. a summarization
+     * instruction). Emitted as `post_prompt`; omitted when unset.
+     */
     public function setPostPrompt(string $postPrompt): self
     {
         $this->postPrompt = $postPrompt;
         return $this;
     }
 
+    /**
+     * Fold prior conversation history into a summary when this context is
+     * entered. Emitted as `consolidate: true` and omitted when false. Also acts
+     * as the "reset configuration" that suppresses the plain history wipe
+     * described in {@see Context::setIsolated()}.
+     */
     public function setConsolidate(bool $consolidate): self
     {
         $this->consolidate = $consolidate;
         return $this;
     }
 
+    /**
+     * Discard prior conversation history entirely when this context is entered.
+     * Emitted as `full_reset: true` and omitted when false. Stronger than
+     * {@see Context::setConsolidate()}, which keeps a summary; like it, it
+     * counts as a reset configuration for {@see Context::setIsolated()}.
+     */
     public function setFullReset(bool $fullReset): self
     {
         $this->fullReset = $fullReset;
         return $this;
     }
 
+    /**
+     * Set the user-role prompt injected when this context is entered. Emitted
+     * as `user_prompt`; omitted when unset.
+     */
     public function setUserPrompt(string $userPrompt): self
     {
         $this->userPrompt = $userPrompt;

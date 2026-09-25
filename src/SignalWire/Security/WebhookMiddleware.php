@@ -37,6 +37,14 @@ final class WebhookMiddleware
     private string $signingKey;
     private Logger $logger;
 
+    /**
+     * @param string $signingKey the shared secret webhook signatures are
+     *   verified against. Held in memory only — it is never logged, echoed, or
+     *   included in a 403 response.
+     * @throws \InvalidArgumentException when the key is the empty string, so a
+     *   misconfigured middleware fails loudly at construction rather than
+     *   validating every request against an empty secret.
+     */
     public function __construct(string $signingKey)
     {
         if ($signingKey === '') {

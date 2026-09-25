@@ -341,6 +341,102 @@ class SWMLCoreTest extends TestCase
         );
     }
 
+    /**
+     * A bare-string `post_prompt` is what the engine kills the call over:
+     * mod_openai/app_config.c:3219 `!cJSON_IsObject(post_prompt)` raises a
+     * fatal:true calling.error, exactly as :3193 does for `prompt`. Mirrors
+     * signalwire-python 4371610.
+     */
+    public function testAiHandlerValidateConfigRejectsBareStringPostPrompt(): void
+    {
+        $handler = new AIVerbHandler();
+        [$valid, $errors] = $handler->validateConfig([
+            'prompt' => ['text' => 'hi'],
+            'post_prompt' => 'Summarize the call.',
+        ]);
+        $this->assertFalse($valid);
+        $this->assertContains("'post_prompt' must be an object", $errors);
+    }
+
+    /**
+     * The engine's :3219 error payload names the array case explicitly ("not an
+     * array"). PHP has no dict/list distinction, so `is_array()` alone would let
+     * a JSON-array-shaped post_prompt through — the predicate must use
+     * `array_is_list()` to catch it.
+     */
+    public function testAiHandlerValidateConfigRejectsListShapedPostPrompt(): void
+    {
+        $handler = new AIVerbHandler();
+        [$valid, $errors] = $handler->validateConfig([
+            'prompt' => ['text' => 'hi'],
+            'post_prompt' => [['text' => 'Summarize the call.']],
+        ]);
+        $this->assertFalse($valid);
+        $this->assertContains("'post_prompt' must be an object", $errors);
+    }
+
+    public function testAiHandlerValidateConfigAcceptsObjectPostPrompt(): void
+    {
+        $handler = new AIVerbHandler();
+        [$valid, $errors] = $handler->validateConfig([
+            'prompt' => ['text' => 'hi'],
+            'post_prompt' => ['text' => 'Summarize the call.'],
+        ]);
+        $this->assertTrue($valid);
+        $this->assertSame([], $errors);
+    }
+
+    /** `post_prompt` is OPTIONAL — absence must not be an error. */
+    public function testAiHandlerValidateConfigAcceptsAbsentPostPrompt(): void
+    {
+        $handler = new AIVerbHandler();
+        [$valid, $errors] = $handler->validateConfig(['prompt' => ['text' => 'hi']]);
+        $this->assertTrue($valid);
+        $this->assertSame([], $errors);
+    }
+
+    /**
+     * PHP cannot distinguish `[]` from `{}` — the reference accepts an empty
+     * dict, so an empty array must stay accepted rather than be caught by the
+     * list check (`array_is_list([])` is true).
+     */
+    public function testAiHandlerValidateConfigAcceptsEmptyArrayPostPrompt(): void
+    {
+        $handler = new AIVerbHandler();
+        [$valid, $errors] = $handler->validateConfig([
+            'prompt' => ['text' => 'hi'],
+            'post_prompt' => [],
+        ]);
+        $this->assertTrue($valid);
+        $this->assertSame([], $errors);
+    }
+
+    /** A `\stdClass` post_prompt is a JSON object too (SWML's empty-object idiom). */
+    public function testAiHandlerValidateConfigAcceptsStdClassPostPrompt(): void
+    {
+        $handler = new AIVerbHandler();
+        [$valid, $errors] = $handler->validateConfig([
+            'prompt' => ['text' => 'hi'],
+            'post_prompt' => (object) ['text' => 'Summarize the call.'],
+        ]);
+        $this->assertTrue($valid);
+        $this->assertSame([], $errors);
+    }
+
+    /** Round-trip guard: what buildConfig emits must validate. */
+    public function testAiHandlerBuildConfigPostPromptRoundTripsValid(): void
+    {
+        $handler = new AIVerbHandler();
+        $config = $handler->buildConfig([
+            'prompt_text' => 'hi',
+            'post_prompt' => 'Summarize the call.',
+        ]);
+        $this->assertSame(['text' => 'Summarize the call.'], $config['post_prompt']);
+        [$valid, $errors] = $handler->validateConfig($config);
+        $this->assertTrue($valid);
+        $this->assertSame([], $errors);
+    }
+
     public function testAiHandlerValidateConfigRejectsNonObjectSwaig(): void
     {
         $handler = new AIVerbHandler();

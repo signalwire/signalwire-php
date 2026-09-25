@@ -75,13 +75,13 @@ signalwire.agent_server.AgentServer.is_sip_routing_enabled: PHP idiomatic access
 signalwire.agent_server.AgentServer.serve: PHP idiomatic accessor / lifecycle hook on AgentServer.
 signalwire.agents.bedrock.BedrockAgent.render_swml: PHP override surfaces the public renderSwml() SWML-render entry on BedrockAgent (transforms the base `ai` verb into `amazon_bedrock`). Python's reference declares this as the private `_render_swml` (not on the surface); the same capability is public in PHP, mirroring the base AgentBase.render_swml addition.
 signalwire.cli.simulation.mock_env.Adapter: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.cli.simulation.mock_env.Adapter.detect: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
+signalwire.cli.simulation.mock_env.Adapter.detect: PHP-specific platform-mode-detection adapter (lambda / google_cloud_function / azure_function / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
 signalwire.cli.simulation.mock_env.Adapter.detect_mode: PHP-specific platform-mode-detection adapter; the typed counterpart of detect() returning the ExecutionMode enum (same logic, autocompletion + exhaustive match). Python uses the broader simulation/mock_env ServerlessSimulator class.
-signalwire.cli.simulation.mock_env.Adapter.handle_azure: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
-signalwire.cli.simulation.mock_env.Adapter.handle_cgi: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
-signalwire.cli.simulation.mock_env.Adapter.handle_gcf: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
-signalwire.cli.simulation.mock_env.Adapter.handle_lambda: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
-signalwire.cli.simulation.mock_env.Adapter.serve: PHP-specific platform-mode-detection adapter (lambda / gcf / azure / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
+signalwire.cli.simulation.mock_env.Adapter.handle_azure: PHP-specific platform-mode-detection adapter (lambda / google_cloud_function / azure_function / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
+signalwire.cli.simulation.mock_env.Adapter.handle_cgi: PHP-specific platform-mode-detection adapter (lambda / google_cloud_function / azure_function / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
+signalwire.cli.simulation.mock_env.Adapter.handle_gcf: PHP-specific platform-mode-detection adapter (lambda / google_cloud_function / azure_function / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
+signalwire.cli.simulation.mock_env.Adapter.handle_lambda: PHP-specific platform-mode-detection adapter (lambda / google_cloud_function / azure_function / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
+signalwire.cli.simulation.mock_env.Adapter.serve: PHP-specific platform-mode-detection adapter (lambda / google_cloud_function / azure_function / cgi); Python uses the broader simulation/mock_env ServerlessSimulator class.
 signalwire.core.agent_base.AgentBase.build_ai_verb: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.clone_for_request: PHP idiomatic getter / explicit accessor for an internal AgentBase field; Python users access the same data via `agent.<attr>` direct attribute access.
 signalwire.core.agent_base.AgentBase.get_mcp_servers: php_accessor: explicit read-only accessor returning the configured external MCP servers; Python exposes the same list via the private _mcp_servers attribute (no public getter). Pairs with add_mcp_server.
@@ -137,7 +137,7 @@ signalwire.swaig.tap_direction.TapDirection: php_enum_idiom: PHP 8.1 backed enum
 signalwire.swaig.record_direction.RecordDirection: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG record-direction closed set (speak/listen/both) as a type alongside the bare string. Class-level addition; see RecordDirection.cases for the call-site rationale.
 signalwire.swaig.record_format.RecordFormat: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG record-format closed set (wav/mp3/mp4) as a type alongside the bare string. Class-level addition; see RecordFormat.cases for the call-site rationale.
 signalwire.swaig.codec.Codec: php_enum_idiom: PHP 8.1 backed enum modelling the SWAIG tap-codec closed set (PCMU/PCMA) as a type alongside the bare string. Class-level addition; see Codec.cases for the call-site rationale.
-signalwire.serverless.execution_mode.ExecutionMode: php_enum_idiom: PHP 8.1 backed enum modelling the Adapter execution-mode closed set (lambda/gcf/azure/cgi/server) as a type alongside the bare string. PORT-ONLY: Python has no equivalent enum. Class-level addition; see ExecutionMode.cases for the call-site rationale.
+signalwire.serverless.execution_mode.ExecutionMode: php_enum_idiom: PHP 8.1 backed enum modelling the Adapter execution-mode closed set (lambda/google_cloud_function/azure_function/cgi/server) as a type alongside the bare string. PORT-ONLY: Python has no equivalent enum. Class-level addition; see ExecutionMode.cases for the call-site rationale.
 signalwire.serverless.execution_mode.ExecutionMode.is_serverless: php_enum_idiom: convenience predicate on the ExecutionMode enum — true for every mode except Server. PORT-ONLY (no Python equivalent); see ExecutionMode.cases.
 signalwire.serverless.execution_mode.ExecutionMode.coerce: php_enum_idiom: PHP convenience static on the ExecutionMode enum that normalises ExecutionMode|string to the enum (validating the string against the closed set), backing the enum-OR-string acceptance on Adapter::serve(). See ExecutionMode.cases.
 signalwire.relay.call_state.CallState: php_relay_state_enum: Tier-3 PHP 8.1 backed enum modelling the RELAY call-lifecycle closed set (created/ringing/answered/ending/ended) as a type alongside the bare string. Grounded in Constants::CALL_STATE_* (Python's relay/constants.py CALL_STATES). Offered ALONGSIDE Call::$state (the canonical string, parity) via the typed Call::callState() accessor. PORT-ONLY: the Python reference models call state as a bare str. Class-level addition; see CallState.is_terminal / CallState.try_from_wire. Deliberately NOT unified with DialState or MessageState — three distinct vocabularies.
@@ -204,23 +204,17 @@ signalwire.prefabs.info_gatherer.InfoGathererAgent.get_questions: PHP idiomatic 
 signalwire.prefabs.receptionist.ReceptionistAgent.get_departments: PHP idiomatic accessor on the prefab class.
 signalwire.prefabs.receptionist.ReceptionistAgent.get_greeting: PHP idiomatic accessor on the prefab class.
 signalwire.relay.call.AIAction.get_stop_method: PHP idiomatic accessor on the AIAction subclass.
-signalwire.relay.call.Action.execute_subcommand: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_call_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_events: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_node_id: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_payload: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_state: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.get_stop_method: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Action.handle_event: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.on_completed: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Action.resolve: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
 signalwire.relay.call.Action.stop: PHP idiomatic getter on Action; Python's Action class exposes the same data via direct attributes.
-signalwire.relay.call.Call.dispatch_event: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
 signalwire.relay.call.Call.resolve_all_actions: PHP idiomatic getter on Call; Python's Call class exposes the same data via direct attribute access.
 signalwire.relay.call.CollectAction.get_collect_result: PHP idiomatic accessor on the CollectAction subclass.
 signalwire.relay.call.CollectAction.get_stop_method: PHP idiomatic accessor on the CollectAction subclass.
-signalwire.relay.call.CollectAction.handle_event: PHP idiomatic accessor on the CollectAction subclass.
-signalwire.relay.call.CollectAction.set_stop_method: PHP CollectAction is the handle for both calling.collect and calling.play_and_collect (Python uses two separate types); the setter lets startAction wire the right verb-specific stop sub-command.
 signalwire.relay.call.DetectAction.get_detect_result: PHP idiomatic accessor on the DetectAction subclass.
 signalwire.relay.call.DetectAction.get_stop_method: PHP idiomatic accessor on the DetectAction subclass.
 signalwire.relay.call.FaxAction.get_fax_type: PHP idiomatic accessor on the FaxAction subclass.
@@ -238,12 +232,8 @@ signalwire.relay.client.RelayClient.authenticate: PHP idiomatic accessor on Rela
 signalwire.relay.client.RelayClient.get_call: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.get_calls: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.get_messages: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.handle_event: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.handle_message: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.read_once: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.client.RelayClient.reconnect: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.send: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
-signalwire.relay.client.RelayClient.send_ack: PHP idiomatic accessor on RelayClient (e.g. getCalls, getMessages); Python users access via direct attribute reads.
 signalwire.relay.constants.Constants: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.relay.event.Event: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.relay.event.Event.__init__: PHP idiomatic getter on Event; Python's per-event-type subclasses expose the same data as direct attributes.
@@ -282,10 +272,7 @@ signalwire.relay.event.SendDigitsEvent.__init__: php_event_accessor: PHP constru
 signalwire.relay.event.StreamEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
 signalwire.relay.event.TapEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
 signalwire.relay.event.TranscribeEvent.__init__: php_event_accessor: PHP constructor-promoted value object; the Python reference dataclass generates its __init__ implicitly (not surfaced). Purely additive — the typed event carries the same fields.
-signalwire.relay.message.Message.dispatch_event: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.handle_event: alias for dispatchEvent so the Client's event router (which symmetrically calls handleEvent on actions and messages) doesn't need a per-type branch.
 signalwire.relay.message.Message.on_completed: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
-signalwire.relay.message.Message.resolve: PHP idiomatic getter on the Message class; Python users access via direct attribute reads.
 signalwire.relay.web_socket.WebSocket: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.__init__: Port-internal WebSocket transport adapter (phrity/websocket-backed); constructor accepts an optional CA-bundle path for wss:// peer verification. Python uses the websockets library directly.
 signalwire.relay.web_socket.WebSocket.close: Port-internal WebSocket transport adapter; Python uses the websockets library directly.
@@ -302,7 +289,6 @@ signalwire.rest._base.HttpClient.get_project_id: PHP idiomatic accessor on HttpC
 signalwire.rest._base.HttpClient.get_token: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.HttpClient.list_all: PHP idiomatic accessor on HttpClient.
 signalwire.rest._base.SignalWireRestError.__str__: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
-signalwire.rest._base.SignalWireRestError.get_request_id: PHP getter for the platform request-id pulled from the response headers (§6.6 error-observability); Python's SignalWireRestError exposes `request_id` as a plain attribute (not a surface method)
 signalwire.rest._base.SignalWireRestError.get_response_body: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.rest._request_options.RequestOptions.__init__: PHP-explicit-constructor: Python's RequestOptions is a @dataclass, so its synthesized __init__ is not on the reference SURFACE (griffe omits dataclass-generated inits). PHP has no dataclass — it declares an explicit __construct with the same five optional fields (timeout, retries, retry_on_status, retry_backoff, abort_signal). Same construction contract; only the dataclass-vs-explicit-constructor idiom differs.
 signalwire.rest._pagination.PaginatedIterator.current: PHP-iterator-protocol: PaginatedIterator implements PHP's Iterator interface (current/next/rewind/valid/key) and explicit getter methods (get_data_key/get_http/get_index/get_items/get_params/get_path/is_done) that Python expresses via direct attribute access on its iterator
@@ -374,7 +360,6 @@ signalwire.skills.http_helper.HttpHelper.post_json: PHP-internal HTTP helper use
 signalwire.skills.http_helper.HttpHelper.request: PHP-internal HTTP helper used by the skill base class; Python skills use `requests` directly.
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_description: PHP idiomatic accessor / public hook on InfoGathererSkill.
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_name: PHP idiomatic accessor / public hook on InfoGathererSkill.
-signalwire.skills.info_gatherer.skill.InfoGathererSkill.get_prompt_sections: PHP idiomatic accessor / public hook on InfoGathererSkill.
 signalwire.skills.info_gatherer.skill.InfoGathererSkill.supports_multiple_instances: PHP idiomatic accessor / public hook on InfoGathererSkill.
 signalwire.skills.joke.skill.JokeSkill.get_description: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
 signalwire.skills.joke.skill.JokeSkill.get_name: idiomatic PHP surface extension (getter, setter, or method alias) not present in Python's reference
@@ -436,7 +421,6 @@ signalwire.rest.namespaces._client_tree_generated.VideoNamespace.__get: PHP magi
 signalwire.rest.namespaces.calling_resources_generated.Calling.get_base_path: PHP-idiom getter: explicit getBasePath() on the generated command-dispatch resource; Python exposes the base path as a class-level attribute. Same data, different access shape.
 
 # --- Skill override methods PHP declares that the reference skill does not ---
-signalwire.skills.claude_skills.skill.ClaudeSkillsSkill.get_prompt_sections: PHP's ClaudeSkills declares its own getPromptSections() override; the Python ClaudeSkillsSkill does not surface a get_prompt_sections member (it uses the SkillBase default without redeclaring). Idiomatic explicit override.
 
 # --- LiveWire subsystem (item I) — LiveKit-compat shim, PHP hosting devices + idiomatic accessors ---
 

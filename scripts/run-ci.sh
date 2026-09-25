@@ -27,8 +27,11 @@
 #   Per-gate PASS/FAIL + the FAILED_GATES tally preserved exactly; each gate's output
 #   captured + replayed atomically.
 #
-# Flags:
-#   --fail-fast   stop launching new gates at the first failure (local dev loop).
+# Flags (this is the COMPLETE set; anything else is a hard error — see the argv
+# validation block below. There is NO single-gate filter flag):
+#   --fail-fast          stop launching new gates at the first failure (local dev loop).
+#   --tier=pr|nightly|all  which gate tier to run (default pr).
+#   -h|--help            print usage and exit 0.
 #
 # GATE-INVENTORY NOTE: porting-sdk/GATE_INVENTORY.md is GENERATED (by
 # gen_gate_inventory.py) from the REFERENCE port's run-ci.sh (signalwire-typescript),
@@ -99,6 +102,51 @@ PYTHON_SDK_DIR="$(resolve_python_sdk)" || {
     echo "       (expected $PORTING_SDK_DIR/../signalwire-python or \$PYTHON_SDK env var)" >&2
     exit 2
 }
+
+# ── argv validation: an UNRECOGNISED flag is a hard error ─────────────────
+# gate_scheduler.sh's sched_init() loops over argv recognizing exactly two tokens
+# (--fail-fast, --tier=*) with NO default case, so anything else — a typo, a
+# renamed flag, or an invented one like `--gate REPO-LINT` — is SILENTLY DROPPED
+# and the FULL suite runs. That failure mode is silence PLUS a better-than-expected
+# result: a caller who reads `==> CI PASS` from `--gate X` believes gate X passed
+# when in fact everything ran, and pays the full multi-gate cost on a shared box.
+#
+# So validate here, BEFORE the mock servers are spawned (a typo must die instantly,
+# not after standing up three listeners). This rejects the whole CLASS, not one
+# flag: any future flag added to sched_init must also be added to the case below,
+# which is the point — an unknown token can never again mean "run everything".
+#
+# There is deliberately NO third state: a bad flag NEVER warns-and-proceeds.
+#
+# NOTE: there is no per-gate filter flag. Nothing in run-ci.sh or gate_scheduler.sh
+# implements one, and `--gate NAME` has never existed. To run a single gate, invoke
+# that gate's underlying command directly (each sched_gate line below shows it), or
+# use SW_CI_JOBS=1 for a serial transcript.
+ci_usage() {
+    cat >&2 <<'USAGE'
+usage: bash scripts/run-ci.sh [--fail-fast] [--tier=pr|nightly|all]
+
+  --fail-fast            stop launching new gates at the first failure.
+  --tier=pr              (default) run only the per-PR gate tier.
+  --tier=nightly|all     also run the heavy nightly-tier gates.
+
+Environment: SW_CI_JOBS (concurrency cap), SW_CI_TIER, SW_CI_FAIL_FAST.
+There is no single-gate filter flag; run a gate's command directly instead.
+USAGE
+}
+for _ci_arg in "$@"; do
+    case "$_ci_arg" in
+        --fail-fast) ;;
+        --tier=pr|--tier=nightly|--tier=all) ;;
+        -h|--help) ci_usage; exit 0 ;;
+        *)
+            echo "FATAL: unknown option '$_ci_arg'" >&2
+            ci_usage
+            exit 2
+            ;;
+    esac
+done
+unset _ci_arg
 
 # ── Mock-server lifecycle (for the PARALLEL test gate) ────────────────────
 # The mock-backed suites are session-isolated, so file parallelism is safe. We
@@ -195,6 +243,26 @@ test_gate() {
     PARATEST_PROCS="$PARALLEL_PROCS" bash scripts/run-tests.sh --parallel
 }
 
+# REPO-LINT — ruff check over this repo's hand-written Python (scripts/*.py).
+repo_lint_gate() {
+    sw_ruff check scripts/
+}
+
+# REPO-FMT — ruff format over this repo's hand-written Python (scripts/*.py).
+# LOCAL applies in place; CI runs --check (read-only), same contract as the PHP
+# FMT gate above.
+repo_fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        sw_ruff format --check scripts/
+    else
+        sw_ruff format scripts/ >/dev/null || return 1
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (REPO-FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        sw_ruff format --check scripts/
+    fi
+}
+
 # ---- Part 5: the per-gate --fn helpers are now DEAD — reproduced in the suites -
 # surface_fresh_gate (SURFACE-FRESH), surface_diff_gate (SURFACE-DIFF),
 # rest_coverage_gate (REST-COVERAGE), spec_parity_gate (SPEC-PARITY), and
@@ -261,14 +329,25 @@ sched_gate TEST defer=1 desc="run-tests.sh --parallel (paratest -p $PARALLEL_PRO
 sched_gate SURFACE res=surface desc="surface parity suite (SIGNATURES/DRIFT/SURFACE-FRESH/SURFACE-DIFF/SEMVER-DIFF/GEN-TYPE-DEGENERACY/GEN-IDIOM)" \
     -- python3 "$PORTING_SDK_DIR/scripts/suites/surface.py" --port php --repo "$PORT_ROOT"
 
+# SIGNATURES-FRESH: the committed port_signatures.json must match a fresh regen.
+# SURFACE-FRESH guards port_surface.json; nothing guarded the SIGNATURES artifact,
+# and that one is DRIFT's INPUT — a stale blob makes the parity gate compare the
+# reference against a fiction, clean or dirty at random. Standalone sched_gate on
+# purpose (a _surface_commands.py table entry is read by only 8 of the 10 run-ci
+# scripts, so two ports would be silently skipped). Needs no res=surface mutex: it
+# regenerates into .sw-tmp/ and never touches the working-tree artifact.
+sched_gate SIGNATURES-FRESH res=surface desc="committed port_signatures.json matches a fresh regen" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/_signatures_fresh.py" \
+        --port php --repo "$PORT_ROOT" --porting-sdk "$PORTING_SDK_DIR"
+
 # TYPE-EROSION: a port may not erase a type the reference DECLARES. compare_param treats
 # `any` on EITHER side as matching anything, so a port emitting `any` silently satisfies
 # every reference declaration — an unlimited opt-out. ConciergeAgent.hours_of_operation is
 # declared optional<dict<string,string>> and go still shipped a bare string, with no gate
 # red. RATCHET, not a hard gate: dynamic languages cannot always express a type, so this
 # banks the current count and fails only on REGRESSION. Drive the number DOWN; never up.
-sched_gate TYPE-EROSION res=surface desc="port did not erase a reference-declared param type (ratchet 176)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_type_erosion.py" --port php --repo "$PORT_ROOT" --max 176
+sched_gate TYPE-EROSION res=surface desc="port did not erase a reference-declared param type (ratchet 102)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_type_erosion.py" --port php --repo "$PORT_ROOT" --max 102
 
 # GEN (regen-from-specs family): the 5 GEN-FRESH rules. Cheap wave (php's per-gate
 # GEN-FRESH* were not deferred — preserved: no defer).
@@ -285,6 +364,21 @@ sched_gate BEHAVIORAL defer=1 desc="behavioral suite (BEHAVIORAL-*/EMISSION/ERRO
 sched_gate BEHAVIORAL-NIGHTLY tier=nightly defer=1 desc="behavioral suite, nightly rules (WAIT-LIVENESS/SECRET-SCRUB-LIVE)" \
     -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port php --repo "$PORT_ROOT" \
         --rules WAIT-LIVENESS,SECRET-SCRUB-LIVE
+
+# TOKEN-INTEROP — property 3 of the SWAIG tool-token contract: a token this port MINTS
+# must validate under the REFERENCE's own decoder. SECURE-DEFAULT proves a token is
+# minted and the fleet keying check proves the HMAC key; NEITHER sees the base64
+# ENVELOPE, so a port can ship correct-key correct-HMAC tokens that no other
+# implementation accepts — in production every secure tool call then fails auth. Six of
+# the ten ports shipped exactly that (an unpadded envelope), invisible to their own tests
+# because each port's DECODER tolerates missing padding while the reference's
+# urlsafe_b64decode RAISES on it — so round-tripping against ourselves could never catch
+# it. One mint + a pure-python validation → cheap, per-PR (a security property must not
+# wait for nightly). Its OWN line rather than a member of the BEHAVIORAL suite line,
+# which is defer=1 (heavy wave).
+sched_gate TOKEN-INTEROP desc="a token this port mints validates under the reference's decoder (padded urlsafe base64, ':'-signed / '.'-enveloped, hex HMAC keyed by the secret_key string)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_token_interop.py" --port php \
+        --mint-cmd "php $PORT_ROOT/bin/token-interop-mint"
 
 # DOC-TRUTH (one markdown walk): DOC-AUDIT/DOC-LINKS/DOC-LANG-PURITY/DOC-ENV/
 # COUNT-CLAIM/ACCESSOR-TRUTH/STATUS-CLAIM/README-INCLUDE. res=surface: DOC-AUDIT
@@ -322,6 +416,23 @@ sched_gate FMT defer=1 desc="run-format.sh (local: apply; CI: --check)" \
 sched_gate LINT defer=1 desc="run-lint.sh (phpstan level 9, zero findings)" \
     -- bash scripts/run-lint.sh
 
+# REPO-LINT / REPO-FMT — the 8 hand-written Python programs under scripts/ held to
+# the reference implementation's own ruff ruleset (ruff.toml mirrors
+# signalwire-python/pyproject.toml). Wired 2026-07-30 once the burn reached ZERO
+# (54 -> 0): burn to zero BEFORE wire, so the gate never lands red.
+#
+# This code was linted and format-checked by NOTHING until now. phpstan.neon lists
+# `scripts` in its paths, but phpstan only reads *.php, so 8586 lines of Python
+# were silently uncovered — including the two enumerators that PRODUCE the
+# port_surface.json / port_signatures.json the SURFACE and DRIFT gates compare
+# against. Cheap static checks, no build and no mock, so they belong in the
+# per-PR wave next to FMT/LINT.
+sched_gate REPO-LINT defer=1 desc="ruff check, zero findings, over scripts/*.py" \
+    --fn repo_lint_gate
+
+sched_gate REPO-FMT defer=1 desc="ruff format over scripts/*.py (local: apply; CI: --check)" \
+    --fn repo_fmt_gate
+
 # PUBLIC-JARGON stays standalone (public phpDoc analysis, not a suite family).
 sched_gate PUBLIC-JARGON res=dayone desc="no internal porting jargon in public phpDoc doc-comments" \
     -- python3 "$PORTING_SDK_DIR/scripts/public_jargon.py" --port php --repo "$PORT_ROOT"
@@ -354,16 +465,15 @@ sched_gate SNIPPET-RUN tier=nightly defer=1 desc="php doc snippets run to a zero
 sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port php --repo "$PORT_ROOT"
 
-# DOC-SURFACE (plan §6.3): docblock coverage floor on the hand-written public API
-# surface (generated code is excluded — it's documented by the generator). The
-# floor is pinned in .doc_surface_floor (84.3% today) and ratchets up via
-# --write-floor; report-only at graduation, so a doc regression is visible without
-# failing the run yet (never-regress is enforced once the floor flips blocking).
-# GUARDED: doc_surface.py ships on the porting-sdk plan branch; until it merges to
-# porting-sdk main (which CI clones), skip-with-pass rather than red on a not-yet-
-# landed sibling script. Remove the guard once it's on porting-sdk main.
-sched_gate DOC-SURFACE res=dayone desc="docblock coverage floor on the public API surface (report-only, ratchets via .doc_surface_floor)" \
-    -- bash -c 'if [ -f "$1/scripts/doc_surface.py" ]; then python3 "$1/scripts/doc_surface.py" --port php --repo "$2" --report-only; else echo "[doc-surface] doc_surface.py not on porting-sdk main yet — skip-pass (plan-branch dep)"; fi' _ "$PORTING_SDK_DIR" "$PORT_ROOT"
+# DOC-SURFACE (plan §6.3): docblock coverage floor on the public API surface.
+# BLOCKING. The port is at 100.0% (1164/1164) as of the 2026-07-29 burn and the floor in
+# .doc_surface_floor is pinned there, so a newly-undocumented public symbol is a real
+# regression with a pinned number to prove it — it must red the run, not print a note.
+# Was report-only at graduation, and previously wrapped in a skip-with-pass guard for
+# when doc_surface.py still lived only on the porting-sdk plan branch. Both are gone: the
+# script is on the pinned PORTING_SDK_REF, and a MISSING gate script must fail, not pass.
+sched_gate DOC-SURFACE res=dayone desc="docblock coverage floor on the public API surface (100% — blocking; ratchets via .doc_surface_floor)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_surface.py" --port php --repo "$PORT_ROOT"
 
 # WIRED-MODES (Part 1.6 / D7): the merge-coherence guard — greps this run-ci.sh for
 # every load-bearing env/mode line declared in WIRED_MODES.md (strict-mocks exports)
