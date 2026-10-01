@@ -634,6 +634,15 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\SWML\\Service", "registerRoutingCallback"): {
         "callback": "callable<list<dict<string,any>,dict<string,any>>,optional<string>>",
     },
+    # AgentBase::onCallEnd / addPerCallConfig — bare `callable` hints whose
+    # PHPDoc records the concrete `(list<array>, array)` / `(array, array,
+    # array, AgentBase)` shapes the oracle types.
+    ("SignalWire\\Agent\\AgentBase", "onCallEnd"): {
+        "handler": "callable<list<list<dict<string,any>>,dict<string,any>>,void>",
+    },
+    ("SignalWire\\Agent\\AgentBase", "addPerCallConfig"): {
+        "callback": "callable<list<dict<string,any>,dict<string,any>,dict<string,any>,any>,void>",
+    },
     # SkillManager::loadSkill — Python passes the skill CLASS OBJECT; PHP passes
     # its class-string (`new $skillClass(...)` is the PHP idiom for the same
     # capability) and the PHPDoc records `class-string<SkillBase>`. Re-establish
@@ -947,6 +956,18 @@ AICHAT_SIGNATURES: dict[str, dict[str, dict]] = {
             ],
             "returns": "void",
         },
+        # raw_post: the streaming relay. Python yields an aiohttp response from an
+        # async context manager; PHP returns a Generator of body chunks whose
+        # return value is the HTTP status -- the synchronous form of the same
+        # "relay the bytes as they arrive" capability.
+        "raw_post": {
+            "params": [
+                {"name": "self", "kind": "self"},
+                {"name": "method", "type": "string", "required": True},
+                {"name": "params", "type": "dict<string,any>", "required": True},
+            ],
+            "returns": "class:AsyncIterator",
+        },
         "chat": {
             "params": [
                 {"name": "self", "kind": "self"},
@@ -1241,6 +1262,11 @@ PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\REST\\HttpClient", "post"): {
         "headers": "keyword",
     },
+    # core/mixins/web_mixin.py ``mount(app_or_router, *, prefix="", name=None)``.
+    ("SignalWire\\Agent\\AgentBase", "mount"): {
+        "prefix": "keyword",
+        "name": "keyword",
+    },
     # relay/call.py:620 — ``play_silence(duration, *, on_completed=None)``.
     ("SignalWire\\Relay\\Call", "playSilence"): {
         "on_completed": "keyword",
@@ -1260,6 +1286,10 @@ PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 # surfacing as drift. Keyed by (PHP fully-qualified class, PHP method name) ->
 # canonical return type string.
 RETURN_TYPE_REMAPS: dict[tuple[str, str], str] = {
+    # onCallEnd returns the handler it registered (PHPDoc records the shape).
+    ("SignalWire\\Agent\\AgentBase", "onCallEnd"): (
+        "callable<list<list<dict<string,any>>,dict<string,any>>,void>"
+    ),
     # as_router() — Python's named "embed my routes in a host app" return type is
     # ``signalwire.core.web.HostAppRouter``; the signature oracle records it as the
     # return of both SWMLService.as_router and the projected WebMixin.as_router. PHP
@@ -2037,7 +2067,12 @@ def collect(
             if canonical_name in _AICHAT_SIG_DROP:
                 continue
             if canonical_name in AICHAT_SIGNATURES:
+                reflected = set(methods_out)
                 methods_out = dict(AICHAT_SIGNATURES[canonical_name])
+                # A table entry describes a member's SHAPE; it must not invent
+                # one PHP does not declare (raw_post is a real method).
+                if "raw_post" in methods_out and "raw_post" not in reflected:
+                    methods_out.pop("raw_post")
 
         # RELAY options-bag unfold: restore the reference's keyword params in
         # place of PHP's single ``array $opts`` idiom (see RELAY_OPTS_UNFOLD).

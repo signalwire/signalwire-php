@@ -757,6 +757,25 @@
               ],
               "returns": "class:signalwire.ai_chat.client.ChatLog"
             },
+            "raw_post": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "method",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "params",
+                  "type": "dict<string,any>",
+                  "required": true
+                }
+              ],
+              "returns": "class:AsyncIterator"
+            },
             "summarize": {
               "params": [
                 {
@@ -1918,6 +1937,20 @@
                 }
               ],
               "returns": "any"
+            },
+            "on_call_end": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "handler",
+                  "type": "callable<list<list<dict<string,any>>,dict<string,any>>,void>",
+                  "required": true
+                }
+              ],
+              "returns": "callable<list<list<dict<string,any>>,dict<string,any>>,void>"
             },
             "on_debug_event": {
               "params": [
@@ -6396,6 +6429,20 @@
       "classes": {
         "WebMixin": {
           "methods": {
+            "add_per_call_config": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "callback",
+                  "type": "callable<list<dict<string,any>,dict<string,any>,dict<string,any>,any>,void>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
             "as_router": {
               "params": [
                 {
@@ -6424,6 +6471,34 @@
                   "name": "url",
                   "type": "string",
                   "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "mount": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "app_or_router",
+                  "type": "union<class:signalwire.swml.SWMLService,callable<list<any>,any>>",
+                  "required": true
+                },
+                {
+                  "name": "prefix",
+                  "type": "string",
+                  "required": false,
+                  "default": "",
+                  "kind": "keyword"
+                },
+                {
+                  "name": "name",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null,
+                  "kind": "keyword"
                 }
               ],
               "returns": "any"
@@ -106327,6 +106402,15 @@
                 }
               ],
               "returns": "any"
+            },
+            "session": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "class:signalwire.utils._PublicSession"
             },
             "setup": {
               "params": [

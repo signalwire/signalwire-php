@@ -1034,6 +1034,55 @@ class Service implements RequestHandlerLike
     // ------------------------------------------------------------------
 
     /**
+     * Handlers mounted at a path prefix, longest prefix first.
+     *
+     * @var list<array{prefix: string, handler: RequestHandlerLike|callable}>
+     */
+    protected array $mounts = [];
+
+    /**
+     * Route a request to a mounted handler when its path falls under a mounted
+     * prefix; null when none matches.
+     *
+     * @param array<string, mixed> $query
+     * @param array<string, string> $headers
+     * @return array{int, array<string, string>, string}|null
+     */
+    protected function dispatchMounted(
+        string $method,
+        string $path,
+        array $query,
+        array $headers,
+        ?string $body,
+    ): ?array {
+        foreach ($this->mounts as $mount) {
+            $prefix = $mount['prefix'];
+            if ($prefix !== '' && $path !== $prefix && !str_starts_with($path, $prefix . '/')) {
+                continue;
+            }
+            $relative = $prefix === '' ? $path : (substr($path, strlen($prefix)) ?: '/');
+            if ($query !== []) {
+                $relative .= '?' . http_build_query($query);
+            }
+            $handler = $mount['handler'];
+            if ($handler instanceof RequestHandlerLike) {
+                return $handler->handleRequest($method, $relative, $headers, $body);
+            }
+            $result = $handler($method, $relative, $headers, $body);
+            if (is_array($result) && count($result) === 3) {
+                [$status, $outHeaders, $outBody] = array_values($result);
+                $h = [];
+                foreach (is_array($outHeaders) ? $outHeaders : [] as $k => $v) {
+                    $h[(string) $k] = is_scalar($v) ? (string) $v : '';
+                }
+                return [is_int($status) ? $status : 200, $h, is_scalar($outBody) ? (string) $outBody : ''];
+            }
+            return [500, ['Content-Type' => 'text/plain'], 'mounted handler returned no response'];
+        }
+        return null;
+    }
+
+    /**
      * Handle an HTTP request. Returns [status, headers, body].
      *
      * @param array<string, string> $headers
@@ -1064,6 +1113,14 @@ class Service implements RequestHandlerLike
                 }
             }
             $path = substr($path, 0, $qPos);
+        }
+
+        // Handlers mounted beside this service's own routes (AgentBase::mount):
+        // the longest matching prefix wins and receives the path relative to
+        // it. They are separate routes, outside this service's basic auth.
+        $mounted = $this->dispatchMounted($method, $path, $query, $headers, $body);
+        if ($mounted !== null) {
+            return $mounted;
         }
 
         // Health/ready: no auth

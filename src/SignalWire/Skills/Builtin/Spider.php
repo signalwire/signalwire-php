@@ -7,6 +7,7 @@ namespace SignalWire\Skills\Builtin;
 use SignalWire\Skills\HttpHelper;
 use SignalWire\Skills\SkillBase;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\Utils\PublicHttpSession;
 
 /**
  * Spider scraping skill.
@@ -27,6 +28,13 @@ use SignalWire\SWAIG\FunctionResult;
 class Spider extends SkillBase
 {
     private const BASE_URL_ENV = 'SPIDER_BASE_URL';
+
+    /**
+     * The HTTP session every page fetch goes through. It refuses redirects to
+     * and connections with private or internal addresses, which a check before
+     * the fetch can't catch, and carries the configured User-Agent and headers.
+     */
+    public PublicHttpSession $session;
 
     /**
      * XPath expressions for the unwanted elements stripped before text
@@ -67,6 +75,30 @@ class Spider extends SkillBase
     public function __construct(\SignalWire\Agent\AgentInterface $agent, array $params = [])
     {
         parent::__construct($agent, $params);
+        $this->session = new PublicHttpSession();
+        $userAgent = $params['user_agent'] ?? null;
+        $headers = is_array($params['headers'] ?? null) ? $params['headers'] : [];
+        foreach ($headers as $name => $value) {
+            if (is_string($name) && is_string($value)) {
+                $this->session->headers[$name] = $value;
+            }
+        }
+        $this->session->headers['User-Agent'] = is_string($userAgent)
+            ? $userAgent
+            : 'Spider/1.0 (SignalWire AI Agent)';
+    }
+
+    /**
+     * Fetch through {@see $session}; an upstream the operator pointed at with
+     * SPIDER_BASE_URL is fetched as configured (it may be a local service).
+     *
+     * @param array<string,string> $headers
+     * @return array{int, string, mixed}
+     */
+    private function fetch(string $original, string $rewritten, array $headers, int $timeout): array
+    {
+        $session = $rewritten === $original ? $this->session : new PublicHttpSession(allowPrivate: true);
+        return $session->get($rewritten, timeout: $timeout, headers: $headers);
     }
 
     /** The name. */
@@ -298,10 +330,11 @@ class Spider extends SkillBase
                 $headers = ['User-Agent' => $userAgent] + $extraHeaders;
 
                 try {
-                    [$status, $body, $parsed] = HttpHelper::get(
+                    [$status, $body, $parsed] = $this->fetch(
+                        $url,
                         $rewritten,
-                        headers: $headers,
-                        timeout: $timeout,
+                        $headers,
+                        $timeout,
                     );
                 } catch (\RuntimeException $e) {
                     return new FunctionResult(
@@ -376,10 +409,11 @@ class Spider extends SkillBase
                         self::BASE_URL_ENV,
                     );
                     try {
-                        [$status, $body, $parsed] = HttpHelper::get(
+                        [$status, $body, $parsed] = $this->fetch(
+                            $nextUrl,
                             $rewritten,
-                            headers: $headers,
-                            timeout: $timeout,
+                            $headers,
+                            $timeout,
                         );
                     } catch (\RuntimeException) {
                         continue;
@@ -504,10 +538,11 @@ class Spider extends SkillBase
                 );
                 $headers = ['User-Agent' => $userAgent] + $extraHeaders;
                 try {
-                    [$status, $body, $parsed] = HttpHelper::get(
+                    [$status, $body, $parsed] = $this->fetch(
+                        $url,
                         $rewritten,
-                        headers: $headers,
-                        timeout: $timeout,
+                        $headers,
+                        $timeout,
                     );
                 } catch (\RuntimeException $e) {
                     return new FunctionResult(

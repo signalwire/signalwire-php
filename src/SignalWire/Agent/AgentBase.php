@@ -10,6 +10,8 @@ use SignalWire\POM\PromptObjectModel;
 use SignalWire\Security\SessionManager;
 use SignalWire\Skills\SkillManager;
 use SignalWire\Skills\SkillName;
+use SignalWire\SWAIG\FunctionResult;
+use SignalWire\SWML\RequestHandlerLike;
 use SignalWire\SWML\Schema;
 use SignalWire\SWML\Service;
 
@@ -119,12 +121,20 @@ class AgentBase extends Service implements AgentInterface
     protected array $answerConfig;
 
     // ── Callbacks ───────────────────────────────────────────────────────
-    /** @var callable|null */
-    protected $dynamicConfigCallback;
+    /**
+     * The per-request configuration callbacks, run in registration order
+     * ({@see setDynamicConfigCallback()} replaces the chain,
+     * {@see addPerCallConfig()} appends to it).
+     *
+     * @var list<callable>
+     */
+    protected array $perCallConfigs = [];
     /** @var callable|null */
     protected $summaryCallback;
     /** @var callable|null */
     protected $debugEventHandler;
+    /** @var list<callable(list<array<string,mixed>>, array<string,mixed>): mixed> */
+    protected array $callEndHandlers = [];
 
     // ── Web / URLs ──────────────────────────────────────────────────────
     protected ?string $webhookUrl;
@@ -339,7 +349,7 @@ class AgentBase extends Service implements AgentInterface
         $this->answerConfig    = [];
 
         // Callbacks
-        $this->dynamicConfigCallback = null;
+        $this->perCallConfigs        = [];
         $this->summaryCallback       = null;
         $this->debugEventHandler     = null;
 
@@ -1671,24 +1681,89 @@ class AgentBase extends Service implements AgentInterface
      * `$cb($queryParams, $body, $headers, $agent)` against a
      * {@see AgentBase::cloneForRequest()} copy just before SWML rendering, so
      * mutations apply to that one request and never to the long-lived agent.
-     * Only one callback is held — a second call replaces the first.
+     * This REPLACES every callback registered so far — prefer
+     * {@see addPerCallConfig()} when composing, so a base class and a subclass
+     * (or an agent and a mixin) don't silently drop each other's configuration.
      *
      * @param callable $callback `(array $queryParams, array $body, array $headers, AgentBase $agent): void`.
      */
     public function setDynamicConfigCallback(callable $callback): self
     {
-        $this->dynamicConfigCallback = $callback;
+        $this->perCallConfigs = [$callback];
         return $this;
     }
 
     /**
-     * Returns the dynamic-config callback (or null if none has been set).
-     * Used by request handlers to invoke the callback before SWML
-     * rendering so the agent can be reshaped per-request.
+     * Register a per-request configuration callback, keeping any already set.
+     *
+     * Same signature and contract as {@see setDynamicConfigCallback()}, except
+     * that callbacks accumulate instead of overwriting. They run in
+     * registration order against the same ephemeral per-request agent, so a
+     * later one sees what an earlier one configured and can build on or
+     * override it. Configure the `$agent` argument (the per-request copy),
+     * never `$this`, or the configuration leaks across callers.
+     *
+     *     $agent->addPerCallConfig($configureVoice);
+     *     $agent->addPerCallConfig($configurePageContext);
+     *     // both run, in that order, on every request
+     *
+     * @param callable $callback `(array $queryParams, array $body, array $headers, AgentBase $agent): void`.
+     */
+    public function addPerCallConfig(callable $callback): self
+    {
+        $this->perCallConfigs = [...$this->perCallConfigs, $callback];
+        return $this;
+    }
+
+    /**
+     * Mount an extra request handler alongside this agent's own routes.
+     *
+     * A request whose path is `$prefix` or starts with `$prefix/` is handed to
+     * `$appOrRouter` with the path relative to the prefix, before the agent's
+     * own routing -- so a mounted route is never shadowed by the agent's
+     * catch-all, the agent's bare route keeps serving SWML, and /health stays
+     * reachable. Mounted routes are separate from the agent's endpoints and are
+     * not behind its basic auth.
+     *
+     *     $agent->mount($gateway->router(), prefix: '/chat');
+     *
+     * @param RequestHandlerLike|callable $appOrRouter a {@see RequestHandlerLike}
+     *   (e.g. another service) or a callable
+     *   `(string $method, string $path, array $headers, ?string $body): array{int, array<string,string>, string}`.
+     * @param string      $prefix Path prefix. No trailing slash.
+     * @param string|null $name   Optional mount name (informational).
+     */
+    public function mount(RequestHandlerLike|callable $appOrRouter, string $prefix = '', ?string $name = null): self
+    {
+        $clean = rtrim($prefix, '/');
+        $this->mounts[] = ['prefix' => $clean, 'handler' => $appOrRouter];
+        // Longest prefix first, so a nested mount wins over its parent.
+        usort($this->mounts, static fn (array $a, array $b): int => strlen($b['prefix']) <=> strlen($a['prefix']));
+        $this->logger->info('agent_route_mounted: prefix=' . ($clean !== '' ? $clean : '/')
+            . ($name !== null ? " name={$name}" : ''));
+        return $this;
+    }
+
+    /**
+     * Returns the per-request configuration as one callable (running every
+     * registered callback in registration order), or null when none is set.
+     * Used by request handlers to invoke it before SWML rendering so the agent
+     * can be reshaped per-request.
      */
     public function getDynamicConfigCallback(): ?callable
     {
-        return $this->dynamicConfigCallback;
+        $callbacks = $this->perCallConfigs;
+        if ($callbacks === []) {
+            return null;
+        }
+        if (count($callbacks) === 1) {
+            return $callbacks[0];
+        }
+        return static function (array $queryParams, ?array $body, array $headers, self $agent) use ($callbacks): void {
+            foreach ($callbacks as $callback) {
+                $callback($queryParams, $body, $headers, $agent);
+            }
+        };
     }
 
     /**
@@ -1762,6 +1837,89 @@ class AgentBase extends Service implements AgentInterface
     public function onSummary(array|string|null $summary, ?array $rawData = null): void
     {
         // Default implementation does nothing; subclasses override.
+    }
+
+    /**
+     * Register a handler that runs when the call ends, with the transcript.
+     *
+     * Handlers run in registration order and receive `($callLog, $rawData)`:
+     * the conversation as the platform recorded it (already resolved from
+     * whichever of `call_log` / `raw_call_log` carried it) and the complete
+     * SWAIG request, including `global_data` and `call_id`.
+     *
+     * This wraps the platform's reserved `hangup_hook` function: it fires on
+     * hangup and is never offered to the model, so it cannot be called early or
+     * skipped. Registering a handler also turns on `swaig_post_conversation`,
+     * because `call_log` is a CONDITIONAL field on a SWAIG request: without it
+     * the hook still fires but carries no transcript at all. If that param has
+     * been explicitly set to false it is left alone and a warning is logged.
+     *
+     * The return value is ignored (the call is over), and a handler that throws
+     * is logged rather than raised, so one failing teardown handler cannot stop
+     * the others or turn into a failed hangup.
+     *
+     *     $agent->onCallEnd(function (array $callLog, array $rawData): void {
+     *         store($rawData['global_data']['conversation_id'] ?? null, $callLog);
+     *     });
+     *
+     * @param callable(list<array<string,mixed>>, array<string,mixed>): mixed $handler
+     * @return callable The handler, so a caller can keep a reference to it.
+     */
+    public function onCallEnd(callable $handler): callable
+    {
+        $first = $this->callEndHandlers === [];
+        $this->callEndHandlers[] = $handler;
+        if ($first) {
+            $this->ensureCallEndHook();
+        }
+        return $handler;
+    }
+
+    /** Register the reserved hangup_hook once, and enable its payload. */
+    private function ensureCallEndHook(): void
+    {
+        if (array_key_exists('swaig_post_conversation', $this->params)
+            && $this->params['swaig_post_conversation'] === false) {
+            $this->logger->warn(
+                'call_end_handler_without_conversation: on_call_end handlers are registered '
+                . 'but swaig_post_conversation is explicitly false -- they will receive an '
+                . 'empty call_log'
+            );
+        } elseif (!array_key_exists('swaig_post_conversation', $this->params)) {
+            $this->params['swaig_post_conversation'] = true;
+        }
+
+        $this->defineTool(
+            'hangup_hook',
+            'Internal: fires when the call ends.',
+            [],
+            function (array $args, ?array $rawData): FunctionResult {
+                $raw = $rawData ?? [];
+                // Both spellings are seen in the wild depending on engine.
+                $callLog = !empty($raw['call_log']) ? $raw['call_log']
+                    : (!empty($raw['raw_call_log']) ? $raw['raw_call_log'] : []);
+                $entries = [];
+                foreach (is_array($callLog) ? $callLog : [] as $entry) {
+                    if (is_array($entry)) {
+                        $row = [];
+                        foreach ($entry as $k => $v) {
+                            $row[(string) $k] = $v;
+                        }
+                        $entries[] = $row;
+                    }
+                }
+                $callLog = $entries;
+                foreach ($this->callEndHandlers as $callback) {
+                    // Isolate each handler so one failure cannot stop the rest.
+                    try {
+                        $callback($callLog, $raw);
+                    } catch (\Throwable $e) {
+                        $this->logger->error('call_end_handler_failed: ' . $e->getMessage());
+                    }
+                }
+                return new FunctionResult('');
+            },
+        );
     }
 
     /**
@@ -2123,7 +2281,8 @@ class AgentBase extends Service implements AgentInterface
      */
     protected function handleSwmlRequest(string $method, ?array $requestData, array $headers): array
     {
-        if ($this->dynamicConfigCallback !== null) {
+        $dynamicConfig = $this->getDynamicConfigCallback();
+        if ($dynamicConfig !== null) {
             $clone = $this->cloneForRequest();
 
             $queryParams = [];
@@ -2131,7 +2290,7 @@ class AgentBase extends Service implements AgentInterface
                 $queryParams = (array) $requestData['query_params'];
             }
 
-            ($this->dynamicConfigCallback)($queryParams, $requestData, $headers, $clone);
+            $dynamicConfig($queryParams, $requestData, $headers, $clone);
 
             $swml = $clone->renderSwml($requestData, $headers);
             return $this->jsonResponse(200, $swml);
@@ -2307,9 +2466,10 @@ class AgentBase extends Service implements AgentInterface
         }
 
         // Callbacks preserved by reference (not cloned)
-        $clone->dynamicConfigCallback = $this->dynamicConfigCallback;
+        $clone->perCallConfigs        = $this->perCallConfigs;
         $clone->summaryCallback       = $this->summaryCallback;
         $clone->debugEventHandler     = $this->debugEventHandler;
+        $clone->callEndHandlers       = $this->callEndHandlers;
 
         return $clone;
     }

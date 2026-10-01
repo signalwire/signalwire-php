@@ -181,6 +181,7 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "WebhookValidator": "signalwire.core.security.webhook_validator",
     # Post-prompt normalization (signalwire/core/post_prompt.py).
     "NormalizedPostPrompt": "signalwire.core.post_prompt",
+    "PublicHttpSession": "signalwire.utils.url_validator",
     "WebhookMiddleware": "signalwire.core.security.webhook_middleware",
     "SecurityUtils": "signalwire.core.security.security_utils",
     # core/skills
@@ -674,10 +675,12 @@ MIXIN_PROJECTIONS: dict[tuple[str, str], tuple[str, list[str]]] = {
     ("signalwire.core.mixins.web_mixin", "WebMixin"): (
         "SWMLService",
         [
+            "add_per_call_config",
             "as_router",
             "enable_debug_routes",
             "get_app",
             "manual_set_proxy_url",
+            "mount",
             "on_request",
             "on_swml_request",
             "register_routing_callback",
@@ -710,6 +713,9 @@ CLASS_RENAME_MAP: dict[str, str] = {
     "AgentInterface": "AgentBase",
     "RelayClientLike": "RelayClient",
     "RequestHandlerLike": "SWMLService",
+    # The @internal SSRF-guarded fetcher behind SpiderSkill.session is the
+    # reference's private ``url_validator._PublicSession`` (same role).
+    "PublicHttpSession": "_PublicSession",
     # REST: the generated resource + container classes are named VERBATIM by the
     # oracle canonical names (scripts/generate_rest.py emits `class PhoneNumbers`,
     # `class FabricNamespace`, `class Calling`, …), so they need NO rename — the
