@@ -1574,7 +1574,8 @@ class Service implements RequestHandlerLike
     // ------------------------------------------------------------------
 
     /**
-     * Validate the X-SignalWire-Signature header on a signed webhook POST.
+     * Validate the signature header on a signed webhook POST
+     * (X-SignalWire-Sha256-Signature preferred, else X-SignalWire-Signature).
      *
      * Reconstructs the platform-public URL from request headers (proxy-aware)
      * and runs both Scheme A (RELAY/JSON hex) and Scheme B (Compat/cXML
@@ -1600,21 +1601,15 @@ class Service implements RequestHandlerLike
         string $subPath,
     ): ?array {
         $signature = null;
-        foreach ($headers as $k => $v) {
-            if (strcasecmp($k, 'X-SignalWire-Signature') === 0) {
-                $signature = is_string($v) ? $v : null;
-                break;
-            }
-        }
-        if ($signature === null) {
+        foreach (['X-SignalWire-Sha256-Signature', 'X-SignalWire-Signature', 'X-Twilio-Signature'] as $name) {
             foreach ($headers as $k => $v) {
-                if (strcasecmp($k, 'X-Twilio-Signature') === 0) {
-                    $signature = is_string($v) ? $v : null;
-                    break;
+                if (strcasecmp($k, $name) === 0 && is_string($v) && $v !== '') {
+                    $signature = $v;
+                    break 2;
                 }
             }
         }
-        if ($signature === null || $signature === '') {
+        if ($signature === null) {
             return [
                 403,
                 array_merge(['Content-Type' => 'text/plain'], $this->securityHeaders()),
@@ -1630,9 +1625,11 @@ class Service implements RequestHandlerLike
             return null;
         }
 
-        $valid = \SignalWire\Security\WebhookValidator::validateWebhookSignature(
+        // X-SignalWire-Sha256-Signature is preferred when present; the SHA-1
+        // header (or its X-Twilio-Signature alias) is the fallback.
+        $valid = \SignalWire\Security\WebhookValidator::verifySignedHeaders(
+            $headers,
             $signingKey,
-            $signature,
             $url,
             $rawBody,
         );

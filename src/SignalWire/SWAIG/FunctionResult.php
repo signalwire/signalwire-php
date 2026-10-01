@@ -17,21 +17,35 @@ namespace SignalWire\SWAIG;
  */
 class FunctionResult
 {
-    private string $response;
+    /** @var string|array<string,mixed> */
+    private string|array $response;
     private bool $postProcess;
     /** @var list<array<string,mixed>> */
     private array $actions = [];
 
     /**
-     * @param string|null $response    initial response text; null is coerced to ''
-     *   (an empty response is omitted from the wire payload entirely).
+     * @param string|array<string,mixed>|null $response a PROMPT injected into the
+     *   model's context (facts or an instruction the model reads, not speech
+     *   played to the caller), or the structured `{tool_result, tool_prompt}`
+     *   object; null is coerced to '' (an empty response is omitted from the
+     *   wire payload entirely).
      * @param bool        $postProcess whether the AI should post-process the result;
      *   only reaches the wire when actions are also present.
+     * @param string|null $toolResult  factual outcome of the call (see
+     *   {@see FunctionResult::setToolResponse()}).
+     * @param string|null $toolPrompt  instruction for what the model should say next.
      */
-    public function __construct(?string $response = '', bool $postProcess = false)
-    {
+    public function __construct(
+        string|array|null $response = '',
+        bool $postProcess = false,
+        ?string $toolResult = null,
+        ?string $toolPrompt = null
+    ) {
         $this->response = $response ?? '';
         $this->postProcess = $postProcess;
+        if ($toolResult !== null || $toolPrompt !== null) {
+            $this->setToolResponse($toolResult, $toolPrompt);
+        }
     }
 
     // ── Core ─────────────────────────────────────────────────────────────
@@ -40,6 +54,30 @@ class FunctionResult
     public function setResponse(string $text): self
     {
         $this->response = $text;
+        return $this;
+    }
+
+    /**
+     * Set the structured response form, separating outcome from instruction:
+     *
+     *     {"tool_result": "status: on hold",
+     *      "tool_prompt": "Tell the caller you are placing them on hold."}
+     *
+     * `tool_result` is what the tool DID -- a factual status line for the model
+     * to reason from; `tool_prompt` is what the model should now SAY -- an
+     * instruction, like the string form of the response. Splitting them keeps
+     * the model from reading a status line aloud. Either may be omitted.
+     */
+    public function setToolResponse(?string $toolResult = null, ?string $toolPrompt = null): self
+    {
+        $payload = [];
+        if ($toolResult !== null) {
+            $payload['tool_result'] = $toolResult;
+        }
+        if ($toolPrompt !== null) {
+            $payload['tool_prompt'] = $toolPrompt;
+        }
+        $this->response = $payload;
         return $this;
     }
 
@@ -59,7 +97,8 @@ class FunctionResult
      * and a ``set_response`` method (function_result.py), so the reader is a
      * genuine second member — not a fold target for the setter.
      */
-    public function getResponse(): string
+    /** @return string|array<string,mixed> */
+    public function getResponse(): string|array
     {
         return $this->response;
     }
@@ -97,8 +136,8 @@ class FunctionResult
     {
         $result = [];
 
-        // response is omitted when empty (Python parity).
-        if ($this->response !== '') {
+        // response is omitted when empty (a '' string or an empty payload).
+        if ($this->response !== '' && $this->response !== []) {
             $result['response'] = $this->response;
         }
 
@@ -207,18 +246,74 @@ class FunctionResult
     }
 
     /**
-     * Put the call on hold. Emits `{"hold": <int seconds>}` — a bare integer,
-     * not an object.
+     * Put the call on hold, optionally announcing it and routing what happens next.
      *
+     * During hold speech detection is paused and the agent will not respond,
+     * so anything the caller needs to hear has to be said BEFORE the action
+     * lands. Passing `$prompt` wires that up: it becomes the result's response
+     * (`tool_prompt`, with `tool_result: "status: on hold"`) and switches on
+     * post_process, so the model speaks before the hold executes.
+     *
+     * `$step` / `$timeoutStep` land the caller in a chosen step when the hold
+     * ends (taken off hold / timed out). Omitting both emits the bare integer
+     * form `{"hold": <seconds>}` and the caller resumes where they were.
+     *
+     * @param string|int|null $prompt instruction for the model to deliver
+     *   before the hold; an int here is treated as `$timeout`, so hold(120)
+     *   keeps working.
      * @param int $timeout seconds to hold, CLAMPED to [0, 900]; out-of-range
      *   values are silently pulled to the nearest bound rather than rejected.
+     * @param string|null $step step to move to when the call is taken off hold.
+     * @param string|null $timeoutStep step to move to when the hold times out.
      */
-    public function hold(int $timeout = 300): self
-    {
-        // Python: add_action("hold", timeout) -> {"hold": <int>} (bare int,
-        // not an object). Clamp to [0, 900] first (matches the reference).
+    public function hold(
+        string|int|null $prompt = null,
+        int $timeout = 300,
+        ?string $step = null,
+        ?string $timeoutStep = null
+    ): self {
+        // Back-compat: hold(120) means hold(timeout: 120).
+        if (is_int($prompt)) {
+            $timeout = $prompt;
+            $prompt = null;
+        }
+        // The hold action carries no prompt and pauses speech detection, so a
+        // prompt must be delivered BEFORE the hold lands: it becomes the
+        // structured response and switches on post_process.
+        if ($prompt !== null) {
+            $this->setToolResponse('status: on hold', $prompt);
+            $this->postProcess = true;
+        }
         $clamped = max(0, min(900, $timeout));
-        $this->actions[] = ['hold' => $clamped];
+        // Bare integer unless routing is requested, so existing output is unchanged.
+        if ($step === null && $timeoutStep === null) {
+            $this->actions[] = ['hold' => $clamped];
+            return $this;
+        }
+        $config = ['timeout' => $clamped];
+        if ($step !== null) {
+            $config['step'] = $step;
+        }
+        if ($timeoutStep !== null) {
+            $config['timeout_step'] = $timeoutStep;
+        }
+        $this->actions[] = ['hold' => $config];
+        return $this;
+    }
+
+    /**
+     * Change the agent's voice for the rest of the call.
+     *
+     * The voice is an `engine.voice:model` spec, the same form a language's
+     * voice takes in the SWML `languages` list (e.g. "elevenlabs.rachel"); the
+     * `engine.` prefix and `:model` suffix are optional. It replaces the voice
+     * of the language currently in use. The platform applies it at the next
+     * speech batch boundary and keeps it for that language for the rest of the
+     * call; an empty spec is ignored.
+     */
+    public function changeVoice(string $voice): self
+    {
+        $this->actions[] = ['change_voice' => $voice];
         return $this;
     }
 
@@ -482,8 +577,7 @@ class FunctionResult
      * @param RecordDirection|string $direction stream direction — the typed
      *   {@see RecordDirection} enum (typo-checked at the call site) or a bare
      *   string (matches `record_call`). Normalized to the wire
-     *   string ('speak'/'listen'/'both'). Note `record_call` uses 'listen'
-     *   where {@see FunctionResult::tap()} uses 'hear' — distinct closed sets.
+     *   string ('speak'/'listen'/'both') — the same set {@see FunctionResult::tap()} uses.
      * @throws \InvalidArgumentException on an invalid format or direction.
      */
     public function recordCall(
@@ -684,9 +778,10 @@ class FunctionResult
     /**
      * Execute SWML content with optional transfer behavior. Mirrors
      * `execute_swml`: a string is parsed to an array (on parse
-     * failure it is wrapped as {"raw_swml": <text>}); when $transfer is true the
-     * key "transfer" => "true" is set INSIDE the SWML document; the action is
-     * ALWAYS added under the "SWML" key (there is no separate transfer key).
+     * failure it is wrapped as {"raw_swml": <text>}); the document is added
+     * under the "SWML" action key, and when $transfer is true "transfer" =>
+     * "true" rides BESIDE it in the same action (inside the document it is not
+     * a SWML key and the call would never exit the agent).
      *
      * @param array<string,mixed>|string $swmlContent SWML JSON string or already-decoded array.
      */
@@ -701,10 +796,11 @@ class FunctionResult
             // decode keeps {} a stdClass and JSON arrays as PHP arrays.
             $decoded = json_decode($swmlContent);
             if ($decoded instanceof \stdClass) {
+                $action = ['SWML' => $decoded];
                 if ($transfer) {
-                    $decoded->transfer = 'true';
+                    $action['transfer'] = 'true';
                 }
-                $this->actions[] = ['SWML' => $decoded];
+                $this->actions[] = $action;
                 return $this;
             }
             // On invalid JSON (or a non-object top level), mirror Python's
@@ -715,11 +811,15 @@ class FunctionResult
                 : ['raw_swml' => $swmlContent];
         }
 
+        // transfer rides BESIDE the SWML document, not inside it — the same
+        // shape connect() and swmlTransfer() emit. Inside the document it is
+        // not a SWML key and the call never exits the agent.
+        $action = ['SWML' => $swmlContent];
         if ($transfer) {
-            $swmlContent['transfer'] = 'true';
+            $action['transfer'] = 'true';
         }
 
-        $this->actions[] = ['SWML' => $swmlContent];
+        $this->actions[] = $action;
         return $this;
     }
 
@@ -961,15 +1061,17 @@ class FunctionResult
      * Start background call tap using SWML.
      *
      * Mirrors the `tap` API: validates direction
-     * ({speak,hear,both}), codec ({PCMU,PCMA}) and rtp_ptime (> 0); the only
-     * always-emitted field is `uri`; control_id/direction/codec/rtp_ptime/
-     * status_url are added only when they differ from their defaults; the
+     * ({speak,listen,both}), codec ({PCMU,PCMA}) and rtp_ptime (> 0); `uri`
+     * and `direction` are always emitted (the verb's own default direction is
+     * "speak", not this helper's "both", so omitting it would tap less than
+     * asked); control_id/codec/rtp_ptime/status_url are added only when they
+     * differ from their defaults; the
      * {"tap": ...} verb is wrapped in a full SWML document via executeSwml.
      *
      * @param TapDirection|string $direction stream direction — the typed
      *   {@see TapDirection} enum (typo-checked at the call site) or a bare
      *   string (matches `tap`). Normalized to the wire string
-     *   ('speak'/'hear'/'both').
+     *   ('speak'/'listen'/'both').
      * @param Codec|string $codec media codec — the typed {@see Codec} enum
      *   (typo-checked at the call site) or a bare string (matches Python's
      *   `tap`). Normalized to the wire string ('PCMU'/'PCMA'). This is the SWAIG
@@ -988,7 +1090,7 @@ class FunctionResult
         $codecStr = $codec instanceof Codec ? $codec->value : $codec;
 
         // Validate direction.
-        $validDirections = ['speak', 'hear', 'both'];
+        $validDirections = ['speak', 'listen', 'both'];
         if (!in_array($directionStr, $validDirections, true)) {
             throw new \InvalidArgumentException(
                 'direction must be one of ' . self::pythonList($validDirections)
@@ -1008,16 +1110,16 @@ class FunctionResult
             throw new \InvalidArgumentException('rtp_ptime must be a positive integer');
         }
 
-        // Only `uri` is always present; everything else is emitted only when
-        // it differs from its default (parity with the reference).
+        // `uri` and `direction` are always present; everything else is
+        // emitted only when it differs from its default.
         $tapObj = ['uri' => $uri];
 
         if ($controlId !== null && $controlId !== '') {
             $tapObj['control_id'] = $controlId;
         }
-        if ($directionStr !== 'both') {
-            $tapObj['direction'] = $directionStr;
-        }
+        // Always sent: the verb's own default is "speak", not this helper's
+        // "both", so omitting it would tap less than the caller asked for.
+        $tapObj['direction'] = $directionStr;
         if ($codecStr !== 'PCMU') {
             $tapObj['codec'] = $codecStr;
         }
@@ -1281,16 +1383,46 @@ class FunctionResult
     }
 
     /**
-     * Inject a message into an AI agent on another call using execute_rpc.
-     * Emits: method="ai_message", call_id top-level, params={role,
-     * message_text}. `role` defaults to "system".
+     * Send a message and/or global_data to an AI agent on another call using
+     * execute_rpc (method="ai_message", call_id top-level).
+     *
+     * `$messageText` lands as a turn in the other agent's conversation;
+     * `$globalData` is MERGED into the other call's global_data, silent until a
+     * prompt expands it with `${global_data.your_key}`. Either or both.
+     *
+     * @param array<string,mixed>|null $globalData merged into the target call's global_data.
+     * @throws \InvalidArgumentException when neither message nor global_data is given.
      */
-    public function rpcAiMessage(string $callId, string $messageText, string $role = 'system'): self
+    public function rpcAiMessage(
+        string $callId,
+        ?string $messageText = null,
+        string $role = 'system',
+        ?array $globalData = null
+    ): self {
+        $params = [];
+        if ($messageText !== null) {
+            $params['role'] = $role;
+            $params['message_text'] = $messageText;
+        }
+        if ($globalData !== null) {
+            $params['global_data'] = $globalData;
+        }
+        if ($params === []) {
+            throw new \InvalidArgumentException('rpc_ai_message needs message_text, global_data, or both');
+        }
+        return $this->executeRpc('ai_message', $params, $callId);
+    }
+
+    /**
+     * Merge data into another call's global_data, with no conversation turn.
+     * Thin wrapper over {@see rpcAiMessage()} with `globalData`; the destination
+     * prompt reads it back with `${global_data.key}`.
+     *
+     * @param array<string,mixed> $data Object merged into that call's global_data.
+     */
+    public function rpcAiGlobalData(string $callId, array $data): self
     {
-        return $this->executeRpc('ai_message', [
-            'role' => $role,
-            'message_text' => $messageText,
-        ], $callId);
+        return $this->rpcAiMessage($callId, globalData: $data);
     }
 
     /**

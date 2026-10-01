@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 7d55d7126d7d5826de2a1171de65b63385f6e6f9",
+  "generated_from": "signalwire-php @ 78c0816a13fd720f3fef7c5051d88f944225113d",
   "modules": {
     "signalwire": {
       "classes": {
@@ -267,6 +267,14 @@
       },
       "functions": []
     },
+    "signalwire.core.capabilities": {
+      "classes": {},
+      "functions": [
+        "declared_capabilities",
+        "has_capability",
+        "user_variables"
+      ]
+    },
     "signalwire.core.config_loader": {
       "classes": {
         "ConfigLoader": [
@@ -410,6 +418,7 @@
           "add_action",
           "add_actions",
           "add_dynamic_hints",
+          "change_voice",
           "clear_dynamic_hints",
           "connect",
           "create_payment_action",
@@ -431,6 +440,7 @@
           "remove_metadata",
           "replace_in_history",
           "response",
+          "rpc_ai_global_data",
           "rpc_ai_message",
           "rpc_ai_unhold",
           "rpc_dial",
@@ -441,6 +451,7 @@
           "set_post_process",
           "set_response",
           "set_speech_event_timeout",
+          "set_tool_response",
           "simulate_user_input",
           "sip_refer",
           "stop",
@@ -627,6 +638,25 @@
       },
       "functions": []
     },
+    "signalwire.core.post_prompt": {
+      "classes": {
+        "NormalizedPostPrompt": [
+          "__init__",
+          "call_id",
+          "conversation_id",
+          "dialogue",
+          "medium",
+          "raw",
+          "summary"
+        ]
+      },
+      "functions": [
+        "dialogue_turns",
+        "normalize_post_prompt",
+        "parse_post_prompt_data",
+        "strip_json_fence"
+      ]
+    },
     "signalwire.core.post_prompt_generated": {
       "classes": {
         "PostPrompt": [
@@ -708,7 +738,8 @@
       "classes": {},
       "functions": [
         "validate_request",
-        "validate_webhook_signature"
+        "validate_webhook_signature",
+        "validate_webhook_signature_sha256"
       ]
     },
     "signalwire.core.security_config": {

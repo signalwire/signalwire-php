@@ -81,4 +81,18 @@ class LoggingConfigFreeFunctionsTest extends TestCase
         $result = LoggingConfig::stripControlChars(['v' => "line1\nline2\tcol"]);
         $this->assertSame("line1\nline2\tcol", $result['v']);
     }
+
+    public function testStripControlCharsAcceptsTheProcessorCallShape(): void
+    {
+        // Parity: logging_config.strip_control_chars(*args) — the LAST positional
+        // argument is the event dict, so it works as a processor (logger, method, event).
+        $result = LoggingConfig::stripControlChars(null, 'info', ['msg' => "a\x00b"]);
+        $this->assertSame('ab', $result['msg']);
+    }
+
+    public function testStripControlCharsRequiresTheEventDict(): void
+    {
+        $this->expectException(\TypeError::class);
+        LoggingConfig::stripControlChars();
+    }
 }

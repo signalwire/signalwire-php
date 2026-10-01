@@ -179,6 +179,8 @@ CLASS_MODULE_MAP: dict[str, str] = {
     # core/security
     "SessionManager": "signalwire.core.security.session_manager",
     "WebhookValidator": "signalwire.core.security.webhook_validator",
+    # Post-prompt normalization (signalwire/core/post_prompt.py).
+    "NormalizedPostPrompt": "signalwire.core.post_prompt",
     "WebhookMiddleware": "signalwire.core.security.webhook_middleware",
     "SecurityUtils": "signalwire.core.security.security_utils",
     # core/skills
@@ -440,6 +442,10 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         "signalwire.core.security.webhook_validator",
         "validate_request",
     ),
+    ("WebhookValidator", "validate_webhook_signature_sha256"): (
+        "signalwire.core.security.webhook_validator",
+        "validate_webhook_signature_sha256",
+    ),
     # Decomposed framework-free validation core — the SURFACE oracle records
     # signalwire.core.security.webhook_middleware.validate as a module-level
     # function (alongside make_webhook_validation_dependency). PHP hosts it as a
@@ -503,6 +509,35 @@ SURFACE_FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         "get_execution_mode",
     ),
     ("LoggingConfig", "is_serverless_mode"): ("signalwire.utils", "is_serverless_mode"),
+    # Post-prompt normalization + client capability helpers — module-level free
+    # functions in signalwire.core.post_prompt / signalwire.core.capabilities;
+    # PHP hosts each family on a static facade (PostPrompt / Capabilities,
+    # PSR-4). EVERY public method of both is projected, so the shells drop.
+    ("PostPrompt", "strip_json_fence"): (
+        "signalwire.core.post_prompt",
+        "strip_json_fence",
+    ),
+    ("PostPrompt", "parse_post_prompt_data"): (
+        "signalwire.core.post_prompt",
+        "parse_post_prompt_data",
+    ),
+    ("PostPrompt", "dialogue_turns"): ("signalwire.core.post_prompt", "dialogue_turns"),
+    ("PostPrompt", "normalize_post_prompt"): (
+        "signalwire.core.post_prompt",
+        "normalize_post_prompt",
+    ),
+    ("Capabilities", "user_variables"): (
+        "signalwire.core.capabilities",
+        "user_variables",
+    ),
+    ("Capabilities", "declared_capabilities"): (
+        "signalwire.core.capabilities",
+        "declared_capabilities",
+    ),
+    ("Capabilities", "has_capability"): (
+        "signalwire.core.capabilities",
+        "has_capability",
+    ),
 }
 
 

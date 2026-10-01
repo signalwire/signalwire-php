@@ -226,6 +226,34 @@ FQN_CLASS_MODULE_MAP: dict[str, tuple[str, str | None]] = {
 
 
 FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
+    ("SignalWire\\Core\\PostPrompt", "stripJsonFence"): (
+        "signalwire.core.post_prompt",
+        "strip_json_fence",
+    ),
+    ("SignalWire\\Core\\PostPrompt", "parsePostPromptData"): (
+        "signalwire.core.post_prompt",
+        "parse_post_prompt_data",
+    ),
+    ("SignalWire\\Core\\PostPrompt", "dialogueTurns"): (
+        "signalwire.core.post_prompt",
+        "dialogue_turns",
+    ),
+    ("SignalWire\\Core\\PostPrompt", "normalizePostPrompt"): (
+        "signalwire.core.post_prompt",
+        "normalize_post_prompt",
+    ),
+    ("SignalWire\\Core\\Capabilities", "userVariables"): (
+        "signalwire.core.capabilities",
+        "user_variables",
+    ),
+    ("SignalWire\\Core\\Capabilities", "declaredCapabilities"): (
+        "signalwire.core.capabilities",
+        "declared_capabilities",
+    ),
+    ("SignalWire\\Core\\Capabilities", "hasCapability"): (
+        "signalwire.core.capabilities",
+        "has_capability",
+    ),
     ("SignalWire\\Utils\\UrlValidator", "validateUrl"): (
         "signalwire.utils.url_validator",
         "validate_url",
@@ -327,6 +355,10 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
         "signalwire.core.security.webhook_validator",
         "validate_request",
     ),
+    ("SignalWire\\Security\\WebhookValidator", "validateWebhookSignatureSha256"): (
+        "signalwire.core.security.webhook_validator",
+        "validate_webhook_signature_sha256",
+    ),
     # Decomposed framework-free validation core — Python ships it as the
     # module-level free function signalwire.core.security.webhook_middleware.
     # validate(method, url, headers, body, *, signing_key) -> optional triple.
@@ -383,6 +415,28 @@ FREE_FUNCTION_PROJECTIONS: dict[tuple[str, str], tuple[str, str]] = {
 # table rewrites the projected signature to canonical kind+type so the
 # cross-language audit treats them as compatible.
 FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
+    # core/post_prompt.py ``dialogue_turns(call_log, *, roles=DIALOGUE_ROLES,
+    # drop_echo=None)``. PHP has no keyword-only params (callers reach them by
+    # named argument) and reflection reports the ``self::DIALOGUE_ROLES`` default
+    # by VALUE and erases the tuple element type, so re-establish the canonical
+    # kind / type / named-constant default.
+    ("signalwire.core.post_prompt", "dialogue_turns"): [
+        {"name": "call_log", "type": "any", "required": True},
+        {
+            "name": "roles",
+            "kind": "keyword",
+            "type": "tuple<string,any>",
+            "required": False,
+            "default": "DIALOGUE_ROLES",
+        },
+        {
+            "name": "drop_echo",
+            "kind": "keyword",
+            "type": "optional<string>",
+            "required": False,
+            "default": None,
+        },
+    ],
     ("signalwire", "RestClient"): [
         {
             "name": "args",
@@ -509,6 +563,25 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\REST\\HttpClient", "get"): {
         "params": "optional<dict<string,any>>",
         "headers": "optional<dict<string,string>>",
+    },
+    # FunctionResult / DataMap catch-up params whose concrete map type the
+    # PHPDoc records (``array<string,mixed>``) but reflection erases to ``any``.
+    ("SignalWire\\SWAIG\\FunctionResult", "rpcAiGlobalData"): {
+        "data": "dict<string,any>",
+    },
+    ("SignalWire\\SWAIG\\FunctionResult", "rpcAiMessage"): {
+        "global_data": "optional<dict<string,any>>",
+    },
+    ("SignalWire\\DataMap\\DataMap", "createSimpleApiTool"): {
+        "body": "optional<dict<string,any>>",
+    },
+    ("SignalWire\\DataMap\\DataMap", "body"): {
+        "data": "dict<string,any>",
+    },
+    ("SignalWire\\Core\\NormalizedPostPrompt", "__construct"): {
+        "summary": "dict<string,any>",
+        "dialogue": "list<dict<string,string>>",
+        "raw": "dict<string,any>",
     },
     ("SignalWire\\REST\\HttpClient", "getText"): {
         "params": "optional<dict<string,any>>",
@@ -1746,6 +1819,14 @@ def collect(
                 params = sig.get("params", [])
                 if params and params[0].get("kind") == "self":
                     sig["params"] = params[1:]
+                # The same concrete-collection type remap the class-method path
+                # applies (see PARAM_TYPE_REMAPS), keyed by the HOST method.
+                ff_remap = PARAM_TYPE_REMAPS.get(ff_key)
+                if ff_remap:
+                    for prm in sig.get("params", []):
+                        new_type = ff_remap.get(prm.get("name", ""))
+                        if new_type is not None:
+                            prm["type"] = new_type
                 # Apply variadic-shape override for projections whose PHP
                 # signature uses ``array $args = [], array $kwargs = []``
                 # but the canonical Python signature is

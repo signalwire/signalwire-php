@@ -67,6 +67,7 @@ class ExampleToolHandlerTest extends TestCase
         // this assertion an ArgumentCountError, TypeError or Error inside the
         // handler reads as a perfectly ordinary FunctionResult.
         $response = $result->getResponse();
+        self::assertIsString($response, "tool '{$name}' returned a structured response");
         self::assertStringNotContainsString(
             "Error executing function '{$name}'",
             $response,
@@ -84,7 +85,9 @@ class ExampleToolHandlerTest extends TestCase
         $result = self::callTool($agent, 'get_weather', ['location' => 'Chicago']);
 
         // The real answer, proving the handler ran to completion.
-        self::assertStringContainsString('Chicago', $result->getResponse());
+        $response = $result->getResponse();
+        self::assertIsString($response);
+        self::assertStringContainsString('Chicago', $response);
     }
 
     public function testSimpleAgentWeatherToolEmitsTheSetGlobalDataAction(): void

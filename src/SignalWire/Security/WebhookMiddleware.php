@@ -26,7 +26,8 @@ use SignalWire\Logging\Logger;
  *     );
  *
  * Behaviour:
- *   - Reads X-SignalWire-Signature (or X-Twilio-Signature alias).
+ *   - Reads X-SignalWire-Sha256-Signature (preferred) or
+ *     X-SignalWire-Signature (or the X-Twilio-Signature alias).
  *   - On valid signature: forwards to $next, returns its result unchanged.
  *   - On invalid signature: returns 403 Forbidden, never calls $next.
  *   - On missing header: returns 403 Forbidden, never calls $next.
@@ -78,15 +79,14 @@ final class WebhookMiddleware
         string $rawBody,
         callable $next,
     ): array {
-        $signature = self::extractSignatureFrom($headers);
-        if ($signature === null || $signature === '') {
+        if (!self::hasSignatureHeader($headers)) {
             $this->logger->warn('webhook signature missing — returning 403');
             return self::forbiddenTriple();
         }
 
-        $valid = WebhookValidator::validateWebhookSignature(
+        $valid = WebhookValidator::verifySignedHeaders(
+            $headers,
             $this->signingKey,
-            $signature,
             $url,
             $rawBody,
         );
@@ -142,17 +142,11 @@ final class WebhookMiddleware
             throw new \InvalidArgumentException('signingKey is required');
         }
 
-        $signature = self::extractSignatureFrom($headers);
-        if ($signature === null || $signature === '') {
+        if (!self::hasSignatureHeader($headers)) {
             return self::forbiddenTriple();
         }
 
-        $valid = WebhookValidator::validateWebhookSignature(
-            $signingKey,
-            $signature,
-            $url,
-            $body,
-        );
+        $valid = WebhookValidator::verifySignedHeaders($headers, $signingKey, $url, $body);
 
         if (!$valid) {
             return self::forbiddenTriple();
@@ -162,9 +156,25 @@ final class WebhookMiddleware
     }
 
     /**
-     * Header lookup shared by the instance `process()` and the static
-     * decomposed `validate()`. Prefers X-SignalWire-Signature over the legacy
-     * X-Twilio-Signature alias (cXML compat).
+     * Whether any signature header (X-SignalWire-Sha256-Signature,
+     * X-SignalWire-Signature or the X-Twilio-Signature alias) carries a value.
+     *
+     * @param array<string,mixed> $headers
+     */
+    private static function hasSignatureHeader(array $headers): bool
+    {
+        foreach ($headers as $k => $v) {
+            if (strcasecmp($k, 'X-SignalWire-Sha256-Signature') === 0 && is_string($v) && $v !== '') {
+                return true;
+            }
+        }
+        $signature = self::extractSignatureFrom($headers);
+        return $signature !== null && $signature !== '';
+    }
+
+    /**
+     * Header lookup for the SHA-1 signature. Prefers X-SignalWire-Signature
+     * over the legacy X-Twilio-Signature alias (cXML compat).
      *
      * @param array<string,mixed> $headers
      */

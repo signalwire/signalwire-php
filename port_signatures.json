@@ -2282,6 +2282,45 @@
         }
       }
     },
+    "signalwire.core.capabilities": {
+      "functions": {
+        "declared_capabilities": {
+          "params": [
+            {
+              "name": "body_params",
+              "type": "optional<any>",
+              "required": true
+            }
+          ],
+          "returns": "any"
+        },
+        "has_capability": {
+          "params": [
+            {
+              "name": "body_params",
+              "type": "optional<any>",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "bool"
+        },
+        "user_variables": {
+          "params": [
+            {
+              "name": "body_params",
+              "type": "optional<any>",
+              "required": true
+            }
+          ],
+          "returns": "any"
+        }
+      }
+    },
     "signalwire.core.config_loader": {
       "classes": {
         "ConfigLoader": {
@@ -3640,7 +3679,7 @@
                 },
                 {
                   "name": "data",
-                  "type": "any",
+                  "type": "dict<string,any>",
                   "required": true
                 }
               ],
@@ -3961,7 +4000,7 @@
             },
             {
               "name": "body",
-              "type": "optional<any>",
+              "type": "optional<dict<string,any>>",
               "required": false,
               "default": null
             },
@@ -3988,7 +4027,7 @@
                 },
                 {
                   "name": "response",
-                  "type": "optional<string>",
+                  "type": "optional<union<any,string>>",
                   "required": false,
                   "default": ""
                 },
@@ -3997,6 +4036,18 @@
                   "type": "bool",
                   "required": false,
                   "default": false
+                },
+                {
+                  "name": "tool_result",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "tool_prompt",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "void"
@@ -4038,6 +4089,20 @@
                 {
                   "name": "hints",
                   "type": "list<union<dict<string,any>,string>>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "change_voice": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "voice",
+                  "type": "string",
                   "required": true
                 }
               ],
@@ -4233,10 +4298,28 @@
                   "kind": "self"
                 },
                 {
+                  "name": "prompt",
+                  "type": "optional<union<string,int>>",
+                  "required": false,
+                  "default": null
+                },
+                {
                   "name": "timeout",
                   "type": "int",
                   "required": false,
                   "default": 300
+                },
+                {
+                  "name": "step",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "timeout_step",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -4647,7 +4730,26 @@
                   "kind": "self"
                 }
               ],
-              "returns": "string"
+              "returns": "union<any,string>"
+            },
+            "rpc_ai_global_data": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "call_id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "data",
+                  "type": "dict<string,any>",
+                  "required": true
+                }
+              ],
+              "returns": "any"
             },
             "rpc_ai_message": {
               "params": [
@@ -4662,14 +4764,21 @@
                 },
                 {
                   "name": "message_text",
-                  "type": "string",
-                  "required": true
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 },
                 {
                   "name": "role",
                   "type": "string",
                   "required": false,
                   "default": "system"
+                },
+                {
+                  "name": "global_data",
+                  "type": "optional<dict<string,any>>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -4841,6 +4950,27 @@
                   "name": "ms",
                   "type": "int",
                   "required": true
+                }
+              ],
+              "returns": "any"
+            },
+            "set_tool_response": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "tool_result",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "tool_prompt",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
                 }
               ],
               "returns": "any"
@@ -5352,9 +5482,11 @@
         "strip_control_chars": {
           "params": [
             {
-              "name": "event_dict",
-              "type": "any",
-              "required": true
+              "name": "args",
+              "type": "optional<any>",
+              "kind": "var_positional",
+              "required": false,
+              "default": null
             }
           ],
           "returns": "any"
@@ -6611,6 +6743,169 @@
               "returns": "string"
             }
           }
+        }
+      }
+    },
+    "signalwire.core.post_prompt": {
+      "classes": {
+        "NormalizedPostPrompt": {
+          "methods": {
+            "__init__": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                },
+                {
+                  "name": "medium",
+                  "type": "string",
+                  "required": false,
+                  "default": ""
+                },
+                {
+                  "name": "conversation_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "summary",
+                  "type": "dict<string,any>",
+                  "required": false,
+                  "default": []
+                },
+                {
+                  "name": "dialogue",
+                  "type": "list<dict<string,string>>",
+                  "required": false,
+                  "default": []
+                },
+                {
+                  "name": "call_id",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "raw",
+                  "type": "dict<string,any>",
+                  "required": false,
+                  "default": []
+                }
+              ],
+              "returns": "void"
+            },
+            "call_id": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "conversation_id": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "dialogue": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "medium": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "string"
+            },
+            "raw": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            },
+            "summary": {
+              "params": [
+                {
+                  "name": "self",
+                  "kind": "self"
+                }
+              ],
+              "returns": "any"
+            }
+          }
+        }
+      },
+      "functions": {
+        "dialogue_turns": {
+          "params": [
+            {
+              "name": "call_log",
+              "type": "any",
+              "required": true
+            },
+            {
+              "name": "roles",
+              "kind": "keyword",
+              "type": "tuple<string,any>",
+              "required": false,
+              "default": "DIALOGUE_ROLES"
+            },
+            {
+              "name": "drop_echo",
+              "kind": "keyword",
+              "type": "optional<string>",
+              "required": false,
+              "default": null
+            }
+          ],
+          "returns": "any"
+        },
+        "normalize_post_prompt": {
+          "params": [
+            {
+              "name": "body",
+              "type": "optional<any>",
+              "required": true
+            }
+          ],
+          "returns": "class:signalwire.core.post_prompt.NormalizedPostPrompt"
+        },
+        "parse_post_prompt_data": {
+          "params": [
+            {
+              "name": "data",
+              "type": "optional<any>",
+              "required": true
+            }
+          ],
+          "returns": "any"
+        },
+        "strip_json_fence": {
+          "params": [
+            {
+              "name": "text",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "string"
         }
       }
     },
@@ -8543,6 +8838,31 @@
           "returns": "bool"
         },
         "validate_webhook_signature": {
+          "params": [
+            {
+              "name": "signing_key",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "signature",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "raw_body",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "returns": "bool"
+        },
+        "validate_webhook_signature_sha256": {
           "params": [
             {
               "name": "signing_key",
@@ -10536,6 +10856,18 @@
                 },
                 {
                   "name": "codecs",
+                  "type": "optional<union<any,string>>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "username",
+                  "type": "optional<string>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "password",
                   "type": "optional<string>",
                   "required": false,
                   "default": null
@@ -10612,6 +10944,18 @@
                 {
                   "name": "auto_answer",
                   "type": "optional<bool>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "loop",
+                  "type": "optional<int>",
+                  "required": false,
+                  "default": null
+                },
+                {
+                  "name": "status_url",
+                  "type": "optional<string>",
                   "required": false,
                   "default": null
                 }
@@ -107691,7 +108035,43 @@
           "required": false
         },
         "response": {
+          "type": "optional<union<any,string>>",
+          "required": false
+        },
+        "tool_prompt": {
           "type": "optional<string>",
+          "required": false
+        },
+        "tool_result": {
+          "type": "optional<string>",
+          "required": false
+        }
+      }
+    },
+    "signalwire.core.post_prompt.NormalizedPostPrompt": {
+      "params": {
+        "call_id": {
+          "type": "optional<string>",
+          "required": false
+        },
+        "conversation_id": {
+          "type": "optional<string>",
+          "required": false
+        },
+        "dialogue": {
+          "type": "list<dict<string,string>>",
+          "required": false
+        },
+        "medium": {
+          "type": "string",
+          "required": false
+        },
+        "raw": {
+          "type": "dict<string,any>",
+          "required": false
+        },
+        "summary": {
+          "type": "dict<string,any>",
           "required": false
         }
       }

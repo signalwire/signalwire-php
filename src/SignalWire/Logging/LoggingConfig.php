@@ -91,17 +91,26 @@ final class LoggingConfig
 
     /**
      * Strip control characters from every string value in a data record to
-     * prevent log injection. Nested arrays are processed recursively. Mirrors
-     * Python's `strip_control_chars` structlog processor / TS's
-     * `stripControlChars`.
+     * prevent log injection. Nested arrays are processed recursively.
+     *
+     * Accepts either the event record alone (`stripControlChars($event)`) or a
+     * processor-style call `(logger, methodName, event)`: the LAST argument is
+     * the event record, so the function can sit directly in a processor chain.
      *
      * Projected to signalwire.core.logging_config.strip_control_chars.
      *
-     * @param array<mixed> $eventDict
      * @return array<mixed>
+     * @throws \TypeError when called with no event record.
      */
-    public static function stripControlChars(array $eventDict): array
+    public static function stripControlChars(mixed ...$args): array
     {
+        if ($args === []) {
+            throw new \TypeError('stripControlChars() requires the event dict');
+        }
+        $eventDict = $args[array_key_last($args)];
+        if (!is_array($eventDict)) {
+            throw new \TypeError('stripControlChars(): the event dict must be an array');
+        }
         foreach ($eventDict as $key => $value) {
             if (is_string($value)) {
                 $eventDict[$key] = (string) preg_replace(self::CONTROL_CHAR_RE, '', $value);

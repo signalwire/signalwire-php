@@ -183,7 +183,7 @@ $client->phoneNumbers()->search(['areacode' => '512']);
 $client->datasphere()->documents()->search(queryString: 'billing policy');
 ```
 
-- 22 namespaced API surfaces: Fabric (16 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
+- 24 namespaced API surfaces: Fabric (19 resource types), Calling (42 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
 - Lightweight HTTP via cURL (one handle per request)
 - Array returns -- raw data, no wrapper objects
 
@@ -250,6 +250,7 @@ reference (custom CA bundles, RELAY overrides, and more).
 | `SIGNALWIRE_PROJECT_ID` | RELAY, REST | Project identifier |
 | `SIGNALWIRE_API_TOKEN` | RELAY, REST | API token |
 | `SIGNALWIRE_SPACE` | RELAY, REST | Space hostname (e.g. `example.signalwire.com`) |
+| `SIGNALWIRE_PERSONAL_ACCESS_TOKEN` | REST | Personal Access Token (`pat_...`) for the Space Administration API (`$client->space()`); fallback for `RestClient(personalAccessToken:)` |
 | `SWML_BASIC_AUTH_USER` | Agents | Basic auth username (default: auto-generated) |
 | `SWML_BASIC_AUTH_PASSWORD` | Agents | Basic auth password (default: auto-generated) |
 | `SWML_PROXY_URL_BASE` | Agents | Base URL when behind a reverse proxy |
