@@ -299,6 +299,30 @@ class VideoGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function roomRecordingsDownloadSuccess(): void
+    {
+        $this->client->video()->roomRecordings()->download('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('video.download_room_recording', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function roomRecordingsDownloadError(): void
+    {
+        $this->mock->scenarios()->set('video.download_room_recording', 500, ['error' => 'x']);
+        try {
+            $this->client->video()->roomRecordings()->download('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('video.download_room_recording', $j->matchedRoute);
+    }
+
+    #[Test]
     public function roomRecordingsGetSuccess(): void
     {
         $this->client->video()->roomRecordings()->get('x');
@@ -733,7 +757,7 @@ class VideoGeneratedTest extends TestCase
     #[Test]
     public function streamsUpdateSuccess(): void
     {
-        $this->client->video()->streams()->update('x', 'x');
+        $this->client->video()->streams()->update('x');
         $j = $this->mock->journal()->last();
         $this->assertSame('PUT', $j->method);
         $this->assertSame('video.update_stream', $j->matchedRoute);
@@ -744,7 +768,7 @@ class VideoGeneratedTest extends TestCase
     {
         $this->mock->scenarios()->set('video.update_stream', 500, ['error' => 'x']);
         try {
-            $this->client->video()->streams()->update('x', 'x');
+            $this->client->video()->streams()->update('x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(500, $e->getStatusCode());

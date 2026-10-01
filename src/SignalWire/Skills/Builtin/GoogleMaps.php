@@ -6,6 +6,14 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Address validation and driving-route computation via the Google Maps
+ * Geocoding and Routes APIs.
+ *
+ * Both tools are emitted as DataMap definitions, so the platform calls Google
+ * directly with the configured `api_key` — the key is baked into the tool
+ * definition rather than held for a server-side call.
+ */
 class GoogleMaps extends SkillBase
 {
     /** The name. */
@@ -20,6 +28,7 @@ class GoogleMaps extends SkillBase
         return 'Validate addresses and compute driving routes using Google Maps';
     }
 
+    /** Require a non-empty `api_key`; returns false (skill not loaded) without one. */
     public function setup(): bool
     {
         if (empty($this->params['api_key'])) {
@@ -29,6 +38,11 @@ class GoogleMaps extends SkillBase
         return true;
     }
 
+    /**
+     * Emit two DataMap tools: address lookup (named by `lookup_tool_name`,
+     * default `lookup_address`) and route computation (`route_tool_name`,
+     * default `compute_route`).
+     */
     public function registerTools(): void
     {
         $apiKey = $this->paramString('api_key');
@@ -200,12 +214,8 @@ class GoogleMaps extends SkillBase
     /**
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
-        if (!empty($this->params['skip_prompt'])) {
-            return [];
-        }
-
         return [
             [
                 'title' => 'Google Maps',

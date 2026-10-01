@@ -92,7 +92,12 @@ foreach ($classes as $fqcn) {
         $ctor !== null && $ctor->isPublic()
         && $ctor->getDeclaringClass()->getName() === $r->getName()
     ) {
-        $methods[] = methodEntry($ctor, true);
+        // An `@internal` ctor is excluded on the same terms as any other
+        // `@internal` method (see the per-method skip below).
+        $ctorDoc = $ctor->getDocComment();
+        if ($ctorDoc === false || strpos($ctorDoc, '@internal') === false) {
+            $methods[] = methodEntry($ctor, true);
+        }
     }
 
     // Public methods (declared on this class only — not inherited)
@@ -115,6 +120,21 @@ foreach ($classes as $fqcn) {
         if ($r->isEnum() && $m->isInternal()) {
             continue;
         }
+        // Skip methods carrying an `@internal` docblock tag. PHP has no
+        // package-private visibility, so cross-class dispatch plumbing
+        // (Client::handleMessage -> Client::handleEvent -> Call::dispatchEvent
+        // -> Action::handleEvent -> Action::resolve) MUST be declared `public`
+        // even though the reference keeps the identical machinery private
+        // (`_handle_event` / `_dispatch_event` / `_resolve` / `_send_event_ack`
+        // in signalwire/relay/*.py). That is a genuine language limitation, so
+        // the divergence is folded HERE — the enumerator does not project it as
+        // exported API — rather than excused as an addition. enumerate_surface.py
+        // applies the same per-method `@internal` skip, so both parity axes see
+        // one public surface. (Class-level `@internal` is handled above.)
+        $mDoc = $m->getDocComment();
+        if ($mDoc !== false && strpos($mDoc, '@internal') !== false) {
+            continue;
+        }
         $methods[] = methodEntry($m, false);
     }
 
@@ -125,8 +145,16 @@ foreach ($classes as $fqcn) {
         if ($p->getDeclaringClass()->getName() !== $r->getName()) {
             continue;
         }
+        // A generated DTO property whose wire key is not a PHP identifier
+        // (``nomatch-output``) carries it in a ``wire key:`` doc tag; the
+        // property IS that wire field, so it is recorded under the wire name.
+        $propName = $p->getName();
+        $pDoc = $p->getDocComment();
+        if ($pDoc !== false && preg_match('/wire key: (\S+)/', $pDoc, $wk) === 1) {
+            $propName = $wk[1];
+        }
         $properties[] = [
-            'name' => $p->getName(),
+            'name' => $propName,
             'type' => typeString($p->getType()),
             'is_static' => $p->isStatic(),
         ];

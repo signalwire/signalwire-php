@@ -14,50 +14,89 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * JoinConferenceObject — generated wire type from the 'calling' spec (components/schemas 'JoinConferenceObject').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class JoinConferenceObject
 {
-    public ?string $name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $beep = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $muted = null;
-
-    public ?string $beep = null;
+    public ?array $coach = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $start_on_enter = null;
+    public ?array $emit_call_quality = null;
 
     /** @var array<string,mixed>|null */
     public ?array $end_on_exit = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $wait_url = null;
-
-    /** @var array<string,mixed>|null */
     public ?array $max_participants = null;
 
-    public ?string $record = null;
-
-    public ?string $region = null;
-
-    public ?string $trim = null;
-
-    public ?string $coach = null;
-
-    public ?string $status_callback_event = null;
-
-    public ?string $status_callback = null;
-
-    public ?string $status_callback_method = null;
-
-    public ?string $recording_status_callback = null;
-
-    public ?string $recording_status_callback_method = null;
-
-    public ?string $recording_status_callback_event = null;
+    /** @var array<string,mixed>|null */
+    public ?array $meta = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $result = null;
+    public ?array $min_participants = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $muted = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $name = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $record = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $recording_status_callback = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $recording_status_callback_event = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $recording_status_callback_event_type = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $recording_status_callback_method = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $region = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $start_on_enter = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_callback = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_callback_event = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_callback_event_type = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_callback_method = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $stream = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $trim = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $video = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $video_layout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $video_preview = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $video_quality = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $wait_url = null;
 }

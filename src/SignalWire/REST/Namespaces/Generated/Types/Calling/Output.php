@@ -14,13 +14,16 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * Output — generated wire type from the 'calling' spec (components/schemas 'Output').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Output
 {
-    public ?string $response = null;
-
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $action = null;
+
+    public ?bool $post_process = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $response = null;
 }

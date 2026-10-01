@@ -14,13 +14,11 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * SipEndpointCreateRequest — generated wire type from the 'fabric' spec (components/schemas 'SipEndpointCreateRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SipEndpointCreateRequest
 {
-    public ?string $id = null;
-
     public ?string $username = null;
 
     public ?string $caller_id = null;
@@ -39,4 +37,6 @@ class SipEndpointCreateRequest
 
     /** @var array<string,mixed>|null */
     public ?array $calling_handler_resource_id = null;
+
+    public ?string $password = null;
 }

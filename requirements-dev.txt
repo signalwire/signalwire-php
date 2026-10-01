@@ -1,0 +1,21 @@
+# Python dev dependencies for signalwire-php.
+#
+# This is a PHP SDK, but it ships 8 hand-written Python programs under scripts/
+# that are load-bearing for the gates: the surface/signature enumerators produce
+# the port_surface.json / port_signatures.json that SURFACE and DRIFT compare
+# against, and the generate_*.py scripts emit the committed generated trees that
+# GEN-FRESH byte-checks.
+#
+# That code is linted and format-checked by the REPO-LINT / REPO-FMT gates
+# (scripts/run-ci.sh), so ruff is a real dev dependency, not a local convenience.
+# Declared here AND installed in CI (porting-sdk/.github/workflows/cross-port.yml
+# and this repo's own workflow) — a tool that only exists on one developer's
+# machine is a gate that quietly stops running.
+#
+#   python3 -m pip install -r requirements-dev.txt
+
+# Linter + formatter for scripts/*.py. Config lives in ruff.toml.
+ruff==0.15.21
+
+# Parsed by the enumerators when reading porting-sdk's type_aliases.yaml.
+PyYAML>=6.0

@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Messages;
 /**
  * MessagesUpdateStatusCode422 — generated wire type from the 'messages' spec (components/schemas 'MessagesUpdateStatusCode422').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class MessagesUpdateStatusCode422
 {

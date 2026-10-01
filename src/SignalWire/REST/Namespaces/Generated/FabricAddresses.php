@@ -20,4 +20,13 @@ class FabricAddresses extends \SignalWire\REST\ReadResource
     {
         parent::__construct($http, '/api/fabric/addresses');
     }
+
+    /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function delete(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->delete($this->path($id), $requestOptions);
+    }
 }

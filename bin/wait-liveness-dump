@@ -97,9 +97,9 @@ const CID = 'ctl-live-1';
  * The corpus, mirroring porting-sdk/scripts/wait_liveness_corpus.py CORPUS. Two
  * distinct action types (play, record) so a port can't hardcode one surface.
  *
- * @return list<array<string,mixed>>
+ * @return list<array{id: string, verb: string, kwargs: array<string,mixed>, delay_ms: int, terminal: array{event_type: string, state: string}}>
  */
-function corpus(): array
+function waitLivenessCorpus(): array
 {
     return [
         [
@@ -174,11 +174,15 @@ function classify(
 function startAction(Call $call, string $verb, array $kwargs): \SignalWire\Relay\Action
 {
     $controlId = $kwargs['control_id'];
+    $media = $kwargs['media'] ?? [];
+    $audio = $kwargs['audio'] ?? [];
     switch ($verb) {
         case 'play':
-            return $call->play($kwargs['media'], ['control_id' => $controlId]);
+            /** @var list<array<string,mixed>> $media */
+            return $call->play($media, ['control_id' => $controlId]);
         case 'record':
-            return $call->record($kwargs['audio'], ['control_id' => $controlId]);
+            /** @var array<string,mixed> $audio */
+            return $call->record($audio, ['control_id' => $controlId]);
         default:
             throw new \RuntimeException("wait-liveness-dump: unsupported verb {$verb}");
     }
@@ -217,14 +221,14 @@ function answeredInboundCall(RelayClient $client, RelayHarness $mock, string $ca
 /**
  * Drive ONE liveness case against the real mock and return its classification.
  *
- * @param array<string,mixed> $kase
+ * @param array{id: string, verb: string, kwargs: array<string,mixed>, delay_ms: int, terminal: array{event_type: string, state: string}} $kase
  * @return array<string,mixed>
  */
 function runCase(RelayClient $client, RelayHarness $mock, array $kase): array
 {
-    $delayMs  = (int) $kase['delay_ms'];
+    $delayMs  = $kase['delay_ms'];
     $terminal = $kase['terminal'];
-    $verb     = (string) $kase['verb'];
+    $verb     = $kase['verb'];
     $method   = verbMethod($verb);
 
     $call = answeredInboundCall($client, $mock, "live-{$verb}");
@@ -237,7 +241,7 @@ function runCase(RelayClient $client, RelayHarness $mock, array $kase): array
         ['emit' => ['state' => $terminal['state']], 'delay_ms' => $delayMs],
     ]);
 
-    $action = startAction($call, $verb, $kase['kwargs'] ?? []);
+    $action = startAction($call, $verb, $kase['kwargs']);
 
     $tWaitStart = hrtime(true) / 1e9; // monotonic seconds
     $timedOut = false;
@@ -248,7 +252,8 @@ function runCase(RelayClient $client, RelayHarness $mock, array $kase): array
     $tReturnNow = hrtime(true) / 1e9;
     if ($event instanceof Event) {
         $tReturn = $tReturnNow;
-        $completedState = (string) ($event->getParams()['state'] ?? '');
+        $state = $event->getParams()['state'] ?? '';
+        $completedState = is_string($state) ? $state : '';
     } else {
         // wait() returning null within the deadline is a no-op / hung
         // equivalent: treat it as timed_out so the classification is honest.
@@ -261,12 +266,13 @@ function runCase(RelayClient $client, RelayHarness $mock, array $kase): array
 /**
  * @return int  Process exit code.
  */
+/** @param resource $realStdout */
 function main($realStdout): int
 {
     $out = [];
     // A fresh client/session per case so a scoped scenario/journal never crosses
     // between cases (mirrors the per-test client isolation in ActionsMockTest).
-    foreach (corpus() as $kase) {
+    foreach (waitLivenessCorpus() as $kase) {
         [$client, $mock] = MockTest::scopedClient();
         try {
             $out[$kase['id']] = runCase($client, $mock, $kase);

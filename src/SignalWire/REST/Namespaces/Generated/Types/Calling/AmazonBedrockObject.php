@@ -14,13 +14,27 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * AmazonBedrockObject — generated wire type from the 'calling' spec (components/schemas 'AmazonBedrockObject').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class AmazonBedrockObject
 {
     /** @var array<string,mixed>|null */
+    public ?array $SWAIG = null;
+
+    public ?string $app_name = null;
+
+    public ?string $assistant_name = null;
+
+    public ?string $assistant_prompt = null;
+
+    public ?string $conversation_id = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $global_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $greeting_prompt = null;
 
     /** @var array<string,mixed>|null */
     public ?array $params = null;
@@ -33,6 +47,5 @@ class AmazonBedrockObject
     /** @var array<string,mixed>|null */
     public ?array $prompt = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $SWAIG = null;
+    public ?string $transcript_webhook_url = null;
 }

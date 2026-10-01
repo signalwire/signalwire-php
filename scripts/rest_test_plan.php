@@ -81,29 +81,71 @@ final class PlanRecordingHttpClient extends HttpClient
         return $this->calls;
     }
 
-    /** @param array<string,string> $params @return array<string,mixed> */
-    public function get(string $path, array $params = [], ?RequestOptions $requestOptions = null): array
-    {
+    /**
+     * @param array<string,mixed> $params
+     * @param array<string,string>|null $headers
+     * @return array<string,mixed>
+     */
+    public function get(
+        string $path,
+        array $params = [],
+        ?RequestOptions $requestOptions = null,
+        ?array $headers = null
+    ): array {
         $this->calls[] = ['GET', $path];
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function post(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
-    {
+    /**
+     * @param array<string,mixed>|null $params
+     * @param array<string,string>|null $headers
+     */
+    public function getText(
+        string $path,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null,
+        ?array $headers = null
+    ): string {
+        $this->calls[] = ['GET', $path];
+        return '';
+    }
+
+    /** @param array<string,mixed>|null $params */
+    public function getRedirectLocation(
+        string $path,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null
+    ): string {
+        $this->calls[] = ['GET', $path];
+        return '';
+    }
+
+    /**
+     * @param array<string,mixed>|null $body
+     * @param array<string,mixed>|null $params
+     * @param array<string,string>|null $headers
+     * @return array<string,mixed>
+     */
+    public function post(
+        string $path,
+        ?array $body = null,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null,
+        ?array $headers = null
+    ): array {
         $this->calls[] = ['POST', $path];
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function put(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    /** @param array<string,mixed>|null $data @return array<string,mixed> */
+    public function put(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['PUT', $path];
         return [];
     }
 
-    /** @param array<string,mixed> $data @return array<string,mixed> */
-    public function patch(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    /** @param array<string,mixed>|null $data @return array<string,mixed> */
+    public function patch(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
         $this->calls[] = ['PATCH', $path];
         return [];
@@ -289,6 +331,17 @@ final class TestPlan
             if ($tn === 'array') {
                 return 'route';
             }
+            // A string-returning method that takes the per-call transport
+            // override is a route too: a redirect-answer endpoint (download /
+            // get_pdf returns the Location) or a non-JSON body (get_csv). Plain
+            // getters (getBasePath, getSpace) take no RequestOptions.
+            if ($tn === 'string') {
+                foreach ($m->getParameters() as $p) {
+                    if ($p->getName() === 'requestOptions') {
+                        return 'route';
+                    }
+                }
+            }
             if (in_array($tn, ['string', 'int', 'bool', 'float', 'void', 'mixed', 'self', 'static', 'never'], true)) {
                 return 'infra';
             }
@@ -394,9 +447,13 @@ final class TestPlan
 $client = new RestClient('p', 't', 'example.signalwire.com');
 
 $recorder = new PlanRecordingHttpClient();
-$ref = new ReflectionProperty(RestClient::class, 'http');
-$ref->setAccessible(true);
-$ref->setValue($client, $recorder);
+// Both credentials' clients: the project-token one and the Personal-Access-
+// Token one the PAT-secured namespaces (space()) are wired to.
+foreach (['http', 'patHttp'] as $prop) {
+    $ref = new ReflectionProperty(RestClient::class, $prop);
+    $ref->setAccessible(true);
+    $ref->setValue($client, $recorder);
+}
 
 $plan = (new TestPlan($recorder))->build($client);
 

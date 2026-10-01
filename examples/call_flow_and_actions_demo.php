@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Call Flow and Actions Demo
  *
@@ -46,7 +48,7 @@ $agent->enableDebugEvents(2);
 
 // Debug event handler
 $agent->onDebugEvent(function ($event) {
-    echo "DEBUG EVENT: " . (is_array($event) ? json_encode($event) : $event) . "\n";
+    echo 'DEBUG EVENT: ' . (is_array($event) ? json_encode($event) : $event) . "\n";
 });
 
 // --- Tool: transfer_call ---

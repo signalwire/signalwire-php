@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Example: IVR menu with DTMF collection, playback, and call connect.
  *
@@ -17,24 +19,89 @@
 require 'vendor/autoload.php';
 
 use SignalWire\Relay\Client;
+use SignalWire\Relay\Event;
 
-$AGENT_NUMBER = '+19184238080';
+/** Read a required setting from the environment, or stop with a clear message. */
+function env(string $name): string
+{
+    $value = $_ENV[$name] ?? null;
+    if (!is_string($value) || $value === '') {
+        exit("Set {$name}\n");
+    }
+    return $value;
+}
 
-$client = new Client([
-    'project'  => $_ENV['SIGNALWIRE_PROJECT_ID'] ?? die("Set SIGNALWIRE_PROJECT_ID\n"),
-    'token'    => $_ENV['SIGNALWIRE_API_TOKEN']  ?? die("Set SIGNALWIRE_API_TOKEN\n"),
-    'host'     => $_ENV['SIGNALWIRE_SPACE']      ?? 'relay.signalwire.com',
-    'contexts' => ['default'],
-]);
+/** Read an optional setting from the environment, falling back to a default. */
+function envOr(string $name, string $default): string
+{
+    $value = $_ENV[$name] ?? null;
+    return is_string($value) && $value !== '' ? $value : $default;
+}
 
-/** Helper to build a TTS play element */
+const AGENT_NUMBER = '+19184238080';
+
+/**
+ * Helper to build a TTS play element
+ *
+ * @return array{type: string, params: array{text: string}}
+ */
 function tts(string $text): array
 {
     return ['type' => 'tts', 'params' => ['text' => $text]];
 }
 
-$client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
-    echo "Incoming call: " . $call->callId . "\n";
+/**
+ * Pull the collect result out of a resolved play-and-collect event.
+ *
+ * The wire payload is `params.result = {type: 'digit', params: {digits: '1'}}`,
+ * reached through {@see Event::getParams()} — NOT a `params()` accessor, which
+ * does not exist on Event.
+ *
+ * @return array{type: string, digits: string} empty strings when the collect
+ *   produced no result (timeout, or no event at all)
+ */
+function collectResult(?Event $event): array
+{
+    if ($event === null) {
+        return ['type' => '', 'digits' => ''];
+    }
+
+    $result = $event->getParams()['result'] ?? null;
+    if (!is_array($result)) {
+        return ['type' => '', 'digits' => ''];
+    }
+
+    $type = $result['type'] ?? '';
+    $params = $result['params'] ?? [];
+    $digits = is_array($params) ? ($params['digits'] ?? '') : '';
+
+    return [
+        'type' => is_string($type) ? $type : '',
+        'digits' => is_string($digits) ? $digits : '',
+    ];
+}
+
+// Guard the blocking client so this file can be LOADED in-process (the helpers
+// above are unit-tested) without opening a WebSocket. The client is built and
+// run only when this file is the CLI entrypoint.
+$isCliEntrypoint = PHP_SAPI === 'cli'
+    && is_array($_SERVER['argv'] ?? null)
+    && is_string($_SERVER['argv'][0] ?? null)
+    && \realpath($_SERVER['argv'][0]) === __FILE__;
+
+if (!$isCliEntrypoint) {
+    return;
+}
+
+$client = new Client([
+    'project'  => env('SIGNALWIRE_PROJECT_ID'),
+    'token'    => env('SIGNALWIRE_API_TOKEN'),
+    'host'     => envOr('SIGNALWIRE_SPACE', 'relay.signalwire.com'),
+    'contexts' => ['default'],
+]);
+
+$client->onCall(function ($call) use ($client) {
+    echo 'Incoming call: ' . $call->callId . "\n";
     $call->answer();
 
     // Play greeting and collect a single digit
@@ -49,16 +116,7 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
         ],
     );
 
-    $resultEvent = $collectAction->wait();
-    $result     = [];
-    $resultType = '';
-    $digits     = '';
-
-    if ($resultEvent && method_exists($resultEvent, 'params')) {
-        $result     = $resultEvent->params()['result'] ?? [];
-        $resultType = $result['type'] ?? '';
-        $digits     = ($result['params'] ?? [])['digits'] ?? '';
-    }
+    ['type' => $resultType, 'digits' => $digits] = collectResult($collectAction->wait());
 
     echo "Collect result: type={$resultType} digits={$digits}\n";
 
@@ -82,12 +140,12 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
         $action->wait();
 
         $fromNumber = ($call->device['params'] ?? [])['to_number'] ?? '';
-        echo "Connecting to {$AGENT_NUMBER} from {$fromNumber}\n";
+        echo 'Connecting to ' . AGENT_NUMBER . " from {$fromNumber}\n";
 
         $call->connect([
             'devices' => [[
                 ['type' => 'phone', 'params' => [
-                    'to_number'   => $AGENT_NUMBER,
+                    'to_number'   => AGENT_NUMBER,
                     'from_number' => $fromNumber,
                     'timeout'     => 30,
                 ]],
@@ -99,7 +157,7 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
         while ($call->state !== 'ended') {
             $client->readOnce();
         }
-        echo "Connected call ended: " . $call->callId . "\n";
+        echo 'Connected call ended: ' . $call->callId . "\n";
         return;
     } else {
         // No input or invalid
@@ -110,7 +168,7 @@ $client->onCall(function ($call) use ($client, $AGENT_NUMBER) {
     }
 
     $call->hangup();
-    echo "Call ended: " . $call->callId . "\n";
+    echo 'Call ended: ' . $call->callId . "\n";
 });
 
 $client->connect();  // opens the WebSocket and authenticates (throws on failure)

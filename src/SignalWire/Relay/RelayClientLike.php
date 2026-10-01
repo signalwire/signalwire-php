@@ -22,7 +22,7 @@ interface RelayClientLike
      * @param array<string, mixed> $params
      * @return array<string, mixed>
      */
-    public function execute(string $method, array $params = []): array;
+    public function execute(string $method, array $params): array;
 
     /**
      * Pump a single inbound frame through the transport (event-loop step).

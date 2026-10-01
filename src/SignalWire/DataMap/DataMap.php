@@ -6,6 +6,18 @@ namespace SignalWire\DataMap;
 
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Fluent builder for a SERVERLESS SWAIG tool.
+ *
+ * A data-map tool carries its own execution plan — pattern `expressions` and/or
+ * HTTP `webhooks` — inside the tool definition, so the SignalWire platform runs
+ * it directly and no request ever reaches this SDK. That is the trade-off
+ * against a handler-backed tool: no PHP code runs at call time, and anything the
+ * plan needs (API keys, headers) is baked into the definition the platform
+ * receives.
+ *
+ * Every mutator returns `$this` for chaining.
+ */
 class DataMap
 {
     private string $functionName;
@@ -30,6 +42,10 @@ class DataMap
     /** @var array<string>|null */
     private ?array $globalErrorKeys = null;
 
+    /**
+     * @param string $functionName the SWAIG tool name the LLM calls; it is what
+     *   the emitted definition's `function` key carries.
+     */
     public function __construct(string $functionName)
     {
         $this->functionName = $functionName;
@@ -99,14 +115,14 @@ class DataMap
      *           . 'provide one. Include the state or country if the '
      *           . 'city name is ambiguous.')
      *
-     * @param array<string> $enum
+     * @param array<string>|null $enum
      */
     public function parameter(
         string $name,
         string $type,
         string $description,
         bool $required = false,
-        array $enum = []
+        ?array $enum = null
     ): self {
         $prop = [
             'type' => $type,
@@ -132,17 +148,20 @@ class DataMap
     public function expression(
         string $testValue,
         string $pattern,
-        mixed $output,
-        mixed $nomatchOutput = null
+        FunctionResult $output,
+        ?FunctionResult $nomatchOutput = null
     ): self {
         $expr = [
             'string' => $testValue,
             'pattern' => $pattern,
-            'output' => $output,
+            'output' => $output->toArray(),
         ];
 
         if ($nomatchOutput !== null) {
-            $expr['nomatch_output'] = $nomatchOutput;
+            // HYPHENATED wire key per the reference (data_map.py:202). An underscore
+            // is a key the server does not recognise, so the no-match branch would
+            // never fire.
+            $expr['nomatch-output'] = $nomatchOutput->toArray();
         }
 
         $this->expressions[] = $expr;
@@ -152,19 +171,25 @@ class DataMap
     /**
      * Add a webhook definition.
      *
-     * @param array<string, string> $headers
-     * @param array<string> $requireArgs
+     * `$method` is normalised to UPPER CASE on the way to the wire, matching
+     * the reference (`data_map.py:230` — `{"url": url, "method":
+     * method.upper()}`), so a caller writing the natural lowercase `'get'`
+     * emits `"method": "GET"` like every other port.
+     *
+     * @param string $method HTTP verb; case-insensitive, emitted upper-cased.
+     * @param array<string, string>|null $headers
+     * @param array<string>|null $requireArgs
      */
     public function webhook(
         string $method,
         string $url,
-        array $headers = [],
-        string $formParam = '',
+        ?array $headers = null,
+        ?string $formParam = null,
         bool $inputArgsAsParams = false,
-        array $requireArgs = []
+        ?array $requireArgs = null
     ): self {
         $wh = [
-            'method' => $method,
+            'method' => strtoupper($method),
             'url' => $url,
         ];
 
@@ -172,7 +197,7 @@ class DataMap
             $wh['headers'] = $headers;
         }
 
-        if ($formParam !== '') {
+        if ($formParam !== null && $formParam !== '') {
             $wh['form_param'] = $formParam;
         }
 
@@ -202,20 +227,32 @@ class DataMap
     }
 
     /**
-     * Set body on the last webhook.
+     * Set the JSON request body for the last added webhook; the same as
+     * {@see params()}.
      *
-     * @param array<string, mixed> $data
+     * The platform reads a webhook's body from its `params` field and has no
+     * `body` field (`schema.json` `$defs/Webhook`), so this sets `params`.
+     *
+     * @param array<string, mixed> $data Request body data (may include
+     *   `${variable}` substitutions).
+     * @throws \InvalidArgumentException if no webhook has been added yet.
      */
     public function body(array $data): self
     {
-        if (!empty($this->webhooks)) {
-            $this->webhooks[array_key_last($this->webhooks)]['body'] = $data;
+        if (empty($this->webhooks)) {
+            throw new \InvalidArgumentException('Must add webhook before setting body');
         }
+        $this->webhooks[array_key_last($this->webhooks)]['params'] = $data;
         return $this;
     }
 
     /**
      * Set params on the last webhook.
+     *
+     * `params` is the webhook's JSON request body: `schema.json` `$defs/Webhook`
+     * lists `params` among its ten permitted properties, and the engine's
+     * webhook readers look up `params` (never `body`; {@see body()} writes
+     * here too). Use this method for POST/PUT request data.
      *
      * @param array<string, mixed> $data
      */
@@ -242,25 +279,21 @@ class DataMap
 
     /**
      * Set output on the last webhook.
-     *
-     * @param mixed $result FunctionResult, array, or string
      */
-    public function output(mixed $result): self
+    public function output(FunctionResult $result): self
     {
         if (!empty($this->webhooks)) {
-            $this->webhooks[array_key_last($this->webhooks)]['output'] = self::resolveOutput($result);
+            $this->webhooks[array_key_last($this->webhooks)]['output'] = $result->toArray();
         }
         return $this;
     }
 
     /**
      * Set global fallback output.
-     *
-     * @param mixed $result FunctionResult, array, or string
      */
-    public function fallbackOutput(mixed $result): self
+    public function fallbackOutput(FunctionResult $result): self
     {
-        $this->globalOutput = self::resolveOutput($result);
+        $this->globalOutput = $result->toArray();
         $this->hasGlobalOutput = true;
         return $this;
     }
@@ -349,7 +382,8 @@ class DataMap
      *
      * Mirrors Python's module-level `create_simple_api_tool(name, url,
      * response_template, parameters=None, method="GET", headers=None,
-     * body=None, error_keys=None)` free function. PHP (PSR-4, file-per-class)
+     * body=None, error_keys=None)` free function. A non-empty `$body` is set
+     * as the webhook's `params` (the platform sends params as the JSON body). PHP (PSR-4, file-per-class)
      * cannot declare a module-level free function, so it is hosted here as a
      * static factory on DataMap and projected onto the canonical
      * `signalwire.create_simple_api_tool` via FREE_FUNCTION_PROJECTIONS.
@@ -386,8 +420,9 @@ class DataMap
 
         $dataMap->webhook($method, $url, $headers ?? []);
 
-        if ($body !== null) {
-            $dataMap->body($body);
+        // The platform sends params as the request body.
+        if (!empty($body)) {
+            $dataMap->params($body);
         }
 
         if ($errorKeys !== null) {
@@ -439,15 +474,4 @@ class DataMap
         return $dataMap;
     }
 
-    /**
-     * Convert a result value: FunctionResult calls toArray(), arrays and strings pass through.
-     */
-    private static function resolveOutput(mixed $result): mixed
-    {
-        if ($result instanceof FunctionResult) {
-            return $result->toArray();
-        }
-
-        return $result;
-    }
 }

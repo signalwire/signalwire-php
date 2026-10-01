@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Wikipedia Search Skill Demo
  *
@@ -23,7 +25,7 @@ try {
     $agent->addSkill('datetime');
     echo "Added datetime skill\n";
 } catch (\Exception $e) {
-    echo "Failed to add datetime skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add datetime skill: ' . $e->getMessage() . "\n";
 }
 
 // Add Wikipedia search skill
@@ -44,7 +46,7 @@ try {
     ]);
     echo "Added Wikipedia search (tool: search_wiki)\n";
 } catch (\Exception $e) {
-    echo "Failed to add Wikipedia skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add Wikipedia skill: ' . $e->getMessage() . "\n";
     exit(1);
 }
 

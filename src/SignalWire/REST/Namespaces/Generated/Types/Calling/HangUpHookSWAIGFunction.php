@@ -14,26 +14,26 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * HangUpHookSWAIGFunction — generated wire type from the 'calling' spec (components/schemas 'HangUpHookSWAIGFunction').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class HangUpHookSWAIGFunction
 {
     public ?string $description = null;
 
-    public ?string $purpose = null;
-
     /** @var array<string,mixed>|null */
-    public ?array $parameters = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $fillers = null;
+    public ?array $active = null;
 
     /** @var array<string,mixed>|null */
     public ?array $argument = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $active = null;
+    public ?array $data_map = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $fillers = null;
+
+    public ?string $function = null;
 
     /** @var array<string,mixed>|null */
     public ?array $meta_data = null;
@@ -41,12 +41,12 @@ class HangUpHookSWAIGFunction
     public ?string $meta_data_token = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $data_map = null;
+    public ?array $parameters = null;
+
+    public ?string $purpose = null;
 
     /** @var array<string,mixed>|null */
     public ?array $skip_fillers = null;
-
-    public ?string $web_hook_url = null;
 
     public ?string $wait_file = null;
 
@@ -56,5 +56,11 @@ class HangUpHookSWAIGFunction
     /** @var array<string,mixed>|null */
     public ?array $wait_for_fillers = null;
 
-    public ?string $function = null;
+    public ?string $web_hook_auth_pass = null;
+
+    public ?string $web_hook_auth_password = null;
+
+    public ?string $web_hook_auth_user = null;
+
+    public ?string $web_hook_url = null;
 }

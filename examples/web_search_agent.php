@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Web Search Agent
  *
@@ -20,12 +22,14 @@ $agent = new AgentBase(name: 'Web Search Assistant', route: '/search');
 
 $agent->addLanguage(name: 'English', code: 'en-US', voice: 'inworld.Mark');
 
-$agent->promptAddSection('Personality',
+$agent->promptAddSection(
+    'Personality',
     'You are Franklin, a friendly and knowledgeable search bot. '
     . "You're enthusiastic about helping people find information on the internet.",
 );
 
-$agent->promptAddSection('Goal',
+$agent->promptAddSection(
+    'Goal',
     'Help users find accurate, up-to-date information from the web.',
 );
 
@@ -70,12 +74,12 @@ try {
     ]);
     echo "Web search skill loaded successfully\n";
 } catch (\Exception $e) {
-    echo "Failed to load web search skill: " . $e->getMessage() . "\n";
+    echo 'Failed to load web search skill: ' . $e->getMessage() . "\n";
     exit(1);
 }
 
 $loaded = $agent->listSkills();
-echo "Loaded skills: " . implode(', ', $loaded) . "\n";
+echo 'Loaded skills: ' . implode(', ', $loaded) . "\n";
 
 echo "Starting Web Search Agent\n";
 echo "Available at: http://localhost:3000/search\n";

@@ -17,10 +17,9 @@ namespace SignalWire\SWAIG;
  *     $result->recordCall(direction: 'listen');                  // string (for compatibility)
  *
  * The three members are the only directions the Python reference's `record_call`
- * accepts (`["speak", "listen", "both"]`). Note this set uses `listen`, which
- * differs from {@see TapDirection} — the `tap` set uses `hear`. They are
- * deliberately separate enums because the reference validates two distinct lists.
- * The backing values are the exact wire strings.
+ * accepts (`["speak", "listen", "both"]`) — the same values as
+ * {@see TapDirection}; they stay separate enums because each names the
+ * argument of a different verb. The backing values are the exact wire strings.
  *
  *   - `Speak`  — audio the far end hears from the agent.
  *   - `Listen` — audio the agent hears from the far end.

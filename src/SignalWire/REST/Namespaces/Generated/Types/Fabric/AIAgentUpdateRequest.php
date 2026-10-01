@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * AIAgentUpdateRequest — generated wire type from the 'fabric' spec (components/schemas 'AIAgentUpdateRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class AIAgentUpdateRequest
 {
@@ -45,7 +45,12 @@ class AIAgentUpdateRequest
     /** @var array<string,mixed>|null */
     public ?array $SWAIG = null;
 
-    public ?string $agent_id = null;
-
     public ?string $name = null;
+
+    public ?string $post_prompt_auth_user = null;
+
+    public ?string $post_prompt_auth_password = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $multilingual = null;
 }

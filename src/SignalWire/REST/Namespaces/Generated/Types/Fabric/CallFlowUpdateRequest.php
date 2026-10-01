@@ -14,12 +14,18 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * CallFlowUpdateRequest — generated wire type from the 'fabric' spec (components/schemas 'CallFlowUpdateRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CallFlowUpdateRequest
 {
     public ?string $title = null;
 
     public ?int $document_version = null;
+
+    /** @var array<string,mixed>|string|null */
+    public array|string|null $flow_data = null;
+
+    /** @var array<string,mixed>|string|null */
+    public array|string|null $relayml = null;
 }

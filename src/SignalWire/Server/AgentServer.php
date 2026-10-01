@@ -7,6 +7,15 @@ namespace SignalWire\Server;
 use SignalWire\Agent\AgentBase;
 use SignalWire\Logging\Logger;
 
+/**
+ * Hosts several {@see AgentBase} instances behind one HTTP listener, dispatching
+ * each inbound request to the agent registered at its route.
+ *
+ * Beyond agent routing it can also serve static files under a URL prefix
+ * ({@see AgentServer::serveStaticFiles()}) and route inbound SIP by username
+ * ({@see AgentServer::setupSipRouting()}), mapping a SIP username to the route
+ * of the agent that should answer it.
+ */
 class AgentServer
 {
     protected string $host;
@@ -125,8 +134,7 @@ class AgentServer
         $path = rtrim($path, '/');
 
         foreach ($this->agents as $agent) {
-            // Service::registerRoutingCallback takes (path, callback).
-            $agent->registerRoutingCallback($path, $callbackFn);
+            $agent->registerRoutingCallback($callbackFn, $path);
         }
 
         $this->logger->info("Registered global routing callback at {$path} on all agents");
@@ -267,7 +275,7 @@ class AgentServer
      *
      * @throws \RuntimeException If the directory does not exist.
      */
-    public function serveStaticFiles(string $directory, string $urlPrefix): self
+    public function serveStaticFiles(string $directory, string $urlPrefix = '/'): self
     {
         $realDir = realpath($directory);
         if ($realDir === false || !is_dir($realDir)) {
@@ -307,6 +315,16 @@ class AgentServer
         array $headers = [],
         ?string $body = null,
     ): array {
+        // Split any query string off before routing, and re-attach it when the
+        // request is handed to the matched agent: routing here is exact/prefix
+        // match on the path, but the per-call SWAIG `__token` rides the query
+        // and the agent's own dispatcher needs it.
+        $query = '';
+        $qPos = strpos($path, '?');
+        if ($qPos !== false) {
+            $query = substr($path, $qPos);
+            $path = substr($path, 0, $qPos);
+        }
         $path = $this->normalizePath($path);
 
         // Health endpoint (no auth)
@@ -342,7 +360,7 @@ class AgentServer
 
         if ($matchedRoute !== null) {
             $agent = $this->agents[$matchedRoute];
-            return $agent->handleRequest($method, $path, $headers, $body);
+            return $agent->handleRequest($method, $path . $query, $headers, $body);
         }
 
         return $this->jsonResponse(404, ['error' => 'Not Found']);
@@ -376,8 +394,16 @@ class AgentServer
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $method = is_string($method) ? $method : 'GET';
-        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-        $path = parse_url(is_string($requestUri) ? $requestUri : '/', PHP_URL_PATH) ?: '/';
+        $requestUri = is_string($_SERVER['REQUEST_URI'] ?? null) ? $_SERVER['REQUEST_URI'] : '/';
+        $parsedPath = parse_url($requestUri, PHP_URL_PATH);
+        $path = is_string($parsedPath) && $parsedPath !== '' ? $parsedPath : '/';
+        // Keep the query string: handleRequest() splits it back off before
+        // routing and forwards it to the matched agent, where the SWAIG
+        // `__token` credential is read from it.
+        $parsedQuery = parse_url($requestUri, PHP_URL_QUERY);
+        if (is_string($parsedQuery) && $parsedQuery !== '') {
+            $path .= '?' . $parsedQuery;
+        }
 
         // Reconstruct headers from $_SERVER (works in every SAPI).
         $headers = [];
@@ -446,6 +472,11 @@ class AgentServer
             $this->dispatchFromGlobals();
             return;
         }
+
+        // SECURITY (#90): refuse BEFORE binding when TLS is switched on but
+        // unusable, rather than falling through to the plaintext `php -S`
+        // below. See SecurityConfig::assertTlsUsableOrRefuse().
+        $this->assertTlsUsableOrRefuse();
 
         $this->logger->info("AgentServer starting on {$this->host}:{$this->port}");
 
@@ -522,10 +553,29 @@ class AgentServer
     }
 
     /**
+     * Refuse to serve when TLS is enabled but unusable (#90).
+     *
+     * Delegates to {@see \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse()}
+     * so this path, WebService::start() and SWML\Service::serve() refuse
+     * identically. A no-op when TLS was never requested.
+     *
+     * @throws \RuntimeException when ssl is enabled but the cert/key is unusable
+     */
+    private function assertTlsUsableOrRefuse(): void
+    {
+        \SignalWire\Core\SecurityConfig::assertTlsUsableOrRefuse();
+    }
+
+    /**
      * Resolve the SSL cert/key paths from the environment, mirroring
      * Python's ``SWML_SSL_ENABLED`` / ``SWML_SSL_CERT_PATH`` /
      * ``SWML_SSL_KEY_PATH`` contract. Returns ``[cert, key]`` when SSL is
-     * enabled AND both files exist; otherwise ``[null, null]`` (plaintext).
+     * enabled AND both files exist; otherwise ``[null, null]``.
+     *
+     * NOTE: a ``[null, null]`` return no longer means "serve plaintext" when
+     * the ssl switch is ON — serve() calls
+     * {@see self::assertTlsUsableOrRefuse()} first and throws, so the only way
+     * to reach the plaintext branch below is with TLS deliberately OFF (#90).
      *
      * @return array{0: string|null, 1: string|null}
      */

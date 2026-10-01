@@ -38,7 +38,7 @@ class RegistryBrands extends \SignalWire\REST\BaseResource
      */
     public function create(array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->basePath, $body, $requestOptions);
+        return $this->http->post($this->basePath, $body, requestOptions: $requestOptions);
     }
 
     /**
@@ -49,6 +49,58 @@ class RegistryBrands extends \SignalWire\REST\BaseResource
     public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         return $this->http->get($this->path($id), $params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed>|null $signalwireContactEmails
+     * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function update(string $id, ?string $name = null, ?string $companyName = null, ?string $contactEmail = null, ?string $contactPhone = null, ?string $einIssuingCountry = null, ?string $legalEntityType = null, ?string $ein = null, ?string $companyVertical = null, ?string $companyWebsite = null, ?string $companyAddress = null, ?string $cspBrandReference = null, ?string $statusCallbackUrl = null, ?array $signalwireContactEmails = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__body = [];
+        if ($name !== null) {
+            $__body['name'] = $name;
+        }
+        if ($companyName !== null) {
+            $__body['company_name'] = $companyName;
+        }
+        if ($contactEmail !== null) {
+            $__body['contact_email'] = $contactEmail;
+        }
+        if ($contactPhone !== null) {
+            $__body['contact_phone'] = $contactPhone;
+        }
+        if ($einIssuingCountry !== null) {
+            $__body['ein_issuing_country'] = $einIssuingCountry;
+        }
+        if ($legalEntityType !== null) {
+            $__body['legal_entity_type'] = $legalEntityType;
+        }
+        if ($ein !== null) {
+            $__body['ein'] = $ein;
+        }
+        if ($companyVertical !== null) {
+            $__body['company_vertical'] = $companyVertical;
+        }
+        if ($companyWebsite !== null) {
+            $__body['company_website'] = $companyWebsite;
+        }
+        if ($companyAddress !== null) {
+            $__body['company_address'] = $companyAddress;
+        }
+        if ($cspBrandReference !== null) {
+            $__body['csp_brand_reference'] = $cspBrandReference;
+        }
+        if ($statusCallbackUrl !== null) {
+            $__body['status_callback_url'] = $statusCallbackUrl;
+        }
+        if ($signalwireContactEmails !== null) {
+            $__body['signalwire_contact_emails'] = $signalwireContactEmails;
+        }
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -68,6 +120,6 @@ class RegistryBrands extends \SignalWire\REST\BaseResource
      */
     public function createCampaign(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->http->post($this->path($id, 'campaigns'), $body, $requestOptions);
+        return $this->http->post($this->path($id, 'campaigns'), $body, requestOptions: $requestOptions);
     }
 }

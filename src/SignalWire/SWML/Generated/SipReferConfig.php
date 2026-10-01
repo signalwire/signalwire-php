@@ -12,18 +12,25 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * SipReferConfig — generated SWML verb config type (flattened SWMLMethod verb 'sip_refer' config).
+ * SipReferConfig — generated SWML verb config type ($defs schema 'SipReferConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SipReferConfig
 {
-    public ?string $to_uri = null;
+    /** @var array<string,mixed>|null */
+    public ?array $password = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
 
-    public ?string $username = null;
+    /** @var array<string,mixed>|null */
+    public ?array $to = null;
 
-    public ?string $password = null;
+    /** @var array<string,mixed>|null */
+    public ?array $to_uri = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $username = null;
 }

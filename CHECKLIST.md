@@ -487,7 +487,7 @@ Tests are proof of implementation. The port must test **everything the Python SD
 - [ ] All 41 SwaigFunctionResult action methods present (plus the non-action basics: set_response, set_post_process, add_action, add_actions, to_dict, and the 3 payment helpers). **Proof:** grep the port's equivalent file for the 41 action names in SWAIG_FUNCTION_RESULT_REFERENCE.md; every one resolves, or the omission is justified in PORT_OMISSIONS.md.
 - [ ] All 38 SWML verb methods present and schema-validated
 - [ ] RELAY client: all 4 correlation mechanisms implemented (JSON-RPC id, call_id, control_id, tag)
-- [ ] REST client: all 22 namespaces initialized with correct paths (see Phase 8 for the enumerated list)
+- [ ] REST client: all 24 namespaces initialized with correct paths (see Phase 8 for the enumerated list)
 - [ ] Skills registry: all 18 built-in skills registered (per Phase 4 enumerated list)
 - [ ] agent.AddSkill() one-liner integration works (not just manual SkillManager)
 - [ ] SIP username extraction utility exists

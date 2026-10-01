@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Project;
 /**
  * CreateTokenRequest — generated wire type from the 'project' spec (components/schemas 'CreateTokenRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateTokenRequest
 {
@@ -25,4 +25,6 @@ class CreateTokenRequest
     public ?array $permissions = null;
 
     public ?string $subproject_id = null;
+
+    public ?string $project_id = null;
 }

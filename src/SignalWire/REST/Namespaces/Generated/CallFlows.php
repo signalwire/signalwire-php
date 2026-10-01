@@ -28,7 +28,7 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      */
     public function listAddresses(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/addresses', $params, $requestOptions);
+        return $this->client->get($this->path($id, 'addresses'), $params, $requestOptions);
     }
 
     /**
@@ -38,7 +38,7 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      */
     public function listVersions(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/versions', $params, $requestOptions);
+        return $this->client->get($this->path($id, 'versions'), $params, $requestOptions);
     }
 
     /**
@@ -48,6 +48,6 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      */
     public function deployVersion(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post('/api/fabric/resources/call_flow/' . $id . '/versions', $body, $requestOptions);
+        return $this->client->post($this->path($id, 'versions'), $body, requestOptions: $requestOptions);
     }
 }

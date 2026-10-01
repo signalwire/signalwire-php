@@ -14,19 +14,29 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * PayPrompts — generated wire type from the 'calling' spec (components/schemas 'PayPrompts').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class PayPrompts
 {
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $actions = null;
 
-    public ?string $for = null;
+    /** @var array<string,mixed>|null */
+    public ?array $attempt = null;
 
-    public ?string $attempts = null;
+    /** @var array<string,mixed>|null */
+    public ?array $card_type = null;
 
-    public ?string $card_type = null;
+    /** @var array<string,mixed>|null */
+    public ?array $error_type = null;
 
-    public ?string $error_type = null;
+    /** @var array<string,mixed>|null */
+    public ?array $for = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $play = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $require_matching_inputs = null;
 }

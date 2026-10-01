@@ -185,6 +185,54 @@ final class WebServiceTest extends TestCase
         $this->assertSame('hello world', $body);
     }
 
+    /**
+     * RFC 7235 makes the auth-scheme token case-insensitive, and the reference
+     * compares `scheme.lower() != "basic"`, so `basic <cred>` authenticates.
+     */
+    public function testBasicAuthSchemeIsCaseInsensitive(): void
+    {
+        $svc = $this->service(['basicAuth' => ['admin', 'secret']]);
+        $cred = base64_encode('admin:secret');
+
+        foreach (['basic', 'BaSiC', 'BASIC', 'Basic'] as $scheme) {
+            [$status, , $body] = $svc->handleRequest('GET', '/static/hello.txt', [
+                'Host' => 'localhost',
+                'Authorization' => $scheme . ' ' . $cred,
+            ]);
+            $this->assertSame(200, $status, $scheme);
+            $this->assertSame('hello world', $body);
+        }
+    }
+
+    /**
+     * Case-insensitivity must not widen the accepted scheme set, and a
+     * colon-less decoded payload stays rejected (the reference partitions on
+     * ':' and raises when there is no separator).
+     */
+    public function testBasicAuthStillRejectsWrongSchemesAndColonLessPayload(): void
+    {
+        $svc = $this->service(['basicAuth' => ['admin', 'secret']]);
+        $cred = base64_encode('admin:secret');
+        $noColon = base64_encode('admin');
+
+        foreach ([
+            'Digest ' . $cred,
+            'Negotiate ' . $cred,
+            'Basicx ' . $cred,
+            'basicx ' . $cred,
+            'Bearer ' . $cred,
+            $cred,
+            'Basic ' . $noColon,
+            'basic ' . $noColon,
+        ] as $header) {
+            [$status] = $svc->handleRequest('GET', '/static/hello.txt', [
+                'Host' => 'localhost',
+                'Authorization' => $header,
+            ]);
+            $this->assertSame(401, $status, $header);
+        }
+    }
+
     public function testStartNoOpInCliMode(): void
     {
         putenv('SWAIG_CLI_MODE=true');

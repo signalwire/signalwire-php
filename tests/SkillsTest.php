@@ -11,6 +11,7 @@ use SignalWire\Skills\SkillManager;
 use SignalWire\Skills\SkillName;
 use SignalWire\Skills\SkillRegistry;
 use SignalWire\SWML\Schema;
+use SignalWire\Tests\Support\SchemaProbeSkill;
 use SignalWire\Tests\Support\Shape;
 
 class SkillsTest extends TestCase
@@ -133,6 +134,98 @@ class SkillsTest extends TestCase
         foreach ($expected as $name) {
             $this->assertContains($name, $skills, "Builtin skill '{$name}' missing from listSkills");
         }
+    }
+
+    // ── getAllSkillsSchema parity with Python ────────────────────────────
+    // Mirrors registry.py:274 `get_all_skills_schema`, which documents EIGHT
+    // fields per skill. These assert POPULATED CONTENT, not merely that the
+    // method returns an array: the method previously did `new $className()`
+    // against a constructor that requires an agent, so every lookup threw
+    // ArgumentCountError into an empty catch and description/version were
+    // silently never populated for any skill.
+
+    public function testGetAllSkillsSchemaPopulatesDescriptionAndVersion(): void
+    {
+        $registry = SkillRegistry::instance();
+        $schema = $registry->getAllSkillsSchema();
+
+        $this->assertArrayHasKey('web_search', $schema);
+        $entry = $schema['web_search'];
+
+        $this->assertSame('web_search', $entry['name']);
+        $this->assertNotEmpty(
+            $entry['description'] ?? '',
+            'description must be POPULATED, not merely present'
+        );
+        $this->assertSame(
+            'Search the web for information using Google Custom Search API',
+            $entry['description']
+        );
+        $this->assertNotEmpty($entry['version'] ?? '', 'version must be POPULATED');
+        $this->assertSame('2.0.0', $entry['version']);
+    }
+
+    public function testGetAllSkillsSchemaPopulatesEverySkill(): void
+    {
+        $registry = SkillRegistry::instance();
+        $schema = $registry->getAllSkillsSchema();
+
+        $this->assertCount(18, $schema);
+        foreach ($schema as $name => $entry) {
+            $this->assertNotEmpty(
+                $entry['description'] ?? '',
+                "skill '{$name}' has an empty description"
+            );
+            $this->assertNotEmpty(
+                $entry['version'] ?? '',
+                "skill '{$name}' has an empty version"
+            );
+        }
+    }
+
+    public function testGetAllSkillsSchemaReturnsTheEightReferenceFields(): void
+    {
+        $registry = SkillRegistry::instance();
+        $schema = $registry->getAllSkillsSchema();
+        $entry = $schema['web_search'];
+
+        foreach (
+            [
+                'name',
+                'description',
+                'version',
+                'supports_multiple_instances',
+                'required_packages',
+                'required_env_vars',
+                'parameters',
+                'source',
+            ] as $field
+        ) {
+            $this->assertArrayHasKey($field, $entry, "missing reference field '{$field}'");
+        }
+
+        $this->assertTrue($entry['supports_multiple_instances']);
+        $this->assertSame([], $entry['required_packages']);
+        $this->assertSame([], $entry['required_env_vars']);
+        $this->assertSame('built-in', $entry['source']);
+        // parameters is the skill's own get_parameter_schema(), not an empty stub.
+        $this->assertIsArray($entry['parameters']);
+        $this->assertArrayHasKey('properties', $entry['parameters']);
+        $this->assertArrayHasKey('api_key', $entry['parameters']['properties']);
+    }
+
+    public function testGetAllSkillsSchemaMarksRegisteredSkillsAsRegistered(): void
+    {
+        $registry = SkillRegistry::instance();
+        $registry->registerSkill('registered_probe', SchemaProbeSkill::class);
+
+        $schema = $registry->getAllSkillsSchema();
+
+        $this->assertArrayHasKey('registered_probe', $schema);
+        $this->assertSame('registered', $schema['registered_probe']['source']);
+        $this->assertSame('probe description', $schema['registered_probe']['description']);
+        $this->assertSame('9.9.9', $schema['registered_probe']['version']);
+        $this->assertSame(['PROBE_KEY'], $schema['registered_probe']['required_env_vars']);
     }
 
     public function testRegistrySingletonBehavior(): void
@@ -295,7 +388,7 @@ class SkillsTest extends TestCase
         // Datetime has no required env vars and setup returns true.
         // Pass skip_prompt to keep this test focused on load bookkeeping
         // (skips the promptAddSection path).
-        [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
     }
@@ -305,7 +398,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
         $this->assertSame('', $msg);
@@ -316,8 +409,8 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
-        [$ok, $msg] = $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString('already loaded', $msg);
@@ -328,7 +421,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
         $this->assertTrue($manager->hasSkill('datetime'));
 
         $removed = $manager->unloadSkill('datetime');
@@ -362,7 +455,7 @@ class SkillsTest extends TestCase
 
         $this->assertSame([], $manager->listLoadedSkills());
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
         $this->assertSame(['datetime'], $manager->listLoadedSkills());
     }
 
@@ -390,7 +483,7 @@ class SkillsTest extends TestCase
 
         $this->assertFalse($manager->hasSkill('datetime'));
 
-        $manager->loadSkill('datetime', ['skip_prompt' => true]);
+        $manager->loadSkill('datetime', params: ['skip_prompt' => true]);
         $this->assertTrue($manager->hasSkill('datetime'));
     }
 
@@ -399,7 +492,7 @@ class SkillsTest extends TestCase
         $agent = $this->makeAgent();
         $manager = new SkillManager($agent);
 
-        [$ok, $msg] = $manager->loadSkill('math', ['skip_prompt' => true]);
+        [$ok, $msg] = $manager->loadSkill('math', params: ['skip_prompt' => true]);
 
         $this->assertTrue($ok);
         $this->assertSame('', $msg);
@@ -1559,6 +1652,120 @@ class SkillsTest extends TestCase
             ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
             Shape::at($props, 'exclude_patterns', 'default'),
         );
+    }
+
+    /**
+     * Every built-in skill that overrides the protected `_getPromptSections()`
+     * hook. The reflection test below asserts the shape for ALL of them.
+     *
+     * @return list<class-string>
+     */
+    public static function promptSectionSkillClasses(): array
+    {
+        return [
+            \SignalWire\Skills\Builtin\ClaudeSkills::class,
+            \SignalWire\Skills\Builtin\Datasphere::class,
+            \SignalWire\Skills\Builtin\DatasphereServerless::class,
+            \SignalWire\Skills\Builtin\Datetime::class,
+            \SignalWire\Skills\Builtin\GoogleMaps::class,
+            \SignalWire\Skills\Builtin\InfoGatherer::class,
+            \SignalWire\Skills\Builtin\Joke::class,
+            \SignalWire\Skills\Builtin\Math::class,
+            \SignalWire\Skills\Builtin\McpGateway::class,
+            \SignalWire\Skills\Builtin\NativeVectorSearch::class,
+            \SignalWire\Skills\Builtin\SwmlTransfer::class,
+            \SignalWire\Skills\Builtin\WebSearch::class,
+            \SignalWire\Skills\Builtin\WikipediaSearch::class,
+        ];
+    }
+
+    /**
+     * Constructor params that make each built-in skill with a prompt-section
+     * override produce a NON-empty section list, so the skip_prompt assertion
+     * below is a real flip and not a vacuous empty==empty.
+     *
+     * ClaudeSkills and McpGateway are absent on purpose: both populate the state
+     * their sections describe inside `setup()` (a filesystem discovery walk and a
+     * gateway `/health` probe respectively), so neither can produce a non-empty
+     * list from the constructor alone and neither would give a real flip here.
+     * They are still covered by the reflection arm over
+     * {@see self::promptSectionSkillClasses()}.
+     *
+     * @return array<string, array{0: class-string, 1: array<string, mixed>}>
+     */
+    public static function promptSectionSkillProvider(): array
+    {
+        return [
+            'datasphere' => [\SignalWire\Skills\Builtin\Datasphere::class, [
+                'space_name' => 's', 'project_id' => 'p', 'token' => 't', 'document_id' => 'd',
+            ]],
+            'datasphere_serverless' => [\SignalWire\Skills\Builtin\DatasphereServerless::class, [
+                'document_id' => 'd',
+            ]],
+            'datetime' => [\SignalWire\Skills\Builtin\Datetime::class, []],
+            'google_maps' => [\SignalWire\Skills\Builtin\GoogleMaps::class, ['api_key' => 'k']],
+            'info_gatherer' => [\SignalWire\Skills\Builtin\InfoGatherer::class, [
+                'questions' => [['key_name' => 'q1', 'question_text' => 'Name?']],
+            ]],
+            'joke' => [\SignalWire\Skills\Builtin\Joke::class, ['api_key' => 'k']],
+            'math' => [\SignalWire\Skills\Builtin\Math::class, []],
+            'swml_transfer' => [\SignalWire\Skills\Builtin\SwmlTransfer::class, [
+                'transfers' => ['/sales/' => ['url' => 'https://x/sales']],
+            ]],
+            'web_search' => [\SignalWire\Skills\Builtin\WebSearch::class, [
+                'api_key' => 'k', 'search_engine_id' => 'cx',
+            ]],
+            'wikipedia_search' => [\SignalWire\Skills\Builtin\WikipediaSearch::class, []],
+        ];
+    }
+
+    /**
+     * `skip_prompt` is enforced by the FINAL `SkillBase::getPromptSections()`
+     * template method, not re-implemented per skill. Each subclass overrides the
+     * protected `_getPromptSections()` hook, so a subclass CANNOT forget the
+     * guard — this asserts the guard fires for every one of them.
+     *
+     * @param class-string          $cls
+     * @param array<string, mixed>  $params
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('promptSectionSkillProvider')]
+    public function testSkipPromptIsEnforcedByTheBaseTemplateMethod(string $cls, array $params): void
+    {
+        $agent = $this->makeAgent();
+
+        /** @var \SignalWire\Skills\SkillBase $on */
+        $on = new $cls($agent, $params);
+        $this->assertNotSame([], $on->getPromptSections(), "$cls emits no sections without skip_prompt — the guard assertion below would be vacuous");
+
+        /** @var \SignalWire\Skills\SkillBase $off */
+        $off = new $cls($agent, $params + ['skip_prompt' => true]);
+        $this->assertSame([], $off->getPromptSections(), "$cls did not honour skip_prompt");
+    }
+
+    /**
+     * The guard lives in ONE place. A subclass may not override the public
+     * template method (it is `final`), and every built-in that contributes
+     * sections overrides the protected hook instead.
+     */
+    public function testPromptSectionTemplateMethodIsFinalAndHookIsProtected(): void
+    {
+        $base = new \ReflectionMethod(\SignalWire\Skills\SkillBase::class, 'getPromptSections');
+        $this->assertTrue($base->isFinal(), 'SkillBase::getPromptSections() must be final');
+        $this->assertTrue($base->isPublic());
+
+        $hook = new \ReflectionMethod(\SignalWire\Skills\SkillBase::class, '_getPromptSections');
+        $this->assertTrue($hook->isProtected(), 'the _getPromptSections() hook must be protected, not public API');
+
+        foreach (self::promptSectionSkillClasses() as $cls) {
+            $m = new \ReflectionMethod($cls, '_getPromptSections');
+            $this->assertSame($cls, $m->getDeclaringClass()->getName(), "$cls must override the protected hook");
+            $this->assertTrue($m->isProtected(), "$cls::_getPromptSections() must be protected");
+            $this->assertFalse(
+                (new \ReflectionClass($cls))->hasMethod('getPromptSections')
+                    && (new \ReflectionMethod($cls, 'getPromptSections'))->getDeclaringClass()->getName() === $cls,
+                "$cls must not redeclare the final template method",
+            );
+        }
     }
 
     public function testSpiderInterfaceMethods(): void

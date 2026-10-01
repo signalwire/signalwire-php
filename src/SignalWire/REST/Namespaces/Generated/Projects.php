@@ -27,6 +27,6 @@ class Projects extends \SignalWire\REST\CrudResource
      */
     public function rotateSigningKey(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post($this->path($id, 'signing-key', 'rotate'), [], $requestOptions);
+        return $this->client->post($this->path($id, 'signing-key', 'rotate'), [], requestOptions: $requestOptions);
     }
 }

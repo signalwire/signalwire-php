@@ -14,6 +14,9 @@ namespace SignalWire\REST\Namespaces\Generated;
 /**
  * FabricNamespace — generated container grouping the fabric namespace resources (§8).
  *
+ * @property-read AliasAddresses $aliasAddresses
+ * @property-read SipAddresses $sipAddresses
+ * @property-read PhoneNumberAddresses $phoneNumberAddresses
  * @property-read FabricAddresses $addresses
  * @property-read GenericResources $resources
  * @property-read AiAgents $aiAgents
@@ -34,6 +37,9 @@ namespace SignalWire\REST\Namespaces\Generated;
 class FabricNamespace
 {
     private \SignalWire\REST\HttpClient $http;
+    private ?AliasAddresses $aliasAddresses = null;
+    private ?SipAddresses $sipAddresses = null;
+    private ?PhoneNumberAddresses $phoneNumberAddresses = null;
     private ?FabricAddresses $addresses = null;
     private ?GenericResources $resources = null;
     private ?AiAgents $aiAgents = null;
@@ -54,6 +60,30 @@ class FabricNamespace
     public function __construct(\SignalWire\REST\HttpClient $http)
     {
         $this->http = $http;
+    }
+
+    public function aliasAddresses(): AliasAddresses
+    {
+        if ($this->aliasAddresses === null) {
+            $this->aliasAddresses = new AliasAddresses($this->http);
+        }
+        return $this->aliasAddresses;
+    }
+
+    public function sipAddresses(): SipAddresses
+    {
+        if ($this->sipAddresses === null) {
+            $this->sipAddresses = new SipAddresses($this->http);
+        }
+        return $this->sipAddresses;
+    }
+
+    public function phoneNumberAddresses(): PhoneNumberAddresses
+    {
+        if ($this->phoneNumberAddresses === null) {
+            $this->phoneNumberAddresses = new PhoneNumberAddresses($this->http);
+        }
+        return $this->phoneNumberAddresses;
     }
 
     public function addresses(): FabricAddresses

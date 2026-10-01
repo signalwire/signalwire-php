@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Message;
 /**
  * LogRetrieveResponse — generated wire type from the 'message' spec (components/schemas 'LogRetrieveResponse').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class LogRetrieveResponse
 {
@@ -46,4 +46,10 @@ class LogRetrieveResponse
     public ?array $charge_details = null;
 
     public ?string $created_at = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $error_code = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $error_message = null;
 }

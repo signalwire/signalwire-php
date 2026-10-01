@@ -155,6 +155,21 @@ final class AIChatClientTest extends TestCase
         $this->assertSame('hello', $info->initialMessage);
     }
 
+    public function testRawPostStreamsTheBodyAndReturnsTheStatus(): void
+    {
+        // The body is relayed as it arrives, unparsed; the HTTP status is the
+        // generator's return value.
+        $stream = $this->client()->rawPost('chat', ['id' => 'conv-1', 'message' => 'hi']);
+        $body = '';
+        foreach ($stream as $chunk) {
+            $body .= $chunk;
+        }
+        $this->assertSame(200, $stream->getReturn());
+        $decoded = json_decode($body, true);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('result', $decoded);
+    }
+
     public function testChatDecodesResponseAndUserEvent(): void
     {
         $reply = $this->client()->chat('conv-1', 'hello', timeout: 30, reinit: true);

@@ -54,6 +54,13 @@ class WebSocket
      */
     private ?string $caFile;
 
+    /**
+     * @param string|null $caFile default CA bundle (PEM) used to verify the
+     *   server certificate on `wss://` connections; null uses the system trust
+     *   store. Peer verification stays ON either way — this widens what is
+     *   trusted, it never disables the check. {@see WebSocket::connect()}'s own
+     *   `$caFile` argument overrides this per connection.
+     */
     public function __construct(?string $caFile = null)
     {
         $this->caFile = $caFile;

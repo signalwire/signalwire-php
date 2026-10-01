@@ -14,24 +14,22 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * PomSectionBulletsContent — generated wire type from the 'calling' spec (components/schemas 'PomSectionBulletsContent').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class PomSectionBulletsContent
 {
     public ?string $title = null;
 
-    /** @var list<mixed>|null */
-    public ?array $subsections = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $numbered = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $numberedBullets = null;
-
     public ?string $body = null;
 
     /** @var list<mixed>|null */
     public ?array $bullets = null;
+
+    public ?bool $numbered = null;
+
+    public ?bool $numberedBullets = null;
+
+    /** @var list<mixed>|null */
+    public ?array $subsections = null;
 }

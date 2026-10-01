@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * FabricAddressSubscriber — generated wire type from the 'fabric' spec (components/schemas 'FabricAddressSubscriber').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class FabricAddressSubscriber
 {
@@ -34,7 +34,7 @@ class FabricAddressSubscriber
     /** @var array<string,mixed>|null */
     public ?array $channels = null;
 
-    public ?string $created_at = null;
-
     public ?string $type = null;
+
+    public ?string $resource_id = null;
 }

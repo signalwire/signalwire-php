@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Comprehensive Dynamic Agent Configuration
  *
@@ -39,8 +41,7 @@ $industryConfigs = [
     'general'    => ['compliance_level' => 'standard', 'response_style' => 'conversational'],
 ];
 
-$agent->setDynamicConfigCallback(function ($qp, $bp, $headers, $a)
-    use ($voiceOptions, $industryConfigs) {
+$agent->setDynamicConfigCallback(function ($qp, $bp, $headers, $a) use ($voiceOptions, $industryConfigs) {
 
     $tier      = strtolower($qp['tier'] ?? 'standard');
     $industry  = strtolower($qp['industry'] ?? 'general');

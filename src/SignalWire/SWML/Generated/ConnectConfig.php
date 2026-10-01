@@ -12,40 +12,30 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * ConnectConfig — generated SWML verb config type (flattened SWMLMethod verb 'connect' config).
+ * ConnectConfig — generated SWML verb config type ($defs schema 'ConnectConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ConnectConfig
 {
-    public ?string $from = null;
-
-    /** @var list<mixed>|null */
-    public ?array $headers = null;
-
-    public ?string $codecs = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $webrtc_media = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $session_timeout = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $ringback = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $result = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $timeout = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $max_duration = null;
-
     /** @var array<string,mixed>|null */
     public ?array $answer_on_bridge = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $authorization_bearer_token = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $call_state_events = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $call_state_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $codec = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $codecs = null;
 
     /** @var array<string,mixed>|null */
     public ?array $confirm = null;
@@ -53,29 +43,72 @@ class ConnectConfig
     /** @var array<string,mixed>|null */
     public ?array $confirm_timeout = null;
 
-    public ?string $username = null;
-
-    public ?string $password = null;
+    /** @var array<string,mixed>|null */
+    public ?array $custom_parameters = null;
 
     /** @var array<string,mixed>|null */
     public ?array $encryption = null;
 
-    public ?string $call_state_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $execute_after_queue = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $transfer_after_bridge = null;
+    public ?array $from = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $from_name = null;
 
     /** @var list<mixed>|null */
-    public ?array $call_state_events = null;
+    public ?array $headers = null;
 
-    public ?string $to = null;
+    /** @var array<string,mixed>|null */
+    public ?array $max_duration = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $name = null;
+
+    /** @var list<mixed>|null */
+    public ?array $parallel = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $password = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $realtime = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $result = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $ringback = null;
 
     /** @var list<mixed>|null */
     public ?array $serial = null;
 
     /** @var list<mixed>|null */
-    public ?array $parallel = null;
-
-    /** @var list<mixed>|null */
     public ?array $serial_parallel = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $session_timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_url_method = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $stop_all_on_reject = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $to = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $username = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $webrtc_media = null;
 }

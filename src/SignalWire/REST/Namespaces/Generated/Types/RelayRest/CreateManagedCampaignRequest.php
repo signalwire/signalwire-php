@@ -14,14 +14,12 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * CreateManagedCampaignRequest — generated wire type from the 'relay_rest' spec (components/schemas 'CreateManagedCampaignRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateManagedCampaignRequest
 {
     public ?string $name = null;
-
-    public ?string $brand_id = null;
 
     public ?string $sms_use_case = null;
 
@@ -75,4 +73,9 @@ class CreateManagedCampaignRequest
     public ?bool $terms_and_conditions = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $csp_campaign_reference = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

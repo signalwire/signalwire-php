@@ -58,7 +58,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "on Fabric; the per-phone-route bind is handled by "
         "phone_numbers.set_* helpers per porting-sdk/phone-binding.md",
     ),
-
     # --- Whole subsystems intentionally not ported ---
     (
         "signalwire.search.",
@@ -94,7 +93,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "primitives directly into AgentBase via promptAddSection / "
         "promptAddSubsection / promptAddToSection; no separate class.",
     ),
-
     # --- CLI & tooling (Python-specific helpers) ---
     (
         "signalwire.cli.init_project.",
@@ -118,8 +116,7 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.cli.output.",
-        "CLI pretty-print helpers; PHP's `swaig-test` prints via the "
-        "Logger directly.",
+        "CLI pretty-print helpers; PHP's `swaig-test` prints via the Logger directly.",
     ),
     (
         "signalwire.cli.simulation.",
@@ -150,7 +147,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "signalwire.cli.",
         "Python-only CLI helper not mirrored in PHP's `swaig-test`.",
     ),
-
     # --- Core internals / mixins ---
     (
         "signalwire.core.mixins.",
@@ -353,7 +349,7 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
     (
         "signalwire.core.data_map.create_simple_api_tool",
         "Python factory function; PHP users instantiate `DataMap` and call "
-        "`webhook()`/`body()` directly.",
+        "`webhook()`/`params()` directly.",
     ),
     (
         "signalwire.core.function_result.FunctionResult.to_dict",
@@ -380,7 +376,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "Reflection and projected to the module-level Python names via "
         "FREE_FUNCTION_PROJECTIONS. See PORT_ADDITIONS.md.",
     ),
-
     # --- REST namespaces: PHP merges Python's per-resource classes ---
     (
         "signalwire.rest._base.BaseResource",
@@ -584,7 +579,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "exposes the same constants directly on the phone-numbers helpers "
         "(see PORT_OMISSIONS for the binding helpers).",
     ),
-
     # --- Skills ---
     (
         "signalwire.skills.web_search.skill_improved.",
@@ -687,7 +681,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "helper methods from Python's skill modules are inlined into the "
         "PHP skill class body.",
     ),
-
     # --- Prefabs ---
     (
         "signalwire.prefabs.",
@@ -696,7 +689,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "auto-tools registration). PHP prefabs implement the same five "
         "agent classes with the documented public constructor.",
     ),
-
     # --- Relay internals ---
     (
         "signalwire.relay.call.",
@@ -721,7 +713,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "Python Message exposes additional internal helpers; PHP's "
         "Message sticks to the public send/reply API.",
     ),
-
     # --- Utilities ---
     (
         "signalwire.utils.schema_utils.",
@@ -739,7 +730,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "Python helper; PHP uses `Adapter::detect()` on the Serverless "
         "adapter directly.",
     ),
-
     # --- Top-level re-exports ---
     (
         "signalwire.RestClient",
@@ -774,7 +764,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "Python top-level helper; PHP users call `$agent->run()` or "
         "`$server->register(...) + $server->run()`.",
     ),
-
     # --- AgentServer extras ---
     (
         "signalwire.agent_server.AgentServer.register_global_routing_callback",
@@ -787,7 +776,6 @@ OMISSION_RATIONALES: list[tuple[str, str]] = [
         "`AgentServer::serveStatic` — emitted as `serve_static_files` via "
         "the enumerator's METHOD_ALIASES table; this entry is redundant.",
     ),
-
     # --- Misc internals ---
     (
         "signalwire.core.security.session_manager.SessionManager.activate_session",
@@ -828,8 +816,10 @@ def rationale_for(sym: str) -> str:
     for prefix, rationale in OMISSION_RATIONALES:
         if prefix.endswith(".") and sym.startswith(prefix):
             return rationale
-    return ("not_yet_implemented: Python surface has no matching PHP "
-            "symbol — a follow-up PR will close the gap")
+    return (
+        "not_yet_implemented: Python surface has no matching PHP "
+        "symbol — a follow-up PR will close the gap"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -915,8 +905,7 @@ ADDITIONS_RATIONALES: list[tuple[str, str]] = [
     ),
     (
         "signalwire.core.swml_service.SWMLService.render_swml",
-        "PHP alias for the SWML render path; equivalent of Python's "
-        "`render_document`.",
+        "PHP alias for the SWML render path; equivalent of Python's `render_document`.",
     ),
     (
         "signalwire.core.swml_service.SWMLService.__call",
@@ -1145,9 +1134,9 @@ ADDITIONS_RATIONALES: list[tuple[str, str]] = [
     # --- Serverless adapter ---
     (
         "signalwire.cli.simulation.mock_env.Adapter.",
-        "PHP-specific platform-mode-detection adapter (lambda / gcf / "
-        "azure / cgi); Python uses the broader simulation/mock_env "
-        "ServerlessSimulator class.",
+        "PHP-specific platform-mode-detection adapter (lambda / "
+        "google_cloud_function / azure_function / cgi); Python uses "
+        "the broader simulation/mock_env ServerlessSimulator class.",
     ),
 ]
 
@@ -1161,21 +1150,27 @@ def rationale_for_addition(sym: str) -> str:
     for prefix, rationale in ADDITIONS_RATIONALES:
         if prefix.endswith(".") and sym.startswith(prefix):
             return rationale
-    return ("idiomatic PHP surface extension (getter, setter, or method "
-            "alias) not present in Python's reference")
+    return (
+        "idiomatic PHP surface extension (getter, setter, or method "
+        "alias) not present in Python's reference"
+    )
 
 
 # ---------------------------------------------------------------------------
 # IO
 # ---------------------------------------------------------------------------
 
+
 def run_diff(diff_script: Path, reference: Path, port_surface: Path) -> dict:
     """Run the diff in --json mode and return its parsed payload."""
     result = subprocess.run(
         [
-            sys.executable, str(diff_script),
-            "--reference", str(reference),
-            "--port-surface", str(port_surface),
+            sys.executable,
+            str(diff_script),
+            "--reference",
+            str(reference),
+            "--port-surface",
+            str(port_surface),
             "--json",
         ],
         capture_output=True,
@@ -1184,15 +1179,17 @@ def run_diff(diff_script: Path, reference: Path, port_surface: Path) -> dict:
     )
     if result.returncode not in (0, 1):
         raise SystemExit(
-            f"diff_port_surface.py failed (code {result.returncode}): "
-            f"{result.stderr}"
+            f"diff_port_surface.py failed (code {result.returncode}): {result.stderr}"
         )
     return json.loads(result.stdout)
 
 
 def write_exemption_file(
-    path: Path, title: str, intro: str,
-    symbols: list[str], rationale,
+    path: Path,
+    title: str,
+    intro: str,
+    symbols: list[str],
+    rationale,
 ) -> None:
     """Write an ordered markdown file keyed on symbol name."""
     lines: list[str] = []
@@ -1200,22 +1197,23 @@ def write_exemption_file(
     lines.append(intro.rstrip() + "\n")
     lines.append("")
     lines.append("# Format: `<fully.qualified.symbol>: <rationale>`")
-    lines.append(
-        "# Regenerate with `python3 scripts/generate_exemptions.py` after")
+    lines.append("# Regenerate with `python3 scripts/generate_exemptions.py` after")
     lines.append("# a surface change.")
     lines.append("")
-    for sym in sorted(symbols):
-        lines.append(f"{sym}: {rationale(sym)}")
+    lines.extend(f"{sym}: {rationale(sym)}" for sym in sorted(symbols))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--repo", type=Path, default=Path(__file__).resolve().parent.parent,
+        "--repo",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent,
     )
     parser.add_argument(
-        "--porting-sdk", type=Path,
+        "--porting-sdk",
+        type=Path,
         default=(Path(__file__).resolve().parent.parent.parent / "porting-sdk"),
     )
     args = parser.parse_args(argv)
@@ -1225,7 +1223,8 @@ def main(argv: list[str]) -> int:
         [
             sys.executable,
             str(args.repo / "scripts" / "enumerate_surface.py"),
-            "--output", str(args.repo / "port_surface.json"),
+            "--output",
+            str(args.repo / "port_surface.json"),
         ]
     )
 
@@ -1271,10 +1270,7 @@ def main(argv: list[str]) -> int:
         symbols=additions,
         rationale=rationale_for_addition,
     )
-    print(
-        f"Wrote {len(omissions)} omission(s) and {len(additions)} "
-        f"addition(s)."
-    )
+    print(f"Wrote {len(omissions)} omission(s) and {len(additions)} addition(s).")
     return 0
 
 

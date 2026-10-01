@@ -12,25 +12,28 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * TapConfig — generated SWML verb config type (flattened SWMLMethod verb 'tap' config).
+ * TapConfig — generated SWML verb config type ($defs schema 'TapConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class TapConfig
 {
-    public ?string $uri = null;
+    /** @var array<string,mixed>|null */
+    public ?array $codec = null;
 
-    public ?string $control_id = null;
+    /** @var array<string,mixed>|null */
+    public ?array $control_id = null;
 
     /** @var array<string,mixed>|null */
     public ?array $direction = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $codec = null;
-
-    /** @var array<string,mixed>|null */
     public ?array $rtp_ptime = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $uri = null;
 }

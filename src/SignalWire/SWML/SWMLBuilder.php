@@ -77,17 +77,30 @@ class SWMLBuilder
     /**
      * Add an 'answer' verb to the main section.
      *
-     * @param int|null    $maxDuration Maximum duration in seconds.
-     * @param string|null $codecs      Comma-separated list of codecs.
+     * @param int|null                 $maxDuration Maximum duration in seconds.
+     * @param string|list<string>|null $codecs      Codecs to offer — a comma-separated
+     *   string or a list (PCMU, PCMA, G722, G729, AMR-WB, OPUS, VP8, H264).
+     * @param string|null              $username    Username to use for SIP authentication.
+     * @param string|null              $password    Password to use for SIP authentication.
      */
-    public function answer(?int $maxDuration = null, ?string $codecs = null): static
-    {
+    public function answer(
+        ?int $maxDuration = null,
+        string|array|null $codecs = null,
+        ?string $username = null,
+        ?string $password = null,
+    ): static {
         $config = [];
         if ($maxDuration !== null) {
             $config['max_duration'] = $maxDuration;
         }
         if ($codecs !== null) {
             $config['codecs'] = $codecs;
+        }
+        if ($username !== null) {
+            $config['username'] = $username;
+        }
+        if ($password !== null) {
+            $config['password'] = $password;
         }
         $this->service->addVerb('answer', $config);
         return $this;
@@ -167,6 +180,8 @@ class SWMLBuilder
      * @param string|null       $sayLanguage Language for text-to-speech.
      * @param string|null       $sayGender   Gender for text-to-speech.
      * @param bool|null         $autoAnswer  Whether to auto-answer the call.
+     * @param int|null          $loop        How many times to play (0 = until the call ends).
+     * @param string|null       $statusUrl   http(s) URL to deliver play status events.
      */
     public function play(
         ?string $url = null,
@@ -176,6 +191,8 @@ class SWMLBuilder
         ?string $sayLanguage = null,
         ?string $sayGender = null,
         ?bool $autoAnswer = null,
+        ?int $loop = null,
+        ?string $statusUrl = null,
     ): static {
         $config = [];
 
@@ -201,6 +218,12 @@ class SWMLBuilder
         }
         if ($autoAnswer !== null) {
             $config['auto_answer'] = $autoAnswer;
+        }
+        if ($loop !== null) {
+            $config['loop'] = $loop;
+        }
+        if ($statusUrl !== null) {
+            $config['status_url'] = $statusUrl;
         }
 
         $this->service->addVerb('play', $config);

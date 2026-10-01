@@ -14,28 +14,49 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * LanguagesWithSoloFillers — generated wire type from the 'calling' spec (components/schemas 'LanguagesWithSoloFillers').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class LanguagesWithSoloFillers
 {
-    public ?string $name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $auto_emotion = null;
 
-    public ?string $code = null;
+    /** @var array<string,mixed>|null */
+    public ?array $auto_speed = null;
 
-    public ?string $voice = null;
+    /** @var array<string,mixed>|null */
+    public ?array $code = null;
+
+    /** @var list<mixed>|null */
+    public ?array $double_turn_fillers = null;
+
+    public ?string $engine = null;
+
+    /** @var list<mixed>|null */
+    public ?array $fillers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $function_fillers = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $listen_language = null;
 
     public ?string $model = null;
 
-    public ?string $emotion = null;
-
-    public ?string $speed = null;
-
-    public ?string $engine = null;
+    public ?string $name = null;
 
     /** @var array<string,mixed>|null */
     public ?array $params = null;
 
     /** @var list<mixed>|null */
-    public ?array $fillers = null;
+    public ?array $pronounce = null;
+
+    /** @var list<mixed>|null */
+    public ?array $speech_fillers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $turn_fillers = null;
+
+    public ?string $voice = null;
 }

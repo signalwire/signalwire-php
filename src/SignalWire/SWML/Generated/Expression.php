@@ -14,15 +14,19 @@ namespace SignalWire\SWML\Generated;
 /**
  * Expression — generated SWML verb config type ($defs schema 'Expression').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Expression
 {
-    public ?string $string = null;
-
     public ?string $pattern = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $output = null;
+    public ?string $expr = null;
+
+    /** wire key: nomatch-output */
+    public mixed $nomatch_output = null;
+
+    public mixed $output = null;
+
+    public ?string $string = null;
 }

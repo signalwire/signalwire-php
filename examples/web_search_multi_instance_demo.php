@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Web Search Multiple Instance Demo
  *
@@ -27,14 +29,14 @@ try {
     $agent->addSkill('datetime');
     echo "Added datetime skill\n";
 } catch (\Exception $e) {
-    echo "Failed to add datetime skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add datetime skill: ' . $e->getMessage() . "\n";
 }
 
 try {
     $agent->addSkill('math');
     echo "Added math skill\n";
 } catch (\Exception $e) {
-    echo "Failed to add math skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add math skill: ' . $e->getMessage() . "\n";
 }
 
 // Add web search instances
@@ -52,7 +54,7 @@ if ($googleApiKey && $googleSearchEngineId) {
         ]);
         echo "Added general web search (tool: search_general)\n";
     } catch (\Exception $e) {
-        echo "Failed: " . $e->getMessage() . "\n";
+        echo 'Failed: ' . $e->getMessage() . "\n";
     }
 
     // Instance 2: Technical search with fewer results
@@ -67,7 +69,7 @@ if ($googleApiKey && $googleSearchEngineId) {
         ]);
         echo "Added technical search (tool: search_technical)\n";
     } catch (\Exception $e) {
-        echo "Failed: " . $e->getMessage() . "\n";
+        echo 'Failed: ' . $e->getMessage() . "\n";
     }
 } else {
     echo "Skipping web search (GOOGLE_SEARCH_API_KEY / GOOGLE_SEARCH_ENGINE_ID not set)\n";
@@ -85,7 +87,7 @@ try {
     ]);
     echo "Added Wikipedia search (tool: search_wiki)\n";
 } catch (\Exception $e) {
-    echo "Failed to add Wikipedia skill: " . $e->getMessage() . "\n";
+    echo 'Failed to add Wikipedia skill: ' . $e->getMessage() . "\n";
 }
 
 $loaded = $agent->listSkills();

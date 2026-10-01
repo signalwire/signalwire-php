@@ -14,8 +14,8 @@ namespace SignalWire\SWAIG\Generated\PostPrompt;
 /**
  * PostPromptSwaigLogEntry — generated SWAIG payload wire type (post-prompt components/schemas 'PostPromptSwaigLogEntry').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class PostPromptSwaigLogEntry
 {
@@ -34,18 +34,15 @@ class PostPromptSwaigLogEntry
 
     public mixed $post_data = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $post_response = null;
+    public mixed $post_response = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $delayed_post_response = null;
+    public mixed $delayed_post_response = null;
 
     public ?string $mcp_url = null;
 
     public ?string $mcp_tool = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $mcp_response = null;
+    public ?string $mcp_response = null;
 
-    public ?string $mcp_error = null;
+    public ?bool $mcp_error = null;
 }

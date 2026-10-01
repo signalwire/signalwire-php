@@ -36,12 +36,14 @@ class VideoStreams extends \SignalWire\REST\BaseResource
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $id, string $url, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function update(string $id, ?string $url = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
-        $__body['url'] = $url;
+        if ($url !== null) {
+            $__body['url'] = $url;
+        }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->path($id), $__body, $requestOptions);
+        return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
     }
 
     /**

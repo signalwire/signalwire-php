@@ -12,30 +12,31 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * RequestConfig — generated SWML verb config type (flattened SWMLMethod verb 'request' config).
+ * RequestConfig — generated SWML verb config type ($defs schema 'RequestConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class RequestConfig
 {
-    public ?string $url = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $method = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $headers = null;
-
     /** @var array<string,mixed>|null */
     public ?array $body = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $timeout = null;
 
     /** @var array<string,mixed>|null */
     public ?array $connect_timeout = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $headers = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $method = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $save_variables = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $url = null;
 }

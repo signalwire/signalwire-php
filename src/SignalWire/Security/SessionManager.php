@@ -6,6 +6,24 @@ namespace SignalWire\Security;
 
 use RuntimeException;
 
+/**
+ * Mints and validates the per-tool SWAIG callback tokens.
+ *
+ * STATELESS by design: no session table is kept in memory — every fact a token
+ * asserts travels inside the token itself. A token is the base64url encoding of
+ * `<callId>.<functionName>.<expiry>.<nonce>.<signature>`, where the signature is
+ * HMAC-SHA256 over `callId:functionName:expiry:nonce` under this manager's
+ * secret. Validation compares the function name, the signature, and the call id
+ * with `hash_equals` (timing-safe) and rejects an expired token.
+ *
+ * Because the secret is what makes a token verifiable, a manager constructed
+ * WITHOUT an explicit `$secretKey` generates a random one — so tokens it mints
+ * cannot be validated by any other instance or after a restart. Pass an explicit
+ * key whenever tokens must survive either.
+ *
+ * The `activateSession` / `endSession` / `*SessionMetadata` methods are
+ * API-compatibility no-ops that keep no state and always report success.
+ */
 class SessionManager
 {
     private string $secret;
@@ -326,11 +344,20 @@ class SessionManager
     }
 
     /**
-     * Base64url-encode a string (RFC 4648 without padding).
+     * Base64url-encode a string, PADDING INTACT.
+     *
+     * The reference is ``base64.urlsafe_b64encode``, which KEEPS the '=' padding, and
+     * its ``validate_token`` decodes with ``urlsafe_b64decode``, which RAISES on a
+     * stripped '='. Stripping it (the previous ``rtrim(strtr(..., '+/=', '-_ '), ' ')``)
+     * made every token this port minted unusable to the reference and to any port that
+     * decodes strictly, even though the message and HMAC were correct. Our own
+     * ``base64urlDecode`` still accepted them because it re-pads before decoding — that
+     * asymmetry is why round-tripping against ourselves could not catch it, and why
+     * TOKEN-INTEROP validates against the REFERENCE decoder instead.
      */
     private function base64urlEncode(string $data): string
     {
-        return rtrim(strtr(base64_encode($data), '+/=', '-_ '), ' ');
+        return strtr(base64_encode($data), '+/', '-_');
     }
 
     /**

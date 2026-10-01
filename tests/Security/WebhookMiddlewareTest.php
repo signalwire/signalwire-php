@@ -289,4 +289,72 @@ class WebhookMiddlewareTest extends TestCase
             '',
         );
     }
+
+    // ── X-SignalWire-Sha256-Signature preference ─────────────────────────
+    // Parity: tests/unit/security/test_webhook_middleware.py
+    // TestSha256SignaturePreference.
+
+    private static function sha256Sig(): string
+    {
+        return hash_hmac('sha256', self::URL . self::RAW_BODY, self::KEY);
+    }
+
+    public function testValidSha256SignaturePasses(): void
+    {
+        $this->assertNull(WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Sha256-Signature' => self::sha256Sig()],
+            self::RAW_BODY,
+            self::KEY,
+        ));
+    }
+
+    public function testBadSha256FallsBackToValidSha1(): void
+    {
+        $this->assertNull(WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Sha256-Signature' => str_repeat('0', 64), 'X-SignalWire-Signature' => self::SIG_A],
+            self::RAW_BODY,
+            self::KEY,
+        ));
+    }
+
+    public function testBadSha256WithNoSha1IsRejected(): void
+    {
+        $result = WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Sha256-Signature' => str_repeat('0', 64)],
+            self::RAW_BODY,
+            self::KEY,
+        );
+        $this->assertNotNull($result);
+        $this->assertSame(403, $result[0]);
+    }
+
+    public function testValidSha256PreferredOverBadSha1(): void
+    {
+        $this->assertNull(WebhookMiddleware::validate(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Sha256-Signature' => self::sha256Sig(), 'X-SignalWire-Signature' => 'bad'],
+            self::RAW_BODY,
+            self::KEY,
+        ));
+    }
+
+    public function testProcessAcceptsSha256Only(): void
+    {
+        $mw = new WebhookMiddleware(self::KEY);
+        [$status, ,] = $mw->process(
+            'POST',
+            self::URL,
+            ['X-SignalWire-Sha256-Signature' => self::sha256Sig()],
+            self::RAW_BODY,
+            fn (string $m, string $u, array $h, string $b) => [200, [], 'ok'],
+        );
+        $this->assertSame(200, $status);
+    }
 }

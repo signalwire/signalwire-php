@@ -12,23 +12,24 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * ExecuteConfig — generated SWML verb config type (flattened SWMLMethod verb 'execute' config).
+ * ExecuteConfig — generated SWML verb config type ($defs schema 'ExecuteConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ExecuteConfig
 {
-    public ?string $dest = null;
-
     /** @var array<string,mixed>|null */
-    public ?array $params = null;
+    public ?array $dest = null;
 
     /** @var array<string,mixed>|null */
     public ?array $meta = null;
 
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $on_return = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $params = null;
 
     /** @var array<string,mixed>|null */
     public ?array $result = null;

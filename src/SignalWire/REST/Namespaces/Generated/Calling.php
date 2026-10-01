@@ -42,48 +42,81 @@ class Calling
         if ($callId !== null) {
             $body['id'] = $callId;
         }
-        return $this->http->post(self::BASE_PATH, $body, $requestOptions);
+        return $this->http->post(self::BASE_PATH, $body, requestOptions: $requestOptions);
     }
 
     /**
      * @param list<mixed>|null $statusEvents
      * @param array<string,mixed>|null $codecs
+     * @param array<string,mixed>|null $toScript
+     * @param array<string,mixed>|null $region
+     * @param list<mixed>|null $headers
+     * @param array<string,mixed>|null $customVariables
      * @param array<string,mixed>|null $swml
      * @param array<string,mixed> $extras Forward-compat command params.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function dial(string $from_, string $to, ?string $callerId = null, ?string $fallbackUrl = null, ?string $statusUrl = null, ?array $statusEvents = null, ?string $urlMethod = null, ?string $url = null, ?array $codecs = null, ?array $swml = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function dial(string $from_, ?string $to = null, ?string $callerId = null, ?string $fallbackUrl = null, ?string $statusUrl = null, ?array $statusEvents = null, ?string $urlMethod = null, ?array $codecs = null, ?array $toScript = null, ?int $timeout = null, ?float $maxPricePerMinute = null, ?string $sendDigits = null, ?array $region = null, ?string $username = null, ?string $password = null, ?array $headers = null, ?array $customVariables = null, ?string $url = null, ?array $swml = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['from'] = $from_;
-        $params['to'] = $to;
+        $__params = [];
+        $__params['from'] = $from_;
+        if ($to !== null) {
+            $__params['to'] = $to;
+        }
         if ($callerId !== null) {
-            $params['caller_id'] = $callerId;
+            $__params['caller_id'] = $callerId;
         }
         if ($fallbackUrl !== null) {
-            $params['fallback_url'] = $fallbackUrl;
+            $__params['fallback_url'] = $fallbackUrl;
         }
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
         if ($statusEvents !== null) {
-            $params['status_events'] = $statusEvents;
+            $__params['status_events'] = $statusEvents;
         }
         if ($urlMethod !== null) {
-            $params['url_method'] = $urlMethod;
-        }
-        if ($url !== null) {
-            $params['url'] = $url;
+            $__params['url_method'] = $urlMethod;
         }
         if ($codecs !== null) {
-            $params['codecs'] = $codecs;
+            $__params['codecs'] = $codecs;
+        }
+        if ($toScript !== null) {
+            $__params['to_script'] = $toScript;
+        }
+        if ($timeout !== null) {
+            $__params['timeout'] = $timeout;
+        }
+        if ($maxPricePerMinute !== null) {
+            $__params['max_price_per_minute'] = $maxPricePerMinute;
+        }
+        if ($sendDigits !== null) {
+            $__params['send_digits'] = $sendDigits;
+        }
+        if ($region !== null) {
+            $__params['region'] = $region;
+        }
+        if ($username !== null) {
+            $__params['username'] = $username;
+        }
+        if ($password !== null) {
+            $__params['password'] = $password;
+        }
+        if ($headers !== null) {
+            $__params['headers'] = $headers;
+        }
+        if ($customVariables !== null) {
+            $__params['custom_variables'] = $customVariables;
+        }
+        if ($url !== null) {
+            $__params['url'] = $url;
         }
         if ($swml !== null) {
-            $params['swml'] = $swml;
+            $__params['swml'] = $swml;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('dial', null, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('dial', null, $__params, $requestOptions);
     }
 
     /**
@@ -94,25 +127,25 @@ class Calling
      */
     public function update(string $id, ?string $fallbackUrl = null, ?string $status = null, ?string $statusUrl = null, ?string $url = null, ?array $swml = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['id'] = $id;
+        $__params = [];
+        $__params['id'] = $id;
         if ($fallbackUrl !== null) {
-            $params['fallback_url'] = $fallbackUrl;
+            $__params['fallback_url'] = $fallbackUrl;
         }
         if ($status !== null) {
-            $params['status'] = $status;
+            $__params['status'] = $status;
         }
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
         if ($url !== null) {
-            $params['url'] = $url;
+            $__params['url'] = $url;
         }
         if ($swml !== null) {
-            $params['swml'] = $swml;
+            $__params['swml'] = $swml;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('update', null, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('update', null, $__params, $requestOptions);
     }
 
     /**
@@ -122,30 +155,31 @@ class Calling
      */
     public function end(string $callId, ?string $reason = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
+        $__params = [];
         if ($reason !== null) {
-            $params['reason'] = $reason;
+            $__params['reason'] = $reason;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.end', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.end', $callId, $__params, $requestOptions);
     }
 
     /**
+     * @param array<string,mixed>|null $timeout
      * @param array<string,mixed> $extras Forward-compat command params.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function aiHold(string $callId, ?int $timeout = null, ?string $prompt = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function aiHold(string $callId, ?string $prompt = null, ?array $timeout = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        if ($timeout !== null) {
-            $params['timeout'] = $timeout;
-        }
+        $__params = [];
         if ($prompt !== null) {
-            $params['prompt'] = $prompt;
+            $__params['prompt'] = $prompt;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.ai_hold', $callId, $params, $requestOptions);
+        if ($timeout !== null) {
+            $__params['timeout'] = $timeout;
+        }
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_hold', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -155,52 +189,56 @@ class Calling
      */
     public function aiUnhold(string $callId, ?string $prompt = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
+        $__params = [];
         if ($prompt !== null) {
-            $params['prompt'] = $prompt;
+            $__params['prompt'] = $prompt;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.ai_unhold', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_unhold', $callId, $__params, $requestOptions);
     }
 
     /**
-     * @param array<string,mixed>|null $reset
      * @param array<string,mixed>|null $globalData
+     * @param array<string,mixed>|null $reset
      * @param array<string,mixed> $extras Forward-compat command params.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function aiMessage(string $callId, ?string $role = null, ?string $messageText = null, ?array $reset = null, ?array $globalData = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function aiMessage(string $callId, ?array $globalData = null, ?string $messageText = null, ?array $reset = null, ?string $role = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        if ($role !== null) {
-            $params['role'] = $role;
+        $__params = [];
+        if ($globalData !== null) {
+            $__params['global_data'] = $globalData;
         }
         if ($messageText !== null) {
-            $params['message_text'] = $messageText;
+            $__params['message_text'] = $messageText;
         }
         if ($reset !== null) {
-            $params['reset'] = $reset;
+            $__params['reset'] = $reset;
         }
-        if ($globalData !== null) {
-            $params['global_data'] = $globalData;
+        if ($role !== null) {
+            $__params['role'] = $role;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.ai_message', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_message', $callId, $__params, $requestOptions);
     }
 
     /**
      * @param array<string,mixed> $action
+     * @param list<mixed>|null $hints
      * @param array<string,mixed> $extras Forward-compat command params.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function liveTranscribe(string $callId, array $action, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function liveTranscribe(string $callId, array $action, ?array $hints = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['action'] = $action;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.live_transcribe', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['action'] = $action;
+        if ($hints !== null) {
+            $__params['hints'] = $hints;
+        }
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.live_transcribe', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -211,13 +249,13 @@ class Calling
      */
     public function liveTranslate(string $callId, array $action, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['action'] = $action;
+        $__params = [];
+        $__params['action'] = $action;
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.live_translate', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.live_translate', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -228,10 +266,10 @@ class Calling
      */
     public function transfer(string $callId, array $dest, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['dest'] = $dest;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.transfer', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['dest'] = $dest;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.transfer', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -242,10 +280,10 @@ class Calling
      */
     public function userEvent(string $callId, array $event, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['event'] = $event;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.user_event', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['event'] = $event;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.user_event', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -255,9 +293,9 @@ class Calling
      */
     public function disconnect(string $callId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.disconnect', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.disconnect', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -266,27 +304,39 @@ class Calling
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function play(string $callId, array $play, ?string $controlId = null, ?float $volume = null, ?string $direction = null, ?int $loop = null, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function play(string $callId, array $play, ?string $controlId = null, ?string $direction = null, ?string $gender = null, ?string $language = null, ?int $loop = null, ?string $statusUrl = null, ?string $voice = null, ?float $volume = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['play'] = $play;
+        $__params = [];
+        $__params['play'] = $play;
         if ($controlId !== null) {
-            $params['control_id'] = $controlId;
-        }
-        if ($volume !== null) {
-            $params['volume'] = $volume;
+            $__params['control_id'] = $controlId;
         }
         if ($direction !== null) {
-            $params['direction'] = $direction;
+            $__params['direction'] = $direction;
+        }
+        if ($gender !== null) {
+            $__params['gender'] = $gender;
+        }
+        if ($language !== null) {
+            $__params['language'] = $language;
         }
         if ($loop !== null) {
-            $params['loop'] = $loop;
+            $__params['loop'] = $loop;
         }
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.play', $callId, $params, $requestOptions);
+        if ($voice !== null) {
+            $__params['voice'] = $voice;
+        }
+        if ($volume !== null) {
+            $__params['volume'] = $volume;
+        }
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.play', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -296,10 +346,10 @@ class Calling
      */
     public function playPause(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.play.pause', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.play.pause', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -309,10 +359,10 @@ class Calling
      */
     public function playResume(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.play.resume', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.play.resume', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -322,10 +372,10 @@ class Calling
      */
     public function playStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.play.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.play.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -335,33 +385,40 @@ class Calling
      */
     public function playVolume(string $callId, string $controlId, float $volume, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params['volume'] = $volume;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.play.volume', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params['volume'] = $volume;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.play.volume', $callId, $__params, $requestOptions);
     }
 
     /**
+     * @param array<string,mixed>|null $record
      * @param array<string,mixed>|null $audio
      * @param array<string,mixed> $extras Forward-compat command params.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function record(string $callId, ?string $controlId = null, ?array $audio = null, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function record(string $callId, ?string $controlId = null, ?array $record = null, ?string $statusUrl = null, ?array $audio = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
+        $__params = [];
         if ($controlId !== null) {
-            $params['control_id'] = $controlId;
+            $__params['control_id'] = $controlId;
         }
-        if ($audio !== null) {
-            $params['audio'] = $audio;
+        if ($record !== null) {
+            $__params['record'] = $record;
         }
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.record', $callId, $params, $requestOptions);
+        if ($audio !== null) {
+            $__params['record'] = array_merge((array) ($__params['record'] ?? []), ['audio' => $audio]);
+        }
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.record', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -369,12 +426,15 @@ class Calling
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function recordPause(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function recordPause(string $callId, string $controlId, ?string $behavior = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.record.pause', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        if ($behavior !== null) {
+            $__params['behavior'] = $behavior;
+        }
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.record.pause', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -384,10 +444,10 @@ class Calling
      */
     public function recordResume(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.record.resume', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.record.resume', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -397,10 +457,10 @@ class Calling
      */
     public function recordStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.record.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.record.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -410,29 +470,44 @@ class Calling
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function collect(string $callId, ?string $controlId = null, ?float $initialTimeout = null, ?array $digits = null, ?array $speech = null, ?bool $continuous = null, ?bool $partialResults = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function collect(string $callId, ?bool $continue_ = null, ?bool $continuous = null, ?string $controlId = null, ?array $digits = null, ?float $initialTimeout = null, ?bool $partialResults = null, ?bool $sendStartOfInput = null, ?array $speech = null, ?bool $startInputTimers = null, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        if ($controlId !== null) {
-            $params['control_id'] = $controlId;
-        }
-        if ($initialTimeout !== null) {
-            $params['initial_timeout'] = $initialTimeout;
-        }
-        if ($digits !== null) {
-            $params['digits'] = $digits;
-        }
-        if ($speech !== null) {
-            $params['speech'] = $speech;
+        $__params = [];
+        if ($continue_ !== null) {
+            $__params['continue'] = $continue_;
         }
         if ($continuous !== null) {
-            $params['continuous'] = $continuous;
+            $__params['continuous'] = $continuous;
+        }
+        if ($controlId !== null) {
+            $__params['control_id'] = $controlId;
+        }
+        if ($digits !== null) {
+            $__params['digits'] = $digits;
+        }
+        if ($initialTimeout !== null) {
+            $__params['initial_timeout'] = $initialTimeout;
         }
         if ($partialResults !== null) {
-            $params['partial_results'] = $partialResults;
+            $__params['partial_results'] = $partialResults;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.collect', $callId, $params, $requestOptions);
+        if ($sendStartOfInput !== null) {
+            $__params['send_start_of_input'] = $sendStartOfInput;
+        }
+        if ($speech !== null) {
+            $__params['speech'] = $speech;
+        }
+        if ($startInputTimers !== null) {
+            $__params['start_input_timers'] = $startInputTimers;
+        }
+        if ($statusUrl !== null) {
+            $__params['status_url'] = $statusUrl;
+        }
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.collect', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -442,10 +517,10 @@ class Calling
      */
     public function collectStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.collect.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.collect.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -455,10 +530,10 @@ class Calling
      */
     public function collectStartInputTimers(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.collect.start_input_timers', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.collect.start_input_timers', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -467,18 +542,24 @@ class Calling
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function detect(string $callId, array $detect, ?string $controlId = null, ?float $timeout = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function detect(string $callId, array $detect, ?string $controlId = null, ?string $statusUrl = null, ?float $timeout = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['detect'] = $detect;
+        $__params = [];
+        $__params['detect'] = $detect;
         if ($controlId !== null) {
-            $params['control_id'] = $controlId;
+            $__params['control_id'] = $controlId;
+        }
+        if ($statusUrl !== null) {
+            $__params['status_url'] = $statusUrl;
         }
         if ($timeout !== null) {
-            $params['timeout'] = $timeout;
+            $__params['timeout'] = $timeout;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.detect', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.detect', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -488,29 +569,35 @@ class Calling
      */
     public function detectStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.detect.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.detect.stop', $callId, $__params, $requestOptions);
     }
 
     /**
-     * @param array<string,mixed> $tap
      * @param array<string,mixed> $device
+     * @param array<string,mixed> $tap
      * @param array<string,mixed> $extras Forward-compat command params.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function tap(string $callId, array $tap, array $device, ?string $controlId = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function tap(string $callId, array $device, array $tap, ?string $controlId = null, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['tap'] = $tap;
-        $params['device'] = $device;
+        $__params = [];
+        $__params['device'] = $device;
+        $__params['tap'] = $tap;
         if ($controlId !== null) {
-            $params['control_id'] = $controlId;
+            $__params['control_id'] = $controlId;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.tap', $callId, $params, $requestOptions);
+        if ($statusUrl !== null) {
+            $__params['status_url'] = $statusUrl;
+        }
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.tap', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -520,10 +607,10 @@ class Calling
      */
     public function tapStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.tap.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.tap.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -532,27 +619,39 @@ class Calling
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function stream(string $callId, string $url, ?string $controlId = null, ?string $codec = null, ?string $track = null, ?string $authorizationBearerToken = null, ?array $customParameters = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function stream(string $callId, string $url, ?string $authorizationBearerToken = null, ?string $codec = null, ?string $controlId = null, ?array $customParameters = null, ?string $name = null, ?string $statusUrl = null, ?string $statusUrlMethod = null, ?string $track = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['url'] = $url;
-        if ($controlId !== null) {
-            $params['control_id'] = $controlId;
+        $__params = [];
+        $__params['url'] = $url;
+        if ($authorizationBearerToken !== null) {
+            $__params['authorization_bearer_token'] = $authorizationBearerToken;
         }
         if ($codec !== null) {
-            $params['codec'] = $codec;
+            $__params['codec'] = $codec;
         }
-        if ($track !== null) {
-            $params['track'] = $track;
-        }
-        if ($authorizationBearerToken !== null) {
-            $params['authorization_bearer_token'] = $authorizationBearerToken;
+        if ($controlId !== null) {
+            $__params['control_id'] = $controlId;
         }
         if ($customParameters !== null) {
-            $params['custom_parameters'] = $customParameters;
+            $__params['custom_parameters'] = $customParameters;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.stream', $callId, $params, $requestOptions);
+        if ($name !== null) {
+            $__params['name'] = $name;
+        }
+        if ($statusUrl !== null) {
+            $__params['status_url'] = $statusUrl;
+        }
+        if ($statusUrlMethod !== null) {
+            $__params['status_url_method'] = $statusUrlMethod;
+        }
+        if ($track !== null) {
+            $__params['track'] = $track;
+        }
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.stream', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -562,10 +661,10 @@ class Calling
      */
     public function streamStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.stream.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.stream.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -575,9 +674,9 @@ class Calling
      */
     public function denoise(string $callId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.denoise', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.denoise', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -587,9 +686,9 @@ class Calling
      */
     public function denoiseStop(string $callId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.denoise.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.denoise.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -599,15 +698,18 @@ class Calling
      */
     public function transcribe(string $callId, ?string $controlId = null, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
+        $__params = [];
         if ($controlId !== null) {
-            $params['control_id'] = $controlId;
+            $__params['control_id'] = $controlId;
         }
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.transcribe', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        if (!\array_key_exists('control_id', $__params)) {
+            $__params['control_id'] = self::uuid4();
+        }
+        return $this->execute('calling.transcribe', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -617,10 +719,10 @@ class Calling
      */
     public function transcribeStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.transcribe.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.transcribe.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -628,12 +730,118 @@ class Calling
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function aiStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function aiStop(string $callId, ?string $controlId = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.ai.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        if ($controlId !== null) {
+            $__params['control_id'] = $controlId;
+        }
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai.stop', $callId, $__params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed>|null $SWAIG
+     * @param array<string,mixed>|null $action
+     * @param list<mixed>|null $direction
+     * @param array<string,mixed>|null $globalData
+     * @param list<mixed>|null $hints
+     * @param array<string,mixed>|null $params
+     * @param array<string,mixed>|null $permissions
+     * @param array<string,mixed>|null $prompt
+     * @param array<string,mixed> $extras Forward-compat command params.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function aiSidecar(string $callId, string $lang, ?array $SWAIG = null, ?array $action = null, ?string $customerRole = null, ?array $direction = null, ?array $globalData = null, ?array $hints = null, ?string $model = null, ?array $params = null, ?array $permissions = null, ?array $prompt = null, ?string $url = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__params = [];
+        $__params['lang'] = $lang;
+        if ($SWAIG !== null) {
+            $__params['SWAIG'] = $SWAIG;
+        }
+        if ($action !== null) {
+            $__params['action'] = $action;
+        }
+        if ($customerRole !== null) {
+            $__params['customer_role'] = $customerRole;
+        }
+        if ($direction !== null) {
+            $__params['direction'] = $direction;
+        }
+        if ($globalData !== null) {
+            $__params['global_data'] = $globalData;
+        }
+        if ($hints !== null) {
+            $__params['hints'] = $hints;
+        }
+        if ($model !== null) {
+            $__params['model'] = $model;
+        }
+        if ($params !== null) {
+            $__params['params'] = $params;
+        }
+        if ($permissions !== null) {
+            $__params['permissions'] = $permissions;
+        }
+        if ($prompt !== null) {
+            $__params['prompt'] = $prompt;
+        }
+        if ($url !== null) {
+            $__params['url'] = $url;
+        }
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_sidecar', $callId, $__params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat command params.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function aiSidecarAsk(string $callId, string $text, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__params = [];
+        $__params['text'] = $text;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_sidecar.ask', $callId, $__params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat command params.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function aiSidecarPoke(string $callId, string $text, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__params = [];
+        $__params['text'] = $text;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_sidecar.poke', $callId, $__params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat command params.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function aiSidecarStop(string $callId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__params = [];
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_sidecar.stop', $callId, $__params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat command params.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function aiSidecarStatus(string $callId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__params = [];
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.ai_sidecar.status', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -643,10 +851,10 @@ class Calling
      */
     public function sendFaxStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.send_fax.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.send_fax.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -656,10 +864,10 @@ class Calling
      */
     public function receiveFaxStop(string $callId, string $controlId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['control_id'] = $controlId;
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.receive_fax.stop', $callId, $params, $requestOptions);
+        $__params = [];
+        $__params['control_id'] = $controlId;
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.receive_fax.stop', $callId, $__params, $requestOptions);
     }
 
     /**
@@ -670,12 +878,23 @@ class Calling
      */
     public function refer(string $callId, array $device, ?string $statusUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        $params = [];
-        $params['device'] = $device;
+        $__params = [];
+        $__params['device'] = $device;
         if ($statusUrl !== null) {
-            $params['status_url'] = $statusUrl;
+            $__params['status_url'] = $statusUrl;
         }
-        $params = array_merge($params, $extras);
-        return $this->execute('calling.refer', $callId, $params, $requestOptions);
+        $__params = array_merge($__params, $extras);
+        return $this->execute('calling.refer', $callId, $__params, $requestOptions);
+    }
+
+    /** A random RFC 4122 version-4 UUID: the control id sent when the caller passes none. */
+    private static function uuid4(): string
+    {
+        $b = random_bytes(16);
+        $b[6] = \chr((\ord($b[6]) & 0x0f) | 0x40);
+        $b[8] = \chr((\ord($b[8]) & 0x3f) | 0x80);
+        $h = bin2hex($b);
+        return substr($h, 0, 8) . '-' . substr($h, 8, 4) . '-' . substr($h, 12, 4)
+            . '-' . substr($h, 16, 4) . '-' . substr($h, 20);
     }
 }

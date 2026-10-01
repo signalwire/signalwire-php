@@ -14,20 +14,14 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * BedrockSWAIG — generated wire type from the 'calling' spec (components/schemas 'BedrockSWAIG').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class BedrockSWAIG
 {
-    /** @var list<mixed>|null */
-    public ?array $functions = null;
-
     /** @var array<string,mixed>|null */
     public ?array $defaults = null;
 
     /** @var list<mixed>|null */
-    public ?array $native_functions = null;
-
-    /** @var list<mixed>|null */
-    public ?array $includes = null;
+    public ?array $functions = null;
 }

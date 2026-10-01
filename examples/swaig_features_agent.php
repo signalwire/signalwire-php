@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * SWAIG Features Agent
  *
@@ -112,7 +114,7 @@ $agent->defineTool(
                 $day['temp'] = round(($day['temp'] - 32) * 5 / 9);
             }
         }
-        $lines = array_map(fn($d) => "{$d['day']}: {$d['temp']}{$symbol}, {$d['condition']}", $forecast);
+        $lines = array_map(fn ($d) => "{$d['day']}: {$d['temp']}{$symbol}, {$d['condition']}", $forecast);
         return new FunctionResult("3-day forecast for {$location}:\n" . implode("\n", $lines));
     },
 );

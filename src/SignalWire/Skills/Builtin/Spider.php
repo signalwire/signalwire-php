@@ -7,6 +7,7 @@ namespace SignalWire\Skills\Builtin;
 use SignalWire\Skills\HttpHelper;
 use SignalWire\Skills\SkillBase;
 use SignalWire\SWAIG\FunctionResult;
+use SignalWire\Utils\PublicHttpSession;
 
 /**
  * Spider scraping skill.
@@ -29,6 +30,38 @@ class Spider extends SkillBase
     private const BASE_URL_ENV = 'SPIDER_BASE_URL';
 
     /**
+     * The HTTP session every page fetch goes through. It refuses redirects to
+     * and connections with private or internal addresses, which a check before
+     * the fetch can't catch, and carries the configured User-Agent and headers.
+     */
+    public PublicHttpSession $session;
+
+    /**
+     * XPath expressions for the unwanted elements stripped before text
+     * extraction. PREFILLED with the reference's seven defaults
+     * (skills/spider/skill.py:191-199) — an empty list would strip nothing, so
+     * the contents ARE the default. Public because the reference records it as
+     * a caller-observable value on the skill instance: a caller appends to it
+     * (or replaces it) to control what is dropped from a scraped page.
+     *
+     * PHP ships no `lxml`, so extraction is a regex pipeline rather than a real
+     * XPath engine; {@see htmlToText()} compiles each simple `//tag` expression
+     * to the matching element-stripping pattern. An expression this pipeline
+     * cannot compile is skipped rather than silently mis-stripping.
+     *
+     * @var list<string>
+     */
+    public array $removeXpaths = [
+        '//script',
+        '//style',
+        '//nav',
+        '//header',
+        '//footer',
+        '//aside',
+        '//noscript',
+    ];
+
+    /**
      * Initialize the spider skill with configuration parameters.
      *
      * Mirrors Python `SpiderSkill.__init__` (skill.py:151): the base
@@ -42,6 +75,30 @@ class Spider extends SkillBase
     public function __construct(\SignalWire\Agent\AgentInterface $agent, array $params = [])
     {
         parent::__construct($agent, $params);
+        $this->session = new PublicHttpSession();
+        $userAgent = $params['user_agent'] ?? null;
+        $headers = is_array($params['headers'] ?? null) ? $params['headers'] : [];
+        foreach ($headers as $name => $value) {
+            if (is_string($name) && is_string($value)) {
+                $this->session->headers[$name] = $value;
+            }
+        }
+        $this->session->headers['User-Agent'] = is_string($userAgent)
+            ? $userAgent
+            : 'Spider/1.0 (SignalWire AI Agent)';
+    }
+
+    /**
+     * Fetch through {@see $session}; an upstream the operator pointed at with
+     * SPIDER_BASE_URL is fetched as configured (it may be a local service).
+     *
+     * @param array<string,string> $headers
+     * @return array{int, string, mixed}
+     */
+    private function fetch(string $original, string $rewritten, array $headers, int $timeout): array
+    {
+        $session = $rewritten === $original ? $this->session : new PublicHttpSession(allowPrivate: true);
+        return $session->get($rewritten, timeout: $timeout, headers: $headers);
     }
 
     /** The name. */
@@ -56,6 +113,10 @@ class Spider extends SkillBase
         return 'Fast web scraping and crawling capabilities';
     }
 
+    /**
+     * True — several crawlers with different limits may coexist,
+     * distinguished by `tool_name` (default `spider`).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -200,11 +261,25 @@ class Spider extends SkillBase
         return $schema;
     }
 
+    /**
+     * Always succeeds — every crawl parameter has a default, so there is no
+     * required configuration to validate.
+     */
     public function setup(): bool
     {
         return true;
     }
 
+    /**
+     * Define the crawl tools, prefixed by the `tool_prefix` param.
+     *
+     * Crawl bounds are clamped rather than rejected: `max_text_length` to a
+     * minimum of 100 (default 5000), `timeout` to a minimum of 2 (default 15),
+     * `max_pages` to a minimum of 1 (default 5), `max_depth` to a minimum of 0
+     * (default 2). `follow_patterns` restricts which links are followed, and
+     * `user_agent` (default `Spider/1.0 (SignalWire AI Agent)`) plus `headers`
+     * set the outbound request headers.
+     */
     public function registerTools(): void
     {
         $prefix = $this->paramString('tool_prefix');
@@ -255,10 +330,11 @@ class Spider extends SkillBase
                 $headers = ['User-Agent' => $userAgent] + $extraHeaders;
 
                 try {
-                    [$status, $body, $parsed] = HttpHelper::get(
+                    [$status, $body, $parsed] = $this->fetch(
+                        $url,
                         $rewritten,
-                        headers: $headers,
-                        timeout: $timeout,
+                        $headers,
+                        $timeout,
                     );
                 } catch (\RuntimeException $e) {
                     return new FunctionResult(
@@ -272,7 +348,7 @@ class Spider extends SkillBase
                 }
 
                 $rawHtml = self::extractHtmlBody($body, $parsed);
-                $text = self::htmlToText($rawHtml, $maxLength);
+                $text = $this->htmlToText($rawHtml, $maxLength);
                 if ($text === '') {
                     return new FunctionResult("No content extracted from {$url}");
                 }
@@ -333,10 +409,11 @@ class Spider extends SkillBase
                         self::BASE_URL_ENV,
                     );
                     try {
-                        [$status, $body, $parsed] = HttpHelper::get(
+                        [$status, $body, $parsed] = $this->fetch(
+                            $nextUrl,
                             $rewritten,
-                            headers: $headers,
-                            timeout: $timeout,
+                            $headers,
+                            $timeout,
                         );
                     } catch (\RuntimeException) {
                         continue;
@@ -346,7 +423,7 @@ class Spider extends SkillBase
                     }
                     $visited[$nextUrl] = true;
                     $rawHtml = self::extractHtmlBody($body, $parsed);
-                    $text = self::htmlToText($rawHtml, $maxLength);
+                    $text = $this->htmlToText($rawHtml, $maxLength);
                     if ($text !== '') {
                         $summary = strlen($text) > 500
                             ? substr($text, 0, 500) . '...'
@@ -461,10 +538,11 @@ class Spider extends SkillBase
                 );
                 $headers = ['User-Agent' => $userAgent] + $extraHeaders;
                 try {
-                    [$status, $body, $parsed] = HttpHelper::get(
+                    [$status, $body, $parsed] = $this->fetch(
+                        $url,
                         $rewritten,
-                        headers: $headers,
-                        timeout: $timeout,
+                        $headers,
+                        $timeout,
                     );
                 } catch (\RuntimeException $e) {
                     return new FunctionResult(
@@ -531,25 +609,28 @@ class Spider extends SkillBase
      * intro and the conclusion of the page (matches the python
      * port's _fast_text_extract's "keep_start / keep_end" behavior).
      */
-    private static function htmlToText(string $html, int $maxLength): string
+    private function htmlToText(string $html, int $maxLength): string
     {
         if ($html === '') {
             return '';
         }
-        // Drop noisy elements wholesale.
-        $cleaned = preg_replace(
-            [
-                '#<script\b[^>]*>.*?</script>#is',
-                '#<style\b[^>]*>.*?</style>#is',
-                '#<nav\b[^>]*>.*?</nav>#is',
-                '#<header\b[^>]*>.*?</header>#is',
-                '#<footer\b[^>]*>.*?</footer>#is',
-                '#<aside\b[^>]*>.*?</aside>#is',
-                '#<noscript\b[^>]*>.*?</noscript>#is',
-            ],
-            ' ',
-            $html,
-        ) ?? $html;
+        // Drop the elements named by $removeXpaths wholesale. Driven by the
+        // public field so a caller that edits the list actually changes what is
+        // stripped (the reference iterates the same list in
+        // _fast_text_extract, skill.py:313).
+        $patterns = [];
+        foreach ($this->removeXpaths as $xpath) {
+            if (preg_match('#^//([a-zA-Z][a-zA-Z0-9]*)$#', $xpath, $m) !== 1) {
+                // Not a simple element selector — the regex pipeline cannot
+                // compile it. Skip rather than mis-strip.
+                continue;
+            }
+            $tag = $m[1];
+            $patterns[] = '#<' . $tag . '\b[^>]*>.*?</' . $tag . '>#is';
+        }
+        $cleaned = $patterns === []
+            ? $html
+            : (preg_replace($patterns, ' ', $html) ?? $html);
         $text = strip_tags($cleaned);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = (string) preg_replace('/\s+/', ' ', $text);

@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * CreateSipEndpointRequest — generated wire type from the 'relay_rest' spec (components/schemas 'CreateSipEndpointRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateSipEndpointRequest
 {
@@ -72,4 +72,6 @@ class CreateSipEndpointRequest
     public ?string $call_ai_agent_id = null;
 
     public ?string $call_relay_script_url = null;
+
+    public ?string $call_relay_script_url_method = null;
 }

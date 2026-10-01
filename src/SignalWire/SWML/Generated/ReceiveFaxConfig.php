@@ -12,12 +12,13 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * ReceiveFaxConfig — generated SWML verb config type (flattened SWMLMethod verb 'receive_fax' config).
+ * ReceiveFaxConfig — generated SWML verb config type ($defs schema 'ReceiveFaxConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ReceiveFaxConfig
 {
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
 }

@@ -12,12 +12,13 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * JoinRoomConfig — generated SWML verb config type (flattened SWMLMethod verb 'join_room' config).
+ * JoinRoomConfig — generated SWML verb config type ($defs schema 'JoinRoomConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class JoinRoomConfig
 {
-    public ?string $name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $name = null;
 }

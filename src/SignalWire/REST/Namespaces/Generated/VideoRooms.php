@@ -41,6 +41,6 @@ class VideoRooms extends \SignalWire\REST\CrudResource
         $__body = [];
         $__body['url'] = $url;
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path($id, 'streams'), $__body, $requestOptions);
+        return $this->client->post($this->path($id, 'streams'), $__body, requestOptions: $requestOptions);
     }
 }

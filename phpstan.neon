@@ -8,9 +8,33 @@ includes:
     - vendor/phpstan/phpstan-phpunit/extension.neon
 parameters:
     level: 9
+    # EVERY PHP directory in the repo, held to the SAME level 9 bar. There is one
+    # bar — the one the shipped library meets — and examples/bin/relay/rest are
+    # shipping code too (owner ruling 2026-07-29). Until 2026-07-30 this list was
+    # src+scripts+tests only, so examples/, bin/, relay/examples/ and
+    # rest/examples/ were analysed by NOTHING and 493 level-9 findings had
+    # accumulated unseen — including a fatal ArgumentCountError in
+    # examples/simple_agent.php. No excludePaths: coverage is the whole tree.
     paths:
         - src
         - scripts
         - tests
+        - bin
+        - examples
+        - relay/examples
+        - rest/examples
+    # The bin/ CLIs are EXTENSIONLESS `#!/usr/bin/env php` scripts, so the `bin`
+    # directory entry above (phpstan only walks *.php) silently skipped all seven
+    # — 2113 LOC of shipped CLI, including the documented `swaig-test`. phpstan
+    # has no way to add an extensionless glob (fileExtensions requires an actual
+    # extension), so each is listed by explicit path. ADD ANY NEW bin/ SCRIPT HERE.
+    # scripts/check_bin_coverage.php is the gate that fails if one is missing.
+        - bin/envelope-dump
+        - bin/pagination-dump
+        - bin/secret-scrub-dump
+        - bin/secure-default-dump
+        - bin/swaig-test
+        - bin/token-interop-mint
+        - bin/wait-liveness-dump
     bootstrapFiles:
         - vendor/autoload.php

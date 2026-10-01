@@ -12,10 +12,10 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * UserEventConfig — generated SWML verb config type (flattened SWMLMethod verb 'user_event' config).
+ * UserEventConfig — generated SWML verb config type ($defs schema 'UserEventConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class UserEventConfig
 {

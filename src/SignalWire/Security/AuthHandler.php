@@ -98,29 +98,38 @@ class AuthHandler
     }
 
     /**
-     * Verify a Bearer token against the configured token. Returns false
-     * immediately if Bearer auth is not configured. Constant-time comparison.
+     * Verify presented Bearer credentials against the configured token. Returns
+     * false immediately if Bearer auth is not configured. Constant-time
+     * comparison.
+     *
+     * Mirrors the reference's `verify_bearer_token(credentials)`
+     * (core/auth_handler.py:113): only the `credentials` field — the token
+     * itself — is compared; `scheme` is carried but not matched.
      */
-    public function verifyBearerToken(string $token): bool
+    public function verifyBearerToken(BearerCredentials $credentials): bool
     {
         if ($this->bearerToken === null) {
             return false;
         }
-        return hash_equals($this->bearerToken, $token);
+        return hash_equals($this->bearerToken, $credentials->credentials);
     }
 
     /**
-     * Verify a Basic Auth username/password pair against the configured
-     * credentials. Returns false immediately if Basic auth is not configured.
-     * Constant-time comparison of both fields.
+     * Verify presented Basic Auth credentials against the configured pair.
+     * Returns false immediately if Basic auth is not configured. Constant-time
+     * comparison of both fields.
+     *
+     * Mirrors the reference's `verify_basic_auth(credentials)`
+     * (core/auth_handler.py:98).
      */
-    public function verifyBasicAuth(string $username, string $password): bool
+    public function verifyBasicAuth(BasicCredentials $credentials): bool
     {
         if ($this->basicAuth === null) {
             return false;
         }
         [$expectedUser, $expectedPass] = $this->basicAuth;
-        return hash_equals($expectedUser, $username) && hash_equals($expectedPass, $password);
+        return hash_equals($expectedUser, $credentials->username)
+            && hash_equals($expectedPass, $credentials->password);
     }
 
     /**
@@ -198,8 +207,15 @@ class AuthHandler
 
         if ($this->bearerToken !== null) {
             $auth = $get($headers, 'Authorization') ?? '';
-            if (str_starts_with($auth, 'Bearer ') && $this->verifyBearerToken(substr($auth, 7))) {
-                return true;
+            $token = self::schemeParam($auth, 'Bearer');
+            if ($token !== null) {
+                // Carry the scheme through exactly as the client sent it — the
+                // reference reports the wire scheme, not a canonicalized one.
+                $sentScheme = substr($auth, 0, (int) strpos($auth, ' '));
+                $presented = new BearerCredentials($sentScheme, $token);
+                if ($this->verifyBearerToken($presented)) {
+                    return true;
+                }
             }
         }
 
@@ -212,14 +228,15 @@ class AuthHandler
 
         if ($this->basicAuth !== null) {
             $auth = $get($headers, 'Authorization') ?? '';
-            if (str_starts_with($auth, 'Basic ')) {
-                $decoded = base64_decode(substr($auth, 6), true);
+            $param = self::schemeParam($auth, 'Basic');
+            if ($param !== null) {
+                $decoded = base64_decode($param, true);
                 if ($decoded !== false) {
                     $colon = strpos($decoded, ':');
                     if ($colon !== false && $colon > 0) {
                         $user = substr($decoded, 0, $colon);
                         $pass = substr($decoded, $colon + 1);
-                        if ($this->verifyBasicAuth($user, $pass)) {
+                        if ($this->verifyBasicAuth(new BasicCredentials($user, $pass))) {
                             return true;
                         }
                     }
@@ -235,5 +252,28 @@ class AuthHandler
         }
 
         return false;
+    }
+
+    /**
+     * Split an ``Authorization`` header into its scheme and credential,
+     * mirroring FastAPI's ``get_authorization_scheme_param`` (partition on the
+     * FIRST space, strip the credential).
+     *
+     * Returns ``null`` when the header is empty or its scheme token does not
+     * case-insensitively equal ``$expectedScheme``. RFC 7235 makes the
+     * auth-scheme token case-insensitive and the reference compares
+     * ``scheme.lower() != "bearer"`` / ``!= "basic"``, so ``bearer <token>`` is
+     * legal and must not be rejected.
+     */
+    private static function schemeParam(string $authHeader, string $expectedScheme): ?string
+    {
+        $sep = strpos($authHeader, ' ');
+        if ($sep === false) {
+            return null;
+        }
+        if (strcasecmp(substr($authHeader, 0, $sep), $expectedScheme) !== 0) {
+            return null;
+        }
+        return trim(substr($authHeader, $sep + 1));
     }
 }

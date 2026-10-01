@@ -14,16 +14,16 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * CondReg — generated wire type from the 'calling' spec (components/schemas 'CondReg').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CondReg
 {
-    public ?string $when = null;
+    /** @var list<mixed>|null */
+    public ?array $else = null;
 
     /** @var list<mixed>|null */
     public ?array $then = null;
 
-    /** @var list<mixed>|null */
-    public ?array $else = null;
+    public ?string $when = null;
 }

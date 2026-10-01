@@ -128,7 +128,7 @@ class RequestOptionsMockTest extends TestCase
             $this->client->getHttp()->post(
                 self::CREATE_ADDRESS_PATH,
                 ['label' => 'x'],
-                new RequestOptions(retries: 2, retryBackoff: 0.0),
+                requestOptions: new RequestOptions(retries: 2, retryBackoff: 0.0),
             );
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
@@ -147,7 +147,7 @@ class RequestOptionsMockTest extends TestCase
         $this->client->getHttp()->post(
             self::CREATE_ADDRESS_PATH,
             ['label' => 'x'],
-            new RequestOptions(retries: 1, retryBackoff: 0.0),
+            requestOptions: new RequestOptions(retries: 1, retryBackoff: 0.0),
         );
 
         $this->assertSame(2, $this->countRequests('POST', self::CREATE_ADDRESS_PATH), 'POST retries a 503 throttle (safe): 503 then 200');

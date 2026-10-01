@@ -62,6 +62,7 @@ These knobs relax a default-secure behavior — set them only when you understan
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SWML_ALLOW_PRIVATE_URLS` | `false` | Allow SDK fetches to private/loopback IPs (SSRF guard off) |
+| `SWML_URL_FETCH_USE_PROXY` | `false` | Let user-supplied URL fetches (the spider skill) go through `HTTP_PROXY`/`HTTPS_PROXY`; off by default because through a proxy the connected-peer address check can't apply — use only a proxy that restricts destinations itself |
 | `SWML_SKIP_SCHEMA_VALIDATION` | `false` | Skip SWML schema validation (`1`/`true`/`yes` to disable) |
 
 ## Retrieving Credentials

@@ -14,15 +14,20 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * Expression — generated wire type from the 'calling' spec (components/schemas 'Expression').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Expression
 {
-    public ?string $string = null;
-
     public ?string $pattern = null;
+
+    public ?string $expr = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $nomatch_output = null;
 
     /** @var array<string,mixed>|null */
     public ?array $output = null;
+
+    public ?string $string = null;
 }

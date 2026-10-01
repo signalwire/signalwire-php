@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Video;
 /**
  * UpdateRoomRequest — generated wire type from the 'video' spec (components/schemas 'UpdateRoomRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class UpdateRoomRequest
 {
@@ -27,11 +27,11 @@ class UpdateRoomRequest
 
     public ?string $quality = null;
 
-    public ?string $join_from = null;
+    public string|float|null $join_from = null;
 
-    public ?string $join_until = null;
+    public string|float|null $join_until = null;
 
-    public ?string $remove_at = null;
+    public string|float|null $remove_at = null;
 
     public ?int $remove_after_seconds_elapsed = null;
 

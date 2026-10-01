@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Voice;
 /**
  * RelayVoiceLog — generated wire type from the 'voice' spec (components/schemas 'RelayVoiceLog').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class RelayVoiceLog
 {
@@ -54,4 +54,61 @@ class RelayVoiceLog
 
     /** @var array<string,mixed>|null */
     public ?array $parent_id = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_mos = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_jitter_min = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_jitter_max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_jitter_min = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_jitter_max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_jitter_avg = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_rtt_avg = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_rtt_min = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_rtt_max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_media_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_media_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_lost = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_mean_interval = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_dtmf_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_dtmf_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_skip_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_flush_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_largest_jb_size = null;
 }

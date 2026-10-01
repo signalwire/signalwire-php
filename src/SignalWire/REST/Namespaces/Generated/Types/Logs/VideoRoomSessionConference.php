@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Logs;
 /**
  * VideoRoomSessionConference — generated wire type from the 'logs' spec (components/schemas 'VideoRoomSessionConference').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class VideoRoomSessionConference
 {
@@ -35,7 +35,8 @@ class VideoRoomSessionConference
     /** @var array<string,mixed>|null */
     public ?array $status = null;
 
-    public ?bool $locked = null;
+    /** @var array<string,mixed>|null */
+    public ?array $locked = null;
 
     /** @var array<string,mixed>|null */
     public ?array $started_at = null;
@@ -43,7 +44,7 @@ class VideoRoomSessionConference
     /** @var array<string,mixed>|null */
     public ?array $ended_at = null;
 
-    public ?string $charge = null;
+    public ?float $charge = null;
 
     /** @var list<mixed>|null */
     public ?array $charge_details = null;

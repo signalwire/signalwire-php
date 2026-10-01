@@ -59,7 +59,7 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
             $__body['encryption'] = $encryption;
         }
         $__body = array_merge($__body, $extras);
-        return $this->client->post($this->path($subscriberId, 'sip_endpoints'), $__body, $requestOptions);
+        return $this->client->post($this->path($subscriberId, 'sip_endpoints'), $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -104,7 +104,7 @@ class Subscribers extends \SignalWire\REST\FabricResourcePUT
             $__body['encryption'] = $encryption;
         }
         $__body = array_merge($__body, $extras);
-        return $this->client->patch($this->path($subscriberId, 'sip_endpoints', $id), $__body, $requestOptions);
+        return $this->client->patch($this->path($subscriberId, 'sip_endpoints', $id), $__body, requestOptions: $requestOptions);
     }
 
     /**

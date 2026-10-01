@@ -14,16 +14,12 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * ConferenceRoomUpdateRequest — generated wire type from the 'fabric' spec (components/schemas 'ConferenceRoomUpdateRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ConferenceRoomUpdateRequest
 {
-    public ?string $name = null;
-
     public ?string $display_name = null;
-
-    public ?string $description = null;
 
     public ?string $join_from = null;
 
@@ -47,10 +43,4 @@ class ConferenceRoomUpdateRequest
     public ?array $meta = null;
 
     public ?bool $sync_audio_video = null;
-
-    public ?bool $tone_on_entry_and_exit = null;
-
-    public ?bool $room_join_video_off = null;
-
-    public ?bool $user_join_video_off = null;
 }

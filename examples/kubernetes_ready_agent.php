@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Kubernetes-Ready Agent
  *
@@ -17,7 +19,8 @@ require 'vendor/autoload.php';
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
-$port = (int) ($_ENV['PORT'] ?? getenv('PORT') ?: 8080);
+$portRaw = $_ENV['PORT'] ?? getenv('PORT');
+$port = is_numeric($portRaw) ? (int) $portRaw : 8080;
 
 $agent = new AgentBase(
     name:  'k8s-agent',
@@ -40,7 +43,7 @@ $agent->defineTool(
     name:        'health_status',
     description: 'Get the health status of this agent',
     parameters:  ['type' => 'object', 'properties' => []],
-    handler: function (array $args, array $raw) use ($agent, $port): FunctionResult {
+    handler: function (array $args, array $raw) use ($port): FunctionResult {
         return new FunctionResult("Agent is healthy, running on port {$port} in Kubernetes.");
     },
 );

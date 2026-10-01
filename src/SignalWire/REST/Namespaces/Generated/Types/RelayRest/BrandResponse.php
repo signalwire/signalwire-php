@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * BrandResponse — generated wire type from the 'relay_rest' spec (components/schemas 'BrandResponse').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class BrandResponse
 {
@@ -41,8 +41,6 @@ class BrandResponse
 
     public ?string $company_vertical = null;
 
-    public ?string $company_website = null;
-
     public ?string $csp_brand_reference = null;
 
     public ?bool $csp_self_registered = null;
@@ -52,4 +50,11 @@ class BrandResponse
     public ?string $created_at = null;
 
     public ?string $updated_at = null;
+
+    /** @var list<mixed>|null */
+    public ?array $signalwire_contact_emails = null;
+
+    public ?string $large_message_limit = null;
+
+    public ?string $number_pooling_for_company = null;
 }

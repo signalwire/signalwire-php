@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * CallCreateParamsURL — generated wire type from the 'calling' spec (components/schemas 'CallCreateParamsURL').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CallCreateParamsURL
 {
@@ -33,6 +33,31 @@ class CallCreateParamsURL
     public ?array $status_events = null;
 
     public ?string $url_method = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $codecs = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $to_script = null;
+
+    public ?int $timeout = null;
+
+    public ?float $max_price_per_minute = null;
+
+    public ?string $send_digits = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $region = null;
+
+    public ?string $username = null;
+
+    public ?string $password = null;
+
+    /** @var list<mixed>|null */
+    public ?array $headers = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $custom_variables = null;
 
     public ?string $url = null;
 }

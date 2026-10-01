@@ -14,16 +14,127 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * FunctionParameters — generated wire type from the 'fabric' spec (components/schemas 'FunctionParameters').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class FunctionParameters
 {
-    public ?string $type = null;
+    public ?string $title = null;
+
+    public ?string $description = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $type = null;
+
+    public mixed $const = null;
+
+    /** @var list<mixed>|null */
+    public ?array $enum = null;
+
+    public ?string $format = null;
+
+    public ?string $pattern = null;
+
+    public ?float $minimum = null;
+
+    public ?float $maximum = null;
+
+    public ?float $exclusiveMinimum = null;
+
+    public ?float $exclusiveMaximum = null;
+
+    public ?int $minLength = null;
+
+    public ?int $maxLength = null;
+
+    public ?int $minItems = null;
+
+    public ?int $maxItems = null;
+
+    public ?int $minProperties = null;
+
+    public ?int $maxProperties = null;
+
+    public mixed $default = null;
+
+    /** @var list<mixed>|null */
+    public ?array $examples = null;
+
+    public ?bool $deprecated = null;
+
+    public ?bool $nullable = null;
 
     /** @var array<string,mixed>|null */
     public ?array $properties = null;
 
     /** @var list<mixed>|null */
     public ?array $required = null;
+
+    /** @var list<mixed>|null */
+    public ?array $prefixItems = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $items = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $propertyNames = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $additionalProperties = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $unevaluatedProperties = null;
+
+    /** @var list<mixed>|null */
+    public ?array $oneOf = null;
+
+    /** @var list<mixed>|null */
+    public ?array $anyOf = null;
+
+    /** @var list<mixed>|null */
+    public ?array $allOf = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $not = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $contains = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $dependentRequired = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $dependentSchemas = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $else = null;
+
+    public mixed $example = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $if = null;
+
+    public ?int $maxContains = null;
+
+    public ?int $minContains = null;
+
+    public ?float $multipleOf = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $patternProperties = null;
+
+    /** @var list<mixed>|null */
+    public ?array $propertyOrdering = null;
+
+    public ?bool $readOnly = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $then = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $unevaluatedItems = null;
+
+    public ?bool $uniqueItems = null;
+
+    public ?bool $writeOnly = null;
 }

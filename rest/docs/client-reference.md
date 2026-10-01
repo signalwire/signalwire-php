@@ -19,7 +19,7 @@ $client = new RestClient(
 ## Namespaces
 
 All API surfaces are accessed as method calls that return the namespace object.
-There are 22 namespaces:
+There are 24 namespaces:
 
 | Accessor | Description |
 |----------|-------------|
@@ -45,6 +45,8 @@ There are 22 namespaces:
 | `$client->pubsub()` | PubSub token creation |
 | `$client->messages()` | Message send and history |
 | `$client->chat()` | Chat token creation |
+| `$client->space()` | Space Administration API (members, billing, usage, settings) — authenticated with a Personal Access Token (`personalAccessToken:` / `SIGNALWIRE_PERSONAL_ACCESS_TOKEN`) |
+| `$client->whatsapp()` | WhatsApp businesses, numbers and templates |
 
 ## Return Values
 

@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Video;
 /**
  * ActiveSession — generated wire type from the 'video' spec (components/schemas 'ActiveSession').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ActiveSession
 {
@@ -25,17 +25,23 @@ class ActiveSession
 
     public ?string $name = null;
 
-    public ?string $display_name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $display_name = null;
 
-    public ?string $join_from = null;
+    /** @var array<string,mixed>|null */
+    public ?array $join_from = null;
 
-    public ?string $join_until = null;
+    /** @var array<string,mixed>|null */
+    public ?array $join_until = null;
 
-    public ?string $remove_at = null;
+    /** @var array<string,mixed>|null */
+    public ?array $remove_at = null;
 
-    public ?int $remove_after_seconds_elapsed = null;
+    /** @var array<string,mixed>|null */
+    public ?array $remove_after_seconds_elapsed = null;
 
-    public ?string $layout = null;
+    /** @var array<string,mixed>|null */
+    public ?array $layout = null;
 
     public ?int $max_members = null;
 
@@ -55,7 +61,27 @@ class ActiveSession
 
     public ?bool $enable_room_previews = null;
 
-    public ?string $preview_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $preview_url = null;
 
-    public ?bool $audio_video_sync = null;
+    public ?bool $sync_audio_video = null;
+
+    public ?bool $tone_on_entry_and_exit = null;
+
+    public ?bool $room_join_video_off = null;
+
+    public ?bool $user_join_video_off = null;
+
+    public ?bool $locked = null;
+
+    public ?float $cost_in_dollars = null;
+
+    public ?string $created_at = null;
+
+    public ?string $updated_at = null;
+
+    public ?string $locked_cover = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $prioritize_handraise = null;
 }

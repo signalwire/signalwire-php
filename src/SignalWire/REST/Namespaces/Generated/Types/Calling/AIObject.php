@@ -14,11 +14,20 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * AIObject — generated wire type from the 'calling' spec (components/schemas 'AIObject').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class AIObject
 {
+    /** @var array<string,mixed>|null */
+    public ?array $SWAIG = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $agent = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $engine = null;
+
     /** @var array<string,mixed>|null */
     public ?array $global_data = null;
 
@@ -29,19 +38,29 @@ class AIObject
     public ?array $languages = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $multilingual = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $params = null;
 
     /** @var array<string,mixed>|null */
     public ?array $post_prompt = null;
 
-    public ?string $post_prompt_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $post_prompt_auth_password = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $post_prompt_auth_user = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $post_prompt_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $prompt = null;
 
     /** @var list<mixed>|null */
     public ?array $pronounce = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $prompt = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $SWAIG = null;
+    public ?array $voice = null;
 }

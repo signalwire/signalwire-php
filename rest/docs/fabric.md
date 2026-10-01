@@ -173,9 +173,6 @@ $detail    = $client->fabric()->addresses()->get($addressId);
 // Guest token
 $guest = $client->fabric()->tokens()->createGuestToken(['resource_id' => $resourceId]);
 
-// Invite token
-$invite = $client->fabric()->tokens()->createInviteToken(['resource_id' => $resourceId]);
-
 // Embed token
 $embed = $client->fabric()->tokens()->createEmbedToken(['resource_id' => $resourceId]);
 

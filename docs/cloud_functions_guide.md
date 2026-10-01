@@ -42,9 +42,10 @@ $agent->promptAddSection('Role', 'You are a helpful assistant running in Google 
 Adapter::handleGcf($agent);
 ```
 
-> `Adapter::serve($agent)` auto-detects the execution mode (`gcf`, `azure`,
-> `lambda`, `cgi`, or `server`) and dispatches to the right handler, so a single
-> entry point can run unchanged across platforms.
+> `Adapter::serve($agent)` auto-detects the execution mode
+> (`google_cloud_function`, `azure_function`, `lambda`, `cgi`, or `server`) and
+> dispatches to the right handler, so a single entry point can run unchanged
+> across platforms.
 
 2. **Create `composer.json`**:
 ```json

@@ -12,12 +12,13 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * StopTapConfig — generated SWML verb config type (flattened SWMLMethod verb 'stop_tap' config).
+ * StopTapConfig — generated SWML verb config type ($defs schema 'StopTapConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class StopTapConfig
 {
-    public ?string $control_id = null;
+    /** @var array<string,mixed>|null */
+    public ?array $control_id = null;
 }

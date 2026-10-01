@@ -14,12 +14,14 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * PayParameters — generated wire type from the 'calling' spec (components/schemas 'PayParameters').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class PayParameters
 {
-    public ?string $name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $name = null;
 
-    public ?string $value = null;
+    /** @var array<string,mixed>|null */
+    public ?array $value = null;
 }

@@ -61,7 +61,7 @@ class MessagesGeneratedTest extends TestCase
     #[Test]
     public function messagesUpdateSuccess(): void
     {
-        $this->client->messages()->update('x', 'x');
+        $this->client->messages()->update('x');
         $j = $this->mock->journal()->last();
         $this->assertSame('PATCH', $j->method);
         $this->assertSame('messages.update_message', $j->matchedRoute);
@@ -72,7 +72,7 @@ class MessagesGeneratedTest extends TestCase
     {
         $this->mock->scenarios()->set('messages.update_message', 500, ['error' => 'x']);
         try {
-            $this->client->messages()->update('x', 'x');
+            $this->client->messages()->update('x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(500, $e->getStatusCode());

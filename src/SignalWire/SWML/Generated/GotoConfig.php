@@ -12,17 +12,19 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * GotoConfig — generated SWML verb config type (flattened SWMLMethod verb 'goto' config).
+ * GotoConfig — generated SWML verb config type ($defs schema 'GotoConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class GotoConfig
 {
-    public ?string $label = null;
-
-    public ?string $when = null;
+    /** @var array<string,mixed>|null */
+    public ?array $label = null;
 
     /** @var array<string,mixed>|null */
     public ?array $max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $when = null;
 }

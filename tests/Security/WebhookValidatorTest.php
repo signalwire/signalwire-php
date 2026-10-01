@@ -485,4 +485,55 @@ class WebhookValidatorTest extends TestCase
             );
         }
     }
+
+    // ── Scheme A, SHA-256 (X-SignalWire-Sha256-Signature) ─────────────────
+    // Parity: tests/unit/security/test_webhook_validator.py TestSchemeASha256.
+
+    private static function signSha256(string $key, string $url, string $rawBody): string
+    {
+        return hash_hmac('sha256', $url . $rawBody, $key);
+    }
+
+    public function testSha256PositiveVector(): void
+    {
+        $a = self::VECTOR_A;
+        $sig = self::signSha256($a['signing_key'], $a['url'], $a['raw_body']);
+        $this->assertSame(64, strlen($sig));
+        $this->assertTrue(WebhookValidator::validateWebhookSignatureSha256($a['signing_key'], $sig, $a['url'], $a['raw_body']));
+    }
+
+    public function testSha1SignatureNotAcceptedAsSha256(): void
+    {
+        $a = self::VECTOR_A;
+        $this->assertFalse(
+            WebhookValidator::validateWebhookSignatureSha256($a['signing_key'], $a['expected'], $a['url'], $a['raw_body'])
+        );
+    }
+
+    public function testSha256NegativeTamperedBody(): void
+    {
+        $a = self::VECTOR_A;
+        $sig = self::signSha256($a['signing_key'], $a['url'], $a['raw_body']);
+        $tampered = str_replace('answered', 'ringing', $a['raw_body']);
+        $this->assertFalse(WebhookValidator::validateWebhookSignatureSha256($a['signing_key'], $sig, $a['url'], $tampered));
+    }
+
+    public function testSha256NegativeWrongKey(): void
+    {
+        $a = self::VECTOR_A;
+        $sig = self::signSha256($a['signing_key'], $a['url'], $a['raw_body']);
+        $this->assertFalse(WebhookValidator::validateWebhookSignatureSha256('wrong-key', $sig, $a['url'], $a['raw_body']));
+    }
+
+    public function testSha256MissingSignatureReturnsFalse(): void
+    {
+        $a = self::VECTOR_A;
+        $this->assertFalse(WebhookValidator::validateWebhookSignatureSha256($a['signing_key'], '', $a['url'], $a['raw_body']));
+    }
+
+    public function testSha256MissingSigningKeyThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        WebhookValidator::validateWebhookSignatureSha256('', 'deadbeef', self::VECTOR_A['url'], self::VECTOR_A['raw_body']);
+    }
 }

@@ -133,41 +133,104 @@ class HttpClient
      * @param array<string,mixed> $params Query-string parameters (scalars are
      *   url-encoded; nested arrays use PHP's bracketed query syntax).
      * @param RequestOptions|null $requestOptions Per-request override.
+     * @param array<string,string>|null $headers Headers sent on this request only
+     *   (over the client defaults).
      * @return array<string,mixed>
      */
-    public function get(string $path, array $params = [], ?RequestOptions $requestOptions = null): array
-    {
-        return $this->request('GET', $path, $params, null, $requestOptions);
+    public function get(
+        string $path,
+        array $params = [],
+        ?RequestOptions $requestOptions = null,
+        ?array $headers = null
+    ): array {
+        return self::jsonResult($this->request('GET', $path, $params, null, $requestOptions, $headers ?? []));
     }
 
     /**
-     * @param array<string,mixed> $data JSON body payload.
+     * Issue a ``GET`` whose success body is a non-JSON media type (e.g.
+     * ``text/csv``) and return it as text. Send the media type as ``Accept``
+     * in ``$headers``.
+     *
+     * @param array<string,mixed>|null $params Query-string parameters.
      * @param RequestOptions|null $requestOptions Per-request override.
-     * @return array<string,mixed>
+     * @param array<string,string>|null $headers Headers sent on this request only.
+     * @throws SignalWireRestError on a non-2xx response.
      */
-    public function post(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
-    {
-        return $this->request('POST', $path, [], $data, $requestOptions);
+    public function getText(
+        string $path,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null,
+        ?array $headers = null
+    ): string {
+        return self::stringResult(
+            $this->request('GET', $path, $params ?? [], null, $requestOptions, $headers ?? [], 'text')
+        );
     }
 
     /**
-     * @param array<string,mixed> $data JSON body payload.
+     * Issue a ``GET`` whose success IS a redirect and return its ``Location``.
+     *
+     * The redirect is not followed: the endpoint's answer is the URL of the
+     * resource (e.g. a signed download URL), which the caller fetches with any
+     * HTTP client.
+     *
+     * @param array<string,mixed>|null $params Query-string parameters.
      * @param RequestOptions|null $requestOptions Per-request override.
-     * @return array<string,mixed>
+     * @throws SignalWireRestError for an error status or a non-redirect success.
      */
-    public function put(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
-    {
-        return $this->request('PUT', $path, [], $data, $requestOptions);
+    public function getRedirectLocation(
+        string $path,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null
+    ): string {
+        return self::stringResult(
+            $this->request('GET', $path, $params ?? [], null, $requestOptions, [], 'redirect')
+        );
     }
 
     /**
-     * @param array<string,mixed> $data JSON body payload.
+     * @param array<string,mixed>|null $body JSON body payload. Defaults to null
+     *   (no body), matching the reference (rest/_base.py:295).
+     * @param array<string,mixed>|null $params Query-string parameters (scalars
+     *   are url-encoded; nested arrays use PHP's bracketed query syntax). A POST
+     *   may carry BOTH a JSON body and a query string — the reference
+     *   (rest/_base.py:295) passes `params` straight through to the query, so
+     *   the port exposes the same door.
+     * @param RequestOptions|null $requestOptions Per-request override.
+     * @param array<string,string>|null $headers Headers sent on this request only
+     *   (over the client defaults), e.g. a declared ``Idempotency-Key``.
+     * @return array<string,mixed>
+     */
+    public function post(
+        string $path,
+        ?array $body = null,
+        ?array $params = null,
+        ?RequestOptions $requestOptions = null,
+        ?array $headers = null
+    ): array {
+        return self::jsonResult($this->request('POST', $path, $params ?? [], $body, $requestOptions, $headers ?? []));
+    }
+
+    /**
+     * @param array<string,mixed>|null $data JSON body payload. Defaults to
+     *   null (no body), matching the reference (rest/_base.py:306).
      * @param RequestOptions|null $requestOptions Per-request override.
      * @return array<string,mixed>
      */
-    public function patch(string $path, array $data = [], ?RequestOptions $requestOptions = null): array
+    public function put(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
     {
-        return $this->request('PATCH', $path, [], $data, $requestOptions);
+        return self::jsonResult($this->request('PUT', $path, [], $data, $requestOptions));
+    }
+
+    /**
+     * @param array<string,mixed>|null $data JSON body payload. Defaults to
+     *   null (no body), matching the reference (rest/_base.py:314).
+     * @param RequestOptions|null $requestOptions Per-request override.
+     * @return array<string,mixed>
+     */
+    public function patch(string $path, ?array $data = null, ?RequestOptions $requestOptions = null): array
+    {
+        return self::jsonResult($this->request('PATCH', $path, [], $data, $requestOptions));
     }
 
     /**
@@ -176,7 +239,7 @@ class HttpClient
      */
     public function delete(string $path, ?RequestOptions $requestOptions = null): array
     {
-        return $this->request('DELETE', $path, [], null, $requestOptions);
+        return self::jsonResult($this->request('DELETE', $path, [], null, $requestOptions));
     }
 
     // -----------------------------------------------------------------
@@ -341,11 +404,33 @@ class HttpClient
     // -----------------------------------------------------------------
 
     /**
+     * @param array<string,mixed>|string $result
+     * @return array<string,mixed>
+     */
+    private static function jsonResult(array|string $result): array
+    {
+        // A 'json' request always returns the decoded array (request() returns a
+        // string only for the 'text' / 'redirect' modes).
+        return is_array($result) ? $result : ['raw' => $result];
+    }
+
+    /** @param array<string,mixed>|string $result */
+    private static function stringResult(array|string $result): string
+    {
+        return is_string($result) ? $result : '';
+    }
+
+    /**
      * @param non-empty-string $method HTTP verb (GET/POST/PUT/PATCH/DELETE).
      * @param array<string,mixed> $params  Query-string parameters.
      * @param array<string,mixed>|null $body JSON body (for POST/PUT/PATCH).
      * @param RequestOptions|null $requestOptions Per-request override.
-     * @return array<string,mixed>
+     * @param array<string,string> $extraHeaders Headers for this request only;
+     *   each replaces the default of the same name.
+     * @param 'json'|'text'|'redirect' $response How a success is read: the
+     *   decoded JSON body, the body as text, or (redirects NOT followed) the
+     *   3xx ``Location``.
+     * @return array<string,mixed>|string
      * @throws SignalWireRestError on a non-2xx response; a SignalWireRestTransportError
      *   (a member of that family) on a transport-level failure (connection
      *   refused / DNS / reset / TLS / timeout — the request never reached a
@@ -356,8 +441,10 @@ class HttpClient
         string $path,
         array $params = [],
         ?array $body = null,
-        ?RequestOptions $requestOptions = null
-    ): array {
+        ?RequestOptions $requestOptions = null,
+        array $extraHeaders = [],
+        string $response = 'json'
+    ): array|string {
         $url = $this->baseUrl . $path;
 
         if (!empty($params)) {
@@ -389,12 +476,24 @@ class HttpClient
 
             $ch = curl_init();
 
-            $headers = [
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'Authorization: ' . $this->authHeader,
-                'User-Agent: ' . $this->userAgent,
+            $headerMap = [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'Authorization' => $this->authHeader,
+                'User-Agent' => $this->userAgent,
             ];
+            foreach ($extraHeaders as $name => $value) {
+                foreach (array_keys($headerMap) as $existing) {
+                    if (strcasecmp($existing, $name) === 0) {
+                        unset($headerMap[$existing]);
+                    }
+                }
+                $headerMap[$name] = $value;
+            }
+            $headers = [];
+            foreach ($headerMap as $name => $value) {
+                $headers[] = $name . ': ' . $value;
+            }
 
             curl_setopt_array($ch, [
                 CURLOPT_URL            => $url,
@@ -456,6 +555,29 @@ class HttpClient
             $rawHeaders = substr($rawResponse, 0, $headerSize);
             $responseBody = substr($rawResponse, $headerSize);
 
+            // A redirect-answer endpoint: the 3xx Location IS the result (the
+            // redirect is never followed — cURL does not follow by default).
+            if ($response === 'redirect' && $httpCode < 400) {
+                $location = '';
+                foreach (self::parseHeaders($rawHeaders) as $hName => $hValue) {
+                    if (strcasecmp($hName, 'Location') === 0) {
+                        $location = $hValue;
+                    }
+                }
+                if ($httpCode >= 300 && $location !== '') {
+                    return $location;
+                }
+                // A success that is not the redirect the endpoint answers with.
+                throw new SignalWireRestError(
+                    sprintf('%s %s returned %d: %s', $method, $url, $httpCode, $responseBody),
+                    $httpCode,
+                    $responseBody,
+                    $url,
+                    $method,
+                    self::parseHeaders($rawHeaders)
+                );
+            }
+
             // Non-2xx HTTP status.
             if ($httpCode < 200 || $httpCode >= 300) {
                 if ($attempt <= $retries
@@ -478,6 +600,10 @@ class HttpClient
                     $method,
                     self::parseHeaders($rawHeaders)
                 );
+            }
+
+            if ($response === 'text') {
+                return $responseBody;
             }
 
             // 204 No Content or empty body.

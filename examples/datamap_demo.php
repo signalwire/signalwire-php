@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * DataMap Demo - Shows how to use the DataMap class for server-side tools
  *
@@ -38,8 +40,13 @@ $agent->registerSwaigFunction($weather->toSwaigFunction());
 // 2. Expression-based file control (no API calls)
 $fileControl = (new DataMap('file_control'))
     ->description('Control audio/video playback')
-    ->parameter('command', 'string', 'Playback command', required: true,
-        enum: ['play', 'pause', 'stop', 'next', 'previous'])
+    ->parameter(
+        'command',
+        'string',
+        'Playback command',
+        required: true,
+        enum: ['play', 'pause', 'stop', 'next', 'previous']
+    )
     ->expression(
         '${args.command}',
         'play|resume',

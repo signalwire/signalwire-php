@@ -14,25 +14,28 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * BedrockParams — generated wire type from the 'calling' spec (components/schemas 'BedrockParams').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class BedrockParams
 {
     /** @var array<string,mixed>|null */
     public ?array $attention_timeout = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $hard_stop_time = null;
+    public ?string $compact_conversation_time = null;
+
+    public ?string $compact_strategy = null;
+
+    public ?string $hard_stop_prompt = null;
+
+    public ?string $hard_stop_time = null;
 
     /** @var array<string,mixed>|null */
     public ?array $inactivity_timeout = null;
 
-    public ?string $video_listening_file = null;
-
     public ?string $video_idle_file = null;
 
-    public ?string $video_talking_file = null;
+    public ?string $video_listening_file = null;
 
-    public ?string $hard_stop_prompt = null;
+    public ?string $video_talking_file = null;
 }

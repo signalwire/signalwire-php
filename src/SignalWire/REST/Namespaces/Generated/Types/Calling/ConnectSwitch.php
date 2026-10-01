@@ -14,16 +14,17 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * ConnectSwitch — generated wire type from the 'calling' spec (components/schemas 'ConnectSwitch').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class ConnectSwitch
 {
-    public ?string $variable = null;
+    /** @var array<string,mixed>|null */
+    public ?array $default = null;
 
     /** @var array<string,mixed>|null */
     public ?array $case = null;
 
-    /** @var list<mixed>|null */
-    public ?array $default = null;
+    /** @var array<string,mixed>|null */
+    public ?array $variable = null;
 }

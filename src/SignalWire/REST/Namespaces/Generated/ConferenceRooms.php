@@ -28,6 +28,6 @@ class ConferenceRooms extends \SignalWire\REST\FabricResourcePUT
      */
     public function listAddresses(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/fabric/resources/conference_room/' . $id . '/addresses', $params, $requestOptions);
+        return $this->client->get($this->path($id, 'addresses'), $params, $requestOptions);
     }
 }

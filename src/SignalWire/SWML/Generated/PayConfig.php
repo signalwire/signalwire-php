@@ -12,24 +12,30 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * PayConfig — generated SWML verb config type (flattened SWMLMethod verb 'pay' config).
+ * PayConfig — generated SWML verb config type ($defs schema 'PayConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class PayConfig
 {
-    public ?string $payment_connector_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $description = null;
 
-    public ?string $charge_amount = null;
+    /** @var array<string,mixed>|null */
+    public ?array $bank_account_type = null;
 
-    public ?string $currency = null;
+    /** @var array<string,mixed>|null */
+    public ?array $charge_amount = null;
 
-    public ?string $description = null;
+    /** @var array<string,mixed>|null */
+    public ?array $currency = null;
 
-    public ?string $input = null;
+    /** @var array<string,mixed>|null */
+    public ?array $input = null;
 
-    public ?string $language = null;
+    /** @var array<string,mixed>|null */
+    public ?array $language = null;
 
     /** @var array<string,mixed>|null */
     public ?array $max_attempts = null;
@@ -37,21 +43,29 @@ class PayConfig
     /** @var array<string,mixed>|null */
     public ?array $min_postal_code_length = null;
 
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $parameters = null;
 
-    public ?string $payment_method = null;
+    /** @var array<string,mixed>|null */
+    public ?array $payment_connector_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $payment_method = null;
 
     /** @var array<string,mixed>|null */
     public ?array $postal_code = null;
 
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $prompts = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $say_voice = null;
 
     /** @var array<string,mixed>|null */
     public ?array $security_code = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
 
     /** @var array<string,mixed>|null */
     public ?array $timeout = null;
@@ -59,7 +73,9 @@ class PayConfig
     /** @var array<string,mixed>|null */
     public ?array $token_type = null;
 
-    public ?string $valid_card_types = null;
+    /** @var array<string,mixed>|null */
+    public ?array $valid_card_types = null;
 
-    public ?string $voice = null;
+    /** @var array<string,mixed>|null */
+    public ?array $voice = null;
 }

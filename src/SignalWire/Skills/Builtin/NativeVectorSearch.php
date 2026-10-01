@@ -63,6 +63,10 @@ class NativeVectorSearch extends SkillBase
         return 'Search document indexes using vector similarity and keyword search (local or remote)';
     }
 
+    /**
+     * True — one instance per index. The instance key combines `tool_name`
+     * with `index_file` (or `default` when unset).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -108,7 +112,7 @@ class NativeVectorSearch extends SkillBase
      *
      * @return list<array{title: string, body?: string, bullets?: list<string>}>
      */
-    public function getPromptSections(): array
+    protected function _getPromptSections(): array
     {
         return [];
     }
@@ -329,6 +333,11 @@ class NativeVectorSearch extends SkillBase
         return $schema;
     }
 
+    /**
+     * Accept either mode's configuration: a `remote_url` (network mode,
+     * supported in PHP) or an `index_file` (local mode). Returns false only
+     * when NEITHER is set.
+     */
     public function setup(): bool
     {
         // Either remote_url is set (network mode, supported), or
@@ -338,6 +347,15 @@ class NativeVectorSearch extends SkillBase
         return $remoteUrl !== '' || $indexFile !== '';
     }
 
+    /**
+     * Define the search tool (`search_knowledge` unless overridden by
+     * `tool_name`), whose handler queries the remote index from this process.
+     *
+     * Param clamping: `count` to [1, 20], `max_content_length` to a minimum
+     * of 1000, `timeout` to a minimum of 2 seconds. `no_results_message`
+     * supports a `{query}` placeholder, and `response_prefix` /
+     * `response_postfix` wrap each non-empty result.
+     */
     public function registerTools(): void
     {
         $toolName = $this->getToolName('search_knowledge');

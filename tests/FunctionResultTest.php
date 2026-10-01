@@ -450,6 +450,47 @@ class FunctionResultTest extends TestCase
         $this->assertArrayNotHasKey('user_prompt', $cs);
     }
 
+    /**
+     * DEFAULT COVERAGE: `switchContext()` takes NO required argument — the
+     * reference declares `system_prompt: str | None = None` and
+     * `user_prompt: str | None = None` (function_result.py:706). The port
+     * previously REQUIRED `$systemPrompt` and defaulted `$userPrompt` to `''`.
+     *
+     * With no system_prompt the reference falls through to the object branch
+     * and emits an EMPTY object — it only sets `system_prompt` when truthy
+     * (function_result.py:730).
+     */
+    public function testSwitchContextTakesNoRequiredArgument(): void
+    {
+        $fr = new FunctionResult();
+        $fr->switchContext();
+        $cs = Shape::at($fr->toArray(), 'action', 0, 'context_switch');
+
+        $this->assertIsArray($cs);
+        $this->assertSame([], $cs, 'no truthy field -> empty context_switch object');
+
+        $rp = (new \ReflectionMethod(FunctionResult::class, 'switchContext'))->getParameters();
+        $this->assertTrue($rp[0]->isOptional(), 'systemPrompt must be optional');
+        $this->assertNull($rp[0]->getDefaultValue());
+        $this->assertNull($rp[1]->getDefaultValue(), 'userPrompt must default to null');
+    }
+
+    /**
+     * DEFAULT COVERAGE for the user_prompt-only path: with no system_prompt
+     * the simple-string branch must NOT fire, and system_prompt must be
+     * absent from the emitted object rather than present-and-null.
+     */
+    public function testSwitchContextUserPromptOnlyOmitsSystemPrompt(): void
+    {
+        $fr = new FunctionResult();
+        $fr->switchContext(userPrompt: 'just the user side');
+        $cs = Shape::at($fr->toArray(), 'action', 0, 'context_switch');
+
+        $this->assertIsArray($cs);
+        $this->assertArrayNotHasKey('system_prompt', $cs);
+        $this->assertSame('just the user side', $cs['user_prompt']);
+    }
+
     public function testReplaceInHistoryWithString(): void
     {
         // Python action name is "replace_in_history"; the string is emitted
@@ -554,7 +595,7 @@ class FunctionResultTest extends TestCase
 
     public function testRecordCallInvalidDirectionThrows(): void
     {
-        // record_call rejects 'hear' (that belongs to tap's set, not this one).
+        // record_call rejects 'hear' (not a direction of either verb).
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("direction must be 'speak', 'listen', or 'both'");
         (new FunctionResult())->recordCall('id', false, 'wav', 'hear');
@@ -703,15 +744,16 @@ class FunctionResultTest extends TestCase
 
     public function testExecuteSwmlWithTransfer(): void
     {
-        // Python sets transfer="true" INSIDE the SWML document and still adds
-        // it under the "SWML" action key (no separate transfer_swml key).
+        // transfer="true" rides BESIDE the SWML document in the same action
+        // (the shape connect()/swml_transfer() emit), never inside it.
         $swml = ['sections' => ['main' => [['answer' => []]]]];
         $fr = new FunctionResult();
         $fr->executeSwml($swml, true);
         $action = Shape::sub($fr->toArray(), 'action', 0);
 
         $this->assertArrayNotHasKey('transfer_swml', $action);
-        $this->assertSame('true', Shape::at($action, 'SWML', 'transfer'));
+        $this->assertSame('true', $action['transfer']);
+        $this->assertArrayNotHasKey('transfer', Shape::sub($action, 'SWML'));
         $this->assertSame($swml['sections'], Shape::at($action, 'SWML', 'sections'));
     }
 
@@ -729,27 +771,27 @@ class FunctionResultTest extends TestCase
     public function testExecuteSwmlStringWithTransferPreservesEmptyObject(): void
     {
         // String + transfer: the nested empty object {} must be preserved AND
-        // transfer="true" set as a sibling INSIDE the SWML doc. Byte-identical to
-        // Python execute_swml('{"sections":{"main":[{"answer":{}}]}}', True) ->
-        // {"SWML":{"sections":{"main":[{"answer":{}}]},"transfer":"true"}}.
+        // transfer="true" set BESIDE the SWML doc. Byte-identical to Python
+        // execute_swml('{"sections":{"main":[{"answer":{}}]}}', True) ->
+        // {"SWML":{"sections":{"main":[{"answer":{}}]}},"transfer":"true"}.
         $fr = new FunctionResult();
         $fr->executeSwml('{"sections":{"main":[{"answer":{}}]}}', true);
 
         $this->assertSame(
-            '{"SWML":{"sections":{"main":[{"answer":{}}]},"transfer":"true"}}',
+            '{"SWML":{"sections":{"main":[{"answer":{}}]}},"transfer":"true"}',
             json_encode(Shape::at($fr->toArray(), 'action', 0))
         );
     }
 
     public function testExecuteSwmlInvalidStringWithTransfer(): void
     {
-        // raw_swml fallback still injects transfer="true" as a sibling key.
-        // Parity: {"SWML":{"raw_swml":"not json","transfer":"true"}}.
+        // raw_swml fallback: transfer="true" still rides beside the document.
+        // Parity: {"SWML":{"raw_swml":"not json"},"transfer":"true"}.
         $fr = new FunctionResult();
         $fr->executeSwml('not json', true);
         $this->assertSame(
-            ['raw_swml' => 'not json', 'transfer' => 'true'],
-            Shape::at($fr->toArray(), 'action', 0, 'SWML')
+            ['SWML' => ['raw_swml' => 'not json'], 'transfer' => 'true'],
+            Shape::at($fr->toArray(), 'action', 0)
         );
     }
 
@@ -830,28 +872,48 @@ class FunctionResultTest extends TestCase
         (new FunctionResult())->joinConference('conf', false, 'invalid');
     }
 
-    public function testJoinConferenceMaxParticipantsTooHigh(): void
+    public function testJoinConferenceMaxParticipantsHasNoUpperLimit(): void
     {
-        // Parity: test_join_conference_max_participants_too_high
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
-        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 300);
+        // Parity: test_function_result_verb_types.py test_there_is_no_upper_limit
+        // — the platform requires 2 or more and sets no upper limit.
+        $r = (new FunctionResult())->joinConference('room', maxParticipants: 250000);
+        $this->assertSame(
+            250000,
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_conference', 'max_participants')
+        );
     }
 
-    public function testJoinConferenceMaxParticipantsZero(): void
+    public function testJoinConferenceExplicit250IsSent(): void
     {
-        // Parity: test_join_conference_max_participants_zero
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
-        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 0);
+        // Parity: test_explicit_250_is_sent — 250 is no longer a default to drop.
+        $r = (new FunctionResult())->joinConference('room', maxParticipants: 250);
+        $this->assertSame(
+            ['name' => 'room', 'max_participants' => 250],
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_conference')
+        );
     }
 
-    public function testJoinConferenceMaxParticipantsNegative(): void
+    public function testJoinConferenceMaxParticipantsLeftOutByDefault(): void
     {
-        // Parity: test_join_conference_max_participants_negative
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
-        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, -5);
+        // Parity: test_default_keeps_the_simple_form
+        $r = (new FunctionResult())->joinConference('room');
+        $this->assertSame(
+            'room',
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_conference')
+        );
+    }
+
+    public function testJoinConferenceMaxParticipantsBelowTwoIsRefused(): void
+    {
+        // Parity: test_fewer_than_two_or_not_an_integer_is_refused
+        foreach ([1, 0, -5] as $value) {
+            try {
+                (new FunctionResult())->joinConference('conf', maxParticipants: $value);
+                $this->fail("max_participants={$value} must be refused");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('max_participants must be an integer of at least 2', $e->getMessage());
+            }
+        }
     }
 
     public function testJoinConferenceInvalidRecord(): void
@@ -988,8 +1050,9 @@ class FunctionResultTest extends TestCase
     }
 
     // tap parity: the {"tap": ...} verb is SWML-wrapped (executeSwml -> "SWML").
-    // Only `uri` is always present; control_id/direction/codec/rtp_ptime/
-    // status_url are emitted only when they differ from their defaults.
+    // `uri` and `direction` are always present (the verb's own default
+    // direction is "speak", not the helper's "both"); control_id/codec/
+    // rtp_ptime/status_url are emitted only when they differ from their defaults.
 
     public function testTapBasicOmitsDefaults(): void
     {
@@ -998,8 +1061,8 @@ class FunctionResultTest extends TestCase
         $t = Shape::sub($fr->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
 
         $this->assertSame('wss://tap.example.com', $t['uri']);
-        // direction/codec/rtp_ptime/status_url are at defaults -> omitted.
-        $this->assertArrayNotHasKey('direction', $t);
+        // direction is always sent; codec/rtp_ptime/status_url at defaults -> omitted.
+        $this->assertSame('both', $t['direction']);
         $this->assertArrayNotHasKey('codec', $t);
         $this->assertArrayNotHasKey('rtp_ptime', $t);
         $this->assertArrayNotHasKey('control_id', $t);
@@ -1023,7 +1086,7 @@ class FunctionResultTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('direction must be one of');
-        (new FunctionResult())->tap('wss://t', null, 'listen'); // 'listen' is record_call's, not tap's
+        (new FunctionResult())->tap('wss://t', null, 'hear'); // the old, never-valid wire value
     }
 
     public function testTapInvalidCodecThrows(): void
@@ -1500,7 +1563,7 @@ class FunctionResultTest extends TestCase
     public function testRecordCallAcceptsRecordDirectionEnumOrString(): void
     {
         // The backed enum's value is the canonical wire direction string, and
-        // record_call uses 'listen' (not tap's 'hear'). recordCall now routes
+        // record_call uses 'listen' (as tap does). recordCall now routes
         // through the SWML document, so read the verb out of it. The
         // enum-value === 'listen' identity is guaranteed by the backed enum's
         // declaration; the behavioural equivalence below is what needs proving.
@@ -1524,9 +1587,9 @@ class FunctionResultTest extends TestCase
     public function testTapAcceptsTapDirectionEnumOrString(): void
     {
         $enum = new FunctionResult();
-        $enum->tap('wss://tap.example.com', 'tap-1', TapDirection::Hear, 'PCMA');
+        $enum->tap('wss://tap.example.com', 'tap-1', TapDirection::Listen, 'PCMA');
         $string = new FunctionResult();
-        $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
+        $string->tap('wss://tap.example.com', 'tap-1', 'listen', 'PCMA');
 
         $enumTap = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
         $stringTap = Shape::sub($string->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
@@ -1536,7 +1599,7 @@ class FunctionResultTest extends TestCase
             $enumTap,
             'tap enum and string $direction must emit the identical tap action',
         );
-        $this->assertSame('hear', $enumTap['direction']);
+        $this->assertSame('listen', $enumTap['direction']);
     }
 
     /**
@@ -1651,9 +1714,9 @@ class FunctionResultTest extends TestCase
     public function testTapAcceptsCodecEnumOrString(): void
     {
         $enum = new FunctionResult();
-        $enum->tap('wss://tap.example.com', 'tap-1', 'hear', Codec::Pcma);
+        $enum->tap('wss://tap.example.com', 'tap-1', 'listen', Codec::Pcma);
         $string = new FunctionResult();
-        $string->tap('wss://tap.example.com', 'tap-1', 'hear', 'PCMA');
+        $string->tap('wss://tap.example.com', 'tap-1', 'listen', 'PCMA');
 
         $enumTap = Shape::sub($enum->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
         $stringTap = Shape::sub($string->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'tap');
@@ -1714,5 +1777,109 @@ class FunctionResultTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('codec must be one of');
         (new FunctionResult())->tap('wss://t', null, 'both', 'OPUS');
+    }
+
+    // ── python-main catch-up: hold routing/prompt, change_voice, tool
+    //    response, rpc_ai_message global_data, rpc_ai_global_data.
+    //    Parity: tests/unit/core/test_function_result.py.
+
+    public function testHoldStepAndTimeoutStepEmitObjectForm(): void
+    {
+        $r = (new FunctionResult())->hold(timeout: 120, step: 'back_with_agent', timeoutStep: 'take_a_message');
+        $this->assertSame(
+            [['hold' => ['timeout' => 120, 'step' => 'back_with_agent', 'timeout_step' => 'take_a_message']]],
+            $r->toArray()['action']
+        );
+    }
+
+    public function testHoldOnlyStep(): void
+    {
+        $r = (new FunctionResult())->hold(step: 'back_with_agent');
+        $this->assertSame([['hold' => ['timeout' => 300, 'step' => 'back_with_agent']]], $r->toArray()['action']);
+    }
+
+    public function testHoldOnlyTimeoutStepWithPositionalTimeout(): void
+    {
+        $r = (new FunctionResult())->hold(60, timeoutStep: 'take_a_message');
+        $this->assertSame([['hold' => ['timeout' => 60, 'timeout_step' => 'take_a_message']]], $r->toArray()['action']);
+    }
+
+    public function testHoldRoutingClampsTimeout(): void
+    {
+        $r = (new FunctionResult())->hold(timeout: 5000, step: 's');
+        $this->assertSame([['hold' => ['timeout' => 900, 'step' => 's']]], $r->toArray()['action']);
+    }
+
+    public function testHoldPromptBecomesToolResponseAndPostProcess(): void
+    {
+        $r = (new FunctionResult())->hold('Tell the caller you are placing them on hold.', 120);
+        $this->assertSame(
+            [
+                'response' => ['tool_result' => 'status: on hold', 'tool_prompt' => 'Tell the caller you are placing them on hold.'],
+                'action' => [['hold' => 120]],
+                'post_process' => true,
+            ],
+            $r->toArray()
+        );
+    }
+
+    public function testChangeVoiceEmitsStringForm(): void
+    {
+        $r = (new FunctionResult())->changeVoice('elevenlabs.rachel');
+        $this->assertSame([['change_voice' => 'elevenlabs.rachel']], $r->toArray()['action']);
+    }
+
+    public function testChangeVoiceSerializedWireShape(): void
+    {
+        $r = (new FunctionResult('Switching voices now'))->changeVoice('amazon.Joanna');
+        $this->assertSame(
+            ['response' => 'Switching voices now', 'action' => [['change_voice' => 'amazon.Joanna']]],
+            $r->toArray()
+        );
+    }
+
+    public function testChangeVoiceChainsWithOtherActions(): void
+    {
+        $r = new FunctionResult('ok');
+        $ret = $r->changeVoice('elevenlabs.rachel')->say('Hello again');
+        $this->assertSame($r, $ret);
+        $this->assertSame([['change_voice' => 'elevenlabs.rachel'], ['say' => 'Hello again']], $r->toArray()['action']);
+    }
+
+    public function testSetToolResponseSeparatesOutcomeFromInstruction(): void
+    {
+        $r = (new FunctionResult())->setToolResponse('status: on hold', 'Tell the caller.');
+        $this->assertSame(['tool_result' => 'status: on hold', 'tool_prompt' => 'Tell the caller.'], $r->getResponse());
+    }
+
+    public function testConstructorToolResultAndPrompt(): void
+    {
+        $r = new FunctionResult(toolResult: 'Order 1234 shipped Tuesday.', toolPrompt: 'Tell the caller when their order shipped.');
+        $this->assertSame(
+            ['tool_result' => 'Order 1234 shipped Tuesday.', 'tool_prompt' => 'Tell the caller when their order shipped.'],
+            $r->toArray()['response']
+        );
+    }
+
+    public function testRpcAiMessageGlobalDataOnly(): void
+    {
+        $r = (new FunctionResult())->rpcAiMessage('call-1', globalData: ['decline_message' => 'no']);
+        $this->assertSame(
+            ['method' => 'ai_message', 'call_id' => 'call-1', 'params' => ['global_data' => ['decline_message' => 'no']]],
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'execute_rpc')
+        );
+    }
+
+    public function testRpcAiMessageNeedsAPayload(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        (new FunctionResult())->rpcAiMessage('call-1');
+    }
+
+    public function testRpcAiGlobalDataWrapsRpcAiMessage(): void
+    {
+        $a = (new FunctionResult())->rpcAiGlobalData('call-1', ['k' => 'v'])->toArray();
+        $b = (new FunctionResult())->rpcAiMessage('call-1', globalData: ['k' => 'v'])->toArray();
+        $this->assertSame($b, $a);
     }
 }

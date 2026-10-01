@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Messages;
 /**
  * CreateMessageRequest — generated wire type from the 'messages' spec (components/schemas 'CreateMessageRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateMessageRequest
 {
@@ -23,7 +23,8 @@ class CreateMessageRequest
 
     public ?string $from = null;
 
-    public ?string $body = null;
+    /** @var string|array<string,mixed>|list<mixed>|null */
+    public string|array|null $body = null;
 
     /** @var list<mixed>|null */
     public ?array $media = null;
@@ -34,4 +35,17 @@ class CreateMessageRequest
 
     /** @var array<string,mixed>|null */
     public ?array $custom_variables = null;
+
+    public ?string $message_type = null;
+
+    public ?string $template_id = null;
+
+    /** @var array<string,mixed>|list<mixed>|string|null */
+    public array|string|null $header_template_parameters = null;
+
+    /** @var array<string,mixed>|list<mixed>|null */
+    public array|null $body_template_parameters = null;
+
+    /** @var list<mixed>|null */
+    public ?array $button_template_parameters = null;
 }

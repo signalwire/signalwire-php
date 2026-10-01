@@ -96,6 +96,87 @@ final class WebhookValidator
     }
 
     /**
+     * Validate the SHA-256 webhook signature (Scheme A with a stronger hash).
+     *
+     * SignalWire sends `X-SignalWire-Sha256-Signature` alongside the SHA-1
+     * `X-SignalWire-Signature` on signed webhooks. Its construction is the same
+     * Scheme A message with SHA-256:
+     *
+     *     hex(HMAC-SHA256(signing_key, url + raw_body))
+     *
+     * Only Scheme A (RELAY/SWML/JSON) is defined for this header; the legacy
+     * cXML/form Scheme B stays on SHA-1 -- see {@see validateWebhookSignature()}.
+     *
+     * @param string $signingKey Customer's Signing Key. Empty throws.
+     * @param string $signature  The `X-SignalWire-Sha256-Signature` header
+     *                           value (64-char lowercase hex). Empty returns false.
+     * @param string $url        The full public URL SignalWire POSTed to.
+     * @param string $rawBody    The raw request body, BEFORE any parsing.
+     *
+     * @return bool True if the SHA-256 signature matches, false otherwise.
+     *
+     * @throws InvalidArgumentException When $signingKey is missing.
+     */
+    public static function validateWebhookSignatureSha256(
+        string $signingKey,
+        string $signature,
+        string $url,
+        string $rawBody,
+    ): bool {
+        if ($signingKey === '') {
+            throw new InvalidArgumentException('signingKey is required');
+        }
+        if ($signature === '') {
+            return false;
+        }
+        $expected = hash_hmac('sha256', $url . $rawBody, $signingKey);
+        return self::safeEq($expected, $signature);
+    }
+
+    /**
+     * The signed-request decision shared by WebhookMiddleware and the SWML
+     * service: the stronger `X-SignalWire-Sha256-Signature` is preferred when
+     * present, falling back to `X-SignalWire-Signature` (or the
+     * `X-Twilio-Signature` alias) so older platform builds and the cXML/form
+     * Scheme B keep validating. False when no signature header is present.
+     *
+     * @internal shared by the in-SDK validators; not public SDK surface.
+     * @param array<array-key, mixed> $headers Request headers (case-insensitive names).
+     */
+    public static function verifySignedHeaders(
+        array $headers,
+        string $signingKey,
+        string $url,
+        string $rawBody,
+    ): bool {
+        $sha256 = self::headerValue($headers, 'X-SignalWire-Sha256-Signature');
+        if ($sha256 !== null && $sha256 !== ''
+            && self::validateWebhookSignatureSha256($signingKey, $sha256, $url, $rawBody)) {
+            return true;
+        }
+        $signature = self::headerValue($headers, 'X-SignalWire-Signature')
+            ?? self::headerValue($headers, 'X-Twilio-Signature');
+        if ($signature === null || $signature === '') {
+            return false;
+        }
+        return self::validateWebhookSignature($signingKey, $signature, $url, $rawBody);
+    }
+
+    /** @param array<array-key, mixed> $headers */
+    private static function headerValue(array $headers, string $name): ?string
+    {
+        foreach ($headers as $k => $v) {
+            if (strcasecmp((string) $k, $name) === 0) {
+                if (is_array($v)) {
+                    $v = $v[0] ?? null;
+                }
+                return is_string($v) ? $v : null;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Legacy @signalwire/compatibility-api drop-in entry point.
      *
      * If $paramsOrRawBody is a string, delegates to validateWebhookSignature

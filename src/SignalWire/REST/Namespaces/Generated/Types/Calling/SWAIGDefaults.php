@@ -14,10 +14,20 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * SWAIGDefaults — generated wire type from the 'calling' spec (components/schemas 'SWAIGDefaults').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SWAIGDefaults
 {
+    public mixed $meta_data = null;
+
+    public ?string $meta_data_token = null;
+
+    public ?string $web_hook_auth_pass = null;
+
+    public ?string $web_hook_auth_password = null;
+
+    public ?string $web_hook_auth_user = null;
+
     public ?string $web_hook_url = null;
 }

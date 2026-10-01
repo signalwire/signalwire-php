@@ -12,29 +12,13 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * PromptConfig — generated SWML verb config type (flattened SWMLMethod verb 'prompt' config).
+ * PromptConfig — generated SWML verb config type ($defs schema 'PromptConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class PromptConfig
 {
-    /** @var array<string,mixed>|null */
-    public ?array $play = null;
-
-    public ?float $volume = null;
-
-    public ?string $say_voice = null;
-
-    public ?string $say_language = null;
-
-    public ?string $say_gender = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $max_digits = null;
-
-    public ?string $terminators = null;
-
     /** @var array<string,mixed>|null */
     public ?array $digit_timeout = null;
 
@@ -42,17 +26,43 @@ class PromptConfig
     public ?array $initial_timeout = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $speech_timeout = null;
+    public ?array $max_digits = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $play = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $say_gender = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $say_language = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $say_voice = null;
 
     /** @var array<string,mixed>|null */
     public ?array $speech_end_timeout = null;
 
-    public ?string $speech_language = null;
-
     /** @var array<string,mixed>|null */
+    public ?array $speech_engine = null;
+
+    /** @var list<mixed>|null */
     public ?array $speech_hints = null;
 
-    public ?string $speech_engine = null;
+    /** @var array<string,mixed>|null */
+    public ?array $speech_language = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $speech_timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $terminators = null;
+
+    public ?string $url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $volume = null;
 }

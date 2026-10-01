@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Projects;
 /**
  * Project — generated wire type from the 'projects' spec (components/schemas 'Project').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Project
 {
@@ -27,8 +27,6 @@ class Project
     public ?array $parent_project_id = null;
 
     public ?bool $subproject = null;
-
-    public ?string $region_preference = null;
 
     public ?bool $protect_recordings = null;
 

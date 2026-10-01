@@ -54,6 +54,7 @@ Usage:
     python3 scripts/generate_swml_verbs.py --check    # GEN-FRESH: fail if stale
     python3 scripts/generate_swml_verbs.py --out DIR  # scratch: emit into DIR
 """
+
 from __future__ import annotations
 
 import argparse
@@ -70,9 +71,12 @@ from pathlib import Path
 # Import by path so the two generators never diverge on the emit rule.
 # ---------------------------------------------------------------------------
 
+
 def _load_rest_generator():
     here = Path(__file__).resolve().parent
-    spec = importlib.util.spec_from_file_location("generate_rest", here / "generate_rest.py")
+    spec = importlib.util.spec_from_file_location(
+        "generate_rest", here / "generate_rest.py"
+    )
     if spec is None or spec.loader is None:  # pragma: no cover
         raise SystemExit("generate_swml_verbs.py: cannot load generate_rest.py")
     mod = importlib.util.module_from_spec(spec)
@@ -104,12 +108,55 @@ def repo_root() -> Path:
 HAND_WRITTEN_VERBS = {"answer", "hangup", "ai", "play", "say"}
 
 
+def _load_reference_generator(psdk: Path):
+    """The reference generator (porting-sdk/scripts/generate_python_rest_types.py),
+    loaded by path for its schema TRANSFORMS only — drop_deprecated_swml_verbs and
+    hoist_inline_objects — so the type set and every hoisted name are the oracle's
+    by construction (one algorithm, not a re-derivation). Its imports are stdlib
+    only; nothing PHP-specific is taken from it."""
+    path = psdk / "scripts" / "generate_python_rest_types.py"
+    spec = importlib.util.spec_from_file_location("_ref_rest_types", path)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        raise SystemExit(f"generate_swml_verbs.py: cannot load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    # It imports its porting-sdk/scripts siblings (_yaml_load) by bare name.
+    sys.path.insert(0, str(path.parent))
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.path.remove(str(path.parent))
+    return mod
+
+
 def _load_defs(psdk: Path) -> dict:
+    """schema.json ``$defs`` transformed exactly as the reference SWML-verb module
+    sees them: deprecated verbs dropped (owner ruling 2026-09-24: dial/eval/if are
+    not SDK surface), inline objects hoisted to named defs (``<Verb>Config`` /
+    ``<Verb><Path>``), and the SWAIG response ENVELOPE types (SwaigAction /
+    SwaigResponse + the objects hoisted out of them) removed — those are declared
+    once, by the SWAIG action module."""
     doc = json.loads((psdk / "schema.json").read_text())
     defs = doc.get("$defs")
     if not defs:
         raise SystemExit("generate_swml_verbs.py: schema.json has no $defs")
-    return defs
+    ref = _load_reference_generator(psdk)
+    defs, _dropped = ref.drop_deprecated_swml_verbs(defs)
+    verb_roots: dict[str, str] = {}
+    for arm in (defs.get("SWMLMethod") or {}).get("anyOf") or []:
+        wrapper = str(arm.get("$ref") or "").rsplit("/", 1)[-1]
+        wprops = list(((defs.get(wrapper) or {}).get("properties") or {}).keys())
+        if wprops:
+            verb_roots[wrapper] = wprops[0]
+    defs, _hoisted = ref.hoist_inline_objects(defs, verb_roots)
+    envelope = [n for n in ref.SWAIG_ENVELOPE_TYPES if n in defs]
+    return {
+        name: sch
+        for name, sch in defs.items()
+        if not any(
+            name == n or (name.startswith(n) and name[len(n) : len(n) + 1].isupper())
+            for n in envelope
+        )
+    }
 
 
 def _ref_leaf(ref: str) -> str:
@@ -172,8 +219,14 @@ namespace SignalWire\\SWML\\Generated;
 """
 
 
-def _emit_class(psdk: Path, php_name: str, schema_name: str, properties: dict,
-                defs: dict, source_desc: str) -> str:
+def _emit_class(
+    psdk: Path,
+    php_name: str,
+    schema_name: str,
+    properties: dict,
+    defs: dict,
+    source_desc: str,
+) -> str:
     """Emit one method-less PHP data class for an object/config schema. Property
     typing reuses generate_rest.php_property_type (pure idiom — the surface records
     only the class name; types keep the DTO PHPStan-L9-clean). SDK-surface policy
@@ -183,8 +236,12 @@ def _emit_class(psdk: Path, php_name: str, schema_name: str, properties: dict,
     lines.append("/**")
     lines.append(f" * {php_name} — generated SWML verb config type ({source_desc}).")
     lines.append(" *")
-    lines.append(" * Pure data DTO: public typed properties carrying the snake wire key; no")
-    lines.append(" * methods (the reference records this as a method-less type definition).")
+    lines.append(
+        " * Pure data DTO: public typed properties named for the snake_case wire keys"
+    )
+    lines.append(
+        " * they carry. It declares no methods — the values ARE the interface."
+    )
     lines.append(" */")
     lines.append(f"class {php_name}")
     lines.append("{")
@@ -242,7 +299,11 @@ def build_outputs(psdk: Path) -> dict[str, str]:
             continue
         emitted_names.add(php_name)
         outs[f"{php_name}.php"] = _emit_class(
-            psdk, php_name, raw_name, node.get("properties") or {}, defs,
+            psdk,
+            php_name,
+            raw_name,
+            node.get("properties") or {},
+            defs,
             f"$defs schema {raw_name!r}",
         )
 
@@ -279,7 +340,11 @@ def build_outputs(psdk: Path) -> dict[str, str]:
             # scopes target real spec schema names (AIParams), so pass the verb
             # wrapper name — a scoped rule won't match here, which is correct.
             outs[f"{php_name}.php"] = _emit_class(
-                psdk, php_name, wrapper, props, defs,
+                psdk,
+                php_name,
+                wrapper,
+                props,
+                defs,
                 f"flattened SWMLMethod verb {verb!r} config",
             )
 
@@ -290,9 +355,12 @@ def build_outputs(psdk: Path) -> dict[str, str]:
 # Driver.
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="GEN-FRESH: exit non-zero if stale")
+    ap.add_argument(
+        "--check", action="store_true", help="GEN-FRESH: exit non-zero if stale"
+    )
     ap.add_argument("--out", default="", help="scratch: emit into this dir")
     args = ap.parse_args(argv)
 
@@ -317,11 +385,15 @@ def main(argv: list[str]) -> int:
                 if rel not in expected:
                     stale.append(f"{p} (leftover — not in generator output)")
         if stale:
-            sys.stderr.write("GEN-FRESH FAIL: %d generated SWML-verb file(s) stale:\n" % len(stale))
+            sys.stderr.write(
+                f"GEN-FRESH FAIL: {len(stale)} generated SWML-verb file(s) stale:\n"
+            )
             for s in stale:
-                sys.stderr.write("  - %s\n" % s)
+                sys.stderr.write(f"  - {s}\n")
             return 1
-        print("GEN-FRESH: generated SWML-verb files match porting-sdk/schema.json ($defs).")
+        print(
+            "GEN-FRESH: generated SWML-verb files match porting-sdk/schema.json ($defs)."
+        )
         return 0
 
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -260,8 +260,8 @@ class CallingMockTest extends TestCase
     {
         $body = $this->client->calling()->tap(
             'call-1',
-            ['type' => 'audio'],
-            ['type' => 'rtp']
+            tap: ['type' => 'audio'],
+            device: ['type' => 'rtp'],
         );
         $this->assertArrayHasKey('id', $body);
         $p = $this->commandAssert($this->mock->journal()->last(), 'calling.tap', 'call-1');

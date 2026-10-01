@@ -128,8 +128,7 @@ function pg_walk(array $pages): array
 
     foreach ($pages as $page) {
         // Scenarios are FIFO consume-once; arm each page in order.
-        $body = is_array($page) ? $page : (array) $page;
-        $mock->scenarios()->set(PG_ENDPOINT_ID, 200, $body);
+        $mock->scenarios()->set(PG_ENDPOINT_ID, 200, $page);
     }
 
     $it = new PaginatedIterator($client->getHttp(), PG_LIST_PATH, null, 'data');
@@ -148,7 +147,7 @@ function pg_walk(array $pages): array
     $ids = [];
     $hung = false;
     foreach ($it as $row) {
-        $id = is_array($row) ? ($row['id'] ?? null) : null;
+        $id = $row['id'] ?? null;
         if (is_string($id)) {
             $ids[] = $id;
         }

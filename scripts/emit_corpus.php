@@ -202,7 +202,7 @@ $corpus = [
     // ---- tap (each direction / codec) --------------------------------------
     'tap.defaults' => fn () => fr('')->tap('rtp://10.0.0.1:5004'),
     'tap.speak_pcma' => fn () => fr('')->tap('ws://ex.com/tap', direction: 'speak', codec: 'PCMA'),
-    'tap.hear_pcmu' => fn () => fr('')->tap('wss://ex.com/tap', direction: 'hear', codec: 'PCMU'),
+    'tap.listen_pcmu' => fn () => fr('')->tap('wss://ex.com/tap', direction: 'listen', codec: 'PCMU'),
     'tap.both_full' => fn () => fr('')->tap(
         'rtp://10.0.0.1:5004',
         controlId: 'tap1',
@@ -297,6 +297,30 @@ $corpus = [
     'execute_swml.json_string' => fn () => fr('')->executeSwml(
         '{"version": "1.0.0", "sections": {"main": [{"hangup": {}}]}}'
     ),
+
+    // ---- structured tool response (tool_result / tool_prompt) ---------------
+    'tool_response.ctor' => fn () => new FunctionResult(
+        toolResult: 'Order 1042 placed.',
+        toolPrompt: 'Tell the caller their order number.',
+    ),
+    'tool_response.set' => fn () => fr('')->setToolResponse(
+        'Balance is $12.50.',
+        'Read the balance to the caller.',
+    ),
+    'tool_response.result_only' => fn () => fr('')->setToolResponse(toolResult: 'Saved.'),
+
+    // ---- hold with a prompt and step routing --------------------------------
+    'hold.prompt' => fn () => fr('')->hold('Please hold while I check.'),
+    'hold.routing' => fn () => fr('')->hold('One moment.', 60, step: 'resume', timeoutStep: 'timed_out'),
+
+    // ---- RPC global data ----------------------------------------------------
+    'rpc_ai_message.global_data' => fn () => fr('')->rpcAiMessage(
+        'call-abc',
+        'The caller is back.',
+        globalData: ['status' => 'returned'],
+    ),
+    'rpc_ai_message.data_only' => fn () => fr('')->rpcAiMessage('call-abc', globalData: ['order_id' => '1042']),
+    'rpc_ai_global_data' => fn () => fr('')->rpcAiGlobalData('call-abc', ['order_id' => '1042', 'paid' => true]),
 ];
 
 $out = [];

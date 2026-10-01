@@ -14,12 +14,20 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * SubscriberGuestTokenCreateResponse — generated wire type from the 'fabric' spec (components/schemas 'SubscriberGuestTokenCreateResponse').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SubscriberGuestTokenCreateResponse
 {
     public ?string $token = null;
 
     public ?string $refresh_token = null;
+
+    public ?string $address_uri = null;
+
+    public ?string $expires_at = null;
+
+    public ?int $expires_in = null;
+
+    public ?string $issued_at = null;
 }

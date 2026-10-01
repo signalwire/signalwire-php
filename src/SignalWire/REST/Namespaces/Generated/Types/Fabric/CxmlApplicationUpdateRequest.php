@@ -14,42 +14,34 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * CxmlApplicationUpdateRequest — generated wire type from the 'fabric' spec (components/schemas 'CxmlApplicationUpdateRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CxmlApplicationUpdateRequest
 {
-    public ?string $display_name = null;
+    public ?string $name = null;
 
-    public ?string $account_sid = null;
+    public ?string $call_request_url = null;
 
-    public ?string $voice_url = null;
+    public ?string $call_request_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $voice_method = null;
+    public ?string $call_fallback_url = null;
 
-    public ?string $voice_fallback_url = null;
+    public ?string $call_fallback_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $voice_fallback_method = null;
+    public ?string $call_status_url = null;
 
-    public ?string $status_callback = null;
+    public ?string $call_status_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $status_callback_method = null;
+    public ?string $message_request_url = null;
 
-    public ?string $sms_url = null;
+    public ?string $message_request_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $sms_method = null;
+    public ?string $message_fallback_url = null;
 
-    public ?string $sms_fallback_url = null;
+    public ?string $message_fallback_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $sms_fallback_method = null;
+    public ?string $message_status_url = null;
 
-    public ?string $sms_status_callback = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $sms_status_callback_method = null;
+    public ?string $message_status_method = null;
 }

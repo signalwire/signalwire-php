@@ -26,10 +26,13 @@ class FabricTokens extends \SignalWire\REST\BaseResource
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createSubscriberToken(string $reference, ?int $expireAt = null, ?string $applicationId = null, ?string $password = null, ?string $firstName = null, ?string $lastName = null, ?string $displayName = null, ?string $jobTitle = null, ?string $timeZone = null, ?string $country = null, ?string $region = null, ?string $companyName = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function createSubscriberToken(string $reference, ?string $ch = null, ?int $expireAt = null, ?string $applicationId = null, ?string $password = null, ?string $firstName = null, ?string $lastName = null, ?string $displayName = null, ?string $jobTitle = null, ?string $timeZone = null, ?string $country = null, ?string $region = null, ?string $companyName = null, ?string $scope = null, ?string $fingerprint = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['reference'] = $reference;
+        if ($ch !== null) {
+            $__body['ch'] = $ch;
+        }
         if ($expireAt !== null) {
             $__body['expire_at'] = $expireAt;
         }
@@ -63,8 +66,14 @@ class FabricTokens extends \SignalWire\REST\BaseResource
         if ($companyName !== null) {
             $__body['company_name'] = $companyName;
         }
+        if ($scope !== null) {
+            $__body['scope'] = $scope;
+        }
+        if ($fingerprint !== null) {
+            $__body['fingerprint'] = $fingerprint;
+        }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/subscribers/tokens', $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -77,40 +86,56 @@ class FabricTokens extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['refresh_token'] = $refreshToken;
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/subscribers/tokens/refresh', $__body, requestOptions: $requestOptions);
     }
 
     /**
+     * @param list<mixed>|null $allowedAddresses
      * @param array<string,mixed> $extras Forward-compat body fields.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createInviteToken(string $addressId, ?int $expiresAt = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function createGuestToken(?array $allowedAddresses = null, ?int $expireAt = null, ?string $ch = null, ?string $region = null, ?string $email = null, ?string $firstName = null, ?string $lastName = null, ?string $displayName = null, ?string $jobTitle = null, ?string $timeZone = null, ?string $country = null, ?string $companyName = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
-        $__body['address_id'] = $addressId;
-        if ($expiresAt !== null) {
-            $__body['expires_at'] = $expiresAt;
+        if ($allowedAddresses !== null) {
+            $__body['allowed_addresses'] = $allowedAddresses;
         }
-        $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/subscriber/invites', $__body, $requestOptions);
-    }
-
-    /**
-     * @param list<mixed> $allowedAddresses
-     * @param array<string,mixed> $extras Forward-compat body fields.
-     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
-     * @return array<string,mixed>
-     */
-    public function createGuestToken(array $allowedAddresses, ?int $expireAt = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
-    {
-        $__body = [];
-        $__body['allowed_addresses'] = $allowedAddresses;
         if ($expireAt !== null) {
             $__body['expire_at'] = $expireAt;
         }
+        if ($ch !== null) {
+            $__body['ch'] = $ch;
+        }
+        if ($region !== null) {
+            $__body['region'] = $region;
+        }
+        if ($email !== null) {
+            $__body['email'] = $email;
+        }
+        if ($firstName !== null) {
+            $__body['first_name'] = $firstName;
+        }
+        if ($lastName !== null) {
+            $__body['last_name'] = $lastName;
+        }
+        if ($displayName !== null) {
+            $__body['display_name'] = $displayName;
+        }
+        if ($jobTitle !== null) {
+            $__body['job_title'] = $jobTitle;
+        }
+        if ($timeZone !== null) {
+            $__body['time_zone'] = $timeZone;
+        }
+        if ($country !== null) {
+            $__body['country'] = $country;
+        }
+        if ($companyName !== null) {
+            $__body['company_name'] = $companyName;
+        }
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/guests/tokens', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/guests/tokens', $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -123,6 +148,6 @@ class FabricTokens extends \SignalWire\REST\BaseResource
         $__body = [];
         $__body['token'] = $token;
         $__body = array_merge($__body, $extras);
-        return $this->http->post('/api/fabric/embeds/tokens', $__body, $requestOptions);
+        return $this->http->post('/api/fabric/embeds/tokens', $__body, requestOptions: $requestOptions);
     }
 }

@@ -38,7 +38,7 @@ class SipProfile extends \SignalWire\REST\BaseResource
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(?string $domainIdentifier = null, ?array $defaultCodecs = null, ?array $defaultCiphers = null, ?string $defaultEncryption = null, ?string $defaultSendAs = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function update(?string $domainIdentifier = null, ?array $defaultCodecs = null, ?array $defaultCiphers = null, ?string $defaultEncryption = null, ?string $defaultSendAs = null, ?string $defaultOutboundPolicy = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($domainIdentifier !== null) {
@@ -56,7 +56,10 @@ class SipProfile extends \SignalWire\REST\BaseResource
         if ($defaultSendAs !== null) {
             $__body['default_send_as'] = $defaultSendAs;
         }
+        if ($defaultOutboundPolicy !== null) {
+            $__body['default_outbound_policy'] = $defaultOutboundPolicy;
+        }
         $__body = array_merge($__body, $extras);
-        return $this->http->put($this->basePath, $__body, $requestOptions);
+        return $this->http->put($this->basePath, $__body, requestOptions: $requestOptions);
     }
 }

@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Video;
 /**
  * UpdateConferenceRequest — generated wire type from the 'video' spec (components/schemas 'UpdateConferenceRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class UpdateConferenceRequest
 {
@@ -23,9 +23,9 @@ class UpdateConferenceRequest
 
     public ?string $description = null;
 
-    public ?string $join_from = null;
+    public string|float|null $join_from = null;
 
-    public ?string $join_until = null;
+    public string|float|null $join_until = null;
 
     public ?string $quality = null;
 

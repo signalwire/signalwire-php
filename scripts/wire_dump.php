@@ -28,6 +28,8 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use SignalWire\Security\AuthHandler;
+use SignalWire\Security\BasicCredentials;
+use SignalWire\Security\BearerCredentials;
 use SignalWire\Security\SecurityUtils;
 use SignalWire\Security\SessionManager;
 use SignalWire\Security\WebhookValidator;
@@ -143,13 +145,16 @@ $out['wire_validate_webhook_signature_bad'] = [
 // ---- auth verification (basic / bearer / api-key) — oracle marks _pending; ----
 // the differ skips these, but we emit them so the surface is complete.
 $out['wire_verify_basic_auth'] = [
-    'valid' => (new AuthHandler(basicAuth: ['u', 'p']))->verifyBasicAuth('u', 'p'),
+    'valid' => (new AuthHandler(basicAuth: ['u', 'p']))
+        ->verifyBasicAuth(new BasicCredentials('u', 'p')),
 ];
 $out['wire_verify_basic_auth_bad'] = [
-    'valid' => (new AuthHandler(basicAuth: ['u', 'p']))->verifyBasicAuth('u', 'wrong'),
+    'valid' => (new AuthHandler(basicAuth: ['u', 'p']))
+        ->verifyBasicAuth(new BasicCredentials('u', 'wrong')),
 ];
 $out['wire_verify_bearer_token'] = [
-    'valid' => (new AuthHandler(bearerToken: 'secret-bearer'))->verifyBearerToken('secret-bearer'),
+    'valid' => (new AuthHandler(bearerToken: 'secret-bearer'))
+        ->verifyBearerToken(new BearerCredentials('Bearer', 'secret-bearer')),
 ];
 $out['wire_verify_api_key'] = [
     'valid' => (new AuthHandler(apiKey: 'sw-key-123'))->verifyApiKey('sw-key-123'),

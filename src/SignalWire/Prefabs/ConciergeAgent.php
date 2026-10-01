@@ -7,6 +7,17 @@ namespace SignalWire\Prefabs;
 use SignalWire\Agent\AgentBase;
 use SignalWire\SWAIG\FunctionResult;
 
+/**
+ * Ready-made venue-concierge agent: answers questions about a venue's
+ * services, amenities, and hours.
+ *
+ * Configured from a `$venueInfo` array — only `venue_name` is meaningful as a
+ * required key (a missing or non-string value degrades to an empty name
+ * rather than throwing); `services`, `amenities`, `hours_of_operation`,
+ * `special_instructions`, and `welcome_message` are optional. Registers two
+ * SWAIG tools: `check_availability` and `get_directions`. Default route
+ * `/concierge`.
+ */
 class ConciergeAgent extends AgentBase
 {
     protected string $venueName;

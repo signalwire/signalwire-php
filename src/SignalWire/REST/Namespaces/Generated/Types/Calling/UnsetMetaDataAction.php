@@ -14,11 +14,84 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * UnsetMetaDataAction — generated wire type from the 'calling' spec (components/schemas 'UnsetMetaDataAction').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class UnsetMetaDataAction
 {
     /** @var array<string,mixed>|null */
+    public ?array $SWML = null;
+
+    /** @var list<mixed>|null */
+    public ?array $add_dynamic_hints = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $back_to_back_functions = null;
+
+    public ?string $change_context = null;
+
+    public ?string $change_step = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $change_voice = null;
+
+    public bool|string|null $clear_dynamic_hints = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $context_switch = null;
+
+    public ?int $end_of_speech_timeout = null;
+
+    public bool|string|null $extensive_data = null;
+
+    public bool|string|null $functions_on_speaker_timeout = null;
+
+    public bool|string|null $hangup = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $hold = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $playback_bg = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $replace_in_history = null;
+
+    public ?string $say = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $set_global_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $set_meta_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $settings = null;
+
+    public ?int $speech_event_timeout = null;
+
+    public bool|string|null $stop = null;
+
+    /** @var bool|string|int|array<string,mixed>|list<mixed>|null */
+    public bool|string|int|array|null $stop_playback_bg = null;
+
+    /** @var list<mixed>|null */
+    public ?array $toggle_functions = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $transfer = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $unset_global_data = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $unset_meta_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $user_event = null;
+
+    public ?string $user_input = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $wait_for_user = null;
 }

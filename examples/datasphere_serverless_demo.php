@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * DataSphere Serverless Demo
  *
@@ -20,11 +22,19 @@ $agent->setParams(['ai_model' => 'gpt-4.1-nano']);
 
 echo "Creating agent with DataSphere Serverless skill (DataMap implementation)...\n";
 
-try { $agent->addSkill('datetime'); echo "Added datetime skill\n"; }
-catch (\Exception $e) { echo "Failed: " . $e->getMessage() . "\n"; }
+try {
+    $agent->addSkill('datetime');
+    echo "Added datetime skill\n";
+} catch (\Exception $e) {
+    echo 'Failed: ' . $e->getMessage() . "\n";
+}
 
-try { $agent->addSkill('math'); echo "Added math skill\n"; }
-catch (\Exception $e) { echo "Failed: " . $e->getMessage() . "\n"; }
+try {
+    $agent->addSkill('math');
+    echo "Added math skill\n";
+} catch (\Exception $e) {
+    echo 'Failed: ' . $e->getMessage() . "\n";
+}
 
 // Replace with your actual DataSphere details
 $config = [
@@ -48,7 +58,7 @@ try {
     ]));
     echo "Added DataSphere Serverless instance (tool: search_knowledge)\n";
 } catch (\Exception $e) {
-    echo "Failed: " . $e->getMessage() . "\n";
+    echo 'Failed: ' . $e->getMessage() . "\n";
 }
 
 $loaded = $agent->listSkills();

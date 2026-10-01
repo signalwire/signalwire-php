@@ -12,18 +12,19 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * TransferConfig — generated SWML verb config type (flattened SWMLMethod verb 'transfer' config).
+ * TransferConfig — generated SWML verb config type ($defs schema 'TransferConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class TransferConfig
 {
-    public ?string $dest = null;
-
     /** @var array<string,mixed>|null */
-    public ?array $params = null;
+    public ?array $dest = null;
 
     /** @var array<string,mixed>|null */
     public ?array $meta = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $params = null;
 }

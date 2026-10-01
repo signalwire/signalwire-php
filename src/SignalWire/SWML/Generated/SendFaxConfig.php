@@ -12,18 +12,22 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * SendFaxConfig — generated SWML verb config type (flattened SWMLMethod verb 'send_fax' config).
+ * SendFaxConfig — generated SWML verb config type ($defs schema 'SendFaxConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SendFaxConfig
 {
-    public ?string $document = null;
+    /** @var array<string,mixed>|null */
+    public ?array $document = null;
 
-    public ?string $header_info = null;
+    /** @var array<string,mixed>|null */
+    public ?array $header_info = null;
 
-    public ?string $identity = null;
+    /** @var array<string,mixed>|null */
+    public ?array $identity = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
 }

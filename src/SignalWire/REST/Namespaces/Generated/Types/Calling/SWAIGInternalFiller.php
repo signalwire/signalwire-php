@@ -14,35 +14,35 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * SWAIGInternalFiller — generated wire type from the 'calling' spec (components/schemas 'SWAIGInternalFiller').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SWAIGInternalFiller
 {
     /** @var array<string,mixed>|null */
-    public ?array $hangup = null;
+    public ?array $adjust_response_latency = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $change_context = null;
 
     /** @var array<string,mixed>|null */
     public ?array $check_time = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $get_ideal_strategy = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $get_visual_input = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $next_step = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $pause_conversation = null;
 
     /** @var array<string,mixed>|null */
     public ?array $wait_for_user = null;
 
     /** @var array<string,mixed>|null */
     public ?array $wait_seconds = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $adjust_response_latency = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $next_step = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $change_context = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $get_visual_input = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $get_ideal_strategy = null;
 }

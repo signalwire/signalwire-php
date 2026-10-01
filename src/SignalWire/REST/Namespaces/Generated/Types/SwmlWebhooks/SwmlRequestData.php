@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\SwmlWebhooks;
 /**
  * SwmlRequestData — generated wire type from the 'swml_webhooks' spec (components/schemas 'SwmlRequestData').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SwmlRequestData
 {
@@ -25,9 +25,7 @@ class SwmlRequestData
     /** @var array<string,mixed>|null */
     public ?array $vars = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $envs = null;
+    public mixed $envs = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $params = null;
+    public mixed $params = null;
 }

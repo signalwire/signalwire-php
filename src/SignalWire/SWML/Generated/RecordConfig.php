@@ -12,38 +12,40 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * RecordConfig — generated SWML verb config type (flattened SWMLMethod verb 'record' config).
+ * RecordConfig — generated SWML verb config type ($defs schema 'RecordConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class RecordConfig
 {
     /** @var array<string,mixed>|null */
-    public ?array $stereo = null;
-
-    /** @var array<string,mixed>|null */
     public ?array $format = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $direction = null;
-
-    public ?string $terminators = null;
 
     /** @var array<string,mixed>|null */
     public ?array $beep = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $input_sensitivity = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $initial_timeout = null;
+    public ?array $direction = null;
 
     /** @var array<string,mixed>|null */
     public ?array $end_silence_timeout = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $initial_timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $input_sensitivity = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $max_length = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $stereo = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $terminators = null;
 }

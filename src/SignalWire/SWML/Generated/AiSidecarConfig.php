@@ -12,41 +12,46 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * AiSidecarConfig — generated SWML verb config type (flattened SWMLMethod verb 'ai_sidecar' config).
+ * AiSidecarConfig — generated SWML verb config type ($defs schema 'AiSidecarConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class AiSidecarConfig
 {
     /** @var array<string,mixed>|null */
-    public ?array $prompt = null;
-
-    public ?string $lang = null;
-
-    public ?string $model = null;
-
-    /** @var list<mixed>|null */
-    public ?array $direction = null;
-
-    public ?string $customer_role = null;
-
-    public ?string $url = null;
+    public ?array $SWAIG = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $SWAIG = null;
+    public ?array $action = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $customer_role = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $direction = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $global_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $hints = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $lang = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $params = null;
 
     /** @var array<string,mixed>|null */
     public ?array $permissions = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $global_data = null;
-
-    /** @var list<mixed>|null */
-    public ?array $hints = null;
+    public ?array $prompt = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $params = null;
-
-    public mixed $action = null;
+    public ?array $url = null;
 }

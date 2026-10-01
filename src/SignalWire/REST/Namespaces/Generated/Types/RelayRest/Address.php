@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * Address — generated wire type from the 'relay_rest' spec (components/schemas 'Address').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Address
 {
@@ -46,4 +46,10 @@ class Address
     public ?string $postal_code = null;
 
     public ?string $zip_code = null;
+
+    public ?bool $emergency_enabled = null;
+
+    public ?bool $validated = null;
+
+    public ?string $validated_at = null;
 }

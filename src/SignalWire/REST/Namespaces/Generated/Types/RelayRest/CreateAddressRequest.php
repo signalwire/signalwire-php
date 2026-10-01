@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * CreateAddressRequest — generated wire type from the 'relay_rest' spec (components/schemas 'CreateAddressRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateAddressRequest
 {
@@ -40,4 +40,8 @@ class CreateAddressRequest
     public ?string $state = null;
 
     public ?string $postal_code = null;
+
+    public ?bool $emergency_enabled = null;
+
+    public ?bool $auto_correct_address = null;
 }

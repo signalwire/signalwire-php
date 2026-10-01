@@ -14,14 +14,34 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * LanguageParams — generated wire type from the 'calling' spec (components/schemas 'LanguageParams').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class LanguageParams
 {
+    public ?string $emotion = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $pitch = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $similarity = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speakingRate = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speed = null;
+
     /** @var array<string,mixed>|null */
     public ?array $stability = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $similarity = null;
+    public ?array $streaming = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $temperature = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $vol = null;
 }

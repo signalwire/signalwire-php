@@ -30,7 +30,8 @@ $send = static function (array $obj, int $status = 200): void {
     echo json_encode($obj);
 };
 
-$path = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/');
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$path = rtrim((string) parse_url(is_string($requestUri) ? $requestUri : '', PHP_URL_PATH), '/');
 if ($path !== '/api/ai/chat') {
     $send(['jsonrpc' => '2.0', 'error' => ['code' => -32601, 'message' => 'unknown path'], 'id' => null], 404);
     return;
@@ -51,6 +52,7 @@ if (!is_array($data)) {
 
 $rid = $data['id'] ?? null;
 $method = $data['method'] ?? '';
+$method = is_string($method) ? $method : '';
 $params = is_array($data['params'] ?? null) ? $data['params'] : [];
 $cid = $params['id'] ?? null;
 
@@ -70,7 +72,7 @@ if ($method === 'summarize' && $cid === '__summarize_error') {
     return;
 }
 
-if (!isset($canned[$method]) || !is_string($method)) {
+if (!isset($canned[$method])) {
     $send(['jsonrpc' => '2.0', 'error' => ['code' => -32601, 'message' => 'unknown method'], 'id' => $rid]);
     return;
 }

@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace SignalWire\SWML;
 
+/**
+ * An in-memory SWML document: a version plus named sections, each an ordered
+ * list of verb objects.
+ *
+ * Renders to the `{version, sections}` wire shape via
+ * {@see Document::render()} / {@see Document::renderPretty()}, both of which
+ * leave slashes and unicode unescaped.
+ */
 class Document
 {
     private string $version = '1.0.0';
@@ -11,6 +19,11 @@ class Document
     /** @var array<string, list<array<string, mixed>>> */
     private array $sections = [];
 
+    /**
+     * Starts at SWML version 1.0.0 with an empty `main` section already
+     * present — so `main` always exists and {@see Document::addSection()}
+     * reports false for it.
+     */
     public function __construct()
     {
         $this->sections['main'] = [];

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Step Function Inheritance Demo
  *
@@ -55,19 +57,19 @@ $agent->defineTool(
     'lookup_account',
     'Look up customer account details by account number',
     ['account_number' => ['type' => 'string']],
-    fn(array $args, array $raw) => new FunctionResult('looked up'),
+    fn (array $args, array $raw) => new FunctionResult('looked up'),
 );
 $agent->defineTool(
     'process_payment',
     'Process a payment for the current customer',
     ['amount' => ['type' => 'number']],
-    fn(array $args, array $raw) => new FunctionResult('payment processed'),
+    fn (array $args, array $raw) => new FunctionResult('payment processed'),
 );
 $agent->defineTool(
     'send_receipt',
     'Email a receipt to the customer',
     ['email' => ['type' => 'string']],
-    fn(array $args, array $raw) => new FunctionResult('sent'),
+    fn (array $args, array $raw) => new FunctionResult('sent'),
 );
 
 // Build the contexts.

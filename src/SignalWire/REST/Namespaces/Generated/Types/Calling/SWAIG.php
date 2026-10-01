@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * SWAIG — generated wire type from the 'calling' spec (components/schemas 'SWAIG').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SWAIG
 {
@@ -23,14 +23,20 @@ class SWAIG
     public ?array $defaults = null;
 
     /** @var list<mixed>|null */
-    public ?array $native_functions = null;
+    public ?array $functions = null;
+
+    /** @var list<mixed>|null */
+    public ?array $hooks = null;
 
     /** @var list<mixed>|null */
     public ?array $includes = null;
 
-    /** @var list<mixed>|null */
-    public ?array $functions = null;
-
     /** @var array<string,mixed>|null */
     public ?array $internal_fillers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $mcp_servers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $native_functions = null;
 }

@@ -14,17 +14,19 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 /**
  * CXMLScriptUpdateRequest — generated wire type from the 'fabric' spec (components/schemas 'CXMLScriptUpdateRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CXMLScriptUpdateRequest
 {
-    public ?string $display_name = null;
-
     public ?string $contents = null;
 
     public ?string $status_callback_url = null;
 
     /** @var array<string,mixed>|null */
     public ?array $status_callback_method = null;
+
+    public ?string $name = null;
+
+    public ?string $script_type = null;
 }

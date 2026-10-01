@@ -27,6 +27,10 @@ class FabricResourcePUT extends CrudWithAddresses
 {
     protected string $updateMethod = 'PUT';
 
+    /**
+     * Pins the update verb to PUT — the `$updateMethod` argument the parent
+     * accepts is not exposed here, so subclasses cannot widen it back.
+     */
     public function __construct(HttpClient $client, string $basePath)
     {
         parent::__construct($client, $basePath, 'PUT');

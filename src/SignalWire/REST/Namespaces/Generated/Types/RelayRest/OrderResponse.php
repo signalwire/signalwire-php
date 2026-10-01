@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * OrderResponse — generated wire type from the 'relay_rest' spec (components/schemas 'OrderResponse').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class OrderResponse
 {
@@ -30,4 +30,11 @@ class OrderResponse
     public ?string $updated_at = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $campaign_id = null;
+
+    public ?string $brand_id = null;
+
+    /** @var list<mixed>|null */
+    public ?array $phone_numbers = null;
 }

@@ -6,6 +6,10 @@ namespace SignalWire\Skills\Builtin;
 
 use SignalWire\Skills\SkillBase;
 
+/**
+ * Lets the AI start and stop background audio from a configured file list,
+ * emitted as DataMap tools. Requires a non-empty `files` param.
+ */
 class PlayBackgroundFile extends SkillBase
 {
     /**
@@ -83,6 +87,10 @@ class PlayBackgroundFile extends SkillBase
         return 'Control background file playback';
     }
 
+    /**
+     * True — several file sets may be loaded on one agent, distinguished by
+     * `tool_name` (default `play_background_file`).
+     */
     public function supportsMultipleInstances(): bool
     {
         return true;
@@ -143,6 +151,10 @@ class PlayBackgroundFile extends SkillBase
         return $schema;
     }
 
+    /**
+     * Require a non-empty ARRAY `files` param; returns false (skill not
+     * loaded) when it is missing, empty, or not an array.
+     */
     public function setup(): bool
     {
         if (empty($this->params['files']) || !is_array($this->params['files'])) {
@@ -152,6 +164,11 @@ class PlayBackgroundFile extends SkillBase
         return true;
     }
 
+    /**
+     * Register every definition from {@see PlayBackgroundFile::getTools()} as
+     * a raw SWAIG function, merging this skill's `swaig_fields` in as
+     * TOP-LEVEL function-definition keys.
+     */
     public function registerTools(): void
     {
         foreach ($this->getTools() as $funcDef) {

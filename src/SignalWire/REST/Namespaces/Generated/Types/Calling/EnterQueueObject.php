@@ -14,21 +14,26 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * EnterQueueObject — generated wire type from the 'calling' spec (components/schemas 'EnterQueueObject').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class EnterQueueObject
 {
-    public ?string $queue_name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $execute_after_queue = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $transfer_after_bridge = null;
+    public ?array $queue_name = null;
 
-    public ?string $status_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $wait_time = null;
 
     /** @var array<string,mixed>|null */
     public ?array $wait_url = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $wait_time = null;
+    public ?array $whisper_url = null;
 }

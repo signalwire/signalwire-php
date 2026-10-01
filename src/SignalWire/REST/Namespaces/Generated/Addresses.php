@@ -36,7 +36,7 @@ class Addresses extends \SignalWire\REST\BaseResource
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $label, string $country, string $firstName, string $lastName, string $streetNumber, string $streetName, string $city, string $state, string $postalCode, ?string $addressType = null, ?string $addressNumber = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function create(string $label, string $country, string $firstName, string $lastName, string $streetNumber, string $streetName, string $city, string $state, string $postalCode, ?string $addressType = null, ?string $addressNumber = null, ?bool $emergencyEnabled = null, ?bool $autoCorrectAddress = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['label'] = $label;
@@ -54,8 +54,14 @@ class Addresses extends \SignalWire\REST\BaseResource
         if ($addressNumber !== null) {
             $__body['address_number'] = $addressNumber;
         }
+        if ($emergencyEnabled !== null) {
+            $__body['emergency_enabled'] = $emergencyEnabled;
+        }
+        if ($autoCorrectAddress !== null) {
+            $__body['auto_correct_address'] = $autoCorrectAddress;
+        }
         $__body = array_merge($__body, $extras);
-        return $this->http->post($this->basePath, $__body, $requestOptions);
+        return $this->http->post($this->basePath, $__body, requestOptions: $requestOptions);
     }
 
     /**
@@ -66,6 +72,57 @@ class Addresses extends \SignalWire\REST\BaseResource
     public function get(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         return $this->http->get($this->path($id), $params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function update(string $id, ?string $label = null, ?string $country = null, ?string $firstName = null, ?string $lastName = null, ?string $streetNumber = null, ?string $streetName = null, ?string $addressType = null, ?string $addressNumber = null, ?string $city = null, ?string $state = null, ?string $postalCode = null, ?bool $emergencyEnabled = null, ?bool $autoCorrectAddress = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__body = [];
+        if ($label !== null) {
+            $__body['label'] = $label;
+        }
+        if ($country !== null) {
+            $__body['country'] = $country;
+        }
+        if ($firstName !== null) {
+            $__body['first_name'] = $firstName;
+        }
+        if ($lastName !== null) {
+            $__body['last_name'] = $lastName;
+        }
+        if ($streetNumber !== null) {
+            $__body['street_number'] = $streetNumber;
+        }
+        if ($streetName !== null) {
+            $__body['street_name'] = $streetName;
+        }
+        if ($addressType !== null) {
+            $__body['address_type'] = $addressType;
+        }
+        if ($addressNumber !== null) {
+            $__body['address_number'] = $addressNumber;
+        }
+        if ($city !== null) {
+            $__body['city'] = $city;
+        }
+        if ($state !== null) {
+            $__body['state'] = $state;
+        }
+        if ($postalCode !== null) {
+            $__body['postal_code'] = $postalCode;
+        }
+        if ($emergencyEnabled !== null) {
+            $__body['emergency_enabled'] = $emergencyEnabled;
+        }
+        if ($autoCorrectAddress !== null) {
+            $__body['auto_correct_address'] = $autoCorrectAddress;
+        }
+        $__body = array_merge($__body, $extras);
+        return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
     }
 
     /**

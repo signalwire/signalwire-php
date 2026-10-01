@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * CreateDomainApplicationRequest — generated wire type from the 'relay_rest' spec (components/schemas 'CreateDomainApplicationRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateDomainApplicationRequest
 {
@@ -63,6 +63,8 @@ class CreateDomainApplicationRequest
     public ?string $call_video_room_id = null;
 
     public ?string $call_relay_script_url = null;
+
+    public ?string $call_relay_script_url_method = null;
 
     public ?string $call_dialogflow_agent_id = null;
 

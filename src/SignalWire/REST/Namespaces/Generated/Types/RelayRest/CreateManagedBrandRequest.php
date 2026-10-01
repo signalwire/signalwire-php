@@ -14,8 +14,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * CreateManagedBrandRequest — generated wire type from the 'relay_rest' spec (components/schemas 'CreateManagedBrandRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class CreateManagedBrandRequest
 {
@@ -40,4 +40,9 @@ class CreateManagedBrandRequest
     public ?string $company_website = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $csp_brand_reference = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

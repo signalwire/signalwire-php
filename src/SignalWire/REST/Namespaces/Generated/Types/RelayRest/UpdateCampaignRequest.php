@@ -14,10 +14,15 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 /**
  * UpdateCampaignRequest — generated wire type from the 'relay_rest' spec (components/schemas 'UpdateCampaignRequest').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class UpdateCampaignRequest
 {
     public ?string $name = null;
+
+    public ?string $status_callback_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

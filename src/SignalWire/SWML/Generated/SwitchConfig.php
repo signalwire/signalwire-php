@@ -12,18 +12,19 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * SwitchConfig — generated SWML verb config type (flattened SWMLMethod verb 'switch' config).
+ * SwitchConfig — generated SWML verb config type ($defs schema 'SwitchConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class SwitchConfig
 {
-    public ?string $variable = null;
+    /** @var array<string,mixed>|null */
+    public ?array $default = null;
 
     /** @var array<string,mixed>|null */
     public ?array $case = null;
 
-    /** @var list<mixed>|null */
-    public ?array $default = null;
+    /** @var array<string,mixed>|null */
+    public ?array $variable = null;
 }

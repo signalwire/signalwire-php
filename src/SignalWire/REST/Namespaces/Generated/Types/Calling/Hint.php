@@ -14,17 +14,17 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 /**
  * Hint — generated wire type from the 'calling' spec (components/schemas 'Hint').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class Hint
 {
-    public ?string $hint = null;
-
     public ?string $pattern = null;
 
-    public ?string $replace = null;
+    public ?string $hint = null;
 
     /** @var array<string,mixed>|null */
     public ?array $ignore_case = null;
+
+    public ?string $replace = null;
 }

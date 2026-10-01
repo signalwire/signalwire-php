@@ -140,6 +140,13 @@ class SignalWireRestError extends \RuntimeException
         return $this->requestId;
     }
 
+    /**
+     * `SignalWireRestError: <message> (HTTP <status>): <body>`.
+     *
+     * Note this embeds the RAW response body, which may contain
+     * server-supplied detail — treat the result as untrusted when logging or
+     * surfacing it to end users.
+     */
     public function __toString(): string
     {
         return sprintf(

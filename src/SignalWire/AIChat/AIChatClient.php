@@ -409,6 +409,97 @@ class AIChatClient
     }
 
     /**
+     * Send one JSON-RPC call and stream its response body back unread.
+     *
+     * For proxies that must relay the body rather than buffer it: the service
+     * pads a slow response with keepalive whitespace so intermediaries do not
+     * sever the connection mid-turn, and a proxy that awaits the whole body
+     * absorbs that padding and reintroduces the very timeout it exists to
+     * prevent. Iterate the generator and forward each chunk as it arrives; its
+     * return value ({@see \Generator::getReturn()}) is the HTTP status.
+     *
+     *     $stream = $client->rawPost('chat', ['id' => $id, 'message' => $text]);
+     *     foreach ($stream as $chunk) {
+     *         echo $chunk;
+     *         flush();
+     *     }
+     *     $status = $stream->getReturn();
+     *
+     * The caller owns interpreting the result -- including that a JSON-RPC
+     * error arrives under HTTP 200. Prefer the typed methods unless you are
+     * genuinely relaying bytes.
+     *
+     * @param array<string, mixed> $params
+     * @return \Generator<int, string, mixed, int> body chunks; returns the HTTP status
+     * @throws AIChatError On a transport-level failure.
+     */
+    public function rawPost(string $method, array $params): \Generator
+    {
+        $this->requestCounter++;
+        $payload = [
+            'jsonrpc' => '2.0',
+            'method' => $method,
+            'params' => (object) $params,
+            'id' => 'req-' . $this->requestCounter,
+        ];
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            throw new AIChatError(null, 'failed to encode JSON-RPC request');
+        }
+
+        $ch = curl_init();
+        if ($ch === false) {
+            throw new AIChatError(null, 'failed to initialize HTTP client');
+        }
+        /** @var \SplQueue<string> $pending */
+        $pending = new \SplQueue();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $encoded,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: ' . $this->authHeader,
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'User-Agent: ' . $this->userAgent,
+            ],
+            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
+            CURLOPT_LOW_SPEED_LIMIT => $this->readIdleTimeoutSeconds > 0 ? 1 : 0,
+            CURLOPT_LOW_SPEED_TIME => $this->readIdleTimeoutSeconds > 0 ? $this->readIdleTimeoutSeconds : 0,
+            CURLOPT_WRITEFUNCTION => static function ($handle, string $data) use ($pending): int {
+                $pending->enqueue($data);
+                return strlen($data);
+            },
+        ]);
+
+        $multi = curl_multi_init();
+        curl_multi_add_handle($multi, $ch);
+        try {
+            do {
+                $status = curl_multi_exec($multi, $running);
+                while (!$pending->isEmpty()) {
+                    yield $pending->dequeue();
+                }
+                if ($running > 0 && $status === CURLM_OK) {
+                    curl_multi_select($multi, 0.25);
+                }
+            } while ($running > 0 && $status === CURLM_OK);
+            while (!$pending->isEmpty()) {
+                yield $pending->dequeue();
+            }
+            $info = curl_multi_info_read($multi);
+            if (is_array($info) && ($info['result'] ?? CURLE_OK) !== CURLE_OK) {
+                throw new AIChatError(null, sprintf('HTTP transport error: %s', curl_error($ch)));
+            }
+            return (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        } finally {
+            curl_multi_remove_handle($multi, $ch);
+            curl_multi_close($multi);
+            curl_close($ch);
+        }
+    }
+
+    /**
      * Execute the POST and return ``[bodyText, httpStatus]``. Buffers the whole
      * body (leading keepalive whitespace is valid JSON); applies the byte-idle
      * read timeout, not a wall-clock total.

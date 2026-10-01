@@ -14,8 +14,8 @@ namespace SignalWire\SWML\Generated;
 /**
  * RingbackConfig — generated SWML verb config type ($defs schema 'RingbackConfig').
  *
- * Pure data DTO: public typed properties carrying the snake wire key; no
- * methods (the reference records this as a method-less type definition).
+ * Pure data DTO: public typed properties named for the snake_case wire keys
+ * they carry. It declares no methods — the values ARE the interface.
  */
 class RingbackConfig
 {
@@ -24,17 +24,6 @@ class RingbackConfig
     /** @var list<mixed>|null */
     public ?array $urls = null;
 
-    public ?float $volume = null;
-
-    public ?bool $auto_answer = null;
-
-    public ?string $say_voice = null;
-
-    public ?string $say_language = null;
-
-    public ?string $say_gender = null;
-
-    public ?string $status_url = null;
-
-    public ?int $loop = null;
+    /** @var array<string,mixed>|null */
+    public ?array $volume = null;
 }

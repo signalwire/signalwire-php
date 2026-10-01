@@ -184,8 +184,8 @@ class ParameterSchemaTest extends TestCase
     public function testAllFourTier1EnumsIntegrateViaValue(): void
     {
         // The Tier-2 builder integrates ALL four Tier-1 closed-set enums via
-        // ->value. The 3-vocabulary trap holds: RecordDirection uses "listen"
-        // where TapDirection uses "hear"; the Codec set is the 2-value SWAIG
+        // ->value. RecordDirection and TapDirection share speak/listen/both;
+        // the Codec set is the 2-value SWAIG
         // tap set, NOT the larger RELAY superset.
         $built = ParameterSchema::create()
             ->enum('fmt', RecordFormat::cases(), 'Recording format')
@@ -196,12 +196,12 @@ class ParameterSchemaTest extends TestCase
 
         $this->assertSame(['wav', 'mp3', 'mp4'], $built['fmt']['enum']);
         $this->assertSame(['speak', 'listen', 'both'], $built['rec_dir']['enum']);
-        $this->assertSame(['speak', 'hear', 'both'], $built['tap_dir']['enum']);
+        $this->assertSame(['speak', 'listen', 'both'], $built['tap_dir']['enum']);
         $this->assertSame(['PCMU', 'PCMA'], $built['codec']['enum']);
 
-        // listen (record) != hear (tap) — the vocabularies are NOT unified.
+        // tap and record_call share the speak/listen/both wire vocabulary.
         $this->assertNotContains('hear', $built['rec_dir']['enum']);
-        $this->assertNotContains('listen', $built['tap_dir']['enum']);
+        $this->assertNotContains('hear', $built['tap_dir']['enum']);
         // SWAIG tap codec set != the RELAY codec superset.
         $this->assertNotContains('OPUS', $built['codec']['enum']);
 

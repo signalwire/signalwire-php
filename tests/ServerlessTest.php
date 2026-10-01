@@ -43,6 +43,7 @@ class ServerlessTest extends TestCase
             $_SERVER['REQUEST_METHOD'],
             $_SERVER['PATH_INFO'],
             $_SERVER['REQUEST_URI'],
+            $_SERVER['QUERY_STRING'],
             $_SERVER['CONTENT_TYPE'],
             $_SERVER['CONTENT_LENGTH'],
             $_SERVER['HTTP_AUTHORIZATION'],
@@ -69,7 +70,7 @@ class ServerlessTest extends TestCase
     {
         putenv('FUNCTION_TARGET=myHandler');
 
-        $this->assertSame('gcf', Adapter::detect());
+        $this->assertSame('google_cloud_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -80,7 +81,7 @@ class ServerlessTest extends TestCase
     {
         putenv('K_SERVICE=my-cloud-run-service');
 
-        $this->assertSame('gcf', Adapter::detect());
+        $this->assertSame('google_cloud_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -91,7 +92,7 @@ class ServerlessTest extends TestCase
     {
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
 
-        $this->assertSame('azure', Adapter::detect());
+        $this->assertSame('azure_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -159,7 +160,7 @@ class ServerlessTest extends TestCase
         putenv('FUNCTION_TARGET=myHandler');
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
 
-        $this->assertSame('gcf', Adapter::detect());
+        $this->assertSame('google_cloud_function', Adapter::detect());
     }
 
     // ==================================================================
@@ -251,6 +252,64 @@ class ServerlessTest extends TestCase
 
         $result = Adapter::handleLambda($agent, $event, new \stdClass());
 
+        $this->assertSame(200, $result['statusCode']);
+    }
+
+    // ==================================================================
+    // 14b. handleLambda — query string reaches handleRequest()
+    // ==================================================================
+
+    /**
+     * Both lambda payload shapes carry the query differently: the parsed
+     * `queryStringParameters` mapping (REST API v1 and HTTP API v2) and the raw
+     * `rawQueryString` (HTTP API v2 only). The parsed mapping wins, mirroring
+     * the reference's extractor order. This is load-bearing rather than
+     * cosmetic: the per-call SWAIG `__token` rides the query string.
+     */
+    public function testHandleLambdaAppendsParsedQueryStringParameters(): void
+    {
+        $agent = $this->createMockAgent(200, ['ok' => true], 'POST', '/swaig?__token=abc123', [], null);
+
+        $event = [
+            'requestContext'         => ['http' => ['method' => 'POST']],
+            'rawPath'                => '/swaig',
+            'queryStringParameters'  => ['__token' => 'abc123'],
+            'headers'                => [],
+            'body'                   => null,
+        ];
+
+        $result = Adapter::handleLambda($agent, $event, new \stdClass());
+        $this->assertSame(200, $result['statusCode']);
+    }
+
+    public function testHandleLambdaFallsBackToRawQueryString(): void
+    {
+        $agent = $this->createMockAgent(200, ['ok' => true], 'POST', '/swaig?__token=abc123', [], null);
+
+        $event = [
+            'requestContext' => ['http' => ['method' => 'POST']],
+            'rawPath'        => '/swaig',
+            'rawQueryString' => '__token=abc123',
+            'headers'        => [],
+            'body'           => null,
+        ];
+
+        $result = Adapter::handleLambda($agent, $event, new \stdClass());
+        $this->assertSame(200, $result['statusCode']);
+    }
+
+    public function testHandleLambdaWithNoQueryLeavesPathUnchanged(): void
+    {
+        $agent = $this->createMockAgent(200, ['ok' => true], 'POST', '/swaig', [], null);
+
+        $event = [
+            'requestContext' => ['http' => ['method' => 'POST']],
+            'rawPath'        => '/swaig',
+            'headers'        => [],
+            'body'           => null,
+        ];
+
+        $result = Adapter::handleLambda($agent, $event, new \stdClass());
         $this->assertSame(200, $result['statusCode']);
     }
 
@@ -431,16 +490,41 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
-    // 23. handleCgi — Query string stripped from path
+    // 23. handleCgi — Query string PRESERVED on the path
     // ==================================================================
 
-    public function testHandleCgiStripsQueryString(): void
+    /**
+     * The query string reaches handleRequest(), which splits it back off before
+     * routing. It cannot be dropped here: the per-call SWAIG `__token`
+     * credential rides the query, so stripping it would silently make CGI a
+     * weaker transport than direct HTTP.
+     */
+    public function testHandleCgiPreservesQueryStringOnPathInfo(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $_SERVER['PATH_INFO']      = '/test?foo=bar';
 
-        // Path passed to handleRequest should be /test without query string
-        $agent = $this->createMockAgent(200, ['ok' => true], 'GET', '/test', [], null);
+        $agent = $this->createMockAgent(200, ['ok' => true], 'GET', '/test?foo=bar', [], null);
+
+        ob_start();
+        Adapter::handleCgi($agent);
+        $output = ob_get_clean();
+        $this->assertNotFalse($output);
+
+        $this->assertStringStartsWith('Status: 200 OK', $output);
+    }
+
+    /**
+     * PATH_INFO never carries the query; when the query lives only in
+     * QUERY_STRING it must still be recovered onto the path.
+     */
+    public function testHandleCgiRecoversQueryStringFromServerVar(): void
+    {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['PATH_INFO']      = '/test';
+        $_SERVER['QUERY_STRING']   = '__token=abc123';
+
+        $agent = $this->createMockAgent(200, ['ok' => true], 'GET', '/test?__token=abc123', [], null);
 
         ob_start();
         Adapter::handleCgi($agent);
@@ -585,7 +669,13 @@ class ServerlessTest extends TestCase
         // string rather than statically-folded per-case comparisons.)
         $values = array_map(fn (ExecutionMode $m) => $m->value, ExecutionMode::cases());
         sort($values);
-        $this->assertSame(['azure', 'cgi', 'gcf', 'lambda', 'server'], $values);
+        // These are the SAME five tokens the Python reference's
+        // get_execution_mode() returns and handle_serverless_request(mode=…)
+        // dispatches on — the enum must not invent a shorter dialect.
+        $this->assertSame(
+            ['azure_function', 'cgi', 'google_cloud_function', 'lambda', 'server'],
+            $values,
+        );
     }
 
     // ==================================================================
@@ -609,8 +699,8 @@ class ServerlessTest extends TestCase
         putenv('AWS_LAMBDA_FUNCTION_NAME');
 
         putenv('AZURE_FUNCTIONS_ENVIRONMENT=Production');
-        $this->assertSame(ExecutionMode::Azure, Adapter::detectMode());
-        $this->assertSame('azure', Adapter::detect());
+        $this->assertSame(ExecutionMode::AzureFunction, Adapter::detectMode());
+        $this->assertSame('azure_function', Adapter::detect());
         putenv('AZURE_FUNCTIONS_ENVIRONMENT');
 
         $_SERVER['GATEWAY_INTERFACE'] = 'CGI/1.1';
@@ -626,8 +716,8 @@ class ServerlessTest extends TestCase
     {
         $this->assertFalse(ExecutionMode::Server->isServerless());
         $this->assertTrue(ExecutionMode::Lambda->isServerless());
-        $this->assertTrue(ExecutionMode::Gcf->isServerless());
-        $this->assertTrue(ExecutionMode::Azure->isServerless());
+        $this->assertTrue(ExecutionMode::GoogleCloudFunction->isServerless());
+        $this->assertTrue(ExecutionMode::AzureFunction->isServerless());
         $this->assertTrue(ExecutionMode::Cgi->isServerless());
     }
 
@@ -638,7 +728,7 @@ class ServerlessTest extends TestCase
     public function testExecutionModeCoerceAcceptsEnumAndString(): void
     {
         // String arm (parity with the stringly-typed original).
-        $this->assertSame(ExecutionMode::Azure, ExecutionMode::coerce('azure'));
+        $this->assertSame(ExecutionMode::AzureFunction, ExecutionMode::coerce('azure_function'));
         $this->assertSame(ExecutionMode::Cgi, ExecutionMode::coerce('cgi'));
 
         // Enum arm (passthrough).
@@ -678,7 +768,7 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
-    // 34. serve($agent, ExecutionMode::Azure) dispatches to handleAzure path
+    // 34. serve($agent, ExecutionMode::AzureFunction) dispatches to handleAzure path
     //     (real behavior: handleRequest invoked, JSON response emitted)
     // ==================================================================
 
@@ -689,7 +779,7 @@ class ServerlessTest extends TestCase
         // serve() reads php://input for azure; with no body it parses to []
         // and still drives handleAzure -> agent->handleRequest.
         ob_start();
-        Adapter::serve($agent, ExecutionMode::Azure);
+        Adapter::serve($agent, ExecutionMode::AzureFunction);
         $output = ob_get_clean();
         $this->assertNotFalse($output);
 
@@ -703,7 +793,7 @@ class ServerlessTest extends TestCase
     }
 
     // ==================================================================
-    // 35. serve($agent, 'azure') — string arm reaches the same handler
+    // 35. serve($agent, 'azure_function') — string arm reaches the same handler
     // ==================================================================
 
     public function testServeWithStringAzureDispatchesToHandler(): void
@@ -711,7 +801,7 @@ class ServerlessTest extends TestCase
         $agent = $this->makeRecordingAgent();
 
         ob_start();
-        Adapter::serve($agent, 'azure');
+        Adapter::serve($agent, 'azure_function');
         $output = ob_get_clean();
         $this->assertNotFalse($output);
 
