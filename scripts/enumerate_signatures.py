@@ -418,14 +418,14 @@ FREE_FUNCTION_PARAM_OVERRIDES: dict[tuple[str, str], list[dict]] = {
     # core/post_prompt.py ``dialogue_turns(call_log, *, roles=DIALOGUE_ROLES,
     # drop_echo=None)``. PHP has no keyword-only params (callers reach them by
     # named argument) and reflection reports the ``self::DIALOGUE_ROLES`` default
-    # by VALUE and erases the tuple element type, so re-establish the canonical
+    # by VALUE and erases the element type, so re-establish the canonical
     # kind / type / named-constant default.
     ("signalwire.core.post_prompt", "dialogue_turns"): [
         {"name": "call_log", "type": "any", "required": True},
         {
             "name": "roles",
             "kind": "keyword",
-            "type": "tuple<string,any>",
+            "type": "list<string>",
             "required": False,
             "default": "DIALOGUE_ROLES",
         },
@@ -1304,11 +1304,17 @@ PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 # canonical return type string.
 RETURN_TYPE_REMAPS: dict[tuple[str, str], str] = {
     # ChatGateway::router / HandoffRouter::router — Python returns a FastAPI
-    # APIRouter to mount on the agent's app; PHP returns the mountable handler
+    # APIRouter (recorded as the HostAppRouter fold) to mount on the agent's app; PHP returns the mountable handler
     # (the `(method, path, headers, body) -> [status, headers, body]` callable
     # AgentBase::mount serves). Same role: the routes to mount beside the agent.
-    ("SignalWire\\AIChat\\ChatGateway", "router"): "class:APIRouter",
-    ("SignalWire\\AIChat\\HandoffRouter", "router"): "class:APIRouter",
+    (
+        "SignalWire\\AIChat\\ChatGateway",
+        "router",
+    ): "class:signalwire.core.web.HostAppRouter",
+    (
+        "SignalWire\\AIChat\\HandoffRouter",
+        "router",
+    ): "class:signalwire.core.web.HostAppRouter",
     # onCallEnd returns the handler it registered (PHPDoc records the shape).
     ("SignalWire\\Agent\\AgentBase", "onCallEnd"): (
         "callable<list<list<dict<string,any>>,dict<string,any>>,void>"
