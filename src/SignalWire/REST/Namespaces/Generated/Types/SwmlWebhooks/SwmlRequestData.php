@@ -25,9 +25,7 @@ class SwmlRequestData
     /** @var array<string,mixed>|null */
     public ?array $vars = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $envs = null;
+    public mixed $envs = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $params = null;
+    public mixed $params = null;
 }

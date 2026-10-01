@@ -46,4 +46,10 @@ class AddressResponse
     public ?string $postal_code = null;
 
     public ?string $zip_code = null;
+
+    public ?bool $emergency_enabled = null;
+
+    public ?bool $validated = null;
+
+    public ?string $validated_at = null;
 }

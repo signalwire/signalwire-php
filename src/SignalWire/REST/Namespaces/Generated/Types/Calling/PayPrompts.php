@@ -19,14 +19,24 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class PayPrompts
 {
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $actions = null;
 
-    public ?string $for = null;
+    /** @var array<string,mixed>|null */
+    public ?array $attempt = null;
 
-    public ?string $attempts = null;
+    /** @var array<string,mixed>|null */
+    public ?array $card_type = null;
 
-    public ?string $card_type = null;
+    /** @var array<string,mixed>|null */
+    public ?array $error_type = null;
 
-    public ?string $error_type = null;
+    /** @var array<string,mixed>|null */
+    public ?array $for = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $play = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $require_matching_inputs = null;
 }

@@ -64,6 +64,8 @@ class CreateDomainApplicationRequest
 
     public ?string $call_relay_script_url = null;
 
+    public ?string $call_relay_script_url_method = null;
+
     public ?string $call_dialogflow_agent_id = null;
 
     public ?string $call_ai_agent_id = null;

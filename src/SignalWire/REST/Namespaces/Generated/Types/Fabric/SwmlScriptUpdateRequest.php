@@ -19,9 +19,11 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class SwmlScriptUpdateRequest
 {
-    public ?string $display_name = null;
-
     public ?string $contents = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $name = null;
+
+    public ?string $script_type = null;
 }

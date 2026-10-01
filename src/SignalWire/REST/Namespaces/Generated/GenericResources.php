@@ -86,4 +86,31 @@ class GenericResources extends \SignalWire\REST\BaseResource
         $__body = array_merge($__body, $extras);
         return $this->http->post($this->path($id, 'domain_applications'), $__body, requestOptions: $requestOptions);
     }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function assignSipEndpoint(string $id, string $sipEndpointId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__body = [];
+        $__body['sip_endpoint_id'] = $sipEndpointId;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path($id, 'sip_endpoints'), $__body, requestOptions: $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function assignWhatsappNumber(string $id, string $whatsappNumberId, string $handler, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__body = [];
+        $__body['whatsapp_number_id'] = $whatsappNumberId;
+        $__body['handler'] = $handler;
+        $__body = array_merge($__body, $extras);
+        return $this->http->post($this->path($id, 'whatsapp_numbers'), $__body, requestOptions: $requestOptions);
+    }
 }

@@ -19,7 +19,9 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class PayParameters
 {
-    public ?string $name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $name = null;
 
-    public ?string $value = null;
+    /** @var array<string,mixed>|null */
+    public ?array $value = null;
 }

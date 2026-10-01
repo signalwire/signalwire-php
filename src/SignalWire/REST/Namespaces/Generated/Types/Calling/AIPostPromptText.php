@@ -19,22 +19,26 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class AIPostPromptText
 {
-    public ?int $max_tokens = null;
+    public mixed $frequency_penalty = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $temperature = null;
+    public ?float $max_completion_tokens = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $top_p = null;
+    public ?float $max_tokens = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $confidence = null;
+    public ?string $model = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $presence_penalty = null;
+    /** @var list<mixed>|null */
+    public ?array $pom = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $frequency_penalty = null;
+    public mixed $presence_penalty = null;
+
+    public ?string $reasoning_effort = null;
+
+    public ?float $temperature = null;
 
     public ?string $text = null;
+
+    public ?float $top_p = null;
+
+    public ?string $verbosity = null;
 }

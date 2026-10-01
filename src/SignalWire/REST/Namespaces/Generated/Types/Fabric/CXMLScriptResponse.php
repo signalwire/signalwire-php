@@ -23,7 +23,7 @@ class CXMLScriptResponse
 
     public ?string $project_id = null;
 
-    public ?string $name = null;
+    public ?string $display_name = null;
 
     public ?string $type = null;
 

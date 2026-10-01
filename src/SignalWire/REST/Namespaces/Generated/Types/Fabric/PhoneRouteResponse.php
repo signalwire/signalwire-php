@@ -34,7 +34,7 @@ class PhoneRouteResponse
     /** @var array<string,mixed>|null */
     public ?array $channels = null;
 
-    public ?string $created_at = null;
-
     public ?string $type = null;
+
+    public ?string $resource_id = null;
 }

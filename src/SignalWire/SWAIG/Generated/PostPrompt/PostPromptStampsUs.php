@@ -23,8 +23,6 @@ class PostPromptStampsUs
 
     public ?int $last_word_end = null;
 
-    public ?int $suspected_end = null;
-
     public ?int $turn_decided = null;
 
     public ?int $status_pushed = null;

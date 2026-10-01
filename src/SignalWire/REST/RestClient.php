@@ -20,6 +20,12 @@ use SignalWire\REST\Namespaces\Generated\ResourceTree;
  * scripts/generate_rest.py, mirroring the Python reference's
  * ``_client_tree_generated`` assembly. The hand client keeps only what is NOT
  * spec-derivable: credentials/auth and HTTP-layer construction.
+ *
+ * The Space Administration API (``$client->space()``) authenticates with a
+ * user's Personal Access Token instead of a project token:
+ *
+ *     $admin = new RestClient(host: 'your-space.signalwire.com', personalAccessToken: 'pat_...');
+ *     $admin->space()->members()->list();
  */
 class RestClient
 {
@@ -27,10 +33,11 @@ class RestClient
 
     private string $projectId;
     private string $token;
-    private string $space;
+    private string $host;
     /** @var non-empty-string */
     private string $baseUrl;
     private HttpClient $http;
+    private HttpClient $patHttp;
 
     /**
      * @param string $project Project ID (falls back to SIGNALWIRE_PROJECT_ID env var).
@@ -47,34 +54,48 @@ class RestClient
      *        ``RestClient(request_options=...)``. Ordered before ``$caBundle``
      *        to match the reference's ``(project, token, host, request_options)``
      *        positional shape; ``$caBundle`` is the php-only trailing extra.
+     * @param string|null $personalAccessToken A user's Personal Access Token
+     *        (``pat_...``; falls back to SIGNALWIRE_PERSONAL_ACCESS_TOKEN). It
+     *        authenticates ``space()`` — the Space Administration API, which the
+     *        server serves only to a Personal Access Token (HTTP Basic with an
+     *        empty username). Either credential, or both, may be given; a request
+     *        on a resource whose credential is missing throws
+     *        ``\InvalidArgumentException`` before anything is sent.
+     * @param string|null $caBundle Optional CA bundle (PEM) for HTTPS peer
+     *        verification (php-only trailing extra).
      *
      * Parameter names mirror the Python reference's
-     * ``RestClient(project=, token=, host=, request_options=)`` so named-argument
-     * call sites are cross-port identical; the constructor also accepts these
-     * positionally.
+     * ``RestClient(project=, token=, host=, request_options=, personal_access_token=)``
+     * so named-argument call sites are cross-port identical; the constructor
+     * also accepts these positionally.
+     *
+     * @throws \InvalidArgumentException if the host is missing, or if neither a
+     *         complete project + token pair nor a personal access token is given.
      */
     public function __construct(
         string $project = '',
         string $token = '',
         string $host = '',
         ?RequestOptions $requestOptions = null,
+        ?string $personalAccessToken = null,
         ?string $caBundle = null
     ) {
         $this->projectId = $project !== '' ? $project : (string) getenv('SIGNALWIRE_PROJECT_ID');
         $this->token     = $token   !== '' ? $token : (string) getenv('SIGNALWIRE_API_TOKEN');
-        $this->space     = $host    !== '' ? $host : (string) getenv('SIGNALWIRE_SPACE');
+        $this->host      = $host    !== '' ? $host : (string) getenv('SIGNALWIRE_SPACE');
+        $pat = $personalAccessToken !== null && $personalAccessToken !== ''
+            ? $personalAccessToken
+            : (string) getenv('SIGNALWIRE_PERSONAL_ACCESS_TOKEN');
+        $hasProject = $this->projectId !== '' && $this->token !== '';
 
-        if ($this->projectId === '') {
+        if (!$hasProject && $pat === '') {
             throw new \InvalidArgumentException(
-                'projectId is required (pass explicitly or set SIGNALWIRE_PROJECT_ID)'
+                'projectId and token are required (pass explicitly or set '
+                . 'SIGNALWIRE_PROJECT_ID / SIGNALWIRE_API_TOKEN); for space() only, a '
+                . 'personalAccessToken (or SIGNALWIRE_PERSONAL_ACCESS_TOKEN) may be given instead'
             );
         }
-        if ($this->token === '') {
-            throw new \InvalidArgumentException(
-                'token is required (pass explicitly or set SIGNALWIRE_API_TOKEN)'
-            );
-        }
-        if ($this->space === '') {
+        if ($this->host === '') {
             throw new \InvalidArgumentException(
                 'space is required (pass explicitly or set SIGNALWIRE_SPACE)'
             );
@@ -92,11 +113,11 @@ class RestClient
         // (signalwire/rest/_base.py). A real space (<name>.signalwire.com) is
         // never loopback, so production is unaffected. An explicit scheme in the
         // host string is always honored verbatim (the branch above).
-        if (preg_match('#^https?://#i', $this->space)) {
-            $baseUrl = rtrim($this->space, '/');
+        if (preg_match('#^https?://#i', $this->host)) {
+            $baseUrl = rtrim($this->host, '/');
         } else {
-            $scheme = self::isLoopbackHost($this->space) ? 'http' : 'https';
-            $baseUrl = $scheme . '://' . $this->space;
+            $scheme = self::isLoopbackHost($this->host) ? 'http' : 'https';
+            $baseUrl = $scheme . '://' . $this->host;
         }
         // Genuine invariant: $space is non-empty (thrown above), so the
         // https:// branch is non-empty by construction, and the rtrim branch
@@ -105,7 +126,39 @@ class RestClient
         // rtrim/preg_match, so establish the true type at the source.
         assert($baseUrl !== '');
         $this->baseUrl = $baseUrl;
-        $this->http = new HttpClient($this->projectId, $this->token, $this->baseUrl, $requestOptions, $caBundle);
+        $this->http = $hasProject
+            ? new HttpClient($this->projectId, $this->token, $this->baseUrl, $requestOptions, $caBundle)
+            : self::missingCredentialHttp(
+                $this->baseUrl,
+                'projectId and token are required for this resource '
+                . '(SIGNALWIRE_PROJECT_ID / SIGNALWIRE_API_TOKEN); this client has only '
+                . 'a personal access token, which authenticates space()'
+            );
+        // A Personal Access Token is HTTP Basic with an EMPTY username (the
+        // server's Space API authenticator), so it rides the same HttpClient
+        // with '' as the user part.
+        $this->patHttp = $pat !== ''
+            ? new HttpClient('', $pat, $this->baseUrl, $requestOptions, $caBundle)
+            : self::missingCredentialHttp(
+                $this->baseUrl,
+                'personalAccessToken is required for space() '
+                . '(SIGNALWIRE_PERSONAL_ACCESS_TOKEN)'
+            );
+    }
+
+    /**
+     * Stand-in HTTP client for a credential this RestClient was not given:
+     * every request throws ``\InvalidArgumentException`` naming the missing
+     * credential before anything is sent, so a PAT-only client fails loudly on
+     * a project resource (and a project-only client on ``space()``) instead of
+     * sending a request the server can only refuse. Mirrors the reference's
+     * ``_MissingCredentialHttp``.
+     *
+     * @param non-empty-string $baseUrl
+     */
+    private static function missingCredentialHttp(string $baseUrl, string $message): HttpClient
+    {
+        return new MissingCredentialHttpClient($baseUrl, $message);
     }
 
     /**
@@ -132,6 +185,15 @@ class RestClient
         return $this->http;
     }
 
+    /**
+     * The Personal-Access-Token HttpClient the generated ResourceTree wires the
+     * PAT-secured namespaces (``space()``) to.
+     */
+    protected function generatedPatHttpClient(): HttpClient
+    {
+        return $this->patHttp;
+    }
+
     // -----------------------------------------------------------------
     // Getters
     // -----------------------------------------------------------------
@@ -151,7 +213,7 @@ class RestClient
     /** The SignalWire space (host). */
     public function getSpace(): string
     {
-        return $this->space;
+        return $this->host;
     }
 
     /** The base URL. */

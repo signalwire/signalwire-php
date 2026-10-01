@@ -21,19 +21,19 @@ class UserSWAIGFunction
 {
     public ?string $description = null;
 
-    public ?string $purpose = null;
-
     /** @var array<string,mixed>|null */
-    public ?array $parameters = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $fillers = null;
+    public ?array $active = null;
 
     /** @var array<string,mixed>|null */
     public ?array $argument = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $active = null;
+    public ?array $data_map = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $fillers = null;
+
+    public ?string $function = null;
 
     /** @var array<string,mixed>|null */
     public ?array $meta_data = null;
@@ -41,12 +41,12 @@ class UserSWAIGFunction
     public ?string $meta_data_token = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $data_map = null;
+    public ?array $parameters = null;
+
+    public ?string $purpose = null;
 
     /** @var array<string,mixed>|null */
     public ?array $skip_fillers = null;
-
-    public ?string $web_hook_url = null;
 
     public ?string $wait_file = null;
 
@@ -56,5 +56,11 @@ class UserSWAIGFunction
     /** @var array<string,mixed>|null */
     public ?array $wait_for_fillers = null;
 
-    public ?string $function = null;
+    public ?string $web_hook_auth_pass = null;
+
+    public ?string $web_hook_auth_password = null;
+
+    public ?string $web_hook_auth_user = null;
+
+    public ?string $web_hook_url = null;
 }

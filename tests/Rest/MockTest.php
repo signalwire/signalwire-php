@@ -133,6 +133,28 @@ class MockTest extends TestCase
     }
 
     /**
+     * {@link scopedClient()} for the Personal-Access-Token namespaces
+     * (``space()``): the client carries a unique random PAT (``pat_<12 hex>``)
+     * alongside a project credential, and the harness is scoped to the PAT's
+     * ``Authorization: Basic base64(":" . pat)`` header — the header the mock
+     * journals and scopes scenarios by for those routes.
+     *
+     * @return array{0: RestClient, 1: Harness, 2: string}  [client, mock, project]
+     */
+    public static function scopedPatClient(): array
+    {
+        $h = self::harness();
+        $project = 'test_proj_' . bin2hex(random_bytes(6));
+        $pat = 'pat_' . bin2hex(random_bytes(6));
+        $client = new RestClient($project, 'test_tok', $h->url(), personalAccessToken: $pat);
+
+        $mock = new Harness($h->url(), $h->port());
+        $mock->scopeTo('Basic ' . base64_encode(':' . $pat), $project);
+
+        return [$client, $mock, $project];
+    }
+
+    /**
      * Return the Harness (lazily booting the mock server). Tests that need
      * to inspect the journal or push scenarios should call this directly;
      * client() is a convenience wrapper that also resets state.

@@ -19,24 +19,26 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class Webhook
 {
-    /** @var list<mixed>|null */
-    public ?array $expressions = null;
-
     /** @var array<string,mixed>|null */
     public ?array $error_keys = null;
 
-    public ?string $url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $expressions = null;
 
     /** @var array<string,mixed>|null */
     public ?array $foreach = null;
 
+    public ?string $form_param = null;
+
     /** @var array<string,mixed>|null */
     public ?array $headers = null;
+
+    public ?bool $input_args_as_params = null;
 
     public ?string $method = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $input_args_as_params = null;
+    public ?array $output = null;
 
     /** @var array<string,mixed>|null */
     public ?array $params = null;
@@ -44,6 +46,5 @@ class Webhook
     /** @var array<string,mixed>|null */
     public ?array $require_args = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $output = null;
+    public ?string $url = null;
 }

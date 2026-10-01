@@ -19,26 +19,44 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class LanguagesWithFillers
 {
-    public ?string $name = null;
+    /** @var array<string,mixed>|null */
+    public ?array $auto_emotion = null;
 
-    public ?string $code = null;
+    /** @var array<string,mixed>|null */
+    public ?array $auto_speed = null;
 
-    public ?string $voice = null;
+    /** @var array<string,mixed>|null */
+    public ?array $code = null;
+
+    /** @var list<mixed>|null */
+    public ?array $double_turn_fillers = null;
+
+    public ?string $engine = null;
+
+    /** @var list<mixed>|null */
+    public ?array $fillers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $function_fillers = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $listen_language = null;
 
     public ?string $model = null;
 
-    public ?string $emotion = null;
-
-    public ?string $speed = null;
-
-    public ?string $engine = null;
+    public ?string $name = null;
 
     /** @var array<string,mixed>|null */
     public ?array $params = null;
 
     /** @var list<mixed>|null */
-    public ?array $function_fillers = null;
+    public ?array $pronounce = null;
 
     /** @var list<mixed>|null */
     public ?array $speech_fillers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $turn_fillers = null;
+
+    public ?string $voice = null;
 }

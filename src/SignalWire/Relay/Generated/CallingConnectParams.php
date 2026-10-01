@@ -33,5 +33,7 @@ class CallingConnectParams
     /** @var list<mixed>|null */
     public ?array $ringback = null;
 
+    public ?string $send_digits = null;
+
     public ?string $tag = null;
 }

@@ -19,11 +19,11 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class CondReg
 {
-    public ?string $when = null;
+    /** @var list<mixed>|null */
+    public ?array $else = null;
 
     /** @var list<mixed>|null */
     public ?array $then = null;
 
-    /** @var list<mixed>|null */
-    public ?array $else = null;
+    public ?string $when = null;
 }

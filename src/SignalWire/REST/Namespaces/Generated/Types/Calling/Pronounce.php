@@ -19,10 +19,10 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class Pronounce
 {
+    /** @var array<string,mixed>|null */
+    public ?array $ignore_case = null;
+
     public ?string $replace = null;
 
     public ?string $with = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $ignore_case = null;
 }

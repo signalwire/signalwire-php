@@ -19,5 +19,6 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class Label
 {
-    public ?string $label = null;
+    /** @var array<string,mixed>|null */
+    public ?array $label = null;
 }

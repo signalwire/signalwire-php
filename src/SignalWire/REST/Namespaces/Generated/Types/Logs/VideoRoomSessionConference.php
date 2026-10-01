@@ -35,7 +35,8 @@ class VideoRoomSessionConference
     /** @var array<string,mixed>|null */
     public ?array $status = null;
 
-    public ?bool $locked = null;
+    /** @var array<string,mixed>|null */
+    public ?array $locked = null;
 
     /** @var array<string,mixed>|null */
     public ?array $started_at = null;
@@ -43,7 +44,7 @@ class VideoRoomSessionConference
     /** @var array<string,mixed>|null */
     public ?array $ended_at = null;
 
-    public ?string $charge = null;
+    public ?float $charge = null;
 
     /** @var list<mixed>|null */
     public ?array $charge_details = null;

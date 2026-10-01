@@ -19,8 +19,6 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class SipEndpointCreateRequest
 {
-    public ?string $id = null;
-
     public ?string $username = null;
 
     public ?string $caller_id = null;
@@ -39,4 +37,6 @@ class SipEndpointCreateRequest
 
     /** @var array<string,mixed>|null */
     public ?array $calling_handler_resource_id = null;
+
+    public ?string $password = null;
 }

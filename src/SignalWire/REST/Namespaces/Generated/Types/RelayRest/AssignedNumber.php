@@ -28,6 +28,8 @@ class AssignedNumber
     /** @var array<string,mixed>|null */
     public ?array $phone_number = null;
 
+    public ?string $status_callback_url = null;
+
     public ?string $created_at = null;
 
     public ?string $updated_at = null;

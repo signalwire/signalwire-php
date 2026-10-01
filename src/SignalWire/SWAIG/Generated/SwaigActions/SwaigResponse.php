@@ -19,7 +19,8 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class SwaigResponse
 {
-    public ?string $response = null;
+    /** @var array<string,mixed>|null */
+    public ?array $response = null;
 
     /** @var SwaigAction|list<SwaigAction>|null */
     public SwaigAction|array|null $action = null;

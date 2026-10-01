@@ -34,6 +34,11 @@ class PhoneNumber
     /** @var array<string,mixed>|null */
     public ?array $e911_address_id = null;
 
+    /** @var array<string,mixed>|null */
+    public ?array $e911_status = null;
+
+    public ?string $cnam = null;
+
     public ?string $created_at = null;
 
     public ?string $updated_at = null;
@@ -41,8 +46,7 @@ class PhoneNumber
     /** @var array<string,mixed>|null */
     public ?array $next_billed_at = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $call_handler = null;
+    public ?string $call_handler = null;
 
     /** @var array<string,mixed>|null */
     public ?array $calling_handler_resource_id = null;
@@ -103,8 +107,7 @@ class PhoneNumber
     /** @var array<string,mixed>|null */
     public ?array $call_video_room_id = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $message_handler = null;
+    public ?string $message_handler = null;
 
     /** @var array<string,mixed>|null */
     public ?array $messaging_handler_resource_id = null;

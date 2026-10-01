@@ -49,4 +49,14 @@ class Recordings extends \SignalWire\REST\BaseResource
     {
         return $this->http->delete($this->path($id), $requestOptions);
     }
+
+    /**
+     * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return string The URL this endpoint redirects to (the Location of its redirect), not followed and not downloaded; fetch it with any HTTP client.
+     */
+    public function download(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): string
+    {
+        return $this->http->getRedirectLocation($this->path($id . '.mp3'), $params, $requestOptions);
+    }
 }

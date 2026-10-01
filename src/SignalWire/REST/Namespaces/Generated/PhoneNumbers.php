@@ -32,6 +32,60 @@ class PhoneNumbers extends \SignalWire\REST\CrudResource
     }
 
     /**
+     * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function assignE911Address(string $id, string $e911AddressId, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__body = [];
+        $__body['e911_address_id'] = $e911AddressId;
+        $__body = array_merge($__body, $extras);
+        return $this->client->post($this->path($id, 'e911_address'), $__body, requestOptions: $requestOptions);
+    }
+
+    /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function removeE911Address(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->delete($this->path($id, 'e911_address'), $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function getCnam(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->get($this->path($id, 'cnam'), $params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $extras Forward-compat body fields.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function requestCnam(string $id, string $name, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        $__body = [];
+        $__body['name'] = $name;
+        $__body = array_merge($__body, $extras);
+        return $this->client->post($this->path($id, 'cnam'), $__body, requestOptions: $requestOptions);
+    }
+
+    /**
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function clearCnam(string $id, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->delete($this->path($id, 'cnam'), $requestOptions);
+    }
+
+    /**
      * @param array<string,mixed> $extra
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>

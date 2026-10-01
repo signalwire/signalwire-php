@@ -131,6 +131,30 @@ class RelayRestGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function addressesUpdateSuccess(): void
+    {
+        $this->client->addresses()->update('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('PUT', $j->method);
+        $this->assertSame('relay-rest.update_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function addressesUpdateError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.update_address', 500, ['error' => 'x']);
+        try {
+            $this->client->addresses()->update('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.update_address', $j->matchedRoute);
+    }
+
+    #[Test]
     public function importedNumbersCreateSuccess(): void
     {
         $this->client->importedNumbers()->create('x', 'x');
@@ -467,6 +491,54 @@ class RelayRestGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function phoneNumbersAssignE911AddressSuccess(): void
+    {
+        $this->client->phoneNumbers()->assignE911Address('x', 'x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('relay-rest.assign_e911_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersAssignE911AddressError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.assign_e911_address', 500, ['error' => 'x']);
+        try {
+            $this->client->phoneNumbers()->assignE911Address('x', 'x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.assign_e911_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersClearCnamSuccess(): void
+    {
+        $this->client->phoneNumbers()->clearCnam('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('relay-rest.clear_caller_id_name', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersClearCnamError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.clear_caller_id_name', 500, ['error' => 'x']);
+        try {
+            $this->client->phoneNumbers()->clearCnam('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.clear_caller_id_name', $j->matchedRoute);
+    }
+
+    #[Test]
     public function phoneNumbersCreateSuccess(): void
     {
         $this->client->phoneNumbers()->create([]);
@@ -515,6 +587,30 @@ class RelayRestGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function phoneNumbersGetCnamSuccess(): void
+    {
+        $this->client->phoneNumbers()->getCnam('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('relay-rest.retrieve_caller_id_name', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersGetCnamError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.retrieve_caller_id_name', 500, ['error' => 'x']);
+        try {
+            $this->client->phoneNumbers()->getCnam('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.retrieve_caller_id_name', $j->matchedRoute);
+    }
+
+    #[Test]
     public function phoneNumbersGetSuccess(): void
     {
         $this->client->phoneNumbers()->get('x');
@@ -560,6 +656,54 @@ class RelayRestGeneratedTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame(500, $j->responseStatus);
         $this->assertSame('relay-rest.list_phone_numbers', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersRemoveE911AddressSuccess(): void
+    {
+        $this->client->phoneNumbers()->removeE911Address('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('relay-rest.remove_e911_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersRemoveE911AddressError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.remove_e911_address', 500, ['error' => 'x']);
+        try {
+            $this->client->phoneNumbers()->removeE911Address('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.remove_e911_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersRequestCnamSuccess(): void
+    {
+        $this->client->phoneNumbers()->requestCnam('x', 'x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('relay-rest.request_caller_id_name', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumbersRequestCnamError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.request_caller_id_name', 500, ['error' => 'x']);
+        try {
+            $this->client->phoneNumbers()->requestCnam('x', 'x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.request_caller_id_name', $j->matchedRoute);
     }
 
     #[Test]
@@ -827,6 +971,30 @@ class RelayRestGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function recordingsDownloadSuccess(): void
+    {
+        $this->client->recordings()->download('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('relay-rest.download_recording', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function recordingsDownloadError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.download_recording', 500, ['error' => 'x']);
+        try {
+            $this->client->recordings()->download('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.download_recording', $j->matchedRoute);
+    }
+
+    #[Test]
     public function recordingsGetSuccess(): void
     {
         $this->client->recordings()->get('x');
@@ -995,9 +1163,33 @@ class RelayRestGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function brandsUpdateSuccess(): void
+    {
+        $this->client->registry()->brands()->update('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('PUT', $j->method);
+        $this->assertSame('relay-rest.update_brand', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function brandsUpdateError(): void
+    {
+        $this->mock->scenarios()->set('relay-rest.update_brand', 500, ['error' => 'x']);
+        try {
+            $this->client->registry()->brands()->update('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('relay-rest.update_brand', $j->matchedRoute);
+    }
+
+    #[Test]
     public function campaignsCreateOrderSuccess(): void
     {
-        $this->client->registry()->campaigns()->createOrder('x');
+        $this->client->registry()->campaigns()->createOrder('x', []);
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame('relay-rest.create_order', $j->matchedRoute);
@@ -1008,7 +1200,7 @@ class RelayRestGeneratedTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.create_order', 500, ['error' => 'x']);
         try {
-            $this->client->registry()->campaigns()->createOrder('x');
+            $this->client->registry()->campaigns()->createOrder('x', []);
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(500, $e->getStatusCode());
@@ -1213,7 +1405,7 @@ class RelayRestGeneratedTest extends TestCase
     #[Test]
     public function shortCodesUpdateSuccess(): void
     {
-        $this->client->shortCodes()->update('x', 'x', 'x');
+        $this->client->shortCodes()->update('x');
         $j = $this->mock->journal()->last();
         $this->assertSame('PUT', $j->method);
         $this->assertSame('relay-rest.update_short_code', $j->matchedRoute);
@@ -1224,7 +1416,7 @@ class RelayRestGeneratedTest extends TestCase
     {
         $this->mock->scenarios()->set('relay-rest.update_short_code', 500, ['error' => 'x']);
         try {
-            $this->client->shortCodes()->update('x', 'x', 'x');
+            $this->client->shortCodes()->update('x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(500, $e->getStatusCode());

@@ -48,4 +48,7 @@ class AIAgent
     public ?string $agent_id = null;
 
     public ?string $name = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $multilingual = null;
 }

@@ -26,19 +26,9 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function listAddresses(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
-    {
-        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/addresses', $params, $requestOptions);
-    }
-
-    /**
-     * @param array<string,mixed> $params Query-string parameters.
-     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
-     * @return array<string,mixed>
-     */
     public function listVersions(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->get('/api/fabric/resources/call_flow/' . $id . '/versions', $params, $requestOptions);
+        return $this->client->get($this->path($id, 'versions'), $params, $requestOptions);
     }
 
     /**
@@ -48,6 +38,6 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      */
     public function deployVersion(string $id, array $body, ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
-        return $this->client->post('/api/fabric/resources/call_flow/' . $id . '/versions', $body, requestOptions: $requestOptions);
+        return $this->client->post($this->path($id, 'versions'), $body, requestOptions: $requestOptions);
     }
 }

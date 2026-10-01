@@ -40,4 +40,9 @@ class CreateManagedBrandRequest
     public ?string $company_website = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $csp_brand_reference = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

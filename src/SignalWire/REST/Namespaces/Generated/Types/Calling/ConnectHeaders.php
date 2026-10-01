@@ -21,5 +21,6 @@ class ConnectHeaders
 {
     public ?string $name = null;
 
-    public ?string $value = null;
+    /** @var array<string,mixed>|null */
+    public ?array $value = null;
 }

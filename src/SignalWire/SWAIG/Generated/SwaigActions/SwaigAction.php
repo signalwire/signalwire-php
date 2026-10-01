@@ -32,6 +32,8 @@ class SwaigAction
 
     public ?string $change_step = null;
 
+    public string|ChangeVoiceAction|null $change_voice = null;
+
     public ?bool $clear_dynamic_hints = null;
 
     public string|ContextSwitchAction|null $context_switch = null;

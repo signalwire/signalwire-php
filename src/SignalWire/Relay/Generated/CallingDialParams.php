@@ -28,5 +28,7 @@ class CallingDialParams
 
     public ?string $region = null;
 
+    public ?string $send_digits = null;
+
     public ?string $tag = null;
 }

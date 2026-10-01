@@ -40,4 +40,8 @@ class CreateAddressRequest
     public ?string $state = null;
 
     public ?string $postal_code = null;
+
+    public ?bool $emergency_enabled = null;
+
+    public ?bool $auto_correct_address = null;
 }

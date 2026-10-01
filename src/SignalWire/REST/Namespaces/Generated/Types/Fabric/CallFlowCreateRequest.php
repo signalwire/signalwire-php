@@ -20,4 +20,10 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
 class CallFlowCreateRequest
 {
     public ?string $title = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $flow_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $relayml = null;
 }

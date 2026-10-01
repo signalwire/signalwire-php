@@ -19,11 +19,15 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class SWAIGIncludes
 {
+    public ?string $auth_password = null;
+
+    public ?string $auth_user = null;
+
     /** @var list<mixed>|null */
     public ?array $functions = null;
 
-    public ?string $url = null;
-
     /** @var array<string,mixed>|null */
     public ?array $meta_data = null;
+
+    public ?string $url = null;
 }

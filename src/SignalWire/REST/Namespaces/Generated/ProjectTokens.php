@@ -27,13 +27,16 @@ class ProjectTokens extends \SignalWire\REST\BaseResource
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function create(string $name, array $permissions, ?string $subprojectId = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function create(string $name, array $permissions, ?string $subprojectId = null, ?string $projectId = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         $__body['name'] = $name;
         $__body['permissions'] = $permissions;
         if ($subprojectId !== null) {
             $__body['subproject_id'] = $subprojectId;
+        }
+        if ($projectId !== null) {
+            $__body['project_id'] = $projectId;
         }
         $__body = array_merge($__body, $extras);
         return $this->http->post($this->basePath, $__body, requestOptions: $requestOptions);

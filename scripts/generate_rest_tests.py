@@ -286,14 +286,29 @@ class {cls} extends TestCase
 
     protected function setUp(): void
     {{
-        [$this->client, $this->mock] = MockTest::scopedClient();
+        [$this->client, $this->mock] = MockTest::{client_factory}();
     }}
 """
 
+#: The security scheme a Personal-Access-Token spec declares (rest-apis/space) —
+#: the same name the resource generator and the mock key on.
+PAT_SECURITY_SCHEME = "SignalWirePersonalAccessToken"
 
-def emit_spec_file(spec: str, rows: list[dict]) -> str:
+
+def is_pat_spec(psdk: Path, spec: str) -> bool:
+    """True when the spec's root ``security`` accepts ONLY the Personal Access
+    Token: its tests drive a client carrying a PAT and scope the harness to the
+    PAT auth header (the mock rejects a project credential on those routes)."""
+    doc = yaml.safe_load((psdk / "rest-apis" / spec / "openapi.yaml").read_text())
+    security = (doc or {}).get("security") or []
+    names = [n for req in security if isinstance(req, dict) for n in req]
+    return bool(names) and all(n == PAT_SECURITY_SCHEME for n in names)
+
+
+def emit_spec_file(spec: str, rows: list[dict], pat: bool = False) -> str:
     cls = pascal_spec(spec) + "GeneratedTest"
-    body = HEADER_TMPL.format(spec=spec, cls=cls)
+    factory = "scopedPatClient" if pat else "scopedClient"
+    body = HEADER_TMPL.format(spec=spec, cls=cls, client_factory=factory)
     for r in rows:
         ident = method_ident(r["_slug"])
         call = r["_call"]
@@ -381,7 +396,7 @@ def build_outputs(psdk: Path) -> tuple[dict[str, str], list[str], int]:
         # generated/hand split (the go `_generated_test.go` / ts
         # `_generated.test.ts` marker, expressed in PHP's file-per-class idiom).
         fn = f"{pascal_spec(spec)}GeneratedTest.php"
-        outs[fn] = emit_spec_file(spec, srows)
+        outs[fn] = emit_spec_file(spec, srows, pat=is_pat_spec(psdk, spec))
 
     return outs, uncovered, len(covered_vias)
 

@@ -45,7 +45,12 @@ class AIAgentUpdateRequest
     /** @var array<string,mixed>|null */
     public ?array $SWAIG = null;
 
-    public ?string $agent_id = null;
-
     public ?string $name = null;
+
+    public ?string $post_prompt_auth_user = null;
+
+    public ?string $post_prompt_auth_password = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $multilingual = null;
 }

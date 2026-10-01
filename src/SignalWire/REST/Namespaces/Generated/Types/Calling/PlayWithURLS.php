@@ -23,16 +23,25 @@ class PlayWithURLS
     public ?array $auto_answer = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $volume = null;
-
-    public ?string $say_voice = null;
-
-    public ?string $say_language = null;
-
-    public ?string $say_gender = null;
-
-    public ?string $status_url = null;
+    public ?array $loop = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $say_gender = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $say_language = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $say_voice = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_url = null;
+
+    public ?string $url = null;
+
+    /** @var list<mixed>|null */
     public ?array $urls = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $volume = null;
 }

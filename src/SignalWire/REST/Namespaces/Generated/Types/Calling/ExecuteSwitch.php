@@ -19,11 +19,12 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class ExecuteSwitch
 {
-    public ?string $variable = null;
+    /** @var array<string,mixed>|null */
+    public ?array $default = null;
 
     /** @var array<string,mixed>|null */
     public ?array $case = null;
 
-    /** @var list<mixed>|null */
-    public ?array $default = null;
+    /** @var array<string,mixed>|null */
+    public ?array $variable = null;
 }

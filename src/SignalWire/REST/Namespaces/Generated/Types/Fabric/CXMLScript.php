@@ -32,7 +32,7 @@ class CXMLScript
 
     public ?string $script_type = null;
 
-    public ?string $display_name = null;
+    public ?string $name = null;
 
     /** @var array<string,mixed>|null */
     public ?array $status_callback_url = null;

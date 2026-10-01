@@ -19,16 +19,18 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
  */
 class AvailablePhoneNumber
 {
-    public ?string $number = null;
-
     public ?string $region = null;
-
-    public ?string $city = null;
 
     public ?string $rate_center = null;
 
-    public ?string $lata = null;
-
-    /** @var array<string,mixed>|null */
+    /** @var list<mixed>|null */
     public ?array $capabilities = null;
+
+    public ?string $e164 = null;
+
+    public ?string $national_number_formatted = null;
+
+    public ?string $international_number_formatted = null;
+
+    public ?string $country_code = null;
 }

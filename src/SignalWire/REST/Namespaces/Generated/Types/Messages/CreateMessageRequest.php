@@ -34,4 +34,17 @@ class CreateMessageRequest
 
     /** @var array<string,mixed>|null */
     public ?array $custom_variables = null;
+
+    public ?string $message_type = null;
+
+    public ?string $template_id = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $header_template_parameters = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $body_template_parameters = null;
+
+    /** @var list<mixed>|null */
+    public ?array $button_template_parameters = null;
 }

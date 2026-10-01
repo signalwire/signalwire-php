@@ -24,6 +24,4 @@ class AssignedPhoneNumber
     public ?string $name = null;
 
     public ?string $number = null;
-
-    public ?string $status_callback_url = null;
 }

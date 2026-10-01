@@ -31,7 +31,7 @@ class ConferenceRoom
 
     public ?string $quality = null;
 
-    public ?float $fps = null;
+    public ?int $fps = null;
 
     /** @var array<string,mixed>|null */
     public ?array $join_from = null;

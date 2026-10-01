@@ -19,9 +19,14 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class ConversationMessage
 {
-    public ?string $role = null;
-
     public ?string $content = null;
 
     public ?string $lang = null;
+
+    public ?string $role = null;
+
+    public ?string $tool_call_id = null;
+
+    /** @var list<mixed>|null */
+    public ?array $tool_calls = null;
 }

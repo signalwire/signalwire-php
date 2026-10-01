@@ -42,60 +42,51 @@ class CxmlApplications extends \SignalWire\REST\BaseResource
     }
 
     /**
-     * @param array<string,mixed>|null $voiceMethod
-     * @param array<string,mixed>|null $voiceFallbackMethod
-     * @param array<string,mixed>|null $statusCallbackMethod
-     * @param array<string,mixed>|null $smsMethod
-     * @param array<string,mixed>|null $smsFallbackMethod
-     * @param array<string,mixed>|null $smsStatusCallbackMethod
      * @param array<string,mixed> $extras Forward-compat body fields.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $id, ?string $displayName = null, ?string $accountSid = null, ?string $voiceUrl = null, ?array $voiceMethod = null, ?string $voiceFallbackUrl = null, ?array $voiceFallbackMethod = null, ?string $statusCallback = null, ?array $statusCallbackMethod = null, ?string $smsUrl = null, ?array $smsMethod = null, ?string $smsFallbackUrl = null, ?array $smsFallbackMethod = null, ?string $smsStatusCallback = null, ?array $smsStatusCallbackMethod = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function update(string $id, ?string $name = null, ?string $callRequestUrl = null, ?string $callRequestMethod = null, ?string $callFallbackUrl = null, ?string $callFallbackMethod = null, ?string $callStatusUrl = null, ?string $callStatusMethod = null, ?string $messageRequestUrl = null, ?string $messageRequestMethod = null, ?string $messageFallbackUrl = null, ?string $messageFallbackMethod = null, ?string $messageStatusUrl = null, ?string $messageStatusMethod = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
-        if ($displayName !== null) {
-            $__body['display_name'] = $displayName;
+        if ($name !== null) {
+            $__body['name'] = $name;
         }
-        if ($accountSid !== null) {
-            $__body['account_sid'] = $accountSid;
+        if ($callRequestUrl !== null) {
+            $__body['call_request_url'] = $callRequestUrl;
         }
-        if ($voiceUrl !== null) {
-            $__body['voice_url'] = $voiceUrl;
+        if ($callRequestMethod !== null) {
+            $__body['call_request_method'] = $callRequestMethod;
         }
-        if ($voiceMethod !== null) {
-            $__body['voice_method'] = $voiceMethod;
+        if ($callFallbackUrl !== null) {
+            $__body['call_fallback_url'] = $callFallbackUrl;
         }
-        if ($voiceFallbackUrl !== null) {
-            $__body['voice_fallback_url'] = $voiceFallbackUrl;
+        if ($callFallbackMethod !== null) {
+            $__body['call_fallback_method'] = $callFallbackMethod;
         }
-        if ($voiceFallbackMethod !== null) {
-            $__body['voice_fallback_method'] = $voiceFallbackMethod;
+        if ($callStatusUrl !== null) {
+            $__body['call_status_url'] = $callStatusUrl;
         }
-        if ($statusCallback !== null) {
-            $__body['status_callback'] = $statusCallback;
+        if ($callStatusMethod !== null) {
+            $__body['call_status_method'] = $callStatusMethod;
         }
-        if ($statusCallbackMethod !== null) {
-            $__body['status_callback_method'] = $statusCallbackMethod;
+        if ($messageRequestUrl !== null) {
+            $__body['message_request_url'] = $messageRequestUrl;
         }
-        if ($smsUrl !== null) {
-            $__body['sms_url'] = $smsUrl;
+        if ($messageRequestMethod !== null) {
+            $__body['message_request_method'] = $messageRequestMethod;
         }
-        if ($smsMethod !== null) {
-            $__body['sms_method'] = $smsMethod;
+        if ($messageFallbackUrl !== null) {
+            $__body['message_fallback_url'] = $messageFallbackUrl;
         }
-        if ($smsFallbackUrl !== null) {
-            $__body['sms_fallback_url'] = $smsFallbackUrl;
+        if ($messageFallbackMethod !== null) {
+            $__body['message_fallback_method'] = $messageFallbackMethod;
         }
-        if ($smsFallbackMethod !== null) {
-            $__body['sms_fallback_method'] = $smsFallbackMethod;
+        if ($messageStatusUrl !== null) {
+            $__body['message_status_url'] = $messageStatusUrl;
         }
-        if ($smsStatusCallback !== null) {
-            $__body['sms_status_callback'] = $smsStatusCallback;
-        }
-        if ($smsStatusCallbackMethod !== null) {
-            $__body['sms_status_callback_method'] = $smsStatusCallbackMethod;
+        if ($messageStatusMethod !== null) {
+            $__body['message_status_method'] = $messageStatusMethod;
         }
         $__body = array_merge($__body, $extras);
         return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);

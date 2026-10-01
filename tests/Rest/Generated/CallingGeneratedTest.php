@@ -37,7 +37,7 @@ class CallingGeneratedTest extends TestCase
     #[Test]
     public function callingDialSuccess(): void
     {
-        $this->client->calling()->dial('x', 'x');
+        $this->client->calling()->dial('x');
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame('calling.call-commands', $j->matchedRoute);
@@ -48,7 +48,7 @@ class CallingGeneratedTest extends TestCase
     {
         $this->mock->scenarios()->set('calling.call-commands', 500, ['error' => 'x']);
         try {
-            $this->client->calling()->dial('x', 'x');
+            $this->client->calling()->dial('x');
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(500, $e->getStatusCode());

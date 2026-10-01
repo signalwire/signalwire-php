@@ -28,8 +28,6 @@ class Project
 
     public ?bool $subproject = null;
 
-    public ?string $region_preference = null;
-
     public ?bool $protect_recordings = null;
 
     public ?bool $protect_message_media = null;

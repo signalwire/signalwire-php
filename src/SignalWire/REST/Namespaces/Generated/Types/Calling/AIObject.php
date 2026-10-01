@@ -20,6 +20,15 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 class AIObject
 {
     /** @var array<string,mixed>|null */
+    public ?array $SWAIG = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $agent = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $engine = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $global_data = null;
 
     /** @var list<mixed>|null */
@@ -29,19 +38,29 @@ class AIObject
     public ?array $languages = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $multilingual = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $params = null;
 
     /** @var array<string,mixed>|null */
     public ?array $post_prompt = null;
 
-    public ?string $post_prompt_url = null;
+    /** @var array<string,mixed>|null */
+    public ?array $post_prompt_auth_password = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $post_prompt_auth_user = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $post_prompt_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $prompt = null;
 
     /** @var list<mixed>|null */
     public ?array $pronounce = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $prompt = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $SWAIG = null;
+    public ?array $voice = null;
 }

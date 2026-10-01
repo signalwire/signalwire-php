@@ -19,9 +19,29 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class LanguageParams
 {
+    public ?string $emotion = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $pitch = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $similarity = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speakingRate = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speed = null;
+
     /** @var array<string,mixed>|null */
     public ?array $stability = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $similarity = null;
+    public ?array $streaming = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $temperature = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $vol = null;
 }

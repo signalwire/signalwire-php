@@ -93,6 +93,7 @@ _NS_ORDER = (
     "projects",
     "chat",
     "pubsub",
+    "space",
     "swml-webhooks",
 )
 
@@ -349,6 +350,21 @@ def load_bases(psdk: Path) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 
+#: The security scheme a Personal-Access-Token spec declares (rest-apis/space) — the
+#: same name the reference generator (generate_python_rest_types.py) and the mock
+#: (mock_signalwire/auth.py) key on.
+PAT_SECURITY_SCHEME = "SignalWirePersonalAccessToken"
+
+
+def _is_pat_spec(doc: dict) -> bool:
+    """True when the spec's root ``security`` accepts ONLY the Personal Access Token:
+    its resources are wired to the client's PAT credential, never the project token
+    (mirrors the reference generator's ``_is_pat_spec``)."""
+    security = doc.get("security") or []
+    names = [n for req in security if isinstance(req, dict) for n in req]
+    return bool(names) and all(n == PAT_SECURITY_SCHEME for n in names)
+
+
 class Spec:
     def __init__(self, name: str, doc: dict):
         self.name = name
@@ -359,14 +375,29 @@ class Spec:
                 f"{name}: servers[0].url path {self.server_path!r} has a trailing slash"
             )
         self.namespace_attr = (doc.get("x-sdk-namespace") or {}).get("attr") or ""
+        self.uses_pat = _is_pat_spec(doc)
         self.ops: dict[str, tuple[str, str, bool]] = {}
         self.op_body: dict[
             str, dict
         ] = {}  # operationId -> requestBody JSON schema (or {})
+        # operationId -> responses map (drives the success read: json/text/redirect)
+        self.op_responses: dict[str, dict] = {}
+        # operationId -> [(wire header name, required)] — declared header params
+        self.op_headers: dict[str, list[tuple[str, bool]]] = {}
         for path, item in (doc.get("paths") or {}).items():
             for verb in ("get", "post", "put", "patch", "delete"):
                 o = item.get(verb)
                 if o and o.get("operationId"):
+                    self.op_responses[o["operationId"]] = o.get("responses") or {}
+                    hdrs: list[tuple[str, bool]] = []
+                    for raw in [
+                        *(item.get("parameters") or []),
+                        *(o.get("parameters") or []),
+                    ]:
+                        prm = self._resolve_param(doc, raw)
+                        if prm.get("in") == "header":
+                            hdrs.append((prm["name"], bool(prm.get("required"))))
+                    self.op_headers[o["operationId"]] = hdrs
                     self.ops[o["operationId"]] = (
                         verb,
                         path,
@@ -379,6 +410,39 @@ class Spec:
                     )
                     self.op_body[o["operationId"]] = (media or {}).get("schema") or {}
         self.schemas = ((doc.get("components") or {}).get("schemas")) or {}
+
+    @staticmethod
+    def _resolve_param(doc: dict, raw: object) -> dict:
+        """A parameter object, following a ``#/components/parameters/<X>`` $ref."""
+        if not isinstance(raw, dict):
+            return {}
+        ref = raw.get("$ref")
+        if not ref:
+            return raw
+        node: object = doc
+        for part in str(ref).lstrip("#/").split("/"):
+            node = node.get(part, {}) if isinstance(node, dict) else {}
+        return node if isinstance(node, dict) else {}
+
+    def response_kind(self, op_id: str) -> tuple[str, str | None]:
+        """How an op's success is read, mirroring the reference generator:
+        ``json`` (default); ``text`` when the 2xx body is a non-JSON media type
+        (returns that media type for the Accept header); ``redirect`` when there
+        is no 2xx and a 3xx carries ``Location`` (the method returns that URL,
+        never following it)."""
+        responses = self.op_responses.get(op_id) or {}
+        ok = responses.get("200") or responses.get("201") or responses.get("2XX") or {}
+        ok_content = ok.get("content") or {}
+        text_media = next((m for m in ok_content if m != "application/json"), None)
+        if ok and "application/json" not in ok_content and text_media is not None:
+            return "text", text_media
+        if not ok:
+            for code, r in sorted(responses.items()):
+                if str(code).startswith("3") and "Location" in (
+                    (r or {}).get("headers") or {}
+                ):
+                    return "redirect", None
+        return "json", None
 
     def resources(self) -> list[tuple[str, dict]]:
         out = []
@@ -902,12 +966,18 @@ def method_call_path(spec: Spec, anchor: str, markup: dict, op_path: str):
     id_args: list[str] = []
     pieces: list[str] = []
     for s in segs:
-        if s.startswith("{") and s.endswith("}"):
-            arg = arg_for(s[1:-1])
+        m = re.fullmatch(r"([^{}]*)\{([^{}]+)\}([^{}]*)", s)
+        if m:
+            arg = arg_for(m.group(2))
             while arg in id_args:
                 arg += "2"
             id_args.append(arg)
-            pieces.append("$" + arg)
+            # A segment with text around the brace ({id}.mp3) concatenates it.
+            parts = [php_str(m.group(1))] if m.group(1) else []
+            parts.append("$" + arg)
+            if m.group(3):
+                parts.append(php_str(m.group(3)))
+            pieces.append(" . ".join(parts))
         else:
             pieces.append(php_str(s))
     if sibling:
@@ -965,6 +1035,37 @@ def emit_method(
     write_verb = verb in ("post", "put", "patch")
     doc = ["    /**"]
     body_ml: list[str] = []
+    kind, text_media = spec.response_kind(op_id)
+    if kind != "json" and verb != "get":
+        raise SystemExit(
+            f"{cls}.{method_snake} ({op_id}): {kind} success on {verb.upper()}; "
+            "only GET is supported"
+        )
+    headers = spec.op_headers.get(op_id) or []
+    if headers and not (verb == "post" and has_body):
+        raise SystemExit(
+            f"{cls}.{method_snake} ({op_id}): header parameter on a "
+            f"{verb.upper()} without an object body is not supported"
+        )
+    if any(not req for _h, req in headers):
+        raise SystemExit(
+            f"{cls}.{method_snake} ({op_id}): optional header parameter is not supported"
+        )
+    # Declared (required) header params: named params ahead of the body fields
+    # (the reference orders required headers first), sent per call.
+    header_args = [
+        (h, snake_to_camel(re.sub(r"[^0-9A-Za-z]+", "_", h).lower().strip("_")))
+        for h, _req in headers
+    ]
+    header_records = [
+        {
+            "name": re.sub(r"[^0-9A-Za-z]+", "_", h).lower().strip("_"),
+            "kind": "keyword",
+            "type": "string",
+            "required": True,
+        }
+        for h, _req in headers
+    ]
 
     # Every emitted verb takes a trailing keyword-only ``request_options`` (plan
     # 4.2) forwarded to the HTTP layer, never folded into the wire body. The
@@ -977,9 +1078,9 @@ def emit_method(
             # §5.1 object body → one named PHP param per spec field + extras.
             fields = object_body_fields(spec, body_schema)
             field_php, build, _, field_doc = body_params(
-                spec, cls, name, fields, id_records
+                spec, cls, name, fields, [*id_records, *header_records]
             )
-            params = id_params + field_php
+            params = id_params + [f"string ${a}" for _h, a in header_args] + field_php
             body_ml = build
             body_arg = "$__body"  # the collision-free request-body dict local (see body_params)
             doc.extend(field_doc)
@@ -1009,9 +1110,14 @@ def emit_method(
         # not, so the transport override sits at a different index per verb.
         # Naming it binds correctly for every verb and survives any future
         # insertion.
+        hdr_arg = ""
+        if header_args:
+            hdr_arg = ", headers: [" + ", ".join(
+                f"{php_str(h)} => ${a}" for h, a in header_args
+            ) + "]"
         call_line = (
             f"        return $this->{recv}->{verb_fn}"
-            f"({path_expr}, {body_arg}, requestOptions: $requestOptions);"
+            f"({path_expr}, {body_arg}, requestOptions: $requestOptions{hdr_arg});"
         )
     elif write_verb:
         # write verb, no body → empty body.
@@ -1033,9 +1139,20 @@ def emit_method(
         params = [*id_params, "array $params = []"]
         _register_sidecar(cls, name, [*id_records, _request_options_record()])
         doc.append("     * @param array<string,mixed> $params Query-string parameters.")
-        call_line = (
-            f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
-        )
+        if kind == "text":
+            call_line = (
+                f"        return $this->{recv}->getText({path_expr}, $params, "
+                f"$requestOptions, headers: ['Accept' => {php_str(text_media or '')}]);"
+            )
+        elif kind == "redirect":
+            call_line = (
+                f"        return $this->{recv}->getRedirectLocation"
+                f"({path_expr}, $params, $requestOptions);"
+            )
+        else:
+            call_line = (
+                f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
+            )
     else:  # delete
         params = id_params
         _register_sidecar(cls, name, [*id_records, _request_options_record()])
@@ -1048,10 +1165,21 @@ def emit_method(
     doc.append(_REQUEST_OPTIONS_DOC)
 
     sig = ", ".join(params)
-    doc.append("     * @return array<string,mixed>")
+    if kind == "redirect":
+        doc.append(
+            "     * @return string The URL this endpoint redirects to (the Location of "
+            "its redirect), not followed and not downloaded; fetch it with any HTTP client."
+        )
+        ret = "string"
+    elif kind == "text":
+        doc.append(f"     * @return string The {text_media} response body.")
+        ret = "string"
+    else:
+        doc.append("     * @return array<string,mixed>")
+        ret = "array"
     doc.append("     */")
     lines = "\n".join(doc) + "\n"
-    lines += f"    public function {name}({sig}): array\n    {{\n"
+    lines += f"    public function {name}({sig}): {ret}\n    {{\n"
     for bl in body_ml:
         lines += bl + "\n"
     lines += call_line + "\n    }\n"
@@ -1509,6 +1637,8 @@ CONTAINERS = {
     "registry": ("RegistryNamespace", "registry"),
     "project": ("ProjectNamespace", "project"),
     "datasphere": ("DatasphereNamespace", "datasphere"),
+    "space": ("SpaceNamespace", "space"),
+    "whatsapp": ("WhatsappNamespace", "whatsapp"),
 }
 
 # Accessor-name overrides — mirrors the Python reference generator's
@@ -1658,11 +1788,21 @@ def emit_resource_tree(placed) -> str:
     flats = []  # (accessor, class)
     containers_seen = []  # ordered container attrs
     seen_c = set()
-    for _spec, _anchor, markup, container in placed:
+    # Containers whose spec security is the Personal Access Token (rest-apis/space):
+    # wired to the client's PAT HttpClient, never the project-token one.
+    pat_containers: set[str] = set()
+    for spec, _anchor, markup, container in placed:
         name = markup["name"]
         if not container:
+            if spec.uses_pat:
+                raise SystemExit(
+                    f"{spec.name}: flat resource {name!r} in a Personal-Access-Token "
+                    "spec — PAT resources must sit under a namespace container"
+                )
             flats.append((flat_accessor(name), name))
         else:
+            if spec.uses_pat:
+                pat_containers.add(container)
             if container not in seen_c:
                 seen_c.add(container)
                 containers_seen.append(container)
@@ -1695,6 +1835,11 @@ def emit_resource_tree(placed) -> str:
     lines.append(
         "    abstract protected function generatedHttpClient(): \\SignalWire\\REST\\HttpClient;"
     )
+    if pat_containers:
+        lines.append("")
+        lines.append(
+            "    abstract protected function generatedPatHttpClient(): \\SignalWire\\REST\\HttpClient;"
+        )
     for accessor, cls in flats:
         lines.append("")
         lines.append(f"    public function {accessor}(): {cls}")
@@ -1712,9 +1857,10 @@ def emit_resource_tree(placed) -> str:
         lines.append(f"    public function {acc}(): {clsname}")
         lines.append("    {")
         lines.append(f"        if ($this->{acc} === null) {{")
-        lines.append(
-            f"            $this->{acc} = new {clsname}($this->generatedHttpClient());"
+        cred = (
+            "generatedPatHttpClient" if c in pat_containers else "generatedHttpClient"
         )
+        lines.append(f"            $this->{acc} = new {clsname}($this->{cred}());")
         lines.append("        }")
         lines.append(f"        return $this->{acc};")
         lines.append("    }")
@@ -1788,8 +1934,24 @@ namespace SignalWire\\REST\\Namespaces\\Generated\\Types\\{sub};
 # surface enumerator (enumerate_surface.py PHP_TYPE_RESERVED_UNRENAME) maps it back
 # to the bare oracle leaf name (the type-name analog of the reserved-word FIELD
 # rename Python does with ``from`` -> ``from_``, and of the TS BUILTIN_COLLISION
-# rename). These four are also SWML-verb schema names (Goto/Return/Switch/Unset).
-PHP_TYPE_RESERVED = {"goto", "return", "switch", "unset"}
+# rename). Every PHP keyword is illegal as a class name, as are the reserved
+# type names, so the set is the whole keyword table (``from`` is not a PHP
+# keyword — it is in PHP_KEYWORDS only for the param rename) plus those type
+# names; the specs carry Goto/Return/Switch/Unset/Echo/Foreach today.
+PHP_TYPE_RESERVED = (PHP_KEYWORDS - {"from"}) | {
+    "bool",
+    "false",
+    "float",
+    "int",
+    "iterable",
+    "mixed",
+    "never",
+    "null",
+    "object",
+    "string",
+    "true",
+    "void",
+}
 
 
 def type_name(raw: str) -> str:

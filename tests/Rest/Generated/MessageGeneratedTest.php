@@ -81,4 +81,196 @@ class MessageGeneratedTest extends TestCase
         $this->assertSame(500, $j->responseStatus);
         $this->assertSame('message.list_message_logs', $j->matchedRoute);
     }
+
+    #[Test]
+    public function businessesListSuccess(): void
+    {
+        $this->client->whatsapp()->businesses()->list();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('message.list_whatsapp_businesses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function businessesListError(): void
+    {
+        $this->mock->scenarios()->set('message.list_whatsapp_businesses', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->businesses()->list();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.list_whatsapp_businesses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function numbersGetSuccess(): void
+    {
+        $this->client->whatsapp()->numbers()->get('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('message.retrieve_whatsapp_number', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function numbersGetError(): void
+    {
+        $this->mock->scenarios()->set('message.retrieve_whatsapp_number', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->numbers()->get('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.retrieve_whatsapp_number', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function numbersListSuccess(): void
+    {
+        $this->client->whatsapp()->numbers()->list();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('message.list_whatsapp_numbers', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function numbersListError(): void
+    {
+        $this->mock->scenarios()->set('message.list_whatsapp_numbers', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->numbers()->list();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.list_whatsapp_numbers', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesCreateSuccess(): void
+    {
+        $this->client->whatsapp()->templates()->create([]);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('message.create_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesCreateError(): void
+    {
+        $this->mock->scenarios()->set('message.create_whatsapp_template', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->templates()->create([]);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.create_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesDeleteSuccess(): void
+    {
+        $this->client->whatsapp()->templates()->delete('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('message.delete_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesDeleteError(): void
+    {
+        $this->mock->scenarios()->set('message.delete_whatsapp_template', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->templates()->delete('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.delete_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesGetSuccess(): void
+    {
+        $this->client->whatsapp()->templates()->get('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('message.retrieve_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesGetError(): void
+    {
+        $this->mock->scenarios()->set('message.retrieve_whatsapp_template', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->templates()->get('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.retrieve_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesListSuccess(): void
+    {
+        $this->client->whatsapp()->templates()->list();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('message.list_whatsapp_templates', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesListError(): void
+    {
+        $this->mock->scenarios()->set('message.list_whatsapp_templates', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->templates()->list();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.list_whatsapp_templates', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesUpdateSuccess(): void
+    {
+        $this->client->whatsapp()->templates()->update('x', []);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('PATCH', $j->method);
+        $this->assertSame('message.update_whatsapp_template', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function templatesUpdateError(): void
+    {
+        $this->mock->scenarios()->set('message.update_whatsapp_template', 500, ['error' => 'x']);
+        try {
+            $this->client->whatsapp()->templates()->update('x', []);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('message.update_whatsapp_template', $j->matchedRoute);
+    }
 }

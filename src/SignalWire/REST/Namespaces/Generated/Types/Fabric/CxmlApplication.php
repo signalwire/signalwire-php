@@ -60,4 +60,10 @@ class CxmlApplication
 
     /** @var array<string,mixed>|null */
     public ?array $sms_status_callback_method = null;
+
+    public ?string $message_status_callback = null;
+
+    public ?string $api_version = null;
+
+    public ?string $uri = null;
 }

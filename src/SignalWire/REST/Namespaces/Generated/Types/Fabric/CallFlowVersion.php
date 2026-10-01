@@ -21,13 +21,15 @@ class CallFlowVersion
 {
     public ?string $id = null;
 
-    public ?string $version = null;
+    public ?int $document_version = null;
 
     public ?string $created_at = null;
 
     public ?string $updated_at = null;
 
-    public ?string $flow_data = null;
+    /** @var array<string,mixed>|null */
+    public ?array $flow_data = null;
 
-    public ?string $relayml = null;
+    /** @var array<string,mixed>|null */
+    public ?array $relayml = null;
 }

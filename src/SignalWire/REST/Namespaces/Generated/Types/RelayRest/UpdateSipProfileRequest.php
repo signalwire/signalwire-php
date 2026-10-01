@@ -30,4 +30,6 @@ class UpdateSipProfileRequest
     public ?string $default_encryption = null;
 
     public ?string $default_send_as = null;
+
+    public ?string $default_outbound_policy = null;
 }

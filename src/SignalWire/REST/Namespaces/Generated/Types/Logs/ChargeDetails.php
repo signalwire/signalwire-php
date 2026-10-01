@@ -21,5 +21,5 @@ class ChargeDetails
 {
     public ?string $description = null;
 
-    public ?string $charge = null;
+    public ?float $charge = null;
 }

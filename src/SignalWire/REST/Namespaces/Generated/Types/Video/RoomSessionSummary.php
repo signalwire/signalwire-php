@@ -83,8 +83,7 @@ class RoomSessionSummary
     /** @var array<string,mixed>|null */
     public ?array $preview_url = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $prioritize_handraise = null;
+    public ?bool $prioritize_handraise = null;
 
     /** @var array<string,mixed>|null */
     public ?array $sync_audio_video = null;

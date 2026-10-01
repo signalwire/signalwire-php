@@ -37,4 +37,6 @@ class SipEndpointUpdateRequest
 
     /** @var array<string,mixed>|null */
     public ?array $calling_handler_resource_id = null;
+
+    public ?string $password = null;
 }

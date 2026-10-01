@@ -20,4 +20,9 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 class UpdateCampaignRequest
 {
     public ?string $name = null;
+
+    public ?string $status_callback_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

@@ -19,8 +19,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class SWMLObject
 {
-    public ?string $version = null;
-
     /** @var array<string,mixed>|null */
     public ?array $sections = null;
+
+    public ?string $version = null;
 }

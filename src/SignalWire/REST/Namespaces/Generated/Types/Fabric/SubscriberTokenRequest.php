@@ -19,6 +19,8 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class SubscriberTokenRequest
 {
+    public ?string $ch = null;
+
     public ?string $reference = null;
 
     public ?int $expire_at = null;
@@ -42,4 +44,8 @@ class SubscriberTokenRequest
     public ?string $region = null;
 
     public ?string $company_name = null;
+
+    public ?string $scope = null;
+
+    public ?string $fingerprint = null;
 }

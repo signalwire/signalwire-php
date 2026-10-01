@@ -23,4 +23,24 @@ class SubscriberGuestTokenCreateRequest
     public ?array $allowed_addresses = null;
 
     public ?int $expire_at = null;
+
+    public ?string $ch = null;
+
+    public ?string $region = null;
+
+    public ?string $email = null;
+
+    public ?string $first_name = null;
+
+    public ?string $last_name = null;
+
+    public ?string $display_name = null;
+
+    public ?string $job_title = null;
+
+    public ?string $time_zone = null;
+
+    public ?string $country = null;
+
+    public ?string $company_name = null;
 }

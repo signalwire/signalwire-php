@@ -19,5 +19,6 @@ namespace SignalWire\SWML\Generated;
  */
 class Return_
 {
-    public mixed $return = null;
+    /** @var array<string,mixed>|null */
+    public ?array $return = null;
 }

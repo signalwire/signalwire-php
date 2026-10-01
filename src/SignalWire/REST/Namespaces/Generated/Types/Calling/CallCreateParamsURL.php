@@ -34,5 +34,30 @@ class CallCreateParamsURL
 
     public ?string $url_method = null;
 
+    /** @var array<string,mixed>|null */
+    public ?array $codecs = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $to_script = null;
+
+    public ?int $timeout = null;
+
+    public ?float $max_price_per_minute = null;
+
+    public ?string $send_digits = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $region = null;
+
+    public ?string $username = null;
+
+    public ?string $password = null;
+
+    /** @var list<mixed>|null */
+    public ?array $headers = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $custom_variables = null;
+
     public ?string $url = null;
 }

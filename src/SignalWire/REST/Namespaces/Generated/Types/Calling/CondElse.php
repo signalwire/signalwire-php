@@ -21,4 +21,9 @@ class CondElse
 {
     /** @var list<mixed>|null */
     public ?array $else = null;
+
+    /** @var list<mixed>|null */
+    public ?array $then = null;
+
+    public ?string $when = null;
 }

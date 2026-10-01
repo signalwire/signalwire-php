@@ -21,9 +21,10 @@ class CreatePartnerCampaignRequest
 {
     public ?string $name = null;
 
-    public ?string $brand_id = null;
-
     public ?string $csp_campaign_reference = null;
 
     public ?string $status_callback_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

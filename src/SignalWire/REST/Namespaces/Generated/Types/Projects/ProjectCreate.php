@@ -28,4 +28,6 @@ class ProjectCreate
     public ?bool $protect_fax_media = null;
 
     public ?bool $force_https_requests = null;
+
+    public ?string $parent_project_id = null;
 }

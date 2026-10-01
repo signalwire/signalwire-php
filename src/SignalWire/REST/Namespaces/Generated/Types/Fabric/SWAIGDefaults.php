@@ -19,5 +19,15 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class SWAIGDefaults
 {
+    public mixed $meta_data = null;
+
+    public ?string $meta_data_token = null;
+
+    public ?string $web_hook_auth_pass = null;
+
+    public ?string $web_hook_auth_password = null;
+
+    public ?string $web_hook_auth_user = null;
+
     public ?string $web_hook_url = null;
 }

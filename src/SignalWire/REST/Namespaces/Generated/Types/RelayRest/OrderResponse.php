@@ -30,4 +30,11 @@ class OrderResponse
     public ?string $updated_at = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $campaign_id = null;
+
+    public ?string $brand_id = null;
+
+    /** @var list<mixed>|null */
+    public ?array $phone_numbers = null;
 }

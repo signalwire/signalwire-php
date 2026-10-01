@@ -20,4 +20,6 @@ namespace SignalWire\REST\Namespaces\Generated\Types\RelayRest;
 class PurchasePhoneNumberRequest
 {
     public ?string $number = null;
+
+    public ?string $number_type = null;
 }

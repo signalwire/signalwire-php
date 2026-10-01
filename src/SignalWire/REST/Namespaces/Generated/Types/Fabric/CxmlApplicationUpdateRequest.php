@@ -19,37 +19,29 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class CxmlApplicationUpdateRequest
 {
-    public ?string $display_name = null;
+    public ?string $name = null;
 
-    public ?string $account_sid = null;
+    public ?string $call_request_url = null;
 
-    public ?string $voice_url = null;
+    public ?string $call_request_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $voice_method = null;
+    public ?string $call_fallback_url = null;
 
-    public ?string $voice_fallback_url = null;
+    public ?string $call_fallback_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $voice_fallback_method = null;
+    public ?string $call_status_url = null;
 
-    public ?string $status_callback = null;
+    public ?string $call_status_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $status_callback_method = null;
+    public ?string $message_request_url = null;
 
-    public ?string $sms_url = null;
+    public ?string $message_request_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $sms_method = null;
+    public ?string $message_fallback_url = null;
 
-    public ?string $sms_fallback_url = null;
+    public ?string $message_fallback_method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $sms_fallback_method = null;
+    public ?string $message_status_url = null;
 
-    public ?string $sms_status_callback = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $sms_status_callback_method = null;
+    public ?string $message_status_method = null;
 }

@@ -26,4 +26,7 @@ class CreateCspBrandRequest
     public ?string $csp_brand_reference = null;
 
     public ?string $status_callback_url = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

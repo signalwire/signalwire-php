@@ -19,17 +19,24 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class SMSWithMedia
 {
-    public ?string $to_number = null;
+    /** @var array<string,mixed>|null */
+    public ?array $body = null;
 
-    public ?string $from_number = null;
-
-    public ?string $region = null;
-
-    /** @var list<mixed>|null */
-    public ?array $tags = null;
+    /** @var array<string,mixed>|null */
+    public ?array $from_number = null;
 
     /** @var list<mixed>|null */
     public ?array $media = null;
 
-    public ?string $body = null;
+    /** @var array<string,mixed>|null */
+    public ?array $region = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $status_callback = null;
+
+    /** @var list<mixed>|null */
+    public ?array $tags = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $to_number = null;
 }

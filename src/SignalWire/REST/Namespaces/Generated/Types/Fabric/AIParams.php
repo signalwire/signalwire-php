@@ -23,7 +23,12 @@ class AIParams
     public ?array $acknowledge_interruptions = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $ai_model = null;
+    public ?array $acoustic_eot_gate_prob = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $acoustic_eot_trust_prob = null;
+
+    public ?string $ai_model = null;
 
     public ?string $ai_name = null;
 
@@ -33,18 +38,33 @@ class AIParams
     public ?string $app_name = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $asr_diarize = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $asr_params = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $asr_smart_format = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $asr_speaker_affinity = null;
+
+    public ?string $attention_escalate_prompt = null;
 
     /** @var array<string,mixed>|null */
     public ?array $attention_timeout = null;
 
     public ?string $attention_timeout_prompt = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $asr_diarize = null;
+    public ?string $auth_token = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $asr_speaker_affinity = null;
+    public ?array $auto_correct = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $azure_stream_first = null;
+
+    public ?string $azure_tts_key = null;
 
     public ?string $background_file = null;
 
@@ -55,6 +75,94 @@ class AIParams
     public ?array $background_file_volume = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $barge_functions = null;
+
+    public ?string $barge_match_string = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $barge_min_words = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $bill_all_tts = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $cache = null;
+
+    public ?string $call_uuid = null;
+
+    public ?string $cartesia_key = null;
+
+    public ?string $cartesia_model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $cartesia_stream_first = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $confidence = null;
+
+    public ?string $conscience = null;
+
+    public ?string $conversation_id = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $conversation_sliding_window = null;
+
+    /** @var list<mixed>|null */
+    public ?array $convo = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $debug_webhook_level = null;
+
+    public ?string $debug_webhook_url = null;
+
+    public ?string $deepgram_key_override = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $deepgram_stream_first = null;
+
+    public ?string $deepgram_tts_key = null;
+
+    public ?string $deepgram_url_override = null;
+
+    public ?string $developer_prompt = null;
+
+    public ?string $digit_terminators = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $digit_timeout = null;
+
+    public ?string $direction = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $double_turn_filler_every_n = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $double_turn_filler_min_ms = null;
+
+    public ?string $double_turn_model = null;
+
+    public ?string $double_turn_prompt = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $double_turn_wait_ms = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $double_turns = null;
+
+    public ?string $eleven_labs_key = null;
+
+    public ?string $eleven_labs_model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $eleven_labs_similarity = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $eleven_labs_stability = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $eleven_labs_stream_first = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $enable_barge = null;
 
     /** @var array<string,mixed>|null */
@@ -63,57 +171,42 @@ class AIParams
     /** @var array<string,mixed>|null */
     public ?array $enable_pause = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $enable_turn_detection = null;
-
-    public ?string $barge_match_string = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $barge_min_words = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $barge_functions = null;
-
-    public ?string $conscience = null;
-
-    /** @var list<mixed>|null */
-    public ?array $convo = null;
-
-    public ?string $conversation_id = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $conversation_sliding_window = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $debug_webhook_level = null;
-
-    public ?string $debug_webhook_url = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $debug = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $direction = null;
-
-    public ?string $digit_terminators = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $digit_timeout = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $end_of_speech_timeout = null;
+    public ?string $enable_text_normalization = null;
 
     /** @var array<string,mixed>|null */
     public ?array $enable_thinking = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $enable_turn_detection = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $enable_vision = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $end_of_speech_timeout = null;
 
     /** @var array<string,mixed>|null */
     public ?array $energy_level = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $escalate_after_ms = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $escalate_after_turns = null;
+
+    public ?string $event_webhook_url = null;
+
+    public ?string $ext = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $first_word_timeout = null;
+
+    public ?string $fish_key = null;
+
+    public ?string $fish_model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $function_filler_sequence_gap_ms = null;
 
     /** @var array<string,mixed>|null */
     public ?array $function_wait_for_talking = null;
@@ -121,10 +214,13 @@ class AIParams
     /** @var array<string,mixed>|null */
     public ?array $functions_on_no_response = null;
 
+    public ?string $grok_key = null;
+
+    public ?string $groq_tts_key = null;
+
     public ?string $hard_stop_prompt = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $hard_stop_time = null;
+    public ?string $hard_stop_time = null;
 
     public ?string $hold_music = null;
 
@@ -135,15 +231,17 @@ class AIParams
     public ?array $inactivity_timeout = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $inner_dialog_model = null;
+    public ?array $initial_sleep_ms = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $inner_dialog = null;
+
+    public ?string $inner_dialog_model = null;
 
     public ?string $inner_dialog_prompt = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $inner_dialog_synced = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $initial_sleep_ms = null;
+    public ?array $inner_dialog_scorecard = null;
 
     /** @var array<string,mixed>|null */
     public ?array $input_poll_freq = null;
@@ -153,16 +251,27 @@ class AIParams
 
     public ?string $interrupt_prompt = null;
 
+    public ?string $inworld_apikey = null;
+
+    public ?string $inworld_key = null;
+
+    public ?string $inworld_model = null;
+
+    public ?string $language = null;
+
     /**
      * @var array<string,mixed>|null
      * @deprecated languages_enabled
      */
     public ?array $languages_enabled = null;
 
-    public ?string $local_tz = null;
+    /** @var array<string,mixed>|null */
+    public ?array $lipsync_debug = null;
 
     /** @var array<string,mixed>|null */
     public ?array $llm_diarize_aware = null;
+
+    public ?string $local_tz = null;
 
     /** @var array<string,mixed>|null */
     public ?array $max_emotion = null;
@@ -170,18 +279,85 @@ class AIParams
     /** @var array<string,mixed>|null */
     public ?array $max_response_tokens = null;
 
+    /** @var array<string,mixed>|null */
+    public ?array $min_utterance_ms = null;
+
+    public ?string $minimax_key = null;
+
+    public ?string $minimax_model = null;
+
+    public ?string $mistral_key = null;
+
+    public ?string $mistral_model = null;
+
+    public ?string $model = null;
+
     public ?string $openai_asr_engine = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $openai_azure = null;
+
+    public ?string $openai_gcloud_version = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $openai_stream_first = null;
+
+    public ?string $openai_tts_key = null;
+
+    public ?string $openai_tts_url = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $outbound_attention_timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $pcm_channels = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $pcm_rate = null;
 
     /** @var array<string,mixed>|null */
     public ?array $persist_global_data = null;
 
     public ?string $pom_format = null;
 
+    public ?string $provider = null;
+
+    public ?string $pvt_params = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $realtime = null;
+
+    public ?string $redact_prompt = null;
+
+    public ?string $rime_apikey = null;
+
+    public ?string $rime_key = null;
+
+    public ?string $rime_model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $rime_stream_first = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $sample_rate = null;
+
     /** @var array<string,mixed>|null */
     public ?array $save_conversation = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $send_single_llm_response = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $similarity = null;
+
+    public ?string $smallest_key = null;
+
+    public ?string $smallest_model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speak_when_spoken_to = null;
+
+    public ?string $speaker = null;
 
     /** @var array<string,mixed>|null */
     public ?array $speech_event_timeout = null;
@@ -192,8 +368,26 @@ class AIParams
     /** @var array<string,mixed>|null */
     public ?array $speech_timeout = null;
 
+    public ?string $speechify_key = null;
+
     /** @var array<string,mixed>|null */
-    public ?array $speak_when_spoken_to = null;
+    public ?array $speechify_loudness_normalization = null;
+
+    public ?string $speechify_model = null;
+
+    public ?string $speechify_output_format = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speechify_stream_first = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speechify_text_normalization = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $speed = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $stability = null;
 
     /** @var array<string,mixed>|null */
     public ?array $start_paused = null;
@@ -204,7 +398,14 @@ class AIParams
     public ?array $static_greeting_no_barge = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $summary_mode = null;
+    public ?array $stream_first = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $streaming = null;
+
+    public ?string $strict_mode = null;
+
+    public ?string $summary_mode = null;
 
     /** @var array<string,mixed>|null */
     public ?array $swaig_allow_settings = null;
@@ -216,13 +417,23 @@ class AIParams
     public ?array $swaig_post_conversation = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $swaig_set_global_data = null;
-
-    /** @var array<string,mixed>|null */
     public ?array $swaig_post_swml_vars = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $thinking_model = null;
+    public ?array $swaig_set_global_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $target_first_segment_ms = null;
+
+    public ?string $text_normalization_far_dir = null;
+
+    public ?string $thinking_model = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $tool_result_distill = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $transfer_summary = null;
 
     /** @var array<string,mixed>|null */
     public ?array $transparent_barge = null;
@@ -230,33 +441,51 @@ class AIParams
     /** @var array<string,mixed>|null */
     public ?array $transparent_barge_max_time = null;
 
+    public ?string $tts_number_format = null;
+
     /** @var array<string,mixed>|null */
-    public ?array $transfer_summary = null;
+    public ?array $turn_detection = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $turn_detection_min_length = null;
 
     /** @var array<string,mixed>|null */
     public ?array $turn_detection_timeout = null;
 
-    public ?string $tts_number_format = null;
+    /** @var array<string,mixed>|null */
+    public ?array $turn_filler_every_n = null;
 
-    public ?string $video_listening_file = null;
+    /** @var array<string,mixed>|null */
+    public ?array $turn_filler_min_ms = null;
+
+    public ?string $turn_filler_sources = null;
+
+    public ?string $url = null;
+
+    public ?string $utility_model = null;
+
+    public ?string $vad_config = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $video_fps = null;
 
     public ?string $video_idle_file = null;
 
+    public ?string $video_listening_file = null;
+
+    public ?string $video_scale = null;
+
     public ?string $video_talking_file = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $vision_model = null;
+    public ?string $vision_model = null;
 
-    public ?string $vad_config = null;
+    public ?string $voice_name = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $vol = null;
 
     /** @var array<string,mixed>|null */
     public ?array $wait_for_user = null;
 
     public ?string $wake_prefix = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $eleven_labs_stability = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $eleven_labs_similarity = null;
 }

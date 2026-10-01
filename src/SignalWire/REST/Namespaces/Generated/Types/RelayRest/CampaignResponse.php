@@ -44,8 +44,6 @@ class CampaignResponse
 
     public ?string $sample5 = null;
 
-    public ?string $dynamic_templates = null;
-
     public ?string $message_flow = null;
 
     public ?string $opt_in_message = null;
@@ -59,8 +57,6 @@ class CampaignResponse
     public ?string $opt_out_keywords = null;
 
     public ?string $help_keywords = null;
-
-    public ?bool $number_pooling_required = null;
 
     public ?string $number_pooling_per_campaign = null;
 
@@ -81,4 +77,17 @@ class CampaignResponse
     public ?string $created_at = null;
 
     public ?string $updated_at = null;
+
+    public ?string $dynamic_messages = null;
+
+    public ?string $requested_throughput = null;
+
+    public ?string $daily_messages_per_number = null;
+
+    public ?string $privacy_policy_link = null;
+
+    public ?string $purchase_or_port_numbers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

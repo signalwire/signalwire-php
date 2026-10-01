@@ -37,7 +37,9 @@ namespace SignalWire\REST\Namespaces\Generated;
  * @property-read VideoNamespace $video
  * @property-read DatasphereNamespace $datasphere
  * @property-read LogsNamespace $logs
+ * @property-read WhatsappNamespace $whatsapp
  * @property-read ProjectNamespace $project
+ * @property-read SpaceNamespace $space
  */
 trait ResourceTree
 {
@@ -62,9 +64,13 @@ trait ResourceTree
     private ?VideoNamespace $video = null;
     private ?DatasphereNamespace $datasphere = null;
     private ?LogsNamespace $logs = null;
+    private ?WhatsappNamespace $whatsapp = null;
     private ?ProjectNamespace $project = null;
+    private ?SpaceNamespace $space = null;
 
     abstract protected function generatedHttpClient(): \SignalWire\REST\HttpClient;
+
+    abstract protected function generatedPatHttpClient(): \SignalWire\REST\HttpClient;
 
     public function addresses(): Addresses
     {
@@ -234,12 +240,28 @@ trait ResourceTree
         return $this->logs;
     }
 
+    public function whatsapp(): WhatsappNamespace
+    {
+        if ($this->whatsapp === null) {
+            $this->whatsapp = new WhatsappNamespace($this->generatedHttpClient());
+        }
+        return $this->whatsapp;
+    }
+
     public function project(): ProjectNamespace
     {
         if ($this->project === null) {
             $this->project = new ProjectNamespace($this->generatedHttpClient());
         }
         return $this->project;
+    }
+
+    public function space(): SpaceNamespace
+    {
+        if ($this->space === null) {
+            $this->space = new SpaceNamespace($this->generatedPatHttpClient());
+        }
+        return $this->space;
     }
 
     /**

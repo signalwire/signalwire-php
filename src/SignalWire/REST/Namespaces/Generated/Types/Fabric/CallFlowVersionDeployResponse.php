@@ -27,7 +27,9 @@ class CallFlowVersionDeployResponse
 
     public ?int $document_version = null;
 
-    public ?string $flow_data = null;
+    /** @var array<string,mixed>|null */
+    public ?array $flow_data = null;
 
-    public ?string $relayml = null;
+    /** @var array<string,mixed>|null */
+    public ?array $relayml = null;
 }

@@ -36,4 +36,6 @@ class CarrierLookupInfo
     public ?string $lec = null;
 
     public ?string $linetype = null;
+
+    public ?string $dnc = null;
 }

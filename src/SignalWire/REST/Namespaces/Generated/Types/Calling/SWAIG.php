@@ -23,14 +23,20 @@ class SWAIG
     public ?array $defaults = null;
 
     /** @var list<mixed>|null */
-    public ?array $native_functions = null;
+    public ?array $functions = null;
+
+    /** @var list<mixed>|null */
+    public ?array $hooks = null;
 
     /** @var list<mixed>|null */
     public ?array $includes = null;
 
-    /** @var list<mixed>|null */
-    public ?array $functions = null;
-
     /** @var array<string,mixed>|null */
     public ?array $internal_fillers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $mcp_servers = null;
+
+    /** @var list<mixed>|null */
+    public ?array $native_functions = null;
 }

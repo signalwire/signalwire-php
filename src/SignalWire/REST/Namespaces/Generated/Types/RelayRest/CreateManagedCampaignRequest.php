@@ -21,8 +21,6 @@ class CreateManagedCampaignRequest
 {
     public ?string $name = null;
 
-    public ?string $brand_id = null;
-
     public ?string $sms_use_case = null;
 
     /** @var list<mixed>|null */
@@ -75,4 +73,9 @@ class CreateManagedCampaignRequest
     public ?bool $terms_and_conditions = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $csp_campaign_reference = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $signalwire_contact_emails = null;
 }

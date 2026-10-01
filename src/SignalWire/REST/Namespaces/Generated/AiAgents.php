@@ -20,4 +20,24 @@ class AiAgents extends \SignalWire\REST\FabricResource
     {
         parent::__construct($http, '/api/fabric/resources/ai_agents');
     }
+
+    /**
+     * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function listVoices(array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->get($this->path('voices'), $params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
+    public function listConversationLogs(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->get($this->path($id, 'conversation_logs'), $params, $requestOptions);
+    }
 }

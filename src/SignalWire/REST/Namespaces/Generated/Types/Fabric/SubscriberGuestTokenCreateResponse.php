@@ -22,4 +22,12 @@ class SubscriberGuestTokenCreateResponse
     public ?string $token = null;
 
     public ?string $refresh_token = null;
+
+    public ?string $address_uri = null;
+
+    public ?string $expires_at = null;
+
+    public ?int $expires_in = null;
+
+    public ?string $issued_at = null;
 }

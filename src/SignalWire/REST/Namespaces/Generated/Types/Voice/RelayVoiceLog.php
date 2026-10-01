@@ -54,4 +54,61 @@ class RelayVoiceLog
 
     /** @var array<string,mixed>|null */
     public ?array $parent_id = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_mos = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_jitter_min = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_jitter_max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_jitter_min = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_jitter_max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_jitter_avg = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_rtt_avg = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_rtt_min = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_rtt_max = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_media_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_media_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_lost = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_mean_interval = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_dtmf_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_out_dtmf_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_skip_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_flush_packet_count = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $audio_in_largest_jb_size = null;
 }

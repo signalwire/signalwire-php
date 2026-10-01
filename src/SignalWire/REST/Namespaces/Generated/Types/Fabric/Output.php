@@ -19,8 +19,11 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class Output
 {
-    public ?string $response = null;
-
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $action = null;
+
+    public ?bool $post_process = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $response = null;
 }

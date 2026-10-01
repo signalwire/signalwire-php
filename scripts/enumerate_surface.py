@@ -274,6 +274,24 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "Subscribers": "signalwire.rest.namespaces.fabric_resources_generated",
     "SwmlScripts": "signalwire.rest.namespaces.fabric_resources_generated",
     "SwmlWebhooks": "signalwire.rest.namespaces.fabric_resources_generated",
+    "AliasAddresses": "signalwire.rest.namespaces.fabric_resources_generated",
+    "PhoneNumberAddresses": "signalwire.rest.namespaces.fabric_resources_generated",
+    "SipAddresses": "signalwire.rest.namespaces.fabric_resources_generated",
+    # space namespace (/api/space, Personal-Access-Token auth)
+    "SpaceBalance": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceBillingProfile": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceBillingStatements": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceGeographicPermissions": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceLowBalanceSetting": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceMembers": "signalwire.rest.namespaces.space_resources_generated",
+    "SpacePaymentHistory": "signalwire.rest.namespaces.space_resources_generated",
+    "SpacePaymentMethods": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceSettings": "signalwire.rest.namespaces.space_resources_generated",
+    "SpaceUsage": "signalwire.rest.namespaces.space_resources_generated",
+    # whatsapp (message spec, client->whatsapp container)
+    "WhatsappBusinesses": "signalwire.rest.namespaces.message_resources_generated",
+    "WhatsappNumbers": "signalwire.rest.namespaces.message_resources_generated",
+    "WhatsappTemplates": "signalwire.rest.namespaces.message_resources_generated",
     # calling (command-dispatch)
     "Calling": "signalwire.rest.namespaces.calling_resources_generated",
     # chat / pubsub token resources
@@ -310,6 +328,8 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "RegistryNamespace": "signalwire.rest.namespaces._client_tree_generated",
     "ProjectNamespace": "signalwire.rest.namespaces._client_tree_generated",
     "DatasphereNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "SpaceNamespace": "signalwire.rest.namespaces._client_tree_generated",
+    "WhatsappNamespace": "signalwire.rest.namespaces._client_tree_generated",
     # POM (Prompt Object Model) — typed standalone classes
     "PromptObjectModel": "signalwire.pom.pom",
     "Section": "signalwire.pom.pom",
@@ -991,6 +1011,7 @@ _TYPES_SUB_TO_MODULE: dict[str, str] = {
     "Projects": "signalwire.rest.namespaces.projects_types_generated",
     "Chat": "signalwire.rest.namespaces.chat_types_generated",
     "PubSub": "signalwire.rest.namespaces.pubsub_types_generated",
+    "Space": "signalwire.rest.namespaces.space_types_generated",
     "SwmlWebhooks": "signalwire.rest.namespaces.swml_webhooks_types_generated",
 }
 # Hard-reserved PHP keyword class names generate_rest.py suffixed with `_`; map back
@@ -998,10 +1019,8 @@ _TYPES_SUB_TO_MODULE: dict[str, str] = {
 # SCOPED to the Types/ files so a non-type class named `Return_` (none today) is
 # unaffected.
 _TYPES_RESERVED_UNRENAME: dict[str, str] = {
-    "Goto_": "Goto",
-    "Return_": "Return",
-    "Switch_": "Switch",
-    "Unset_": "Unset",
+    f"{leaf}_": leaf
+    for leaf in ("Echo", "Foreach", "Goto", "Return", "Switch", "Unset")
 }
 
 
@@ -1797,7 +1816,15 @@ def _fold_accessors(modules: dict) -> None:
             if not renames:
                 continue
             members = set(entry["classes"][cls])
-            folded = {renames.get(m, m) for m in members}
+            # A fold that would COLLIDE with a member the port already declares
+            # under the reference name is skipped: the bare member satisfies the
+            # reference, and the accessor is a DISTINCT member (RestClient's
+            # ``getSpace()`` returns the host string while ``space()`` is the
+            # generated Space namespace). Same guard as the signature
+            # enumerator's fold, so both gates stay in lockstep.
+            folded = {
+                m if renames.get(m) in members else renames.get(m, m) for m in members
+            }
             entry["classes"][cls] = sorted(folded)
 
 

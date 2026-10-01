@@ -20,5 +20,77 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
 class PlaybackBGAction
 {
     /** @var array<string,mixed>|null */
+    public ?array $SWML = null;
+
+    /** @var list<mixed>|null */
+    public ?array $add_dynamic_hints = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $back_to_back_functions = null;
+
+    public ?string $change_context = null;
+
+    public ?string $change_step = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $change_voice = null;
+
+    public ?bool $clear_dynamic_hints = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $context_switch = null;
+
+    public ?int $end_of_speech_timeout = null;
+
+    public ?bool $extensive_data = null;
+
+    public ?bool $functions_on_speaker_timeout = null;
+
+    public ?bool $hangup = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $hold = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $playback_bg = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $replace_in_history = null;
+
+    public ?string $say = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $set_global_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $set_meta_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $settings = null;
+
+    public ?int $speech_event_timeout = null;
+
+    public ?bool $stop = null;
+
+    public ?bool $stop_playback_bg = null;
+
+    /** @var list<mixed>|null */
+    public ?array $toggle_functions = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $transfer = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $unset_global_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $unset_meta_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $user_event = null;
+
+    public ?string $user_input = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $wait_for_user = null;
 }

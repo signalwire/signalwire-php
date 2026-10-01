@@ -21,17 +21,15 @@ class PomSectionBulletsContent
 {
     public ?string $title = null;
 
-    /** @var list<mixed>|null */
-    public ?array $subsections = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $numbered = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $numberedBullets = null;
-
     public ?string $body = null;
 
     /** @var list<mixed>|null */
     public ?array $bullets = null;
+
+    public ?bool $numbered = null;
+
+    public ?bool $numberedBullets = null;
+
+    /** @var list<mixed>|null */
+    public ?array $subsections = null;
 }

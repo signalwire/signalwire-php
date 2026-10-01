@@ -72,4 +72,6 @@ class CreateSipEndpointRequest
     public ?string $call_ai_agent_id = null;
 
     public ?string $call_relay_script_url = null;
+
+    public ?string $call_relay_script_url_method = null;
 }

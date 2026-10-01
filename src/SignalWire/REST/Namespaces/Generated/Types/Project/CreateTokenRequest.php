@@ -25,4 +25,6 @@ class CreateTokenRequest
     public ?array $permissions = null;
 
     public ?string $subproject_id = null;
+
+    public ?string $project_id = null;
 }

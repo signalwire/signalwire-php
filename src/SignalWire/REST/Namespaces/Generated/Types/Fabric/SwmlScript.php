@@ -21,7 +21,8 @@ class SwmlScript
 {
     public ?string $id = null;
 
-    public ?string $contents = null;
+    /** @var array<string,mixed>|null */
+    public ?array $contents = null;
 
     public ?string $request_url = null;
 
@@ -30,4 +31,6 @@ class SwmlScript
     public ?string $status_callback_url = null;
 
     public ?string $status_callback_method = null;
+
+    public ?string $script_type = null;
 }

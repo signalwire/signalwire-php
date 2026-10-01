@@ -46,4 +46,10 @@ class MessageLog
     public ?array $charge_details = null;
 
     public ?string $created_at = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $error_code = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $error_message = null;
 }

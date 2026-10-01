@@ -35,6 +35,30 @@ class FabricGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function addressesDeleteSuccess(): void
+    {
+        $this->client->fabric()->addresses()->delete('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('fabric.delete_fabric_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function addressesDeleteError(): void
+    {
+        $this->mock->scenarios()->set('fabric.delete_fabric_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->addresses()->delete('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.delete_fabric_address', $j->matchedRoute);
+    }
+
+    #[Test]
     public function addressesGetSuccess(): void
     {
         $this->client->fabric()->addresses()->get('x');
@@ -179,6 +203,30 @@ class FabricGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function aiAgentsListConversationLogsSuccess(): void
+    {
+        $this->client->fabric()->aiAgents()->listConversationLogs('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.list_ai_agent_conversation_logs', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aiAgentsListConversationLogsError(): void
+    {
+        $this->mock->scenarios()->set('fabric.list_ai_agent_conversation_logs', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aiAgents()->listConversationLogs('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.list_ai_agent_conversation_logs', $j->matchedRoute);
+    }
+
+    #[Test]
     public function aiAgentsListSuccess(): void
     {
         $this->client->fabric()->aiAgents()->list();
@@ -203,6 +251,30 @@ class FabricGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function aiAgentsListVoicesSuccess(): void
+    {
+        $this->client->fabric()->aiAgents()->listVoices();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.list_ai_agent_voices', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aiAgentsListVoicesError(): void
+    {
+        $this->mock->scenarios()->set('fabric.list_ai_agent_voices', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aiAgents()->listVoices();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.list_ai_agent_voices', $j->matchedRoute);
+    }
+
+    #[Test]
     public function aiAgentsUpdateSuccess(): void
     {
         $this->client->fabric()->aiAgents()->update('x', []);
@@ -224,6 +296,126 @@ class FabricGeneratedTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame(500, $j->responseStatus);
         $this->assertSame('fabric.update_ai_agent', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesCreateSuccess(): void
+    {
+        $this->client->fabric()->aliasAddresses()->create([]);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('fabric.create_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesCreateError(): void
+    {
+        $this->mock->scenarios()->set('fabric.create_alias_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aliasAddresses()->create([]);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.create_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesDeleteSuccess(): void
+    {
+        $this->client->fabric()->aliasAddresses()->delete('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('fabric.delete_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesDeleteError(): void
+    {
+        $this->mock->scenarios()->set('fabric.delete_alias_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aliasAddresses()->delete('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.delete_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesGetSuccess(): void
+    {
+        $this->client->fabric()->aliasAddresses()->get('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.get_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesGetError(): void
+    {
+        $this->mock->scenarios()->set('fabric.get_alias_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aliasAddresses()->get('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.get_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesListSuccess(): void
+    {
+        $this->client->fabric()->aliasAddresses()->list();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.list_alias_addresses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesListError(): void
+    {
+        $this->mock->scenarios()->set('fabric.list_alias_addresses', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aliasAddresses()->list();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.list_alias_addresses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesUpdateSuccess(): void
+    {
+        $this->client->fabric()->aliasAddresses()->update('x', []);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('PATCH', $j->method);
+        $this->assertSame('fabric.update_alias_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function aliasAddressesUpdateError(): void
+    {
+        $this->mock->scenarios()->set('fabric.update_alias_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->aliasAddresses()->update('x', []);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.update_alias_address', $j->matchedRoute);
     }
 
     #[Test]
@@ -1115,6 +1307,126 @@ class FabricGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function phoneNumberAddressesCreateSuccess(): void
+    {
+        $this->client->fabric()->phoneNumberAddresses()->create([]);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('fabric.create_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesCreateError(): void
+    {
+        $this->mock->scenarios()->set('fabric.create_phone_number_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->phoneNumberAddresses()->create([]);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.create_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesDeleteSuccess(): void
+    {
+        $this->client->fabric()->phoneNumberAddresses()->delete('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('fabric.delete_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesDeleteError(): void
+    {
+        $this->mock->scenarios()->set('fabric.delete_phone_number_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->phoneNumberAddresses()->delete('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.delete_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesGetSuccess(): void
+    {
+        $this->client->fabric()->phoneNumberAddresses()->get('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.get_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesGetError(): void
+    {
+        $this->mock->scenarios()->set('fabric.get_phone_number_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->phoneNumberAddresses()->get('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.get_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesListSuccess(): void
+    {
+        $this->client->fabric()->phoneNumberAddresses()->list();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.list_phone_number_addresses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesListError(): void
+    {
+        $this->mock->scenarios()->set('fabric.list_phone_number_addresses', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->phoneNumberAddresses()->list();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.list_phone_number_addresses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesUpdateSuccess(): void
+    {
+        $this->client->fabric()->phoneNumberAddresses()->update('x', []);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('PATCH', $j->method);
+        $this->assertSame('fabric.update_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function phoneNumberAddressesUpdateError(): void
+    {
+        $this->mock->scenarios()->set('fabric.update_phone_number_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->phoneNumberAddresses()->update('x', []);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.update_phone_number_address', $j->matchedRoute);
+    }
+
+    #[Test]
     public function relayApplicationsCreateSuccess(): void
     {
         $this->client->fabric()->relayApplications()->create([]);
@@ -1307,6 +1619,54 @@ class FabricGeneratedTest extends TestCase
     }
 
     #[Test]
+    public function resourcesAssignSipEndpointSuccess(): void
+    {
+        $this->client->fabric()->resources()->assignSipEndpoint('x', 'x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('fabric.assign_resource_sip_endpoint', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function resourcesAssignSipEndpointError(): void
+    {
+        $this->mock->scenarios()->set('fabric.assign_resource_sip_endpoint', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->resources()->assignSipEndpoint('x', 'x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.assign_resource_sip_endpoint', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function resourcesAssignWhatsappNumberSuccess(): void
+    {
+        $this->client->fabric()->resources()->assignWhatsappNumber('x', 'x', 'x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('fabric.assign_resource_whatsapp_number', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function resourcesAssignWhatsappNumberError(): void
+    {
+        $this->mock->scenarios()->set('fabric.assign_resource_whatsapp_number', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->resources()->assignWhatsappNumber('x', 'x', 'x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.assign_resource_whatsapp_number', $j->matchedRoute);
+    }
+
+    #[Test]
     public function resourcesDeleteSuccess(): void
     {
         $this->client->fabric()->resources()->delete('x');
@@ -1400,6 +1760,126 @@ class FabricGeneratedTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame(500, $j->responseStatus);
         $this->assertSame('fabric.list_resources', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesCreateSuccess(): void
+    {
+        $this->client->fabric()->sipAddresses()->create([]);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('POST', $j->method);
+        $this->assertSame('fabric.create_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesCreateError(): void
+    {
+        $this->mock->scenarios()->set('fabric.create_sip_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->sipAddresses()->create([]);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.create_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesDeleteSuccess(): void
+    {
+        $this->client->fabric()->sipAddresses()->delete('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('DELETE', $j->method);
+        $this->assertSame('fabric.delete_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesDeleteError(): void
+    {
+        $this->mock->scenarios()->set('fabric.delete_sip_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->sipAddresses()->delete('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.delete_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesGetSuccess(): void
+    {
+        $this->client->fabric()->sipAddresses()->get('x');
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.get_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesGetError(): void
+    {
+        $this->mock->scenarios()->set('fabric.get_sip_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->sipAddresses()->get('x');
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.get_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesListSuccess(): void
+    {
+        $this->client->fabric()->sipAddresses()->list();
+        $j = $this->mock->journal()->last();
+        $this->assertSame('GET', $j->method);
+        $this->assertSame('fabric.list_sip_addresses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesListError(): void
+    {
+        $this->mock->scenarios()->set('fabric.list_sip_addresses', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->sipAddresses()->list();
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.list_sip_addresses', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesUpdateSuccess(): void
+    {
+        $this->client->fabric()->sipAddresses()->update('x', []);
+        $j = $this->mock->journal()->last();
+        $this->assertSame('PATCH', $j->method);
+        $this->assertSame('fabric.update_sip_address', $j->matchedRoute);
+    }
+
+    #[Test]
+    public function sipAddressesUpdateError(): void
+    {
+        $this->mock->scenarios()->set('fabric.update_sip_address', 500, ['error' => 'x']);
+        try {
+            $this->client->fabric()->sipAddresses()->update('x', []);
+            $this->fail('expected SignalWireRestError');
+        } catch (SignalWireRestError $e) {
+            $this->assertSame(500, $e->getStatusCode());
+        }
+        $j = $this->mock->journal()->last();
+        $this->assertSame(500, $j->responseStatus);
+        $this->assertSame('fabric.update_sip_address', $j->matchedRoute);
     }
 
     #[Test]
@@ -2269,7 +2749,7 @@ class FabricGeneratedTest extends TestCase
     #[Test]
     public function tokensCreateGuestTokenSuccess(): void
     {
-        $this->client->fabric()->tokens()->createGuestToken([]);
+        $this->client->fabric()->tokens()->createGuestToken();
         $j = $this->mock->journal()->last();
         $this->assertSame('POST', $j->method);
         $this->assertSame('fabric.create_subscriber_guest_token', $j->matchedRoute);
@@ -2280,7 +2760,7 @@ class FabricGeneratedTest extends TestCase
     {
         $this->mock->scenarios()->set('fabric.create_subscriber_guest_token', 500, ['error' => 'x']);
         try {
-            $this->client->fabric()->tokens()->createGuestToken([]);
+            $this->client->fabric()->tokens()->createGuestToken();
             $this->fail('expected SignalWireRestError');
         } catch (SignalWireRestError $e) {
             $this->assertSame(500, $e->getStatusCode());
@@ -2288,30 +2768,6 @@ class FabricGeneratedTest extends TestCase
         $j = $this->mock->journal()->last();
         $this->assertSame(500, $j->responseStatus);
         $this->assertSame('fabric.create_subscriber_guest_token', $j->matchedRoute);
-    }
-
-    #[Test]
-    public function tokensCreateInviteTokenSuccess(): void
-    {
-        $this->client->fabric()->tokens()->createInviteToken('x');
-        $j = $this->mock->journal()->last();
-        $this->assertSame('POST', $j->method);
-        $this->assertSame('fabric.create_subscriber_invite_token', $j->matchedRoute);
-    }
-
-    #[Test]
-    public function tokensCreateInviteTokenError(): void
-    {
-        $this->mock->scenarios()->set('fabric.create_subscriber_invite_token', 500, ['error' => 'x']);
-        try {
-            $this->client->fabric()->tokens()->createInviteToken('x');
-            $this->fail('expected SignalWireRestError');
-        } catch (SignalWireRestError $e) {
-            $this->assertSame(500, $e->getStatusCode());
-        }
-        $j = $this->mock->journal()->last();
-        $this->assertSame(500, $j->responseStatus);
-        $this->assertSame('fabric.create_subscriber_invite_token', $j->matchedRoute);
     }
 
     #[Test]

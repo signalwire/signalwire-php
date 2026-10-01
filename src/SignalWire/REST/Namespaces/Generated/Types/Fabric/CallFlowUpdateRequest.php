@@ -22,4 +22,10 @@ class CallFlowUpdateRequest
     public ?string $title = null;
 
     public ?int $document_version = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $flow_data = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $relayml = null;
 }

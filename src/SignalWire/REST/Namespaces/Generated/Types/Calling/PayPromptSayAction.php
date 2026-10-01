@@ -19,7 +19,9 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class PayPromptSayAction
 {
-    public ?string $type = null;
+    /** @var array<string,mixed>|null */
+    public ?array $type = null;
 
-    public ?string $phrase = null;
+    /** @var array<string,mixed>|null */
+    public ?array $phrase = null;
 }

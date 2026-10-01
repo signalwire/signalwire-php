@@ -20,11 +20,14 @@ namespace SignalWire\SWML\Generated;
 class DataMap
 {
     /** @var array<string,mixed>|null */
-    public ?array $output = null;
+    public ?array $contexts = null;
 
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
     public ?array $expressions = null;
 
-    /** @var list<mixed>|null */
+    /** @var array<string,mixed>|null */
+    public ?array $output = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $webhooks = null;
 }

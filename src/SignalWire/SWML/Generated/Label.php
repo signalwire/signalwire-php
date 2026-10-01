@@ -19,5 +19,6 @@ namespace SignalWire\SWML\Generated;
  */
 class Label
 {
-    public ?string $label = null;
+    /** @var array<string,mixed>|null */
+    public ?array $label = null;
 }

@@ -19,11 +19,7 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class ConferenceRoomUpdateRequest
 {
-    public ?string $name = null;
-
     public ?string $display_name = null;
-
-    public ?string $description = null;
 
     public ?string $join_from = null;
 
@@ -47,10 +43,4 @@ class ConferenceRoomUpdateRequest
     public ?array $meta = null;
 
     public ?bool $sync_audio_video = null;
-
-    public ?bool $tone_on_entry_and_exit = null;
-
-    public ?bool $room_join_video_off = null;
-
-    public ?bool $user_join_video_off = null;
 }

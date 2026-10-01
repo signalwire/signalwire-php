@@ -31,11 +31,9 @@ class SubscriberRequest
 
     public ?string $job_title = null;
 
-    public ?string $timezone = null;
-
     public ?string $country = null;
 
-    public ?string $region = null;
-
     public ?string $company_name = null;
+
+    public ?string $time_zone = null;
 }

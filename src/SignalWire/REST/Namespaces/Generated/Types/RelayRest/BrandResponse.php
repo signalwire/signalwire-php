@@ -41,8 +41,6 @@ class BrandResponse
 
     public ?string $company_vertical = null;
 
-    public ?string $company_website = null;
-
     public ?string $csp_brand_reference = null;
 
     public ?bool $csp_self_registered = null;
@@ -52,4 +50,11 @@ class BrandResponse
     public ?string $created_at = null;
 
     public ?string $updated_at = null;
+
+    /** @var list<mixed>|null */
+    public ?array $signalwire_contact_emails = null;
+
+    public ?string $large_message_limit = null;
+
+    public ?string $number_pooling_for_company = null;
 }

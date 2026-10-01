@@ -19,15 +19,9 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class BedrockSWAIG
 {
-    /** @var list<mixed>|null */
-    public ?array $functions = null;
-
     /** @var array<string,mixed>|null */
     public ?array $defaults = null;
 
     /** @var list<mixed>|null */
-    public ?array $native_functions = null;
-
-    /** @var list<mixed>|null */
-    public ?array $includes = null;
+    public ?array $functions = null;
 }

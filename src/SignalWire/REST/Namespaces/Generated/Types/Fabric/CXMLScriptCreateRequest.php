@@ -19,12 +19,14 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Fabric;
  */
 class CXMLScriptCreateRequest
 {
-    public ?string $display_name = null;
-
     public ?string $contents = null;
 
     public ?string $status_callback_url = null;
 
     /** @var array<string,mixed>|null */
     public ?array $status_callback_method = null;
+
+    public ?string $name = null;
+
+    public ?string $script_type = null;
 }

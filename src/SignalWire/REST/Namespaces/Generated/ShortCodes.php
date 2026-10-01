@@ -46,11 +46,15 @@ class ShortCodes extends \SignalWire\REST\BaseResource
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $id, string $name, string $messageHandler, ?string $messageRequestUrl = null, ?string $messageRequestMethod = null, ?string $messageFallbackUrl = null, ?string $messageFallbackMethod = null, ?string $messageLamlApplicationId = null, ?string $messageRelayContext = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function update(string $id, ?string $name = null, ?string $messageHandler = null, ?string $messageRequestUrl = null, ?string $messageRequestMethod = null, ?string $messageFallbackUrl = null, ?string $messageFallbackMethod = null, ?string $messageLamlApplicationId = null, ?string $messageRelayContext = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
-        $__body['name'] = $name;
-        $__body['message_handler'] = $messageHandler;
+        if ($name !== null) {
+            $__body['name'] = $name;
+        }
+        if ($messageHandler !== null) {
+            $__body['message_handler'] = $messageHandler;
+        }
         if ($messageRequestUrl !== null) {
             $__body['message_request_url'] = $messageRequestUrl;
         }

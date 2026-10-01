@@ -32,15 +32,22 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
     }
 
     /**
+     * @param array<string,mixed>|null $signalwireContactEmails
      * @param array<string,mixed> $extras Forward-compat body fields.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function update(string $id, ?string $name = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function update(string $id, ?string $name = null, ?string $statusCallbackUrl = null, ?array $signalwireContactEmails = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
         if ($name !== null) {
             $__body['name'] = $name;
+        }
+        if ($statusCallbackUrl !== null) {
+            $__body['status_callback_url'] = $statusCallbackUrl;
+        }
+        if ($signalwireContactEmails !== null) {
+            $__body['signalwire_contact_emails'] = $signalwireContactEmails;
         }
         $__body = array_merge($__body, $extras);
         return $this->http->put($this->path($id), $__body, requestOptions: $requestOptions);
@@ -67,17 +74,15 @@ class RegistryCampaigns extends \SignalWire\REST\BaseResource
     }
 
     /**
-     * @param list<mixed>|null $phoneNumbers
+     * @param list<mixed> $phoneNumbers
      * @param array<string,mixed> $extras Forward-compat body fields.
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
-    public function createOrder(string $id, ?array $phoneNumbers = null, ?string $statusCallbackUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    public function createOrder(string $id, array $phoneNumbers, ?string $statusCallbackUrl = null, array $extras = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         $__body = [];
-        if ($phoneNumbers !== null) {
-            $__body['phone_numbers'] = $phoneNumbers;
-        }
+        $__body['phone_numbers'] = $phoneNumbers;
         if ($statusCallbackUrl !== null) {
             $__body['status_callback_url'] = $statusCallbackUrl;
         }

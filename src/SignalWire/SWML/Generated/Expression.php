@@ -19,10 +19,15 @@ namespace SignalWire\SWML\Generated;
  */
 class Expression
 {
-    public ?string $string = null;
-
     public ?string $pattern = null;
+
+    public ?string $expr = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $nomatch_output = null;
 
     /** @var array<string,mixed>|null */
     public ?array $output = null;
+
+    public ?string $string = null;
 }

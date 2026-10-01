@@ -22,17 +22,20 @@ class BedrockParams
     /** @var array<string,mixed>|null */
     public ?array $attention_timeout = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $hard_stop_time = null;
+    public ?string $compact_conversation_time = null;
+
+    public ?string $compact_strategy = null;
+
+    public ?string $hard_stop_prompt = null;
+
+    public ?string $hard_stop_time = null;
 
     /** @var array<string,mixed>|null */
     public ?array $inactivity_timeout = null;
 
-    public ?string $video_listening_file = null;
-
     public ?string $video_idle_file = null;
 
-    public ?string $video_talking_file = null;
+    public ?string $video_listening_file = null;
 
-    public ?string $hard_stop_prompt = null;
+    public ?string $video_talking_file = null;
 }

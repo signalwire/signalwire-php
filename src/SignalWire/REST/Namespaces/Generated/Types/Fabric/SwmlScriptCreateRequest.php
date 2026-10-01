@@ -24,4 +24,6 @@ class SwmlScriptCreateRequest
     public ?string $contents = null;
 
     public ?string $status_callback_url = null;
+
+    public ?string $script_type = null;
 }

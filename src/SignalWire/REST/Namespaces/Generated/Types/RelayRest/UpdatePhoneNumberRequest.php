@@ -47,6 +47,8 @@ class UpdatePhoneNumberRequest
 
     public ?string $call_relay_script_url = null;
 
+    public ?string $call_relay_script_url_method = null;
+
     public ?string $call_relay_context = null;
 
     public ?string $call_relay_context_status_callback_url = null;

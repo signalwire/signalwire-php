@@ -55,5 +55,8 @@ class CallLeg
     public ?array $type = null;
 
     /** @var array<string,mixed>|null */
+    public ?array $qos_metrics = null;
+
+    /** @var array<string,mixed>|null */
     public ?array $parent_id = null;
 }

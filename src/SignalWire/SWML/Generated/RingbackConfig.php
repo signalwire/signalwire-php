@@ -24,17 +24,6 @@ class RingbackConfig
     /** @var list<mixed>|null */
     public ?array $urls = null;
 
-    public ?float $volume = null;
-
-    public ?bool $auto_answer = null;
-
-    public ?string $say_voice = null;
-
-    public ?string $say_language = null;
-
-    public ?string $say_gender = null;
-
-    public ?string $status_url = null;
-
-    public ?int $loop = null;
+    /** @var array<string,mixed>|null */
+    public ?array $volume = null;
 }

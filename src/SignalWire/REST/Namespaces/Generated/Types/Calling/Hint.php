@@ -19,12 +19,12 @@ namespace SignalWire\REST\Namespaces\Generated\Types\Calling;
  */
 class Hint
 {
-    public ?string $hint = null;
-
     public ?string $pattern = null;
 
-    public ?string $replace = null;
+    public ?string $hint = null;
 
     /** @var array<string,mixed>|null */
     public ?array $ignore_case = null;
+
+    public ?string $replace = null;
 }

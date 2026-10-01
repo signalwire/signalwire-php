@@ -404,6 +404,13 @@ sched_gate PACKAGE-NIGHTLY tier=nightly defer=1 res=dayone desc="package suite, 
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
 
+# SCHEMA-BUNDLE: the bundled src/SignalWire/SWML/schema.json is porting-sdk's bytes
+# (== the api-reference-specs output at the recorded commit) and schema.json.sha256
+# names them. Refresh with port_schema_bundle.py sync (porting-sdk docs/SCHEMA_ROUND_TRIP.md).
+sched_gate SCHEMA-BUNDLE desc="bundled schema.json == porting-sdk's == ARS output (record matches)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/port_schema_bundle.py" check \
+        --port signalwire-php --port-root "$PORT_ROOT" --selftest
+
 sched_gate COORDINATED-PASS desc="a non-main porting-sdk pin must be declared on the PR (Coordinated-With: line or coordinated-pass label)" \
     -- python3 "$PORTING_SDK_DIR/scripts/coordinated_pass.py" --porting-sdk "$PORTING_SDK_DIR"
 
