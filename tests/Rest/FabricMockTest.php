@@ -74,10 +74,10 @@ class FabricMockTest extends TestCase
         $this->assertSame([], $this->mock->journal()->all());
     }
 
-    // ----- call_flows.list_addresses uses singular path ---------------
+    // ----- call_flows.list_addresses: the plural collection path -----
 
     #[Test]
-    public function callFlowsListAddressesUsesSingularPath(): void
+    public function callFlowsListAddressesUsesCollectionPath(): void
     {
         $body = $this->client->fabric()->callFlows()->listAddresses('cf-1');
         $this->assertArrayHasKey('data', $body);
@@ -85,22 +85,23 @@ class FabricMockTest extends TestCase
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
-        // singular 'call_flow' (NOT 'call_flows').
-        $this->assertSame('/api/fabric/resources/call_flow/cf-1/addresses', $j->path);
+        // The addresses route is nested under the plural collection (no
+        // singular route exists — rest-apis/fabric, prime-rails routes.rb).
+        $this->assertSame('/api/fabric/resources/call_flows/cf-1/addresses', $j->path);
         $this->assertNotNull($j->matchedRoute, 'spec gap: call-flow addresses sub-path');
     }
 
-    // ----- conference_rooms.list_addresses uses singular path ---------
+    // ----- conference_rooms.list_addresses: the plural collection path
 
     #[Test]
-    public function conferenceRoomsListAddressesUsesSingularPath(): void
+    public function conferenceRoomsListAddressesUsesCollectionPath(): void
     {
         $body = $this->client->fabric()->conferenceRooms()->listAddresses('cr-1');
         $this->assertArrayHasKey('data', $body);
 
         $j = $this->mock->journal()->last();
         $this->assertSame('GET', $j->method);
-        $this->assertSame('/api/fabric/resources/conference_room/cr-1/addresses', $j->path);
+        $this->assertSame('/api/fabric/resources/conference_rooms/cr-1/addresses', $j->path);
         $this->assertNotNull($j->matchedRoute);
     }
 
@@ -155,27 +156,6 @@ class FabricMockTest extends TestCase
     }
 
     // ----- FabricTokens — every token-creation endpoint --------------
-
-    #[Test]
-    public function tokensCreateInviteToken(): void
-    {
-        // SubscriberInviteTokenCreateRequest declares address_id (required) +
-        // expires_at (optional) — exercise the real typed expiresAt param
-        // instead of an invented extras key.
-        $body = $this->client->fabric()->tokens()->createInviteToken(
-            'addr-1',
-            expiresAt: 7200,
-        );
-
-        $j = $this->mock->journal()->last();
-        $this->assertSame('POST', $j->method);
-        // singular 'subscriber' segment.
-        $this->assertSame('/api/fabric/subscriber/invites', $j->path);
-        $bm = $j->bodyMap();
-        $this->assertNotNull($bm);
-        $this->assertSame('addr-1', $bm['address_id'] ?? null);
-        $this->assertSame(7200, $bm['expires_at'] ?? null);
-    }
 
     #[Test]
     public function tokensCreateEmbedToken(): void

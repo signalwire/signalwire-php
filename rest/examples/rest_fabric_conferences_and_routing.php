@@ -199,13 +199,6 @@ safe('Guest token', function () use ($client, $relayId) {
         echo '  Guest token: ' . substr($t, 0, 40) . "...\n";
     }
 });
-safe('Invite token', function () use ($client, $relayId) {
-    $invite = $client->fabric()->tokens()->createInviteToken(addressId: $relayId);
-    $t = field($invite, 'token', '');
-    if ($t) {
-        echo '  Invite token: ' . substr($t, 0, 40) . "...\n";
-    }
-});
 safe('Embed token', function () use ($client) {
     $embed = $client->fabric()->tokens()->createEmbedToken(token: 'guest-token-value');
     $t = field($embed, 'token', '');

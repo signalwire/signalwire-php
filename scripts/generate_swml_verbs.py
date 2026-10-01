@@ -108,12 +108,55 @@ def repo_root() -> Path:
 HAND_WRITTEN_VERBS = {"answer", "hangup", "ai", "play", "say"}
 
 
+def _load_reference_generator(psdk: Path):
+    """The reference generator (porting-sdk/scripts/generate_python_rest_types.py),
+    loaded by path for its schema TRANSFORMS only — drop_deprecated_swml_verbs and
+    hoist_inline_objects — so the type set and every hoisted name are the oracle's
+    by construction (one algorithm, not a re-derivation). Its imports are stdlib
+    only; nothing PHP-specific is taken from it."""
+    path = psdk / "scripts" / "generate_python_rest_types.py"
+    spec = importlib.util.spec_from_file_location("_ref_rest_types", path)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        raise SystemExit(f"generate_swml_verbs.py: cannot load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    # It imports its porting-sdk/scripts siblings (_yaml_load) by bare name.
+    sys.path.insert(0, str(path.parent))
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.path.remove(str(path.parent))
+    return mod
+
+
 def _load_defs(psdk: Path) -> dict:
+    """schema.json ``$defs`` transformed exactly as the reference SWML-verb module
+    sees them: deprecated verbs dropped (owner ruling 2026-09-24: dial/eval/if are
+    not SDK surface), inline objects hoisted to named defs (``<Verb>Config`` /
+    ``<Verb><Path>``), and the SWAIG response ENVELOPE types (SwaigAction /
+    SwaigResponse + the objects hoisted out of them) removed — those are declared
+    once, by the SWAIG action module."""
     doc = json.loads((psdk / "schema.json").read_text())
     defs = doc.get("$defs")
     if not defs:
         raise SystemExit("generate_swml_verbs.py: schema.json has no $defs")
-    return defs
+    ref = _load_reference_generator(psdk)
+    defs, _dropped = ref.drop_deprecated_swml_verbs(defs)
+    verb_roots: dict[str, str] = {}
+    for arm in (defs.get("SWMLMethod") or {}).get("anyOf") or []:
+        wrapper = str(arm.get("$ref") or "").rsplit("/", 1)[-1]
+        wprops = list(((defs.get(wrapper) or {}).get("properties") or {}).keys())
+        if wprops:
+            verb_roots[wrapper] = wprops[0]
+    defs, _hoisted = ref.hoist_inline_objects(defs, verb_roots)
+    envelope = [n for n in ref.SWAIG_ENVELOPE_TYPES if n in defs]
+    return {
+        name: sch
+        for name, sch in defs.items()
+        if not any(
+            name == n or (name.startswith(n) and name[len(n) : len(n) + 1].isupper())
+            for n in envelope
+        )
+    }
 
 
 def _ref_leaf(ref: str) -> str:

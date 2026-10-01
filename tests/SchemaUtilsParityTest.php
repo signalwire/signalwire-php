@@ -73,7 +73,9 @@ class SchemaUtilsParityTest extends TestCase
         $su = new SchemaUtils();
         $props = $su->getVerbProperties('answer');
         $this->assertNotEmpty($props, 'expected non-empty properties for answer');
-        $this->assertSame('object', $props['type']);
+        // The engine-derived schema states answer's body as an anyOf of its
+        // object form and the positional/scalar forms.
+        $this->assertIsArray($props['anyOf'] ?? null);
     }
 
     public function testGetVerbPropertiesNonexistent(): void

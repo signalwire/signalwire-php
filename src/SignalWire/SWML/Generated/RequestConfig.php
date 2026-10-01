@@ -12,18 +12,31 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * SwaigResponse — generated SWML verb config type ($defs schema 'SwaigResponse').
+ * RequestConfig — generated SWML verb config type ($defs schema 'RequestConfig').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.
  */
-class SwaigResponse
+class RequestConfig
 {
     /** @var array<string,mixed>|null */
-    public ?array $action = null;
-
-    public ?bool $post_process = null;
+    public ?array $body = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $response = null;
+    public ?array $connect_timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $headers = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $method = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $save_variables = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $timeout = null;
+
+    /** @var array<string,mixed>|null */
+    public ?array $url = null;
 }

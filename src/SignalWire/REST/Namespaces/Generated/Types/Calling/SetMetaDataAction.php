@@ -35,18 +35,18 @@ class SetMetaDataAction
     /** @var array<string,mixed>|null */
     public ?array $change_voice = null;
 
-    public ?bool $clear_dynamic_hints = null;
+    public bool|string|null $clear_dynamic_hints = null;
 
     /** @var array<string,mixed>|null */
     public ?array $context_switch = null;
 
     public ?int $end_of_speech_timeout = null;
 
-    public ?bool $extensive_data = null;
+    public bool|string|null $extensive_data = null;
 
-    public ?bool $functions_on_speaker_timeout = null;
+    public bool|string|null $functions_on_speaker_timeout = null;
 
-    public ?bool $hangup = null;
+    public bool|string|null $hangup = null;
 
     /** @var array<string,mixed>|null */
     public ?array $hold = null;
@@ -70,9 +70,10 @@ class SetMetaDataAction
 
     public ?int $speech_event_timeout = null;
 
-    public ?bool $stop = null;
+    public bool|string|null $stop = null;
 
-    public ?bool $stop_playback_bg = null;
+    /** @var bool|string|int|array<string,mixed>|list<mixed>|null */
+    public bool|string|int|array|null $stop_playback_bg = null;
 
     /** @var list<mixed>|null */
     public ?array $toggle_functions = null;

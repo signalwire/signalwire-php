@@ -12,13 +12,13 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * Eval_ — generated SWML verb config type ($defs schema 'Eval').
+ * SendDigitsConfig — generated SWML verb config type ($defs schema 'SendDigitsConfig').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.
  */
-class Eval_
+class SendDigitsConfig
 {
     /** @var array<string,mixed>|null */
-    public ?array $eval = null;
+    public ?array $digits = null;
 }

@@ -37,8 +37,7 @@ class Webhook
 
     public ?string $method = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $output = null;
+    public mixed $output = null;
 
     /** @var array<string,mixed>|null */
     public ?array $params = null;

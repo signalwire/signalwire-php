@@ -12,13 +12,14 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * If_ — generated SWML verb config type ($defs schema 'If').
+ * AiSWAIGInternalFillersCheckTime — generated SWML verb config type ($defs schema 'AiSWAIGInternalFillersCheckTime').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.
  */
-class If_
+class AiSWAIGInternalFillersCheckTime
 {
-    /** @var array<string,mixed>|null */
-    public ?array $if = null;
+    public mixed $default = null;
+
+    public mixed $auto = null;
 }

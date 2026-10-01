@@ -2227,6 +2227,26 @@ def build_surface() -> dict:
     # instead of carrying both spellings. See _fold_accessors above.
     _fold_accessors(modules)
 
+    # ``__get`` on the REST client tree is PHP's realization of the reference's
+    # plain attribute access (``client.fabric.ai_agents``): a property read
+    # (``$client->fabric->aiAgents``) delegates to the same-named accessor method,
+    # which IS the compared member. The magic method is the attribute protocol
+    # itself, not an extra member — fold it here, in the enumerator, for the
+    # generated client tree (RestClient + every ``_client_tree_generated``
+    # container), rather than excusing one addition per container.
+    for _mod, _cls_set in (
+        ("signalwire.rest.client", {"RestClient"}),
+        ("signalwire.rest.namespaces._client_tree_generated", None),
+    ):
+        _entry = modules.get(_mod)
+        if not _entry:
+            continue
+        for _cls in list(_entry["classes"]):
+            if _cls_set is None or _cls in _cls_set:
+                _entry["classes"][_cls] = [
+                    m for m in _entry["classes"][_cls] if m != "__get"
+                ]
+
     # GENERAL FOLD 1 — oracle-gated public-property emission (class B2). Replaces the
     # former hardcoded per-class ``_oracle_class_members`` field emits (RequestOptions
     # and the three AI-Chat records); the ORACLE is now the sole gate, so a class the

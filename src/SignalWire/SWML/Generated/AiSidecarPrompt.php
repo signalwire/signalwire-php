@@ -12,13 +12,13 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * Dial — generated SWML verb config type ($defs schema 'Dial').
+ * AiSidecarPrompt — generated SWML verb config type ($defs schema 'AiSidecarPrompt').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.
  */
-class Dial
+class AiSidecarPrompt
 {
     /** @var array<string,mixed>|null */
-    public ?array $dial = null;
+    public ?array $file = null;
 }

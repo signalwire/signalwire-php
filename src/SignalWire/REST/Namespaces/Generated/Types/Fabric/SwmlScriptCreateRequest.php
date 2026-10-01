@@ -21,7 +21,8 @@ class SwmlScriptCreateRequest
 {
     public ?string $name = null;
 
-    public ?string $contents = null;
+    /** @var string|array<string,mixed>|null */
+    public string|array|null $contents = null;
 
     public ?string $status_callback_url = null;
 

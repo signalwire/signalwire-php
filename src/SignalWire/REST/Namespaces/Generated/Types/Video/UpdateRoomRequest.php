@@ -27,11 +27,11 @@ class UpdateRoomRequest
 
     public ?string $quality = null;
 
-    public ?string $join_from = null;
+    public string|float|null $join_from = null;
 
-    public ?string $join_until = null;
+    public string|float|null $join_until = null;
 
-    public ?string $remove_at = null;
+    public string|float|null $remove_at = null;
 
     public ?int $remove_after_seconds_elapsed = null;
 

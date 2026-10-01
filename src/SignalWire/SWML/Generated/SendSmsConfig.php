@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * SendSmsConfig — generated SWML verb config type (flattened SWMLMethod verb 'send_sms' config).
+ * SendSmsConfig — generated SWML verb config type ($defs schema 'SendSmsConfig').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.

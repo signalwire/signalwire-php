@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * BindDigitConfig — generated SWML verb config type (flattened SWMLMethod verb 'bind_digit' config).
+ * BindDigitConfig — generated SWML verb config type ($defs schema 'BindDigitConfig').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.

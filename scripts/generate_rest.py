@@ -1112,9 +1112,11 @@ def emit_method(
         # insertion.
         hdr_arg = ""
         if header_args:
-            hdr_arg = ", headers: [" + ", ".join(
-                f"{php_str(h)} => ${a}" for h, a in header_args
-            ) + "]"
+            hdr_arg = (
+                ", headers: ["
+                + ", ".join(f"{php_str(h)} => ${a}" for h, a in header_args)
+                + "]"
+            )
         call_line = (
             f"        return $this->{recv}->{verb_fn}"
             f"({path_expr}, {body_arg}, requestOptions: $requestOptions{hdr_arg});"
@@ -1150,9 +1152,7 @@ def emit_method(
                 f"({path_expr}, $params, $requestOptions);"
             )
         else:
-            call_line = (
-                f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
-            )
+            call_line = f"        return $this->{recv}->get({path_expr}, $params, $requestOptions);"
     else:  # delete
         params = id_params
         _register_sidecar(cls, name, [*id_records, _request_options_record()])
@@ -1408,12 +1408,54 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
     mapping = (spec.schemas.get(request).get("discriminator") or {}).get(
         "mapping"
     ) or {}
+    any_autofill = False
     for cmd in commands:
         mname = command_method_name(cmd)
         cmd_schema_ref = mapping.get(cmd) or {}
         cmd_leaf = cmd_schema_ref.rsplit("/", 1)[-1] if cmd_schema_ref else ""
         cmd_schema = spec.schemas.get(cmd_leaf, {})
         fields, with_id = command_param_fields(spec, cmd_schema)
+        # x-sdk-autofill: uuid4 — a server-required id the SDK generates when the
+        # caller omits it (the RELAY client's control_id idiom): the param stays
+        # OPTIONAL and the id is filled after the extras merge (mirrors the
+        # reference generator's setdefault(key, uuid4)).
+        autofill: list[str] = []
+        for wire_name, schema, _req in fields:
+            fill = (schema or {}).get("x-sdk-autofill")
+            if fill is not None and fill != "uuid4":
+                raise SystemExit(
+                    f"{name}.{mname}: {wire_name}: x-sdk-autofill {fill!r} is not a "
+                    "known generator (uuid4)"
+                )
+            if fill == "uuid4":
+                autofill.append(wire_name)
+        # x-sdk-compat-kwargs (on the params schema): an SDK kwarg kept for
+        # compatibility, sent INTO a nested wire key (calling.record ``audio`` ->
+        # params.record.audio). The nested root it fills becomes OPTIONAL.
+        cs_props = resolve_schema(spec, cmd_schema).get("properties") or {}
+        pnode = resolve_schema(spec, cs_props.get("params") or {})
+        compat: list[tuple[str, str, str, dict]] = []  # (arg, root, leaf, schema)
+        field_names = {f[0] for f in fields}
+        for carg, cspec in (pnode.get("x-sdk-compat-kwargs") or {}).items():
+            into = (cspec or {}).get("into", "") if isinstance(cspec, dict) else ""
+            parts = into.split(".")
+            if len(parts) != 2 or carg in field_names or parts[0] not in field_names:
+                raise SystemExit(
+                    f"{name}.{mname}: x-sdk-compat-kwargs.{carg} into {into!r} must name "
+                    "<existing param>.<key> and must not shadow a param"
+                )
+            root_schema = next(f[1] for f in fields if f[0] == parts[0])
+            root_props = resolve_schema(spec, root_schema).get("properties") or {}
+            if parts[1] not in root_props:
+                raise SystemExit(
+                    f"{name}.{mname}: x-sdk-compat-kwargs.{carg}: {into!r} not found"
+                )
+            compat.append((carg, parts[0], parts[1], root_props[parts[1]]))
+        compat_roots = {c[1] for c in compat}
+        fields = [
+            (w, sc, req and w not in autofill and w not in compat_roots)
+            for w, sc, req in fields
+        ]
 
         # Leading positional call_id (when the command schema has an ``id``).
         records: list[dict] = []
@@ -1429,7 +1471,10 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         # command params → keyword named params.
         field_php: list[str] = []
         field_doc: list[str] = []
-        build: list[str] = ["        $params = [];"]
+        # The command-params local is ``$__params`` (leading underscore) so it can
+        # never collide with a command param: calling.ai_sidecar declares one
+        # literally named ``params`` (escape_param never yields a leading ``_``).
+        build: list[str] = ["        $__params = [];"]
         for wire_name, schema, required in ordered_fields(fields):
             ident = escape_param(wire_name)
             pt = php_param_type(spec, schema, required)
@@ -1445,14 +1490,36 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
             }
             if required:
                 field_php.append(f"{pt} ${ident}")
-                build.append(f"        $params[{php_str(wire_name)}] = ${ident};")
+                build.append(f"        $__params[{php_str(wire_name)}] = ${ident};")
             else:
                 field_php.append(f"{pt} ${ident} = null")
                 rec["default"] = None
                 build.append(f"        if (${ident} !== null) {{")
-                build.append(f"            $params[{php_str(wire_name)}] = ${ident};")
+                build.append(f"            $__params[{php_str(wire_name)}] = ${ident};")
                 build.append("        }")
             records.append(rec)
+        for carg, root, leaf, cschema in compat:
+            ident = escape_param(carg)
+            pt = php_param_type(spec, cschema, False)
+            dt = php_doc_type(spec, cschema, False)
+            if dt:
+                field_doc.append(f"     * @param {dt} ${ident}")
+            field_php.append(f"{pt} ${ident} = null")
+            records.append(
+                {
+                    "name": carg,
+                    "kind": "keyword",
+                    "type": canonical_type(spec, cschema, False),
+                    "required": False,
+                    "default": None,
+                }
+            )
+            build.append(f"        if (${ident} !== null) {{")
+            build.append(
+                f"            $__params[{php_str(root)}] = array_merge("
+                f"(array) ($__params[{php_str(root)}] ?? []), [{php_str(leaf)} => ${ident}]);"
+            )
+            build.append("        }")
         # trailing forward-compat door.
         field_php.append("array $extras = []")
         field_doc.append(
@@ -1467,7 +1534,15 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
                 "default": None,
             }
         )
-        build.append("        $params = array_merge($params, $extras);")
+        build.append("        $__params = array_merge($__params, $extras);")
+        for key in autofill:
+            build.append(
+                f"        if (!\\array_key_exists({php_str(key)}, $__params)) {{"
+            )
+            build.append(f"            $__params[{php_str(key)}] = self::uuid4();")
+            build.append("        }")
+        if autofill:
+            any_autofill = True
         # trailing per-call transport override (forwarded through execute()).
         field_php.append(_REQUEST_OPTIONS_PHP_PARAM)
         field_doc.append(_REQUEST_OPTIONS_DOC)
@@ -1486,9 +1561,23 @@ def emit_command_dispatch(spec: Spec, anchor: str, markup: dict) -> str:
         lines.append("    {")
         lines.extend(build)
         lines.append(
-            f"        return $this->execute({php_str(cmd)}, {call_arg}, $params, $requestOptions);"
+            f"        return $this->execute({php_str(cmd)}, {call_arg}, $__params, $requestOptions);"
         )
         lines.append("    }")
+    if any_autofill:
+        lines += [
+            "",
+            "    /** A random RFC 4122 version-4 UUID: the control id sent when the caller passes none. */",
+            "    private static function uuid4(): string",
+            "    {",
+            "        $b = random_bytes(16);",
+            "        $b[6] = \\chr((\\ord($b[6]) & 0x0f) | 0x40);",
+            "        $b[8] = \\chr((\\ord($b[8]) & 0x3f) | 0x80);",
+            "        $h = bin2hex($b);",
+            "        return substr($h, 0, 8) . '-' . substr($h, 8, 4) . '-' . substr($h, 12, 4)",
+            "            . '-' . substr($h, 16, 4) . '-' . substr($h, 20);",
+            "    }",
+        ]
     lines.append("}")
     return (
         GEN_HEADER.format(
@@ -1579,20 +1668,14 @@ def emit_resource(spec: Spec, anchor: str, markup: dict) -> str:
         op_id = spec_ref.get("op")
         if not op_id:
             raise SystemExit(f"{name}.{method_snake}: method markup missing op")
-        # A declared method the base already provides is inherited — EXCEPT
-        # list_addresses re-declared with a sibling/override path (fabric
-        # singular resources), which must shadow the base. And EXCEPT declared
-        # list/get/create/update/delete on a BaseResource resource, which the
-        # base does NOT provide, so they are emitted.
-        if method_snake in provided:
-            if method_snake == "list_addresses":
-                _verb, op_path, _ = spec.ops[op_id]
-                _, sibling = relative_tail(spec, anchor, markup, op_path)
-                if not sibling:
-                    continue
-                # sibling override: fall through and emit
-            else:
-                continue
+        # A declared method the base already provides is inherited — EXCEPT a
+        # declared list_addresses, which always shadows the base (the markup
+        # names the resource's own addresses op; the reference generator emits
+        # every declared method, so the oracle records it on the subclass). And
+        # EXCEPT declared list/get/create/update/delete on a BaseResource
+        # resource, which the base does NOT provide, so they are emitted.
+        if method_snake in provided and method_snake != "list_addresses":
+            continue
         lines.append("")
         lines.append(
             emit_method(spec, anchor, markup, base, method_snake, op_id).rstrip("\n")
@@ -2054,6 +2137,41 @@ def php_property_type(
         or schema.get("$ref")
     ):
         return "?array", "array<string,mixed>|null"
+    # A multi-type list (``type: [boolean, string]``) is a native PHP union of
+    # its members (the reference records ``union<bool,string>``), not its first.
+    raw_t = schema.get("type")
+    if isinstance(raw_t, list):
+        members = [x for x in raw_t if x != "null"]
+        if len(members) > 1:
+            php_of = {
+                "string": "string",
+                "integer": "int",
+                "number": "float",
+                "boolean": "bool",
+                "array": "array",
+                "object": "array",
+            }
+            parts: list[str] = []
+            for m in members:
+                pt = php_of.get(m)
+                if pt is None:
+                    return "mixed", None
+                if pt not in parts:
+                    parts.append(pt)
+            doc_of = {
+                "string": "string",
+                "integer": "int",
+                "number": "float",
+                "boolean": "bool",
+                "array": "list<mixed>",
+                "object": "array<string,mixed>",
+            }
+            doc_parts: list[str] = []
+            for m in members:
+                if doc_of[m] not in doc_parts:
+                    doc_parts.append(doc_of[m])
+            doc = "|".join(doc_parts) + "|null" if "array" in parts else None
+            return "|".join(parts) + "|null", doc
     # A resolved enum newtype carries its base scalar via `type:`.
     t = _schema_type(schema)
     if t == "string":

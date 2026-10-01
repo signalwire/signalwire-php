@@ -12,87 +12,70 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * DialConfig — generated SWML verb config type (flattened SWMLMethod verb 'dial' config).
+ * AiSidecarParams — generated SWML verb config type ($defs schema 'AiSidecarParams').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.
  */
-class DialConfig
+class AiSidecarParams
 {
     /** @var array<string,mixed>|null */
-    public ?array $answer_on_bridge = null;
+    public ?array $act_on_channel = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $call_state_events = null;
+    public ?array $ai_summary = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $call_state_url = null;
+    public ?array $ai_summary_prompt = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $codecs = null;
+    public ?array $debug = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $confirm = null;
+    public ?array $debug_level = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $confirm_timeout = null;
+    public ?array $deepgram_key_override = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $dest_swml = null;
+    public ?array $deepgram_url_override = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $encryption = null;
+    public ?array $final_summary = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $execute_after_queue = null;
+    public ?array $idle_timeout_ms = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $from = null;
+    public ?array $live_events = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $from_name = null;
-
-    /** @var list<mixed>|null */
-    public ?array $headers = null;
+    public ?array $max_history_tokens = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $max_duration = null;
-
-    /** @var list<mixed>|null */
-    public ?array $parallel = null;
+    public ?array $max_iters_per_tick = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $password = null;
-
-    public mixed $result = null;
+    public ?array $min_interval_ms = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $ringback = null;
-
-    /** @var list<mixed>|null */
-    public ?array $serial = null;
-
-    /** @var list<mixed>|null */
-    public ?array $serial_parallel = null;
+    public ?array $speech_engine = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $session_timeout = null;
+    public ?array $speech_timeout = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $status_url = null;
+    public ?array $summary_model = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $stop_all_on_reject = null;
+    public ?array $transcribe_prompt = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $timeout = null;
+    public ?array $vad_silence_ms = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $to = null;
+    public ?array $vad_thresh = null;
 
     /** @var array<string,mixed>|null */
-    public ?array $username = null;
-
-    /** @var array<string,mixed>|null */
-    public ?array $webrtc_media = null;
+    public ?array $verbose_utterances = null;
 }

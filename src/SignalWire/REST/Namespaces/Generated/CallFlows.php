@@ -26,6 +26,16 @@ class CallFlows extends \SignalWire\REST\FabricResourcePUT
      * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
      * @return array<string,mixed>
      */
+    public function listAddresses(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
+    {
+        return $this->client->get($this->path($id, 'addresses'), $params, $requestOptions);
+    }
+
+    /**
+     * @param array<string,mixed> $params Query-string parameters.
+     * @param \SignalWire\REST\RequestOptions|null $requestOptions Per-call transport override (timeout / retry / abort); null uses the client default. NEVER folded into the wire body.
+     * @return array<string,mixed>
+     */
     public function listVersions(string $id, array $params = [], ?\SignalWire\REST\RequestOptions $requestOptions = null): array
     {
         return $this->client->get($this->path($id, 'versions'), $params, $requestOptions);

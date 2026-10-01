@@ -752,7 +752,7 @@ class FunctionResult
         bool $startOnEnter = true,
         bool $endOnExit = false,
         ?string $waitUrl = null,
-        int $maxParticipants = 250,
+        ?int $maxParticipants = null,
         string $record = 'do-not-record',
         ?string $region = null,
         string $trim = 'trim-silence',
@@ -773,10 +773,12 @@ class FunctionResult
             );
         }
 
-        // Validate max_participants.
-        if ($maxParticipants <= 0 || $maxParticipants > 250) {
+        // Validate max_participants. The platform requires a positive number,
+        // and its conference refuses fewer than 2; it sets no upper limit. Null
+        // leaves it out so the platform's default applies.
+        if ($maxParticipants !== null && $maxParticipants < 2) {
             throw new \InvalidArgumentException(
-                'max_participants must be a positive integer <= 250'
+                'max_participants must be an integer of at least 2, got ' . $maxParticipants
             );
         }
 
@@ -818,7 +820,7 @@ class FunctionResult
         // the conference name string.
         if (
             !$muted && $beep === 'true' && $startOnEnter && !$endOnExit &&
-            $waitUrl === null && $maxParticipants === 250 && $record === 'do-not-record' &&
+            $waitUrl === null && $maxParticipants === null && $record === 'do-not-record' &&
             $region === null && $trim === 'trim-silence' && $coach === null &&
             $statusCallbackEvent === null && $statusCallback === null &&
             $statusCallbackMethod === 'POST' && $recordingStatusCallback === null &&
@@ -845,7 +847,7 @@ class FunctionResult
             if ($waitUrl !== null && $waitUrl !== '') {
                 $joinParams['wait_url'] = $waitUrl;
             }
-            if ($maxParticipants !== 250) {
+            if ($maxParticipants !== null) {
                 $joinParams['max_participants'] = $maxParticipants;
             }
             if ($record !== 'do-not-record') {

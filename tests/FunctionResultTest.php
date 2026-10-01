@@ -871,28 +871,48 @@ class FunctionResultTest extends TestCase
         (new FunctionResult())->joinConference('conf', false, 'invalid');
     }
 
-    public function testJoinConferenceMaxParticipantsTooHigh(): void
+    public function testJoinConferenceMaxParticipantsHasNoUpperLimit(): void
     {
-        // Parity: test_join_conference_max_participants_too_high
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
-        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 300);
+        // Parity: test_function_result_verb_types.py test_there_is_no_upper_limit
+        // — the platform requires 2 or more and sets no upper limit.
+        $r = (new FunctionResult())->joinConference('room', maxParticipants: 250000);
+        $this->assertSame(
+            250000,
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_conference', 'max_participants')
+        );
     }
 
-    public function testJoinConferenceMaxParticipantsZero(): void
+    public function testJoinConferenceExplicit250IsSent(): void
     {
-        // Parity: test_join_conference_max_participants_zero
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
-        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, 0);
+        // Parity: test_explicit_250_is_sent — 250 is no longer a default to drop.
+        $r = (new FunctionResult())->joinConference('room', maxParticipants: 250);
+        $this->assertSame(
+            ['name' => 'room', 'max_participants' => 250],
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_conference')
+        );
     }
 
-    public function testJoinConferenceMaxParticipantsNegative(): void
+    public function testJoinConferenceMaxParticipantsLeftOutByDefault(): void
     {
-        // Parity: test_join_conference_max_participants_negative
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('max_participants must be a positive integer <= 250');
-        (new FunctionResult())->joinConference('conf', false, 'true', true, false, null, -5);
+        // Parity: test_default_keeps_the_simple_form
+        $r = (new FunctionResult())->joinConference('room');
+        $this->assertSame(
+            'room',
+            Shape::at($r->toArray(), 'action', 0, 'SWML', 'sections', 'main', 0, 'join_conference')
+        );
+    }
+
+    public function testJoinConferenceMaxParticipantsBelowTwoIsRefused(): void
+    {
+        // Parity: test_fewer_than_two_or_not_an_integer_is_refused
+        foreach ([1, 0, -5] as $value) {
+            try {
+                (new FunctionResult())->joinConference('conf', maxParticipants: $value);
+                $this->fail("max_participants={$value} must be refused");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('max_participants must be an integer of at least 2', $e->getMessage());
+            }
+        }
     }
 
     public function testJoinConferenceInvalidRecord(): void

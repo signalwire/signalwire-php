@@ -23,11 +23,10 @@ class Expression
 
     public ?string $expr = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $nomatch_output = null;
+    /** wire key: nomatch-output */
+    public mixed $nomatch_output = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $output = null;
+    public mixed $output = null;
 
     public ?string $string = null;
 }

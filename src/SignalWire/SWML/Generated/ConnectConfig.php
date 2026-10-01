@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * ConnectConfig — generated SWML verb config type (flattened SWMLMethod verb 'connect' config).
+ * ConnectConfig — generated SWML verb config type ($defs schema 'ConnectConfig').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.

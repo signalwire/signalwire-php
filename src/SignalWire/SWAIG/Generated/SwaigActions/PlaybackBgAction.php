@@ -21,5 +21,5 @@ class PlaybackBgAction
 {
     public ?string $file = null;
 
-    public ?bool $wait = null;
+    public bool|string|null $wait = null;
 }

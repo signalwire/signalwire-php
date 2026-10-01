@@ -48,7 +48,7 @@ namespace SignalWire\Utils;
  * \JsonException inside loadSchema, and it lands on the empty-schema
  * fail-closed path above. An earlier revision of this docblock claimed the
  * lightweight contract "matches Python's _validate_verb_lightweight()
- * exactly"; that was the same false parity claim ruby carried, and it is
+ * exactly"; that was the same false equivalence claim ruby carried, and it is
  * corrected here: Python reaches its lightweight path only for a partial
  * schema with no properties.sections, never as a fallback from a failed
  * validator build (its Draft202012Validator call has no try/except at all,
@@ -251,7 +251,15 @@ final class SchemaUtils
      */
     public function getAllVerbNames(): array
     {
-        $names = array_keys($this->verbs);
+        // A verb the schema marks deprecated (dial / eval / if) is not SDK
+        // surface; it stays known to validation (mirrors the reference's
+        // get_all_verb_names).
+        $names = [];
+        foreach ($this->verbs as $name => $info) {
+            if (!\SignalWire\SWML\Schema::verbIsDeprecated($info['definition'], (string) $name)) {
+                $names[] = (string) $name;
+            }
+        }
         sort($names);
         return $names;
     }
@@ -427,28 +435,16 @@ final class SchemaUtils
      * Three node shapes are handled, and the union case is the one that matters:
      *
      *   - `$ref` -- followed into `$defs` and resolved recursively (ai -> AIObject).
-     *   - `anyOf` / `oneOf` -- resolved BRANCH BY BRANCH, with the config accepted
-     *     when it satisfies SOME branch. Only `oneOf` used to be tested here; an
-     *     `anyOf`-shaped node carries no `type` of its own, so it fell through to
-     *     the plain-object path where `properties` is empty and
-     *     {@see schemaIsClosed()} answers false -- silently DISENGAGING the
-     *     closed-key check and reporting SUCCESS for any key whatsoever. That is
-     *     strictly worse than failing, and php has no full-validator fallback
-     *     behind it (see {@see initFullValidator()}), so this partial check is the
-     *     only gate. Three verbs in the shipped schema are `anyOf`-shaped --
-     *     send_sms (2 object branches), sleep (object / integer / SWMLVar) and
-     *     unset (string / array) -- and the first two were accepting arbitrary
-     *     keys end to end, all the way into the emitted document.
-     *
-     *     The union (not intersection) semantic is the correct one for this schema
-     *     shape: a config satisfying an anyOf/oneOf satisfies SOME branch, so a
-     *     key belonging to no branch belongs to no valid document. An intersection
-     *     would reject connect's serial / parallel / serial_parallel forms, whose
-     *     four branches differ precisely in their discriminating key. Non-object
-     *     branches (sleep's bare `integer`, SWMLVar) contribute no keys -- they
-     *     constrain the config to not be an object at all, a different question
-     *     from which keys an object config may carry -- so a union with NO object
-     *     branch (unset) has no key-set and correctly stays disengaged.
+     *   - `anyOf` / `oneOf` -- the #223 contract: resolve each arm and keep the
+     *     arms that are CLOSED objects. Exactly one such arm is the shape the
+     *     check enforces (ai's anyOf of the typed object / positional forms,
+     *     sleep's object | integer | SWMLVar); zero (unset: string |
+     *     array-of-string) or more than one (ambiguous — a shallow check must
+     *     not guess which form the caller meant) disengages. Non-object arms
+     *     never count. An `anyOf`-shaped node carries no `type` of its own, so
+     *     before unions were resolved it fell through to the plain-object path
+     *     and silently DISENGAGED; php has no full-validator fallback behind
+     *     this check (see {@see initFullValidator()}), so it is the only gate.
      *   - a plain object schema -- checked directly.
      *
      * A depth bound keeps a self-referential `$ref` from spinning.
@@ -490,38 +486,13 @@ final class SchemaUtils
             $branches = $node['oneOf'];
         }
         if ($branches !== null) {
-            $bestErrors = null;
-            $anyEnumerable = false;
-            foreach ($branches as $branch) {
-                if (!is_array($branch)) {
-                    continue;
-                }
-                $resolved = $this->resolveRef(self::onlyStringKeys($branch));
-                if ($this->closedKeySet($resolved, $depth + 1) === null) {
-                    continue;
-                }
-                $anyEnumerable = true;
-                $branchErrors = $this->validateAgainstSchemaNode(
-                    $verbName,
-                    $verbConfig,
-                    $resolved,
-                    $depth + 1
-                );
-                if ($branchErrors === []) {
-                    return [];  // matched a branch cleanly
-                }
-                if ($bestErrors === null || count($branchErrors) < count($bestErrors)) {
-                    $bestErrors = $branchErrors;
-                }
-            }
-            if (!$anyEnumerable) {
-                // No branch closes over an enumerable key set (e.g. unset:
-                // string | array-of-string). There is nothing to enforce here.
+            $arm = $this->singleClosedArm($branches, $depth);
+            if ($arm === null) {
+                // Zero closed object arms (e.g. unset: string | array-of-string)
+                // or more than one (ambiguous): disengage — the #223 contract.
                 return [];
             }
-            return $bestErrors ?? [
-                "Verb '$verbName' config did not match any allowed shape",
-            ];
+            return $this->validateAgainstSchemaNode($verbName, $verbConfig, $arm, $depth + 1);
         }
 
         return $this->validateAgainstObjectSchema($verbName, $verbConfig, $node);
@@ -530,9 +501,8 @@ final class SchemaUtils
     /**
      * Resolve ONE schema node to the set of top-level property names it closes
      * over, or null when it has no such enumerable closed key-set. Same three
-     * node shapes and same union semantic as
-     * {@see validateAgainstSchemaNode()} -- see that method for why the union
-     * (rather than the intersection) of the object branches' keys is correct.
+     * node shapes and the same exactly-one-closed-arm rule for a union as
+     * {@see validateAgainstSchemaNode()} (see {@see singleClosedArm()}).
      *
      * Kept PRIVATE with no public accessor over it: the python reference's
      * SchemaUtils exposes only validate_verb and has no counterpart to this
@@ -561,23 +531,8 @@ final class SchemaUtils
             $branches = $node['oneOf'];
         }
         if ($branches !== null) {
-            $union = [];
-            $found = false;
-            foreach ($branches as $branch) {
-                if (!is_array($branch)) {
-                    continue;
-                }
-                $keys = $this->closedKeySet(self::onlyStringKeys($branch), $depth + 1);
-                if ($keys === null) {
-                    continue;
-                }
-                $found = true;
-                foreach ($keys as $k => $_) {
-                    $union[$k] = true;
-                }
-            }
-            // No branch is a closed object (e.g. unset: string | array-of-string).
-            return $found ? $union : null;
+            $arm = $this->singleClosedArm($branches, $depth);
+            return $arm === null ? null : $this->closedKeySet($arm, $depth + 1);
         }
         // A CLOSED object is enumerable even when it declares ZERO properties:
         // `denoise` / `stop_denoise` are {type:object, properties:{},
@@ -597,6 +552,32 @@ final class SchemaUtils
             $out[(string) $k] = true;
         }
         return $out;
+    }
+
+    /**
+     * The #223 contract for a union verb body (``anyOf`` / ``oneOf``): resolve
+     * each arm (following a ``$ref``) and keep the arms that are closed objects.
+     * EXACTLY ONE such arm is the shape the check enforces; zero (no object
+     * form, e.g. unset) or more than one (ambiguous — a shallow check must not
+     * guess which form the caller meant) disengages. Non-object arms (a bare
+     * scalar, a positional array, a SWML variable) are never candidates.
+     *
+     * @param array<mixed, mixed> $branches
+     * @return array<string, mixed>|null the one closed arm, resolved
+     */
+    private function singleClosedArm(array $branches, int $depth): ?array
+    {
+        $closed = [];
+        foreach ($branches as $branch) {
+            if (!is_array($branch)) {
+                continue;
+            }
+            $resolved = $this->resolveRef(self::onlyStringKeys($branch));
+            if ($this->closedKeySet($resolved, $depth + 1) !== null) {
+                $closed[] = $resolved;
+            }
+        }
+        return count($closed) === 1 ? $closed[0] : null;
     }
 
     /**

@@ -404,22 +404,6 @@ class HttpClient
     // -----------------------------------------------------------------
 
     /**
-     * @param non-empty-string $method HTTP verb (GET/POST/PUT/PATCH/DELETE).
-     * @param array<string,mixed> $params  Query-string parameters.
-     * @param array<string,mixed>|null $body JSON body (for POST/PUT/PATCH).
-     * @param RequestOptions|null $requestOptions Per-request override.
-     * @param array<string,string> $extraHeaders Headers for this request only;
-     *   each replaces the default of the same name.
-     * @param 'json'|'text'|'redirect' $response How a success is read: the
-     *   decoded JSON body, the body as text, or (redirects NOT followed) the
-     *   3xx ``Location``.
-     * @return array<string,mixed>|string
-     * @throws SignalWireRestError on a non-2xx response; a SignalWireRestTransportError
-     *   (a member of that family) on a transport-level failure (connection
-     *   refused / DNS / reset / TLS / timeout — the request never reached a
-     *   response) or a set abort signal.
-     */
-    /**
      * @param array<string,mixed>|string $result
      * @return array<string,mixed>
      */
@@ -436,6 +420,22 @@ class HttpClient
         return is_string($result) ? $result : '';
     }
 
+    /**
+     * @param non-empty-string $method HTTP verb (GET/POST/PUT/PATCH/DELETE).
+     * @param array<string,mixed> $params  Query-string parameters.
+     * @param array<string,mixed>|null $body JSON body (for POST/PUT/PATCH).
+     * @param RequestOptions|null $requestOptions Per-request override.
+     * @param array<string,string> $extraHeaders Headers for this request only;
+     *   each replaces the default of the same name.
+     * @param 'json'|'text'|'redirect' $response How a success is read: the
+     *   decoded JSON body, the body as text, or (redirects NOT followed) the
+     *   3xx ``Location``.
+     * @return array<string,mixed>|string
+     * @throws SignalWireRestError on a non-2xx response; a SignalWireRestTransportError
+     *   (a member of that family) on a transport-level failure (connection
+     *   refused / DNS / reset / TLS / timeout — the request never reached a
+     *   response) or a set abort signal.
+     */
     private function request(
         string $method,
         string $path,

@@ -145,8 +145,16 @@ foreach ($classes as $fqcn) {
         if ($p->getDeclaringClass()->getName() !== $r->getName()) {
             continue;
         }
+        // A generated DTO property whose wire key is not a PHP identifier
+        // (``nomatch-output``) carries it in a ``wire key:`` doc tag; the
+        // property IS that wire field, so it is recorded under the wire name.
+        $propName = $p->getName();
+        $pDoc = $p->getDocComment();
+        if ($pDoc !== false && preg_match('/wire key: (\S+)/', $pDoc, $wk) === 1) {
+            $propName = $wk[1];
+        }
         $properties[] = [
-            'name' => $p->getName(),
+            'name' => $propName,
             'type' => typeString($p->getType()),
             'is_static' => $p->isStatic(),
         ];

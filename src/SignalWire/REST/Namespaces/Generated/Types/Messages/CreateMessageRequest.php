@@ -23,7 +23,8 @@ class CreateMessageRequest
 
     public ?string $from = null;
 
-    public ?string $body = null;
+    /** @var string|array<string,mixed>|list<mixed>|null */
+    public string|array|null $body = null;
 
     /** @var list<mixed>|null */
     public ?array $media = null;
@@ -39,11 +40,11 @@ class CreateMessageRequest
 
     public ?string $template_id = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $header_template_parameters = null;
+    /** @var array<string,mixed>|list<mixed>|string|null */
+    public array|string|null $header_template_parameters = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $body_template_parameters = null;
+    /** @var array<string,mixed>|list<mixed>|null */
+    public array|null $body_template_parameters = null;
 
     /** @var list<mixed>|null */
     public ?array $button_template_parameters = null;

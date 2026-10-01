@@ -25,9 +25,9 @@ class CreateConferenceRequest
 
     public ?string $description = null;
 
-    public ?string $join_from = null;
+    public string|float|null $join_from = null;
 
-    public ?string $join_until = null;
+    public string|float|null $join_until = null;
 
     public ?string $quality = null;
 

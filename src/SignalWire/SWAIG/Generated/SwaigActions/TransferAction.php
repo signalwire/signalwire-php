@@ -21,5 +21,5 @@ class TransferAction
 {
     public ?string $dest = null;
 
-    public ?bool $summarize = null;
+    public bool|string|null $summarize = null;
 }

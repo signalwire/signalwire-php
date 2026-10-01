@@ -21,9 +21,9 @@ class CallFlowCreateRequest
 {
     public ?string $title = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $flow_data = null;
+    /** @var array<string,mixed>|string|null */
+    public array|string|null $flow_data = null;
 
-    /** @var array<string,mixed>|null */
-    public ?array $relayml = null;
+    /** @var array<string,mixed>|string|null */
+    public array|string|null $relayml = null;
 }

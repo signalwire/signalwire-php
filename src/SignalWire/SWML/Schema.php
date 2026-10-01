@@ -24,6 +24,16 @@ class Schema
     /** @var array<string, array{name: string, schema_name: string, definition: array<string,mixed>}> */
     private array $verbs = [];
 
+    /**
+     * Verbs the schema marks ``"deprecated": true`` (dial / eval / if). They are
+     * not SDK surface — no auto-vivified method is offered for them (owner
+     * ruling 2026-09-24; the reference leaves them out of
+     * ``get_all_verb_names()``) — but {@see getVerb()} still knows them.
+     *
+     * @var array<string, true>
+     */
+    private array $deprecated = [];
+
     /** @var array<string,mixed> */
     private array $schemaData = [];
 
@@ -49,21 +59,25 @@ class Schema
     }
 
     /**
-     * Check whether a verb name is valid.
+     * Check whether a verb name is a verb the SDK offers (a deprecated verb is
+     * not — see {@see $deprecated}).
      */
     public function isValidVerb(string $name): bool
     {
-        return isset($this->verbs[$name]);
+        return isset($this->verbs[$name]) && !isset($this->deprecated[$name]);
     }
 
     /**
-     * Get sorted list of all verb names.
+     * Get sorted list of the verb names the SDK offers (deprecated verbs left out).
      *
      * @return list<string>
      */
     public function getVerbNames(): array
     {
-        $names = array_keys($this->verbs);
+        $names = array_values(array_filter(
+            array_keys($this->verbs),
+            fn (string $n): bool => !isset($this->deprecated[$n])
+        ));
         sort($names);
         return $names;
     }
@@ -79,11 +93,29 @@ class Schema
     }
 
     /**
-     * Number of verbs defined in the schema.
+     * Number of verbs the SDK offers (deprecated verbs left out).
      */
     public function verbCount(): int
     {
-        return count($this->verbs);
+        return count($this->verbs) - count($this->deprecated);
+    }
+
+    /**
+     * Whether a SWML verb wrapper is marked deprecated in the schema: JSON
+     * Schema's ``deprecated`` annotation on the wrapper or on its verb property
+     * (mirrors the reference's private ``_verb_is_deprecated``).
+     *
+     * @internal shared with SchemaUtils; not public SDK surface.
+     * @param array<string, mixed> $defn
+     */
+    public static function verbIsDeprecated(array $defn, string $verb): bool
+    {
+        if (($defn['deprecated'] ?? null) === true) {
+            return true;
+        }
+        $props = $defn['properties'] ?? null;
+        $prop = is_array($props) ? ($props[$verb] ?? null) : null;
+        return is_array($prop) && ($prop['deprecated'] ?? null) === true;
     }
 
     private function loadSchema(): void
@@ -166,6 +198,9 @@ class Schema
                 'schema_name' => $defName,
                 'definition' => $definition,
             ];
+            if (self::verbIsDeprecated($definition, $actualVerb)) {
+                $this->deprecated[$actualVerb] = true;
+            }
         }
     }
 }

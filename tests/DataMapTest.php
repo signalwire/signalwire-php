@@ -533,7 +533,7 @@ class DataMapTest extends TestCase
             null,
             'POST',
             null,
-            ['error', 'message']
+            errorKeys: ['error', 'message']
         )->params(['name' => '${args.name}']);
 
         $result = $dataMap->toSwaigFunction();
@@ -665,61 +665,62 @@ class DataMapTest extends TestCase
         $this->assertSame(['err'], Shape::at($webhooks, 1, 'error_keys'));
     }
 
-    // ── body() is GONE ───────────────────────────────────────────────────
+    // ── body() sets params ───────────────────────────────────────────────
     //
-    // `DataMap::body()` is REMOVED — the key it wrote is invalid, not merely
-    // ignored. Owner-ruled 2026-07-29 (reference: signalwire-python 71eed0c),
-    // extending the f171ce3 ruling ("if the server doesn't read them, remove
-    // them") from the createSimpleApiTool PARAMETER to the public BUILDER
-    // METHOD. The same three sources condemn both:
-    //
-    //   * porting-sdk/schema.json $defs/Webhook declares exactly ten properties
-    //     under `unevaluatedProperties: {"not": {}}` — error_keys, expressions,
-    //     foreach, headers, input_args_as_params, method, output, params,
-    //     require_args, url. `body` is not among them, so emitting it is a
-    //     SCHEMA VIOLATION.
-    //   * mod_openai/actions.c:735-739 and bedrock.c:4920-4926 read url, method,
-    //     form_param, `params` and `headers` and nothing else; `grep -n '"body"'`
-    //     across both returns ZERO matches.
-    //   * So the method's only possible effect was producing an invalid document
-    //     while silently discarding the caller's payload.
-    //
-    // `params()` is the correct method for POST/PUT request data — it writes the
-    // `params` key, which IS in the contract and IS read.
+    // The platform reads a webhook's request body from its `params` field and
+    // has no `body` field (schema.json $defs/Webhook), so body() and the
+    // createSimpleApiTool $body both write `params` — never a `body` key.
+    // Mirrors signalwire-python tests/unit/core/test_data_map.py
+    // test_webhook_body_and_params / test_body_is_serialized_as_params /
+    // test_create_simple_api_tool_body_becomes_params.
 
-    public function testBodyMethodIsGone(): void
+    public function testWebhookBodyAndParams(): void
     {
-        $this->assertFalse(
-            method_exists(DataMap::class, 'body'),
-            'DataMap::body() must be removed — it writes a schema-forbidden key '
-            . 'that no engine reader consumes; use params() instead'
-        );
-    }
-
-    /** The replacement must keep working — this is the positive control. */
-    public function testParamsStillWritesTheContractKey(): void
-    {
-        $dm = (new DataMap('t'))
-            ->webhook('POST', 'https://x.test')
-            ->params(['q' => '${query}']);
+        $dm = (new DataMap('test_function'))
+            ->webhook('POST', 'https://api.example.com/data')
+            ->body(['query' => '${args.location}', 'format' => 'json']);
 
         $wh = Shape::sub($dm->toSwaigFunction(), 'data_map', 'webhooks', 0);
+        $this->assertSame(['query' => '${args.location}', 'format' => 'json'], $wh['params']);
+        $this->assertArrayNotHasKey('body', $wh);
 
-        $this->assertSame(['q' => '${query}'], $wh['params']);
+        $dm->params(['api_key' => '12345']);
+        $wh = Shape::sub($dm->toSwaigFunction(), 'data_map', 'webhooks', 0);
+        $this->assertSame(['api_key' => '12345'], $wh['params']);
+    }
+
+    public function testBodyIsSerializedAsParams(): void
+    {
+        $dm = (new DataMap('search'))
+            ->webhook('POST', 'https://api.example.com/search')
+            ->body(['q' => '${args.query}'])
+            ->output(new FunctionResult('Found ${total}'));
+
+        $wh = Shape::sub($dm->toSwaigFunction(), 'data_map', 'webhooks', 0);
+        $this->assertSame(['q' => '${args.query}'], $wh['params']);
         $this->assertArrayNotHasKey('body', $wh);
     }
 
-    /** createSimpleApiTool must not accept or emit a `body`. */
-    public function testCreateSimpleApiToolHasNoBodyParameter(): void
+    public function testBodyBeforeWebhookThrows(): void
     {
-        $params = (new \ReflectionMethod(DataMap::class, 'createSimpleApiTool'))
-            ->getParameters();
-        $names = array_map(static fn ($p) => $p->getName(), $params);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Must add webhook before setting body');
+        (new DataMap('t'))->body(['q' => 'x']);
+    }
 
-        $this->assertNotContains('body', $names, 'createSimpleApiTool must not take a $body');
-        $this->assertSame(
-            ['name', 'url', 'responseTemplate', 'parameters', 'method', 'headers', 'errorKeys'],
-            $names
+    public function testCreateSimpleApiToolBodyBecomesParams(): void
+    {
+        $dm = DataMap::createSimpleApiTool(
+            name: 'search',
+            url: 'https://api.example.com/search',
+            responseTemplate: 'Found ${total} for ${input.args.query}',
+            method: 'POST',
+            body: ['q' => '${args.query}'],
         );
+
+        $wh = Shape::sub($dm->toSwaigFunction(), 'data_map', 'webhooks', 0);
+        $this->assertSame(['q' => '${args.query}'], $wh['params']);
+        $this->assertArrayNotHasKey('body', $wh);
+        $this->assertSame(['response' => 'Found ${total} for ${input.args.query}'], $wh['output']);
     }
 }

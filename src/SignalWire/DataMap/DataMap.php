@@ -227,13 +227,32 @@ class DataMap
     }
 
     /**
+     * Set the JSON request body for the last added webhook; the same as
+     * {@see params()}.
+     *
+     * The platform reads a webhook's body from its `params` field and has no
+     * `body` field (`schema.json` `$defs/Webhook`), so this sets `params`.
+     *
+     * @param array<string, mixed> $data Request body data (may include
+     *   `${variable}` substitutions).
+     * @throws \InvalidArgumentException if no webhook has been added yet.
+     */
+    public function body(array $data): self
+    {
+        if (empty($this->webhooks)) {
+            throw new \InvalidArgumentException('Must add webhook before setting body');
+        }
+        $this->webhooks[array_key_last($this->webhooks)]['params'] = $data;
+        return $this;
+    }
+
+    /**
      * Set params on the last webhook.
      *
-     * This is NOT an alias for a `body` setter: `params` is the only one of the
-     * two that is part of the webhook contract. `schema.json` `$defs/Webhook`
-     * lists `params` among its ten permitted properties and forbids everything
-     * else, and the engine's webhook readers look up `params` and never `body`.
-     * Use this method for POST/PUT request data.
+     * `params` is the webhook's JSON request body: `schema.json` `$defs/Webhook`
+     * lists `params` among its ten permitted properties, and the engine's
+     * webhook readers look up `params` (never `body`; {@see body()} writes
+     * here too). Use this method for POST/PUT request data.
      *
      * @param array<string, mixed> $data
      */
@@ -363,7 +382,8 @@ class DataMap
      *
      * Mirrors Python's module-level `create_simple_api_tool(name, url,
      * response_template, parameters=None, method="GET", headers=None,
-     * error_keys=None)` free function. PHP (PSR-4, file-per-class)
+     * body=None, error_keys=None)` free function. A non-empty `$body` is set
+     * as the webhook's `params` (the platform sends params as the JSON body). PHP (PSR-4, file-per-class)
      * cannot declare a module-level free function, so it is hosted here as a
      * static factory on DataMap and projected onto the canonical
      * `signalwire.create_simple_api_tool` via FREE_FUNCTION_PROJECTIONS.
@@ -371,6 +391,7 @@ class DataMap
      *
      * @param array<string, array{type?: string, description?: string, required?: bool}>|null $parameters
      * @param array<string, string>|null $headers
+     * @param array<string, mixed>|null  $body
      * @param list<string>|null           $errorKeys
      */
     public static function createSimpleApiTool(
@@ -380,6 +401,7 @@ class DataMap
         ?array $parameters = null,
         string $method = 'GET',
         ?array $headers = null,
+        ?array $body = null,
         ?array $errorKeys = null
     ): self {
         $dataMap = new self($name);
@@ -397,6 +419,11 @@ class DataMap
         }
 
         $dataMap->webhook($method, $url, $headers ?? []);
+
+        // The platform sends params as the request body.
+        if (!empty($body)) {
+            $dataMap->params($body);
+        }
 
         if ($errorKeys !== null) {
             $dataMap->errorKeys($errorKeys);

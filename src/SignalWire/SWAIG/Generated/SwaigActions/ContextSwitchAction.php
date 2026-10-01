@@ -19,9 +19,9 @@ namespace SignalWire\SWAIG\Generated\SwaigActions;
  */
 class ContextSwitchAction
 {
-    public ?bool $consolidate = null;
+    public bool|string|null $consolidate = null;
 
-    public ?bool $full_reset = null;
+    public bool|string|null $full_reset = null;
 
     /** @var array<string,mixed>|null */
     public ?array $system_pom = null;

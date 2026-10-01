@@ -260,13 +260,19 @@ class SchemaUtilsAnyOfTest extends TestCase
      *   - set   — an OPEN object (unevaluatedProperties with no `not`, zero
      *             declared properties): a free-form variable bag by design.
      *   - unset — a union with no object branch (string | array of string).
-     *   - cond / label / return — array / string / untyped, not objects at all.
+     *   - transcribe_stop — its one object arm is OPEN (`properties: {}` with
+     *             no closure), beside array / number / string arms.
+     *   - cond / return — array / untyped, not closed objects at all.
+     *
+     * (`label` left this list when the engine-derived schema gave it a CLOSED
+     * object arm — `{label: string}`, `unevaluatedProperties: {not: {}}` — so it
+     * now engages, correctly.)
      *
      * @return list<array{0: string}>
      */
     public static function nonEnumerableVerbs(): array
     {
-        return [['set'], ['unset'], ['cond'], ['label'], ['return']];
+        return [['set'], ['unset'], ['cond'], ['transcribe_stop'], ['return']];
     }
 
     #[DataProvider('nonEnumerableVerbs')]
@@ -305,9 +311,10 @@ class SchemaUtilsAnyOfTest extends TestCase
     }
 
     /**
-     * The engaged/disengaged split is a COUNT, asserted exactly: this fix takes
-     * it 32 -> 34 (sleep and send_sms), leaving exactly the five legitimately
-     * open or non-object shapes disengaged. A count pinned at an exact bound is
+     * The engaged/disengaged split is a COUNT, asserted exactly: on the bundled
+     * schema's 50 SDK verbs (dial / eval / if are deprecated and not offered)
+     * the exactly-one-closed-arm resolver engages 45, leaving exactly the five
+     * legitimately open or non-object shapes disengaged. A count pinned at an exact bound is
      * what catches a future schema re-vendor silently disengaging a verb again —
      * a percentage floor could not, since 33/34 rounds to 100%.
      */
@@ -324,11 +331,11 @@ class SchemaUtilsAnyOfTest extends TestCase
             }
         }
         $this->assertSame(
-            ['cond', 'label', 'return', 'set', 'unset'],
+            ['cond', 'return', 'set', 'transcribe_stop', 'unset'],
             $disengaged,
             'the disengaged set must be exactly the legitimately-open/non-object shapes'
         );
-        $this->assertCount(34, $engaged, 'engaged verbs: ' . implode(' ', $engaged));
+        $this->assertCount(45, $engaged, 'engaged verbs: ' . implode(' ', $engaged));
     }
 
     /**

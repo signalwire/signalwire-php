@@ -21,7 +21,7 @@ class HoldAction
 {
     public ?string $step = null;
 
-    public ?float $timeout = null;
+    public float|string|null $timeout = null;
 
     public ?string $timeout_step = null;
 }

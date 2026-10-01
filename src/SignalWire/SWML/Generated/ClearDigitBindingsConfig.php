@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace SignalWire\SWML\Generated;
 
 /**
- * ClearDigitBindingsConfig — generated SWML verb config type (flattened SWMLMethod verb 'clear_digit_bindings' config).
+ * ClearDigitBindingsConfig — generated SWML verb config type ($defs schema 'ClearDigitBindingsConfig').
  *
  * Pure data DTO: public typed properties named for the snake_case wire keys
  * they carry. It declares no methods — the values ARE the interface.

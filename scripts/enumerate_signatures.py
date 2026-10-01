@@ -508,9 +508,18 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     # type is just as knowable there.)
     ("SignalWire\\REST\\HttpClient", "get"): {
         "params": "optional<dict<string,any>>",
+        "headers": "optional<dict<string,string>>",
+    },
+    ("SignalWire\\REST\\HttpClient", "getText"): {
+        "params": "optional<dict<string,any>>",
+        "headers": "optional<dict<string,string>>",
+    },
+    ("SignalWire\\REST\\HttpClient", "getRedirectLocation"): {
+        "params": "optional<dict<string,any>>",
     },
     ("SignalWire\\REST\\HttpClient", "post"): {
         "params": "optional<dict<string,any>>",
+        "headers": "optional<dict<string,string>>",
     },
     # RequestOptions envelope (plan 4.2). The oracle types the ``abort_signal``
     # constructor param as the _AbortSignal protocol; PHP's ``$abortSignal`` is a
@@ -1148,6 +1157,16 @@ PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     },
     ("SignalWire\\REST\\CrudWithAddresses", "listAddresses"): {
         "request_options": "keyword",
+    },
+    # rest/_base.py ``get`` / ``get_text`` / ``post`` — ``*, headers=None``.
+    ("SignalWire\\REST\\HttpClient", "get"): {
+        "headers": "keyword",
+    },
+    ("SignalWire\\REST\\HttpClient", "getText"): {
+        "headers": "keyword",
+    },
+    ("SignalWire\\REST\\HttpClient", "post"): {
+        "headers": "keyword",
     },
     # relay/call.py:620 — ``play_silence(duration, *, on_completed=None)``.
     ("SignalWire\\Relay\\Call", "playSilence"): {
