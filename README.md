@@ -251,6 +251,8 @@ reference (custom CA bundles, RELAY overrides, and more).
 | `SIGNALWIRE_API_TOKEN` | RELAY, REST | API token |
 | `SIGNALWIRE_SPACE` | RELAY, REST | Space hostname (e.g. `example.signalwire.com`) |
 | `SIGNALWIRE_PERSONAL_ACCESS_TOKEN` | REST | Personal Access Token (`pat_...`) for the Space Administration API (`$client->space()`); fallback for `RestClient(personalAccessToken:)` |
+| `SIGNALWIRE_CHAT_GATEWAY_KEY` | AI Chat gateway | Public key a browser widget presents to `ChatGateway`; generated when unset |
+| `SIGNALWIRE_CHAT_GATEWAY_SECRET` | AI Chat gateway | Secret that signs `ChatGateway` conversation handles; set it explicitly when running more than one process, else one is generated per process |
 | `SWML_BASIC_AUTH_USER` | Agents | Basic auth username (default: auto-generated) |
 | `SWML_BASIC_AUTH_PASSWORD` | Agents | Basic auth password (default: auto-generated) |
 | `SWML_PROXY_URL_BASE` | Agents | Base URL when behind a reverse proxy |

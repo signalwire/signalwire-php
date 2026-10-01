@@ -33,6 +33,7 @@ final class PublicHttpSession
      */
     public array $headers = [];
 
+    /** @param bool $allowPrivate When true, private and internal addresses are allowed. */
     public function __construct(private readonly bool $allowPrivate = false)
     {
     }

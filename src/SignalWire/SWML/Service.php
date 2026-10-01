@@ -1055,6 +1055,9 @@ class Service implements RequestHandlerLike
         array $headers,
         ?string $body,
     ): ?array {
+        // Several handlers may share a prefix (a chat gateway and its handoff
+        // router both at /chat): a 404 from one falls through to the next.
+        $notFound = null;
         foreach ($this->mounts as $mount) {
             $prefix = $mount['prefix'];
             if ($prefix !== '' && $path !== $prefix && !str_starts_with($path, $prefix . '/')) {
@@ -1066,20 +1069,26 @@ class Service implements RequestHandlerLike
             }
             $handler = $mount['handler'];
             if ($handler instanceof RequestHandlerLike) {
-                return $handler->handleRequest($method, $relative, $headers, $body);
-            }
-            $result = $handler($method, $relative, $headers, $body);
-            if (is_array($result) && count($result) === 3) {
-                [$status, $outHeaders, $outBody] = array_values($result);
-                $h = [];
-                foreach (is_array($outHeaders) ? $outHeaders : [] as $k => $v) {
-                    $h[(string) $k] = is_scalar($v) ? (string) $v : '';
+                $response = $handler->handleRequest($method, $relative, $headers, $body);
+            } else {
+                $result = $handler($method, $relative, $headers, $body);
+                if (is_array($result) && count($result) === 3) {
+                    [$status, $outHeaders, $outBody] = array_values($result);
+                    $h = [];
+                    foreach (is_array($outHeaders) ? $outHeaders : [] as $k => $v) {
+                        $h[(string) $k] = is_scalar($v) ? (string) $v : '';
+                    }
+                    $response = [is_int($status) ? $status : 200, $h, is_scalar($outBody) ? (string) $outBody : ''];
+                } else {
+                    $response = [500, ['Content-Type' => 'text/plain'], 'mounted handler returned no response'];
                 }
-                return [is_int($status) ? $status : 200, $h, is_scalar($outBody) ? (string) $outBody : ''];
             }
-            return [500, ['Content-Type' => 'text/plain'], 'mounted handler returned no response'];
+            if ($response[0] !== 404) {
+                return $response;
+            }
+            $notFound = $response;
         }
-        return null;
+        return $notFound;
     }
 
     /**

@@ -181,6 +181,11 @@ CLASS_MODULE_MAP: dict[str, str] = {
     "WebhookValidator": "signalwire.core.security.webhook_validator",
     # Post-prompt normalization (signalwire/core/post_prompt.py).
     "NormalizedPostPrompt": "signalwire.core.post_prompt",
+    # Browser chat gateway + voice/chat handoff (signalwire/ai_chat/{gateway,handoff}.py).
+    "ChatGateway": "signalwire.ai_chat.gateway",
+    "GatewayRejection": "signalwire.ai_chat.gateway",
+    "HandoffRouter": "signalwire.ai_chat.handoff",
+    "NonceEntry": "signalwire.ai_chat.handoff",
     "PublicHttpSession": "signalwire.utils.url_validator",
     "WebhookMiddleware": "signalwire.core.security.webhook_middleware",
     "SecurityUtils": "signalwire.core.security.security_utils",

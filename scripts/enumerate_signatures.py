@@ -578,6 +578,12 @@ PARAM_TYPE_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\DataMap\\DataMap", "body"): {
         "data": "dict<string,any>",
     },
+    ("SignalWire\\AIChat\\ChatGateway", "prepare"): {
+        "body": "dict<string,any>",
+    },
+    ("SignalWire\\AIChat\\ChatGateway", "readUserMetadata"): {
+        "body": "dict<string,any>",
+    },
     ("SignalWire\\Core\\NormalizedPostPrompt", "__construct"): {
         "summary": "dict<string,any>",
         "dialogue": "list<dict<string,string>>",
@@ -1262,6 +1268,17 @@ PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
     ("SignalWire\\REST\\HttpClient", "post"): {
         "headers": "keyword",
     },
+    # ai_chat/gateway.py ``prepare(body, *, origin, key)`` and ai_chat/handoff.py
+    # ``register(*, conversation_id, call_id)`` — keyword-only, reached by named
+    # argument in PHP.
+    ("SignalWire\\AIChat\\ChatGateway", "prepare"): {
+        "origin": "keyword",
+        "key": "keyword",
+    },
+    ("SignalWire\\AIChat\\HandoffRouter", "register"): {
+        "conversation_id": "keyword",
+        "call_id": "keyword",
+    },
     # core/mixins/web_mixin.py ``mount(app_or_router, *, prefix="", name=None)``.
     ("SignalWire\\Agent\\AgentBase", "mount"): {
         "prefix": "keyword",
@@ -1286,6 +1303,12 @@ PARAM_KIND_REMAPS: dict[tuple[str, str], dict[str, str]] = {
 # surfacing as drift. Keyed by (PHP fully-qualified class, PHP method name) ->
 # canonical return type string.
 RETURN_TYPE_REMAPS: dict[tuple[str, str], str] = {
+    # ChatGateway::router / HandoffRouter::router — Python returns a FastAPI
+    # APIRouter to mount on the agent's app; PHP returns the mountable handler
+    # (the `(method, path, headers, body) -> [status, headers, body]` callable
+    # AgentBase::mount serves). Same role: the routes to mount beside the agent.
+    ("SignalWire\\AIChat\\ChatGateway", "router"): "class:APIRouter",
+    ("SignalWire\\AIChat\\HandoffRouter", "router"): "class:APIRouter",
     # onCallEnd returns the handler it registered (PHPDoc records the shape).
     ("SignalWire\\Agent\\AgentBase", "onCallEnd"): (
         "callable<list<list<dict<string,any>>,dict<string,any>>,void>"

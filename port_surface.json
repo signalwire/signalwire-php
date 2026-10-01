@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_from": "signalwire-php @ 337c79cc50ef66ac3f23fbc1de79f0d0f59dfa07",
+  "generated_from": "signalwire-php @ 08491dc829b0c8b036bde659570a66ac26ba9b74",
   "modules": {
     "signalwire": {
       "classes": {
@@ -97,6 +97,67 @@
         "ConversationNotFoundError": [],
         "RateLimitError": [],
         "SummaryError": []
+      },
+      "functions": []
+    },
+    "signalwire.ai_chat.gateway": {
+      "classes": {
+        "ChatGateway": [
+          "__init__",
+          "allowed_origins",
+          "check_key",
+          "check_origin",
+          "close",
+          "config_url",
+          "conversation_timeout",
+          "effective_timeout",
+          "handle_ttl",
+          "key",
+          "last_activity",
+          "max_new_conversations",
+          "max_turns",
+          "mint_handle",
+          "prepare",
+          "read_handle",
+          "read_user_metadata",
+          "router",
+          "visible_messages",
+          "window_seconds"
+        ],
+        "GatewayRejection": [
+          "__init__",
+          "reason",
+          "status"
+        ]
+      },
+      "functions": []
+    },
+    "signalwire.ai_chat.handoff": {
+      "classes": {
+        "HandoffRouter": [
+          "__init__",
+          "capture_leg",
+          "capture_timeout",
+          "end_call",
+          "escalate",
+          "gateway",
+          "max_messages_per_call",
+          "next_conversation_id",
+          "nonce_ttl",
+          "redeem",
+          "register",
+          "router",
+          "say",
+          "send_message"
+        ],
+        "NonceEntry": [
+          "__init__",
+          "call_id",
+          "conversation_id",
+          "issued_at",
+          "messages",
+          "redeemed"
+        ]
       },
       "functions": []
     },

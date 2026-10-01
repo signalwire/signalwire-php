@@ -145,4 +145,14 @@ class PerCallConfigAndMountTest extends TestCase
         $a->mount($inner, prefix: '/myagent/inner');
         $this->assertSame(200, $a->handleRequest('GET', '/myagent/inner/health', [])[0]);
     }
+
+    public function testHandlersSharingAPrefixFallThroughOnNotFound(): void
+    {
+        $a = self::agent();
+        $a->mount(self::router('/one'), prefix: '/myagent/chat');
+        $a->mount(self::router('/two'), prefix: '/myagent/chat');
+        $this->assertSame(200, $a->handleRequest('POST', '/myagent/chat/one', [])[0]);
+        $this->assertSame(200, $a->handleRequest('POST', '/myagent/chat/two', [])[0]);
+        $this->assertSame(404, $a->handleRequest('POST', '/myagent/chat/three', [])[0]);
+    }
 }
