@@ -123,7 +123,7 @@ jobs:
       - name: Set up Python (mock servers)
         uses: actions/setup-python@v6
         with:
-          python-version: '3.14'
+          python-version: '3.15'
 
       - name: Install Python test harnesses (mock_relay + mock_signalwire)
         shell: bash
